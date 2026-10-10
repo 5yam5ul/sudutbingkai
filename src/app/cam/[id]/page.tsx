@@ -1,0 +1,1645 @@
+'use client';
+
+import React, { useEffect, useRef, useState } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { 
+  Zap, RotateCcw, ArrowLeft, ArrowRight, Camera, QrCode as QrIcon, 
+  Check, Eye, Download, X, Heart, MessageSquare, CheckCircle2, Film,
+  Share2, Sparkles, Layers, Mic, MicOff, Play, Square, WifiOff
+} from 'lucide-react';
+import QRCode from 'qrcode';
+import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
+import { EventData, FilmPresetId } from '@/lib/types';
+import { FILM_PRESETS, applyAnalogFilterToCanvas } from '@/lib/filters';
+import { playAnalogShutterSound, playFilmWindingSound } from '@/lib/audio';
+import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
+import { addPhotoToOfflineQueue, flushOfflineQueue, getOfflinePhotosQueue } from '@/lib/offlineQueue';
+
+interface GuestPhoto {
+  id: string;
+  shotNumber: number;
+  imageData: string;
+  timestamp: string;
+  caption?: string;
+  aspectRatio?: '1:1' | '3:4' | '9:16';
+  frameId?: FrameId;
+}
+
+export default function GuestCameraPage() {
+  const params = useParams();
+  const eventId = params.id as string;
+
+  const [event, setEvent] = useState<EventData | null>(null);
+  const [guestName, setGuestName] = useState('');
+  const [tableNumber, setTableNumber] = useState('');
+  const [hasEnteredName, setHasEnteredName] = useState(false);
+  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+  
+  // Point 3: Flash modes: 'screen' (white screen strobe) | 'torch' (LED back hardware light) | 'off'
+  const [flashMode, setFlashMode] = useState<'screen' | 'torch' | 'off'>('screen');
+  
+  // Point 8: Multi-Aspect Ratio: '3:4' | '1:1' | '9:16'
+  const [aspectRatio, setAspectRatio] = useState<'3:4' | '1:1' | '9:16'>('3:4');
+
+  // Point 1: Frame toggle (guest can choose framed vs raw)
+  const [useFrame, setUseFrame] = useState(true);
+
+  // Analog Film Preset Selection (defaults to event preset, switchable if host allows)
+  const [selectedPreset, setSelectedPreset] = useState<FilmPresetId>('portra');
+
+  // Point 5: Offline queue status
+  const [offlineCount, setOfflineCount] = useState(0);
+
+  const [shotCount, setShotCount] = useState(0);
+  const [maxShots, setMaxShots] = useState(20);
+  const [isCapturing, setIsCapturing] = useState(false);
+  const [flashTrigger, setFlashTrigger] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  const [eventNotFound, setEventNotFound] = useState(false);
+  const [loadingEvent, setLoadingEvent] = useState(true);
+
+  // Guest Personal Roll States
+  const [myPhotos, setMyPhotos] = useState<GuestPhoto[]>([]);
+  const [lastShotThumb, setLastShotThumb] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [showRollModal, setShowRollModal] = useState(false);
+  const [currentWish, setCurrentWish] = useState('');
+
+  // Point 6: Voice Note Recording States (at Quota Exhausted)
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordDuration, setRecordDuration] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [isUploadingAudio, setIsUploadingAudio] = useState(false);
+  const [hasSentVoice, setHasSentVoice] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Detect desktop screen width for studio preview layout
+  useEffect(() => {
+    const checkViewport = () => {
+      setIsDesktop(window.innerWidth >= 880);
+    };
+    checkViewport();
+    window.addEventListener('resize', checkViewport);
+    return () => window.removeEventListener('resize', checkViewport);
+  }, []);
+
+  // Fetch event data & handle offline sync listener
+  useEffect(() => {
+    fetch(`/api/events?id=${eventId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.event) {
+          setEvent(data.event);
+          setMaxShots(data.event.shotsPerGuest || 20);
+          if (data.event.preset) {
+            setSelectedPreset(data.event.preset);
+          }
+          if (data.event.frameId === 'none') {
+            setUseFrame(false);
+          }
+        } else {
+          setEventNotFound(true);
+        }
+      })
+      .catch(() => setEventNotFound(true))
+      .finally(() => setLoadingEvent(false));
+
+    try {
+      const savedName = localStorage.getItem(`sb_guest_${eventId}`);
+      if (savedName) {
+        setGuestName(savedName);
+        setHasEnteredName(true);
+      }
+      const savedTable = localStorage.getItem(`sb_table_${eventId}`);
+      if (savedTable) {
+        setTableNumber(savedTable);
+      }
+      const savedPhotos = localStorage.getItem(`sb_my_shots_${eventId}`);
+      if (savedPhotos) {
+        const parsed = JSON.parse(savedPhotos);
+        setMyPhotos(parsed);
+        setShotCount(parsed.length);
+        if (parsed.length > 0) {
+          setLastShotThumb(parsed[parsed.length - 1].imageData);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    // Check offline queue
+    getOfflinePhotosQueue(eventId).then(queue => {
+      setOfflineCount(queue.length);
+    });
+
+    const handleOnline = () => {
+      flushOfflineQueue(() => {
+        setOfflineCount(prev => Math.max(0, prev - 1));
+      }).then(count => {
+        if (count > 0) {
+          toast.success(`${count} foto offline berhasil disinkronkan ke album!`);
+        }
+      });
+    };
+
+    window.addEventListener('online', handleOnline);
+
+    if (typeof window !== 'undefined') {
+      const url = `${window.location.origin}/cam/${eventId}`;
+      QRCode.toDataURL(url, {
+        width: 320,
+        margin: 1,
+        color: { dark: '#1D1D1F', light: '#FFFFFF' }
+      }).then(setQrDataUrl);
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [eventId]);
+
+  const startCamera = async () => {
+    setCameraError(null);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+    }
+
+    try {
+      const constraints: MediaStreamConstraints = {
+        audio: false,
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+    } catch (err) {
+      try {
+        const fallback = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        streamRef.current = fallback;
+        if (videoRef.current) {
+          videoRef.current.srcObject = fallback;
+          await videoRef.current.play();
+        }
+      } catch (fErr) {
+        setCameraError('Izinkan akses kamera di browser ponsel Anda untuk memotret.');
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (hasEnteredName) {
+      startCamera();
+    }
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [hasEnteredName, facingMode]);
+
+  const handleNameSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guestName.trim()) return;
+    localStorage.setItem(`sb_guest_${eventId}`, guestName.trim());
+    if (tableNumber.trim()) {
+      localStorage.setItem(`sb_table_${eventId}`, tableNumber.trim());
+    }
+    setHasEnteredName(true);
+    toast.success(`Selamat datang, ${guestName.trim()}! Kamera siap digunakan.`);
+  };
+
+  const flipCamera = () => {
+    setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
+  };
+
+  // Point 8: Cycle Aspect Ratios
+  const cycleAspectRatio = () => {
+    if (aspectRatio === '3:4') setAspectRatio('1:1');
+    else if (aspectRatio === '1:1') setAspectRatio('9:16');
+    else setAspectRatio('3:4');
+  };
+
+  // Point 3: Cycle Flash Modes
+  const cycleFlashMode = () => {
+    if (flashMode === 'screen') setFlashMode('torch');
+    else if (flashMode === 'torch') setFlashMode('off');
+    else setFlashMode('screen');
+  };
+
+  const takePhoto = async () => {
+    if (isCapturing || !videoRef.current || shotCount >= maxShots) return;
+    setIsCapturing(true);
+
+    // Audio effects: Shutter click + mechanical film winding ratchet
+    playAnalogShutterSound();
+    playFilmWindingSound();
+
+    // Haptic feedback (hentakan rana mekanik analog)
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate([35, 45, 25]);
+      } catch {}
+    }
+
+    // Point 3: Flash handling (Hardware Torch or Screen flash)
+    if (flashMode === 'torch' && streamRef.current && facingMode === 'environment') {
+      try {
+        const track = streamRef.current.getVideoTracks()[0];
+        // @ts-ignore
+        const capabilities = track.getCapabilities?.();
+        // @ts-ignore
+        if (capabilities?.torch) {
+          // @ts-ignore
+          await track.applyConstraints({ advanced: [{ torch: true }] });
+          setTimeout(() => {
+            // @ts-ignore
+            track.applyConstraints({ advanced: [{ torch: false }] });
+          }, 350);
+        } else {
+          setFlashTrigger(true);
+          setTimeout(() => setFlashTrigger(false), 220);
+        }
+      } catch {
+        setFlashTrigger(true);
+        setTimeout(() => setFlashTrigger(false), 220);
+      }
+    } else if (flashMode === 'screen') {
+      setFlashTrigger(true);
+      setTimeout(() => setFlashTrigger(false), 220);
+    }
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current || document.createElement('canvas');
+
+    // Point 8: Set canvas dimensions based on chosen aspect ratio
+    const targetAspect = aspectRatio === '1:1' ? 1 : aspectRatio === '9:16' ? 9 / 16 : 3 / 4;
+    canvas.width = 1200;
+    canvas.height = Math.round(1200 / targetAspect);
+    const ctx = canvas.getContext('2d');
+
+    if (ctx) {
+      const vW = video.videoWidth || 640;
+      const vH = video.videoHeight || 480;
+      const videoRatio = vW / vH;
+      let cW, cH, sX, sY;
+
+      if (videoRatio > targetAspect) {
+        cH = vH;
+        cW = vH * targetAspect;
+        sX = (vW - cW) / 2;
+        sY = 0;
+      } else {
+        cW = vW;
+        cH = vW / targetAspect;
+        sX = 0;
+        sY = (vH - cH) / 2;
+      }
+
+      if (facingMode === 'user') {
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+      }
+
+      ctx.drawImage(video, sX, sY, cW, cH, 0, 0, canvas.width, canvas.height);
+
+      if (facingMode === 'user') {
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+      }
+
+      // 1. Apply analog color emulations & date stamp
+      const currentPreset = selectedPreset || event?.preset || 'portra';
+      applyAnalogFilterToCanvas(canvas, ctx, currentPreset, true);
+
+      // 2. Point 1: Apply decorative event frame if enabled
+      const activeFrameId = (useFrame && event?.frameId) ? event.frameId : 'none';
+      if (activeFrameId !== 'none') {
+        await applyFrameToCanvas(canvas, ctx, {
+          frameId: activeFrameId,
+          coupleOrTitle: event?.coupleOrHost || 'Pernikahan Spesial',
+          eventDate: event?.eventDate,
+          tagline: event?.frameText,
+          customFrameUrl: event?.customFrameUrl
+        });
+      }
+
+      const base64 = canvas.toDataURL('image/jpeg', 0.90);
+      const newShotNum = shotCount + 1;
+      setShotCount(newShotNum);
+
+      // Create lightweight thumbnail for instant preview & safe localStorage storage
+      const thumbCanvas = document.createElement('canvas');
+      thumbCanvas.width = 180;
+      thumbCanvas.height = Math.round(180 / targetAspect);
+      const tCtx = thumbCanvas.getContext('2d');
+      if (tCtx) {
+        tCtx.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+      }
+      const thumbBase64 = thumbCanvas.toDataURL('image/jpeg', 0.65);
+      setLastShotThumb(thumbBase64);
+
+      // Save lightweight thumbnail locally to guest personal roll
+      const newGuestPhoto: GuestPhoto = {
+        id: 'shot-' + Date.now(),
+        shotNumber: newShotNum,
+        imageData: thumbBase64,
+        timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+        caption: currentWish.trim() || (tableNumber ? `Meja ${tableNumber}` : ''),
+        aspectRatio,
+        frameId: activeFrameId
+      };
+
+      const updatedShots = [...myPhotos, newGuestPhoto];
+      setMyPhotos(updatedShots);
+      try {
+        localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updatedShots));
+      } catch (err) {
+        console.warn('LocalStorage quota limit reached, saving in memory:', err);
+      }
+
+      // Trigger polaroid pop feedback
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3200);
+
+      // Point 5: Send high-res photo to server or store in offline queue if offline
+      const displayName = tableNumber ? `${guestName} (${tableNumber})` : guestName;
+
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        addPhotoToOfflineQueue({
+          id: newGuestPhoto.id,
+          eventId,
+          guestName: displayName,
+          shotNumber: newShotNum,
+          imageData: base64,
+          caption: currentWish.trim(),
+          aspectRatio,
+          frameId: activeFrameId,
+          createdAt: Date.now()
+        }).then(() => {
+          setOfflineCount(prev => prev + 1);
+          toast.info('Tersimpan di antrian offline HP. Otomatis terunggah saat online.');
+        });
+      } else {
+        fetch('/api/photos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId,
+            guestName: displayName,
+            shotNumber: newShotNum,
+            imageData: base64,
+            caption: currentWish.trim(),
+            aspectRatio,
+            frameId: activeFrameId
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.photo?.imageData) {
+            setMyPhotos(prev => prev.map(p => p.id === newGuestPhoto.id ? { ...p, imageData: data.photo.imageData } : p));
+          }
+        })
+        .catch(async () => {
+          // Network dropped during upload, queue it safely in IndexedDB
+          await addPhotoToOfflineQueue({
+            id: newGuestPhoto.id,
+            eventId,
+            guestName: displayName,
+            shotNumber: newShotNum,
+            imageData: base64,
+            caption: currentWish.trim(),
+            aspectRatio,
+            frameId: activeFrameId,
+            createdAt: Date.now()
+          });
+          setOfflineCount(prev => prev + 1);
+          toast.info('Koneksi terputus. Foto disimpan di memori HP.');
+        });
+      }
+
+      // Reset wish input
+      setCurrentWish('');
+    }
+
+    setTimeout(() => {
+      setIsCapturing(false);
+    }, 400);
+  };
+
+  const downloadSinglePhoto = (dataUrl: string, shotNum: number) => {
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `SudutBingkai_${event?.title || 'Nikahan'}_Jepretan${shotNum}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast.success(`Jepretan #${shotNum} tersimpan ke galeri Anda!`);
+  };
+
+  // Point 2: Native Web Share API
+  const handleSharePhoto = async (photo: GuestPhoto) => {
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        if (photo.imageData.startsWith('data:image')) {
+          const res = await fetch(photo.imageData);
+          const blob = await res.blob();
+          const file = new File([blob], `SudutBingkai_${photo.shotNumber}.jpg`, { type: 'image/jpeg' });
+          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              title: event?.title || 'Foto SudutBingkai',
+              text: `Momen seru di ${event?.title}!`,
+              files: [file]
+            });
+            return;
+          }
+        }
+        await navigator.share({
+          title: event?.title || 'Foto SudutBingkai',
+          text: `Momen seru di ${event?.title}!`,
+          url: window.location.href
+        });
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Foto seru di ${event?.title}! ${window.location.href}`)}`, '_blank');
+        }
+      }
+    } else {
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Foto seru di ${event?.title}! ${window.location.href}`)}`, '_blank');
+    }
+  };
+
+  // Point 6: Voice Note Recording Functions
+  const startRecordingVoice = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) audioChunksRef.current.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        setAudioBlob(audioBlob);
+        stream.getTracks().forEach(t => t.stop());
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordDuration(0);
+
+      recordTimerRef.current = setInterval(() => {
+        setRecordDuration(prev => {
+          if (prev >= 15) {
+            stopRecordingVoice();
+            return 15;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } catch {
+      toast.error('Izinkan akses mikrofon untuk merekam pesan suara.');
+    }
+  };
+
+  const stopRecordingVoice = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+    }
+  };
+
+  const submitVoiceNote = async () => {
+    if (!audioBlob) return;
+    setIsUploadingAudio(true);
+    try {
+      const formData = new FormData();
+      formData.append('audio', audioBlob, 'voice.webm');
+      formData.append('eventId', eventId);
+      formData.append('guestName', guestName || 'Tamu');
+      formData.append('duration', String(recordDuration));
+
+      const res = await fetch('/api/voice-notes', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        setHasSentVoice(true);
+        toast.success('Pesan suara dan doa Anda telah tersimpan untuk pengantin!');
+      } else {
+        toast.error('Gagal mengirim pesan: ' + data.error);
+      }
+    } catch (e: any) {
+      toast.error('Error: ' + e.message);
+    } finally {
+      setIsUploadingAudio(false);
+    }
+  };
+
+  const availablePresets: FilmPresetId[] = (event?.allowedPresets && event.allowedPresets.length > 0)
+    ? event.allowedPresets
+    : (['portra', 'funsaver', 'quicksnap', 'ektar', 'cinestill', 'ilford', 'agfa', 'trix'] as FilmPresetId[]);
+  const presetInfo = FILM_PRESETS[selectedPreset] || (event ? FILM_PRESETS[event.preset] : FILM_PRESETS.portra) || FILM_PRESETS.portra;
+  const remaining = Math.max(0, maxShots - shotCount);
+  const activeFrameTemplate = event?.frameId ? FRAME_TEMPLATES[event.frameId] : FRAME_TEMPLATES['minimal-gold'];
+
+  // Viewfinder inner component (Dark camera chassis for true film aesthetic)
+  const cameraViewfinder = (
+    <div style={{
+      position: 'relative',
+      width: '100%',
+      height: '100%',
+      background: '#0B0A09',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      overflow: 'hidden',
+      color: '#fff',
+      userSelect: 'none'
+    }}>
+      {/* Live Video Feed with dynamic framing ratio */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden'
+      }}>
+        <video
+          ref={videoRef}
+          playsInline
+          muted
+          autoPlay
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+          }}
+          className={`film-${selectedPreset || event?.preset || 'portra'}`}
+        />
+
+        {/* Dynamic Framing Hairline Overlay (Changes with aspect ratio) */}
+        <div style={{
+          position: 'absolute',
+          top: aspectRatio === '1:1' ? '12%' : '8%',
+          bottom: aspectRatio === '1:1' ? '12%' : '14%',
+          width: aspectRatio === '9:16' ? 'calc(100% - 24px)' : 'calc(100% - 36px)',
+          maxWidth: aspectRatio === '1:1' ? '360px' : aspectRatio === '9:16' ? '340px' : '420px',
+          aspectRatio: aspectRatio === '1:1' ? '1/1' : aspectRatio === '9:16' ? '9/16' : '3/4',
+          border: '1px solid rgba(255, 255, 255, 0.28)',
+          borderRadius: '6px',
+          pointerEvents: 'none',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: '12px',
+          transition: 'all 0.3s ease'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ width: '14px', height: '14px', borderTop: '2.5px solid #C27803', borderLeft: '2.5px solid #C27803' }} />
+            <span style={{ width: '14px', height: '14px', borderTop: '2.5px solid #C27803', borderRight: '2.5px solid #C27803' }} />
+          </div>
+          <div style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.55)', fontSize: '20px', fontWeight: 300, letterSpacing: '4px' }}>
+            +
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <span style={{ width: '14px', height: '14px', borderBottom: '2.5px solid #C27803', borderLeft: '2.5px solid #C27803' }} />
+            <span style={{ width: '14px', height: '14px', borderBottom: '2.5px solid #C27803', borderRight: '2.5px solid #C27803' }} />
+          </div>
+        </div>
+
+        {/* Shutter Flash Animation */}
+        {flashTrigger && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: '#ffffff',
+            zIndex: 90,
+            opacity: 0.98,
+            transition: 'opacity 0.22s ease-out'
+          }} />
+        )}
+
+        {/* Animated Polaroid Spit-out Feedback Toast */}
+        <AnimatePresence>
+          {showToast && lastShotThumb && (
+            <motion.div
+              initial={{ y: 60, opacity: 0, scale: 0.88, rotate: -4 }}
+              animate={{ y: 0, opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ y: 30, opacity: 0, scale: 0.9 }}
+              transition={{ type: 'spring', damping: 22, stiffness: 350 }}
+              onClick={() => setShowRollModal(true)}
+              style={{
+                position: 'absolute',
+                bottom: '140px',
+                left: '20px',
+                zIndex: 80,
+                background: '#FFFFFF',
+                color: '#1D1D1F',
+                padding: '6px 12px 8px',
+                borderRadius: '14px',
+                boxShadow: '0 16px 36px rgba(0,0,0,0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                cursor: 'pointer'
+              }}
+            >
+              <div style={{ width: '40px', height: '52px', borderRadius: '4px', overflow: 'hidden', background: '#000', flexShrink: 0, border: '2px solid #F5F5F0' }}>
+                <img src={lastShotThumb} alt="Thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <CheckCircle2 size={13} color="#27AE60" />
+                  <strong style={{ fontSize: '12px', color: '#1D1D1F' }}>Tersimpan ke Roll!</strong>
+                </div>
+                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block' }}>
+                  Ketuk untuk lihat roll foto ({myPhotos.length})
+                </span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Top HUD Bar */}
+      <header style={{
+        position: 'relative',
+        zIndex: 20,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px 18px',
+        background: 'linear-gradient(180deg, rgba(11,10,9,0.92) 0%, transparent 100%)'
+      }}>
+        {/* Flash Mode Toggle (Screen vs Torch vs Off) */}
+        <button
+          onClick={cycleFlashMode}
+          style={{
+            background: flashMode !== 'off' ? '#C27803' : 'rgba(255, 255, 255, 0.12)',
+            color: '#FFFFFF',
+            border: 'none',
+            borderRadius: '999px',
+            padding: '6px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            cursor: 'pointer',
+            fontSize: '11px',
+            fontWeight: 600
+          }}
+          title="Mode Lampu Kilat"
+        >
+          <Zap size={14} fill={flashMode !== 'off' ? 'currentColor' : 'none'} />
+          <span>{flashMode === 'torch' ? 'TORCH' : flashMode === 'screen' ? 'FLASH' : 'OFF'}</span>
+        </button>
+
+        {/* Film Type Badge & Offline Indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {offlineCount > 0 && (
+            <div style={{
+              background: 'rgba(217, 119, 6, 0.25)',
+              border: '1px solid #D97706',
+              padding: '4px 8px',
+              borderRadius: '999px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontSize: '10px',
+              color: '#F59E0B'
+            }}>
+              <WifiOff size={11} />
+              <span>{offlineCount} Offline</span>
+            </div>
+          )}
+
+          {/* Film Type Badge & Switcher */}
+          <button
+            onClick={() => {
+              if (event?.allowGuestPresetSwitch && availablePresets.length > 1) {
+                const currentIndex = availablePresets.indexOf(selectedPreset);
+                const nextIndex = (currentIndex + 1) % availablePresets.length;
+                const nextPreset = availablePresets[nextIndex];
+                setSelectedPreset(nextPreset);
+                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                  try { navigator.vibrate(25); } catch {}
+                }
+                toast.info(`Film diganti: ${FILM_PRESETS[nextPreset]?.name || nextPreset}`);
+              }
+            }}
+            disabled={!event?.allowGuestPresetSwitch || availablePresets.length <= 1}
+            style={{
+              background: 'rgba(20, 19, 18, 0.85)',
+              backdropFilter: 'blur(12px)',
+              border: event?.allowGuestPresetSwitch && availablePresets.length > 1 ? '1px solid rgba(194, 120, 3, 0.6)' : '1px solid rgba(255, 255, 255, 0.15)',
+              padding: '6px 12px',
+              borderRadius: '999px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: event?.allowGuestPresetSwitch && availablePresets.length > 1 ? 'pointer' : 'default',
+              color: '#fff'
+            }}
+            title={event?.allowGuestPresetSwitch ? 'Ketuk untuk ganti film analog' : 'Emulasi film acara'}
+          >
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: presetInfo.accentColor || '#C27803' }} />
+            <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#fff' }}>
+              {presetInfo.name}
+            </span>
+            {event?.allowGuestPresetSwitch && availablePresets.length > 1 && (
+              <span style={{ fontSize: '9px', opacity: 0.6, marginLeft: '2px' }}>⇄</span>
+            )}
+          </button>
+        </div>
+
+        {/* Counter Badge */}
+        <div style={{
+          background: 'rgba(20, 19, 18, 0.85)',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          padding: '6px 12px',
+          borderRadius: '999px',
+          fontFamily: 'var(--font-mono)',
+          fontSize: '11px',
+          color: remaining <= 3 ? '#FF6B6B' : '#fff',
+          fontWeight: 600
+        }}>
+          {remaining.toString().padStart(2, '0')} / {maxShots} SISA
+        </div>
+      </header>
+
+      {/* Middle Floating Toggles: Aspect Ratio & Frame Switcher */}
+      <div style={{
+        position: 'relative',
+        zIndex: 20,
+        padding: '0 20px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center'
+      }}>
+        {/* Aspect Ratio Switcher (1:1 / 3:4 / 9:16) */}
+        <button
+          onClick={cycleAspectRatio}
+          style={{
+            background: 'rgba(15, 14, 13, 0.75)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.18)',
+            padding: '5px 12px',
+            borderRadius: '999px',
+            color: '#FFFFFF',
+            fontSize: '11px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px'
+          }}
+          title="Ganti Rasio Foto"
+        >
+          <Layers size={12} />
+          <span>{aspectRatio}</span>
+        </button>
+
+        {/* Frame Toggle (Event Frame vs RAW Photo) */}
+        {event?.allowGuestFrameToggle !== false && (
+          <button
+            onClick={() => setUseFrame(!useFrame)}
+            style={{
+              background: useFrame ? 'rgba(194, 120, 3, 0.85)' : 'rgba(15, 14, 13, 0.75)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              padding: '5px 12px',
+              borderRadius: '999px',
+              color: '#FFFFFF',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px'
+            }}
+            title="Pilih Pakai Bingkai atau Raw"
+          >
+            <Sparkles size={12} />
+            <span>{useFrame ? 'BINGKAI: ON' : 'RAW: OFF'}</span>
+          </button>
+        )}
+      </div>
+
+      {/* Optional Wish Bar before shooting */}
+      <div style={{
+        position: 'relative',
+        zIndex: 20,
+        padding: '0 20px',
+        display: 'flex',
+        justifyContent: 'center',
+        marginTop: '8px'
+      }}>
+        <div style={{
+          background: 'rgba(15, 14, 13, 0.75)',
+          backdropFilter: 'blur(12px)',
+          borderRadius: '999px',
+          border: '1px solid rgba(255, 255, 255, 0.15)',
+          padding: '4px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          maxWidth: '360px',
+          width: '100%'
+        }}>
+          <Heart size={13} color="#C27803" />
+          <input
+            type="text"
+            maxLength={60}
+            placeholder="Ketik ucapan untuk pengantin (opsional)..."
+            value={currentWish}
+            onChange={(e) => setCurrentWish(e.target.value)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              outline: 'none',
+              color: '#FFFFFF',
+              fontSize: '11.5px',
+              width: '100%'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Film Switcher Strip for Guests (when host enables allowGuestPresetSwitch) */}
+      {event?.allowGuestPresetSwitch && availablePresets.length > 1 && (
+        <div style={{
+          position: 'relative',
+          zIndex: 20,
+          padding: '6px 16px 2px',
+          display: 'flex',
+          gap: '7px',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}>
+          {availablePresets.map((pid) => {
+            const p = FILM_PRESETS[pid];
+            if (!p) return null;
+            const isSelected = selectedPreset === pid;
+            return (
+              <button
+                key={pid}
+                onClick={() => {
+                  setSelectedPreset(pid);
+                  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                    try { navigator.vibrate(20); } catch {}
+                  }
+                  toast.info(`Film: ${p.name}`);
+                }}
+                style={{
+                  background: isSelected ? 'rgba(194, 120, 3, 0.92)' : 'rgba(15, 14, 13, 0.72)',
+                  backdropFilter: 'blur(10px)',
+                  border: isSelected ? '1.5px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.15)',
+                  color: '#FFFFFF',
+                  borderRadius: '999px',
+                  padding: '4px 10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  cursor: 'pointer',
+                  fontSize: '10.5px',
+                  fontWeight: isSelected ? 700 : 500,
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.15s ease',
+                  transform: isSelected ? 'scale(1.04)' : 'scale(1)'
+                }}
+              >
+                <span style={{
+                  width: '7px',
+                  height: '7px',
+                  borderRadius: '50%',
+                  background: p.accentColor || '#C27803'
+                }} />
+                <span>{p.name.replace(/^(Kodak|Fujifilm|Ilford|Agfa|CineStill)\s+/i, '')}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Bottom Shutter Controls */}
+      <footer style={{
+        position: 'relative',
+        zIndex: 20,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '16px 20px 24px',
+        background: 'linear-gradient(0deg, rgba(11,10,9,0.96) 0%, transparent 100%)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', width: '100%', maxWidth: '380px' }}>
+          {/* Flip Lens */}
+          <button
+            onClick={flipCamera}
+            style={{
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: 'none',
+              color: '#fff',
+              width: '46px',
+              height: '46px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+            title="Putar Kamera"
+          >
+            <RotateCcw size={18} />
+          </button>
+
+          {/* Shutter Button (Mechanical feel) */}
+          <button
+            onClick={takePhoto}
+            disabled={isCapturing || remaining === 0}
+            className="shutter-ring"
+            style={{
+              width: '78px',
+              height: '78px',
+              borderRadius: '50%',
+              background: remaining === 0 ? '#4A4845' : '#FFFFFF',
+              border: '4px solid #12110F',
+              outline: '3px solid rgba(255, 255, 255, 0.8)',
+              cursor: remaining === 0 ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 0
+            }}
+            title="Ambil Foto"
+          >
+            <div style={{
+              width: '62px',
+              height: '62px',
+              borderRadius: '50%',
+              border: '2px solid rgba(0, 0, 0, 0.15)'
+            }} />
+          </button>
+
+          {/* My Roll Button (View Taken Photos) */}
+          <button
+            onClick={() => setShowRollModal(true)}
+            style={{
+              background: myPhotos.length > 0 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.12)',
+              border: 'none',
+              color: myPhotos.length > 0 ? '#1D1D1F' : '#FFFFFF',
+              width: '46px',
+              height: '46px',
+              borderRadius: '14px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
+            title="Roll Foto Saya"
+          >
+            {lastShotThumb ? (
+              <img src={lastShotThumb} alt="My Roll" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <Film size={18} />
+            )}
+            {myPhotos.length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '2px',
+                right: '2px',
+                background: '#C27803',
+                color: '#fff',
+                fontSize: '9px',
+                fontWeight: 700,
+                width: '14px',
+                height: '14px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {myPhotos.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Subtle Co-Branding footer */}
+        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.6, fontSize: '10px', color: '#86868B' }}>
+          <span>SudutBingkai</span>
+          <span>•</span>
+          <span>Tamu: <strong>{guestName || 'Undangan'}</strong></span>
+        </div>
+      </footer>
+
+      {/* Guest Personal Roll Modal / Drawer with Motion Spring Animation */}
+      <AnimatePresence>
+        {showRollModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.85)',
+              backdropFilter: 'blur(16px)',
+              zIndex: 100,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end'
+            }}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              style={{
+                background: '#FFFFFF',
+                color: '#1D1D1F',
+                borderTopLeftRadius: '24px',
+                borderTopRightRadius: '24px',
+                padding: '24px 20px 36px',
+                maxHeight: '82vh',
+                display: 'flex',
+                flexDirection: 'column',
+                position: 'relative'
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div>
+                  <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
+                    ROLL FOTO SAYA ({myPhotos.length} JEPETAN)
+                  </span>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: '2px 0 0' }}>
+                    Koleksi Momen {guestName}
+                  </h3>
+                </div>
+
+                <button
+                  onClick={() => setShowRollModal(false)}
+                  className="glass-pill"
+                  style={{ width: '36px', height: '36px', borderRadius: '50%', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Photos List */}
+              {myPhotos.length === 0 ? (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#86868B' }}>
+                  <Camera size={36} style={{ margin: '0 auto 12px', opacity: 0.5 }} />
+                  <p style={{ fontSize: '14px', margin: 0 }}>Belum ada foto yang diambil.</p>
+                  <span style={{ fontSize: '12px' }}>Arahkan kamera ke momen seru dan tekan tombol rana!</span>
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))',
+                  gap: '12px',
+                  overflowY: 'auto',
+                  paddingBottom: '20px'
+                }}>
+                  {myPhotos.map((photo) => (
+                    <div
+                      key={photo.id}
+                      style={{
+                        background: '#FBFBFA',
+                        borderRadius: '12px',
+                        overflow: 'hidden',
+                        border: '1px solid rgba(0,0,0,0.08)',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}
+                    >
+                      <div style={{ position: 'relative', width: '100%', aspectRatio: photo.aspectRatio === '1:1' ? '1/1' : photo.aspectRatio === '9:16' ? '9/16' : '3/4', background: '#000' }}>
+                        <img src={photo.imageData} alt={`Jepretan #${photo.shotNumber}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+
+                      <div style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B' }}>
+                          #{photo.shotNumber}
+                        </span>
+                        
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          {/* Point 2: Share Button */}
+                          <button
+                            onClick={() => handleSharePhoto(photo)}
+                            title="Bagikan ke WhatsApp/IG"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#C27803',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '2px'
+                            }}
+                          >
+                            <Share2 size={13} />
+                          </button>
+
+                          <button
+                            onClick={() => downloadSinglePhoto(photo.imageData, photo.shotNumber)}
+                            title="Unduh ke HP"
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#1D1D1F',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '2px'
+                            }}
+                          >
+                            <Download size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Modal Bottom Actions */}
+              <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.08)', paddingTop: '16px', display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => setShowRollModal(false)}
+                  className="btn-apple-black"
+                  style={{ flex: 1, padding: '12px', fontSize: '13px', borderRadius: '12px' }}
+                >
+                  <span>Kembali Motret ({remaining} Sisa)</span>
+                </button>
+
+                <Link
+                  href={`/event/${eventId}`}
+                  className="glass-pill"
+                  style={{ padding: '12px 18px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Eye size={14} />
+                  <span>Lihat Galeri Bersama</span>
+                </Link>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Quota Exhausted Overlay with Point 6: Voice Note Closing Message */}
+      {remaining === 0 && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(11, 10, 9, 0.94)',
+          zIndex: 85,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '24px',
+          textAlign: 'center',
+          overflowY: 'auto'
+        }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(194, 120, 3, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803', marginBottom: '14px' }}>
+            <Film size={26} />
+          </div>
+
+          <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', marginBottom: '6px' }}>
+            ROLL KAMERA SELESAI
+          </span>
+
+          <h2 className="font-display-serif" style={{ fontSize: '24px', color: '#FFFFFF', marginBottom: '8px' }}>
+            Terima Kasih, {guestName}!
+          </h2>
+
+          <p style={{ color: '#A1A1A6', fontSize: '13px', maxWidth: '320px', lineHeight: 1.5, marginBottom: '20px' }}>
+            Anda telah menghabiskan seluruh jepretan ({maxShots} foto). Semua foto telah aman tersimpan di roll pernikahan {event?.coupleOrHost || 'pengantin'}.
+          </p>
+
+          {/* Point 6: Voice Note Penutup for Host */}
+          {event?.allowVoiceNote !== false && !hasSentVoice && (
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              borderRadius: '20px',
+              padding: '18px 20px',
+              maxWidth: '320px',
+              width: '100%',
+              marginBottom: '20px'
+            }}>
+              <span className="font-mono-film" style={{ color: '#D97706', fontSize: '10.5px', display: 'block', marginBottom: '4px' }}>
+                PESAN PENUTUP SPESIAL
+              </span>
+              <strong style={{ fontSize: '13px', color: '#FFFFFF', display: 'block', marginBottom: '8px' }}>
+                Tinggalkan Ucapan Suara untuk Pengantin
+              </strong>
+
+              {!audioBlob ? (
+                <div>
+                  <button
+                    onClick={isRecording ? stopRecordingVoice : startRecordingVoice}
+                    style={{
+                      background: isRecording ? '#E11D48' : '#C27803',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '999px',
+                      padding: '10px 20px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginTop: '6px'
+                    }}
+                  >
+                    {isRecording ? <Square size={14} /> : <Mic size={14} />}
+                    <span>{isRecording ? `Merekam (${recordDuration}s / 15s) - Stop` : 'Tekan & Rekam Ucapan (15s)'}</span>
+                  </button>
+                  {isRecording && (
+                    <span style={{ fontSize: '11px', color: '#F87171', display: 'block', marginTop: '6px', animation: 'pulse 1s infinite' }}>
+                      ● Sedang merekam suara Anda...
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                  <span style={{ fontSize: '12px', color: '#4ADE80' }}>✓ Rekaman suara siap dikirim ({recordDuration}s)</span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={submitVoiceNote}
+                      disabled={isUploadingAudio}
+                      style={{
+                        background: '#C27803',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '8px 16px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {isUploadingAudio ? 'Mengirim...' : 'Kirim Pesan Suara'}
+                    </button>
+                    <button
+                      onClick={() => setAudioBlob(null)}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Ulangi
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {hasSentVoice && (
+            <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22C55E', borderRadius: '14px', padding: '10px 16px', maxWidth: '320px', width: '100%', marginBottom: '20px' }}>
+              <span style={{ fontSize: '12px', color: '#86EFAC' }}>✓ Pesan suara Anda telah berhasil disimpan untuk pengantin!</span>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '280px' }}>
+            <button
+              onClick={() => setShowRollModal(true)}
+              className="btn-apple-black"
+              style={{ background: '#FFFFFF', color: '#1D1D1F', padding: '12px', fontSize: '13.5px', borderRadius: '12px' }}
+            >
+              <span>Buka Roll Foto Saya ({myPhotos.length})</span>
+            </button>
+
+            <Link
+              href={`/event/${eventId}`}
+              className="glass-pill"
+              style={{ padding: '12px', fontSize: '13.5px', textDecoration: 'none', color: '#FFFFFF', textAlign: 'center' }}
+            >
+              <span>Buka Galeri Bersama</span>
+            </Link>
+          </div>
+        </div>
+      )}
+
+      <canvas ref={canvasRef} style={{ display: 'none' }} />
+    </div>
+  );
+
+  // If user hasn't entered their name yet (Point 7: Simple Name Check-in)
+  const checkInScreen = (
+    <div style={{
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+      padding: '36px 28px',
+      background: '#FFFFFF',
+      color: '#1D1D1F',
+      position: 'relative'
+    }}>
+      <div style={{ maxWidth: '340px', margin: '0 auto', width: '100%' }}>
+        <p className="font-mono-film" style={{ color: '#C27803', marginBottom: '8px' }}>
+          {event?.coupleOrHost || 'Pernikahan Sarah & Dimas'}
+        </p>
+
+        <h1 className="font-display-serif" style={{ fontSize: '32px', lineHeight: 1.15, marginBottom: '14px', color: '#1D1D1F' }}>
+          Kamera Tamu <em>Digital</em>
+        </h1>
+
+        <p style={{ color: '#515154', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '24px' }}>
+          Setiap momen yang kamu tangkap malam ini akan menjadi kejutan manis bagi yang berbahagia. Tersedia <strong>{maxShots} jepretan</strong> analog bernuansa {presetInfo.name}. Masukkan namamu untuk mulai membidik.
+        </p>
+
+        <form onSubmit={handleNameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+              Nama Anda *
+            </label>
+            <input
+              type="text"
+              required
+              maxLength={24}
+              placeholder="Contoh: Sarah & Budi"
+              value={guestName}
+              onChange={(e) => setGuestName(e.target.value)}
+              className="glass-input"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                fontSize: '14px'
+              }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            className="btn-apple-black"
+            style={{ width: '100%', padding: '14px', borderRadius: '12px', marginTop: '6px' }}
+          >
+            <span>Buka Rana Kamera</span>
+            <ArrowRight size={16} />
+          </button>
+        </form>
+
+        <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid rgba(0, 0, 0, 0.08)', display: 'flex', alignItems: 'center', gap: '8px', color: '#6E6E73', fontSize: '12px' }}>
+          <Check size={14} color="#C27803" />
+          <span>Foto langsung tersimpan ke album pengantin & roll Anda</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (loadingEvent) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0B0A09', color: '#fff' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(255,255,255,0.2)', borderTopColor: '#C27803', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px' }} />
+          <p style={{ fontSize: '13px', color: '#86868B', fontFamily: 'var(--font-mono)' }}>MEMPERSIAPKAN ROLL KAMERA...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (eventNotFound) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FBFBFA', color: '#1D1D1F', padding: '24px' }}>
+        <div className="glass-card" style={{ maxWidth: '420px', width: '100%', padding: '40px 28px', textAlign: 'center', borderRadius: '24px' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(217, 119, 6, 0.1)', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Film size={26} />
+          </div>
+          <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', display: 'block', marginBottom: '8px' }}>
+            KODE ACARA TIDAK VALID
+          </span>
+          <h1 className="font-display-serif" style={{ fontSize: '26px', fontWeight: 700, marginBottom: '10px', color: '#1D1D1F' }}>
+            Acara Tidak Ditemukan
+          </h1>
+          <p style={{ color: '#6E6E73', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '24px' }}>
+            Tautan barcode kamera acara ini tidak ditemukan atau belum didaftarkan oleh penyelenggara.
+          </p>
+          <Link href="/" className="btn-apple-black" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', textDecoration: 'none', borderRadius: '12px', fontSize: '13.5px' }}>
+            <span>Kembali ke Beranda</span>
+            <ArrowRight size={15} />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // DESKTOP STUDIO VIEW (Apple Luminous Light Glass Studio)
+  if (isDesktop) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: '#F4F4F1',
+        color: '#1D1D1F',
+        display: 'flex',
+        flexDirection: 'column',
+        position: 'relative'
+      }}>
+        {/* Background Radial Glow */}
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          width: '900px',
+          height: '600px',
+          background: 'radial-gradient(circle, rgba(194, 120, 3, 0.06) 0%, transparent 70%)',
+          pointerEvents: 'none',
+          zIndex: 0
+        }} />
+
+        {/* Studio Top Navigation */}
+        <header className="glass-nav" style={{
+          position: 'relative',
+          zIndex: 50,
+          padding: '16px 36px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <Link href="/" style={{ textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <ArrowLeft size={16} />
+              <img 
+                src="/sudut-bingkai-logo.png" 
+                alt="Sudut Bingkai" 
+                style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }} 
+              />
+            </Link>
+            <span style={{ color: 'rgba(0, 0, 0, 0.2)' }}>/</span>
+            <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
+              STUDIO SIMULATOR
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <Link href={`/event/${eventId}`} className="btn-apple-black" style={{ fontSize: '13px', padding: '8px 18px', textDecoration: 'none' }}>
+              <Eye size={14} />
+              <span>Buka Galeri Acara</span>
+            </Link>
+          </div>
+        </header>
+
+        {/* Studio Body: Side-by-Side Smartphone Chassis + Info */}
+        <main style={{
+          flex: 1,
+          maxWidth: '1200px',
+          width: '100%',
+          margin: '0 auto',
+          padding: '40px 24px',
+          display: 'grid',
+          gridTemplateColumns: '400px 1fr',
+          gap: '64px',
+          alignItems: 'center',
+          position: 'relative',
+          zIndex: 10
+        }}>
+          {/* Left Column: Smartphone Frame */}
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <div className="phone-mockup">
+              <div className="phone-island" />
+              <div style={{ flex: 1, position: 'relative' }}>
+                {hasEnteredName ? cameraViewfinder : checkInScreen}
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Editorial Event Context & Mobile QR Code */}
+          <div>
+            <div className="glass-pill" style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 14px',
+              borderRadius: '999px',
+              marginBottom: '20px'
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
+              <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
+                PERNIKAHAN & ACARA
+              </span>
+            </div>
+
+            <h1 className="font-display-serif" style={{ fontSize: '46px', lineHeight: 1.1, marginBottom: '16px', color: '#1D1D1F' }}>
+              {event?.title || 'Pernikahan Dimas & Sarah'}
+            </h1>
+
+            <p style={{ fontSize: '16px', color: '#515154', lineHeight: 1.7, marginBottom: '32px', maxWidth: '540px' }}>
+              Anda sedang membuka kamera tamu melalui browser desktop. Anda dapat menguji fitur langsung lewat simulator ponsel di samping, atau memindai QR code di bawah dengan kamera smartphone Anda untuk memotret di genggaman tangan.
+            </p>
+
+            {/* QR Scan Card */}
+            <div className="glass-card" style={{
+              borderRadius: '20px',
+              padding: '24px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '24px',
+              maxWidth: '520px',
+              marginBottom: '32px'
+            }}>
+              {qrDataUrl && (
+                <div style={{
+                  padding: '8px',
+                  background: '#FFFFFF',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(0, 0, 0, 0.08)',
+                  flexShrink: 0
+                }}>
+                  <img src={qrDataUrl} alt="Scan QR" style={{ width: '110px', height: '110px', display: 'block' }} />
+                </div>
+              )}
+              <div>
+                <h2 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '6px', color: '#1D1D1F' }}>
+                  Pindai dengan Smartphone
+                </h2>
+                <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, marginBottom: '12px' }}>
+                  Arahkan kamera ponsel Anda ke QR ini untuk membuka kamera tamu secara instan tanpa unduh aplikasi.
+                </p>
+                <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
+                  PRESET: {presetInfo.name} • {maxShots} FOTO/TAMU
+                </span>
+              </div>
+            </div>
+
+            {/* Event Specs */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', maxWidth: '520px' }}>
+              <div className="glass-card" style={{ padding: '16px', borderRadius: '16px' }}>
+                <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>
+                  FILTER
+                </span>
+                <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>{presetInfo.name}</strong>
+              </div>
+
+              <div className="glass-card" style={{ padding: '16px', borderRadius: '16px' }}>
+                <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>
+                  BINGKAI
+                </span>
+                <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>{activeFrameTemplate.name}</strong>
+              </div>
+
+              <div className="glass-card" style={{ padding: '16px', borderRadius: '16px' }}>
+                <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>
+                  BATAS FOTO
+                </span>
+                <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>{maxShots} / Tamu</strong>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // MOBILE FULLSCREEN VIEW (100dvh edge to edge)
+  return (
+    <div style={{ width: '100vw', height: '100dvh', overflow: 'hidden', background: '#0B0A09' }}>
+      {hasEnteredName ? cameraViewfinder : checkInScreen}
+    </div>
+  );
+}
