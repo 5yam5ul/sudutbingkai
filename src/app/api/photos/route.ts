@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const eventId = searchParams.get('eventId') || undefined;
     const includeHidden = searchParams.get('includeHidden') === 'true';
 
-    const photos = getAllPhotos(eventId, includeHidden);
+    const photos = await getAllPhotos(eventId, includeHidden);
     return NextResponse.json({ success: true, photos });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     // Validate that event exists
-    const event = getEventById(body.eventId);
+    const event = await getEventById(body.eventId);
     if (!event) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
     }
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
       frameId: body.frameId || 'none'
     };
 
-    const saved = savePhoto(newPhoto);
+    const saved = await savePhoto(newPhoto);
     return NextResponse.json({ success: true, photo: saved });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 400 });
@@ -70,7 +70,7 @@ export async function PATCH(request: Request) {
       updates.caption = body.caption;
     }
 
-    const updated = updatePhoto(body.id, updates);
+    const updated = await updatePhoto(body.id, updates);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Foto tidak ditemukan' }, { status: 404 });
     }
@@ -89,7 +89,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'ID foto diperlukan' }, { status: 400 });
     }
 
-    const deleted = deletePhoto(id);
+    const deleted = await deletePhoto(id);
     if (!deleted) {
       return NextResponse.json({ success: false, error: 'Foto tidak ditemukan atau gagal dihapus' }, { status: 404 });
     }

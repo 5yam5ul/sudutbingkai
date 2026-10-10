@@ -8,14 +8,14 @@ export async function GET(request: Request) {
     const id = searchParams.get('id');
 
     if (id) {
-      const event = getEventById(id);
+      const event = await getEventById(id);
       if (!event) {
         return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
       }
       return NextResponse.json({ success: true, event });
     }
 
-    const events = getAllEvents();
+    const events = await getAllEvents();
     return NextResponse.json({ success: true, events });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
@@ -60,8 +60,8 @@ export async function POST(request: Request) {
       vendorInstagram: body.vendorInstagram
     };
 
-    saveEvent(newEvent);
-    return NextResponse.json({ success: true, event: newEvent });
+    const saved = await saveEvent(newEvent);
+    return NextResponse.json({ success: true, event: saved });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 400 });
   }
@@ -93,7 +93,7 @@ export async function PATCH(request: Request) {
     if (body.allowVoiceNote !== undefined) updates.allowVoiceNote = body.allowVoiceNote;
     if (body.allowGuestFrameToggle !== undefined) updates.allowGuestFrameToggle = body.allowGuestFrameToggle;
 
-    const updated = updateEvent(body.id, updates);
+    const updated = await updateEvent(body.id, updates);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
     }

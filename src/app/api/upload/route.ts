@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export async function POST(request: Request) {
   try {
@@ -17,28 +18,65 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Bingkai khusus harus berformat PNG dengan background transparan' }, { status: 400 });
     }
 
-    // Target folder
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const ext = file.name.split('.').pop() || 'png';
     const subFolder = type === 'frame' ? 'frames' : 'general';
-    const targetDir = path.join(process.cwd(), 'public', 'uploads', subFolder);
-    if (!fs.existsSync(targetDir)) {
-      fs.mkdirSync(targetDir, { recursive: true });
+    const filename = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
+
+    // 1. Try upload to Supabase Storage if configured
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const storagePath = `${subFolder}/${filename}`;
+        const { error: uploadError } = await supabase.storage
+          .from('photos')
+          .upload(storagePath, buffer, {
+            contentType: mime || 'image/png',
+            upsert: true
+          });
+
+        if (!uploadError) {
+          const { data: publicUrlData } = supabase.storage
+            .from('photos')
+            .getPublicUrl(storagePath);
+
+          return NextResponse.json({
+            success: true,
+            url: publicUrlData.publicUrl,
+            filename,
+            size: file.size
+          });
+        }
+        console.warn('Supabase storage upload error:', uploadError.message);
+      } catch (uploadEx) {
+        console.warn('Supabase storage upload exception:', uploadEx);
+      }
     }
 
-    const ext = file.name.split('.').pop() || 'png';
-    const filename = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
-    const targetPath = path.join(targetDir, filename);
+    // 2. Local fallback
+    try {
+      const targetDir = path.join(process.cwd(), 'public', 'uploads', subFolder);
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    fs.writeFileSync(targetPath, buffer);
+      const targetPath = path.join(targetDir, filename);
+      fs.writeFileSync(targetPath, buffer);
 
-    const publicUrl = `/uploads/${subFolder}/${filename}`;
+      const publicUrl = `/uploads/${subFolder}/${filename}`;
 
-    return NextResponse.json({
-      success: true,
-      url: publicUrl,
-      filename,
-      size: file.size
-    });
+      return NextResponse.json({
+        success: true,
+        url: publicUrl,
+        filename,
+        size: file.size
+      });
+    } catch (fsErr) {
+      console.error('Local fallback failed (likely read-only serverless environment):', fsErr);
+      return NextResponse.json({
+        success: false,
+        error: 'Penyimpanan file gagal. Pastikan Supabase Storage telah aktif.'
+      }, { status: 500 });
+    }
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
   }
