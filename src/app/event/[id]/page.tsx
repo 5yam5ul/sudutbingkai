@@ -3,7 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Camera, Tv, Printer, Download, Share2, RefreshCw, ArrowLeft, Image as ImageIcon, Users, Check, Lock, Unlock, Clock, Volume2, Mic, X } from 'lucide-react';
+import { 
+  Camera, Tv, Printer, Download, Share2, RefreshCw, ArrowLeft, 
+  Image as ImageIcon, Users, Check, Lock, Unlock, Clock, Volume2, 
+  Mic, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Film, Sparkles 
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { hapticLightTap, hapticDialClick } from '@/lib/haptics';
 import { EventData, PhotoRecord } from '@/lib/types';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FRAME_TEMPLATES } from '@/lib/frames';
@@ -17,6 +23,39 @@ interface VoiceNoteRecord {
   duration: number;
   timestamp: string;
 }
+
+const slideVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 320 : direction < 0 ? -320 : 0,
+    opacity: 0,
+    scale: 0.92,
+    rotate: direction > 0 ? 3.5 : direction < 0 ? -3.5 : 0
+  }),
+  center: {
+    zIndex: 1,
+    x: 0,
+    opacity: 1,
+    scale: 1,
+    rotate: 0,
+    transition: {
+      x: { type: 'spring' as const, stiffness: 320, damping: 30 },
+      opacity: { duration: 0.2 },
+      scale: { type: 'spring' as const, stiffness: 320, damping: 30 },
+      rotate: { type: 'spring' as const, stiffness: 320, damping: 30 }
+    }
+  },
+  exit: (direction: number) => ({
+    zIndex: 0,
+    x: direction < 0 ? 320 : -320,
+    opacity: 0,
+    scale: 0.92,
+    rotate: direction < 0 ? 3.5 : -3.5,
+    transition: {
+      x: { type: 'spring' as const, stiffness: 320, damping: 30 },
+      opacity: { duration: 0.2 }
+    }
+  })
+};
 
 export default function EventDashboardPage() {
   const params = useParams();
@@ -40,6 +79,58 @@ export default function EventDashboardPage() {
 
   // Lightbox Photo Modal State
   const [activePhoto, setActivePhoto] = useState<PhotoRecord | null>(null);
+  const [slideDirection, setSlideDirection] = useState<number>(0);
+  const [isZoomed, setIsZoomed] = useState(false);
+  const filmStripRef = React.useRef<HTMLDivElement | null>(null);
+
+  // Unlocked photos available for preview
+  const isRollLocked = event?.revealMode === 'delayed' && !countdown.isExpired;
+  const availablePhotos = isRollLocked ? [] : photos;
+  const activeIndex = activePhoto ? availablePhotos.findIndex(p => p.id === activePhoto.id) : -1;
+
+  const paginate = (newDirection: number) => {
+    if (availablePhotos.length <= 1 || !activePhoto || activeIndex === -1) return;
+    hapticLightTap();
+    setIsZoomed(false);
+    setSlideDirection(newDirection);
+    const newIndex = (activeIndex + newDirection + availablePhotos.length) % availablePhotos.length;
+    setActivePhoto(availablePhotos[newIndex]);
+  };
+
+  const jumpToPhoto = (targetPhoto: PhotoRecord, index: number) => {
+    if (!activePhoto || targetPhoto.id === activePhoto.id) return;
+    hapticDialClick();
+    setIsZoomed(false);
+    setSlideDirection(index > activeIndex ? 1 : -1);
+    setActivePhoto(targetPhoto);
+  };
+
+  // Keyboard navigation for Lightbox
+  useEffect(() => {
+    if (!activePhoto) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowRight') {
+        paginate(1);
+      } else if (e.key === 'ArrowLeft') {
+        paginate(-1);
+      } else if (e.key === 'Escape') {
+        setActivePhoto(null);
+        setIsZoomed(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activePhoto, availablePhotos, activeIndex]);
+
+  // Center active thumbnail in film strip scrubber
+  useEffect(() => {
+    if (activePhoto && filmStripRef.current) {
+      const activeEl = filmStripRef.current.querySelector(`[data-photo-id="${activePhoto.id}"]`) as HTMLElement;
+      if (activeEl) {
+        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      }
+    }
+  }, [activePhoto]);
 
   const fetchEventData = async () => {
     try {
@@ -618,104 +709,436 @@ export default function EventDashboardPage() {
         )}
       </main>
 
-      {/* Lightbox Photo Modal */}
-      {activePhoto && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(0, 0, 0, 0.85)',
-            backdropFilter: 'blur(10px)',
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px'
-          }}
-          onClick={() => setActivePhoto(null)}
-        >
-          <div
-            className="glass-card"
+      {/* Lightbox Photo Modal (Ultra-Smooth Drag/Swipe + Film Strip Scrubber) */}
+      <AnimatePresence>
+        {activePhoto && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.22 }}
             style={{
-              background: '#FFFFFF',
-              maxWidth: '520px',
-              width: '100%',
-              borderRadius: '28px',
-              padding: '20px',
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(8, 7, 6, 0.95)',
+              backdropFilter: 'blur(20px)',
+              zIndex: 100,
               display: 'flex',
               flexDirection: 'column',
-              gap: '16px'
+              justifyContent: 'space-between',
+              padding: 'calc(max(12px, env(safe-area-inset-top, 0px))) 16px calc(max(14px, env(safe-area-inset-bottom, 0px))) 16px',
+              color: '#FFFFFF',
+              userSelect: 'none',
+              touchAction: 'none'
             }}
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => {
+              setActivePhoto(null);
+              setIsZoomed(false);
+            }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <strong style={{ fontSize: '15px', color: '#1D1D1F', display: 'block' }}>{activePhoto.guestName}</strong>
-                <span className="font-mono-film" style={{ fontSize: '11px', color: '#86868B' }}>Jepretan #{activePhoto.shotNumber}</span>
-              </div>
-              <button
-                onClick={() => setActivePhoto(null)}
-                className="glass-pill"
-                style={{ padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div style={{ borderRadius: '20px', overflow: 'hidden', background: '#000', maxHeight: '60vh', display: 'flex', justifyContent: 'center' }}>
-              <img
-                src={activePhoto.imageData}
-                alt={activePhoto.guestName}
-                style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }}
-              />
-            </div>
-
-            {/* Guest Wish / Caption Callout */}
-            {activePhoto.caption && (
-              <div style={{
-                padding: '12px 14px',
-                borderRadius: '14px',
-                background: 'rgba(194, 120, 3, 0.08)',
-                border: '1px solid rgba(194, 120, 3, 0.25)',
+            {/* Header: Photo Counter, Guest Name, Zoom & Close */}
+            <div
+              style={{
                 display: 'flex',
-                alignItems: 'flex-start',
-                gap: '10px'
-              }}>
-                <span style={{ fontSize: '18px', lineHeight: 1 }}>💬</span>
-                <div>
-                  <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#C27803', display: 'block', marginBottom: '3px', letterSpacing: '0.5px' }}>
-                    UCAPAN DARI {activePhoto.guestName.toUpperCase()}
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                zIndex: 20,
+                paddingBottom: '8px'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                <span
+                  style={{
+                    background: 'rgba(245, 158, 11, 0.2)',
+                    border: '1px solid rgba(245, 158, 11, 0.5)',
+                    color: '#FBBF24',
+                    padding: '4px 10px',
+                    borderRadius: '999px',
+                    fontSize: '11px',
+                    fontFamily: 'var(--font-mono)',
+                    fontWeight: 700,
+                    letterSpacing: '0.04em',
+                    flexShrink: 0
+                  }}
+                >
+                  FOTO {activeIndex + 1}/{availablePhotos.length}
+                </span>
+
+                <div style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <strong style={{ fontSize: '13.5px', color: '#FFFFFF', fontWeight: 600 }}>
+                    {activePhoto.guestName}
+                  </strong>
+                  <span className="font-mono-film" style={{ fontSize: '11px', color: '#A1A1A6', marginLeft: '6px' }}>
+                    #{activePhoto.shotNumber}
                   </span>
-                  <p style={{ margin: 0, fontSize: '13.5px', color: '#1D1D1F', fontStyle: 'italic', lineHeight: '1.5', fontWeight: 500 }}>
-                    &ldquo;{activePhoto.caption}&rdquo;
-                  </p>
                 </div>
               </div>
-            )}
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <button
-                onClick={() => handleSharePhoto(activePhoto)}
-                className="btn-apple-black"
-                style={{ padding: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
-              >
-                <Share2 size={14} />
-                <span>Bagikan (Share)</span>
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => setIsZoomed(!isZoomed)}
+                  style={{
+                    background: isZoomed ? '#F59E0B' : 'rgba(255, 255, 255, 0.12)',
+                    border: isZoomed ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.2)',
+                    color: isZoomed ? '#000000' : '#FFFFFF',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease'
+                  }}
+                  title={isZoomed ? "Perkecil (Zoom Out)" : "Perbesar (Zoom In 2x)"}
+                >
+                  {isZoomed ? <ZoomOut size={16} /> : <ZoomIn size={16} />}
+                </button>
 
-              <a
-                href={activePhoto.imageData}
-                download={`sudutbingkai-${activePhoto.guestName}-${activePhoto.shotNumber}.jpg`}
-                className="glass-pill"
-                style={{ padding: '10px', fontSize: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', textDecoration: 'none', color: '#1D1D1F' }}
-              >
-                <Download size={14} />
-                <span>Unduh Foto</span>
-              </a>
+                <button
+                  onClick={() => {
+                    setActivePhoto(null);
+                    setIsZoomed(false);
+                  }}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF',
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                  title="Tutup Preview (Esc)"
+                >
+                  <X size={18} />
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+
+            {/* Central Stage: Draggable / Swipeable Photo Canvas + Floating Chevrons */}
+            <div
+              style={{
+                flex: 1,
+                minHeight: 0,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden',
+                padding: '6px 0'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Floating Prev Button */}
+              {availablePhotos.length > 1 && (
+                <button
+                  onClick={() => paginate(-1)}
+                  style={{
+                    position: 'absolute',
+                    left: '6px',
+                    zIndex: 25,
+                    background: 'rgba(20, 18, 16, 0.65)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Foto Sebelumnya (Geser Kanan)"
+                >
+                  <ChevronLeft size={22} />
+                </button>
+              )}
+
+              {/* Animated Draggable Card */}
+              <AnimatePresence initial={false} custom={slideDirection} mode="popLayout">
+                <motion.div
+                  key={activePhoto.id}
+                  custom={slideDirection}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  drag={isZoomed ? false : "x"}
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.7}
+                  onDragEnd={(e, { offset, velocity }) => {
+                    const swipeThreshold = 45;
+                    const velocityThreshold = 400;
+                    if (offset.x < -swipeThreshold || velocity.x < -velocityThreshold) {
+                      paginate(1);
+                    } else if (offset.x > swipeThreshold || velocity.x > velocityThreshold) {
+                      paginate(-1);
+                    }
+                  }}
+                  onDoubleClick={() => setIsZoomed(!isZoomed)}
+                  style={{
+                    width: '100%',
+                    maxWidth: isZoomed ? 'min(94vw, 560px)' : 'min(90vw, 440px)',
+                    maxHeight: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: isZoomed ? 'zoom-out' : 'grab',
+                    touchAction: 'none'
+                  }}
+                  whileTap={{ cursor: isZoomed ? 'zoom-out' : 'grabbing' }}
+                >
+                  <div
+                    style={{
+                      position: 'relative',
+                      borderRadius: '20px',
+                      overflow: 'hidden',
+                      background: '#000000',
+                      boxShadow: '0 24px 60px rgba(0,0,0,0.85), inset 0 0 0 1px rgba(255, 255, 255, 0.12)',
+                      transition: 'transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)',
+                      transform: isZoomed ? 'scale(1.4)' : 'scale(1)',
+                      maxHeight: '60vh',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <img
+                      src={activePhoto.imageData}
+                      alt={activePhoto.guestName}
+                      draggable={false}
+                      style={{
+                        maxWidth: '100%',
+                        maxHeight: '60vh',
+                        objectFit: 'contain',
+                        display: 'block',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                  </div>
+
+                  {/* Swipe hint on touch devices */}
+                  {!isZoomed && availablePhotos.length > 1 && (
+                    <span
+                      style={{
+                        marginTop: '8px',
+                        fontSize: '10.5px',
+                        color: 'rgba(255, 255, 255, 0.45)',
+                        letterSpacing: '0.04em'
+                      }}
+                    >
+                      ← Geser kiri/kanan untuk foto lain →
+                    </span>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Floating Next Button */}
+              {availablePhotos.length > 1 && (
+                <button
+                  onClick={() => paginate(1)}
+                  style={{
+                    position: 'absolute',
+                    right: '6px',
+                    zIndex: 25,
+                    background: 'rgba(20, 18, 16, 0.65)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF',
+                    width: '42px',
+                    height: '42px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
+                    transition: 'all 0.15s ease'
+                  }}
+                  title="Foto Selanjutnya (Geser Kiri)"
+                >
+                  <ChevronRight size={22} />
+                </button>
+              )}
+            </div>
+
+            {/* Bottom Section: Wish Quote Card + Mini Film Strip + Quick Action Buttons */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                zIndex: 20
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Guest Wish / Caption Callout */}
+              {activePhoto.caption && (
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    background: 'rgba(245, 158, 11, 0.12)',
+                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '8px',
+                    maxWidth: '520px',
+                    margin: '0 auto',
+                    width: '100%'
+                  }}
+                >
+                  <span style={{ fontSize: '15px', lineHeight: 1 }}>💬</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span className="font-mono-film" style={{ fontSize: '9px', color: '#FBBF24', display: 'block', marginBottom: '2px', letterSpacing: '0.05em' }}>
+                      UCAPAN DARI {activePhoto.guestName.toUpperCase()}
+                    </span>
+                    <p style={{ margin: 0, fontSize: '12px', color: '#FFFFFF', fontStyle: 'italic', lineHeight: '1.4', fontWeight: 500 }}>
+                      &ldquo;{activePhoto.caption}&rdquo;
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Mini Film Strip Scrubber (Ide Kreatif: Deretan Klise Film 35mm) */}
+              {availablePhotos.length > 1 && (
+                <div
+                  ref={filmStripRef}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    overflowX: 'auto',
+                    padding: '6px 4px',
+                    background: 'rgba(0, 0, 0, 0.45)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    maxWidth: '520px',
+                    margin: '0 auto',
+                    width: '100%',
+                    scrollbarWidth: 'none'
+                  }}
+                >
+                  {availablePhotos.map((p, idx) => {
+                    const isSelected = p.id === activePhoto.id;
+                    return (
+                      <button
+                        key={p.id}
+                        data-photo-id={p.id}
+                        onClick={() => jumpToPhoto(p, idx)}
+                        style={{
+                          flexShrink: 0,
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '8px',
+                          overflow: 'hidden',
+                          border: isSelected ? '2px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.18)',
+                          boxShadow: isSelected ? '0 0 12px rgba(245, 158, 11, 0.6)' : 'none',
+                          padding: 0,
+                          cursor: 'pointer',
+                          background: '#000',
+                          opacity: isSelected ? 1 : 0.55,
+                          transform: isSelected ? 'scale(1.06)' : 'scale(1)',
+                          transition: 'all 0.2s ease',
+                          position: 'relative'
+                        }}
+                        title={`Lihat foto ${idx + 1}`}
+                      >
+                        <img
+                          src={p.imageData}
+                          alt={`Thumbnail ${idx + 1}`}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                        <span
+                          style={{
+                            position: 'absolute',
+                            bottom: '1px',
+                            right: '2px',
+                            fontSize: '8px',
+                            fontFamily: 'var(--font-mono)',
+                            color: '#FFFFFF',
+                            background: 'rgba(0,0,0,0.7)',
+                            padding: '0 2px',
+                            borderRadius: '2px',
+                            lineHeight: 1
+                          }}
+                        >
+                          {p.shotNumber}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Action Buttons: Share & Download */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '10px',
+                  maxWidth: '520px',
+                  margin: '0 auto',
+                  width: '100%'
+                }}
+              >
+                <button
+                  onClick={() => handleSharePhoto(activePhoto)}
+                  style={{
+                    padding: '10px',
+                    fontSize: '12.5px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '7px',
+                    cursor: 'pointer',
+                    background: '#C27803',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: 600,
+                    boxShadow: '0 4px 16px rgba(194, 120, 3, 0.4)'
+                  }}
+                >
+                  <Share2 size={14} />
+                  <span>Bagikan</span>
+                </button>
+
+                <a
+                  href={activePhoto.imageData}
+                  download={`sudutbingkai-${activePhoto.guestName}-${activePhoto.shotNumber}.jpg`}
+                  style={{
+                    padding: '10px',
+                    fontSize: '12.5px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '7px',
+                    textDecoration: 'none',
+                    color: '#FFFFFF',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    borderRadius: '12px',
+                    fontWeight: 600
+                  }}
+                >
+                  <Download size={14} />
+                  <span>Unduh Foto</span>
+                </a>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

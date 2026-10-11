@@ -36,6 +36,39 @@ interface GuestPhoto {
   frameId?: FrameId;
 }
 
+const slideVariants = {
+  enter: (direction: number) => ({
+    x: direction > 0 ? 320 : direction < 0 ? -320 : 0,
+    opacity: 0,
+    scale: 0.92,
+    rotate: direction > 0 ? 3.5 : direction < 0 ? -3.5 : 0
+  }),
+  center: {
+    zIndex: 1,
+    x: 0,
+    opacity: 1,
+    scale: 1,
+    rotate: 0,
+    transition: {
+      x: { type: 'spring' as const, stiffness: 320, damping: 30 },
+      opacity: { duration: 0.2 },
+      scale: { type: 'spring' as const, stiffness: 320, damping: 30 },
+      rotate: { type: 'spring' as const, stiffness: 320, damping: 30 }
+    }
+  },
+  exit: (direction: number) => ({
+    zIndex: 0,
+    x: direction < 0 ? 320 : -320,
+    opacity: 0,
+    scale: 0.92,
+    rotate: direction < 0 ? 3.5 : -3.5,
+    transition: {
+      x: { type: 'spring' as const, stiffness: 320, damping: 30 },
+      opacity: { duration: 0.2 }
+    }
+  })
+};
+
 export default function GuestCameraPage() {
   const params = useParams();
   const eventId = params.id as string;
@@ -80,6 +113,16 @@ export default function GuestCameraPage() {
   const [showRollModal, setShowRollModal] = useState(false);
   const [showWishModal, setShowWishModal] = useState(false);
   const [previewPhoto, setPreviewPhoto] = useState<GuestPhoto | null>(null);
+  const [previewSlideDirection, setPreviewSlideDirection] = useState<number>(0);
+
+  const paginatePreview = (dir: number) => {
+    if (myPhotos.length <= 1 || !previewPhoto) return;
+    hapticLightTap();
+    setPreviewSlideDirection(dir);
+    const idx = myPhotos.findIndex(p => p.id === previewPhoto.id);
+    const nextIdx = (idx + dir + myPhotos.length) % myPhotos.length;
+    setPreviewPhoto(myPhotos[nextIdx]);
+  };
   const [currentWish, setCurrentWish] = useState('');
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -1822,70 +1865,113 @@ export default function GuestCameraPage() {
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    const idx = myPhotos.findIndex(p => p.id === previewPhoto.id);
-                    if (idx > 0) setPreviewPhoto(myPhotos[idx - 1]);
-                    else setPreviewPhoto(myPhotos[myPhotos.length - 1]);
+                    paginatePreview(-1);
                   }}
                   style={{
                     position: 'absolute',
-                    left: '4px',
+                    left: '6px',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    zIndex: 15,
-                    background: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: 25,
+                    background: 'rgba(20, 18, 16, 0.65)',
+                    backdropFilter: 'blur(12px)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: '#fff',
-                    width: '40px',
-                    height: '40px',
+                    width: '42px',
+                    height: '42px',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)'
                   }}
+                  title="Foto Sebelumnya (Geser Kanan)"
                 >
                   <ArrowLeft size={20} />
                 </button>
               )}
 
-              <img
-                src={previewPhoto.imageData}
-                alt={`Jepretan #${previewPhoto.shotNumber}`}
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: 'contain',
-                  borderRadius: '16px',
-                  boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1)'
-                }}
-              />
+              <AnimatePresence initial={false} custom={previewSlideDirection} mode="popLayout">
+                <motion.div
+                  key={previewPhoto.id}
+                  custom={previewSlideDirection}
+                  variants={slideVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.7}
+                  onDragEnd={(e, { offset, velocity }) => {
+                    const swipeThreshold = 45;
+                    const velocityThreshold = 400;
+                    if (offset.x < -swipeThreshold || velocity.x < -velocityThreshold) {
+                      paginatePreview(1);
+                    } else if (offset.x > swipeThreshold || velocity.x > velocityThreshold) {
+                      paginatePreview(-1);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    maxHeight: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'grab',
+                    touchAction: 'none'
+                  }}
+                  whileTap={{ cursor: 'grabbing' }}
+                >
+                  <img
+                    src={previewPhoto.imageData}
+                    alt={`Jepretan #${previewPhoto.shotNumber}`}
+                    draggable={false}
+                    style={{
+                      maxWidth: '100%',
+                      maxHeight: '62vh',
+                      objectFit: 'contain',
+                      borderRadius: '16px',
+                      boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+                      pointerEvents: 'none'
+                    }}
+                  />
+                  {myPhotos.length > 1 && (
+                    <span style={{ marginTop: '8px', fontSize: '10px', color: 'rgba(255, 255, 255, 0.45)', letterSpacing: '0.04em' }}>
+                      ← Geser kiri/kanan untuk foto lain →
+                    </span>
+                  )}
+                </motion.div>
+              </AnimatePresence>
 
               {/* Navigation Next */}
               {myPhotos.length > 1 && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    const idx = myPhotos.findIndex(p => p.id === previewPhoto.id);
-                    if (idx < myPhotos.length - 1) setPreviewPhoto(myPhotos[idx + 1]);
-                    else setPreviewPhoto(myPhotos[0]);
+                    paginatePreview(1);
                   }}
                   style={{
                     position: 'absolute',
-                    right: '4px',
+                    right: '6px',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    zIndex: 15,
-                    background: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: 25,
+                    background: 'rgba(20, 18, 16, 0.65)',
+                    backdropFilter: 'blur(12px)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     color: '#fff',
-                    width: '40px',
-                    height: '40px',
+                    width: '42px',
+                    height: '42px',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)'
                   }}
+                  title="Foto Selanjutnya (Geser Kiri)"
                 >
                   <ArrowRight size={20} />
                 </button>
