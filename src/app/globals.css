@@ -1187,4 +1187,31 @@ br.mobile-only {
   }
 }
 
+/* Editorial Testimonial 3-Column Spreads */
+.editorial-testimonial-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+}
+
+@media (max-width: 1024px) {
+  .editorial-testimonial-grid {
+    grid-template-columns: 1fr;
+    max-width: 540px;
+    margin: 0 auto;
+    gap: 36px;
+  }
+}
+
+.photo-print-base {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+}
+
+.photo-print-base:hover {
+  transform: translateY(-6px) scale(1.03) !important;
+  z-index: 10 !important;
+  box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.22), 0 4px 12px -2px rgba(0, 0, 0, 0.1) !important;
+}
+
+
 

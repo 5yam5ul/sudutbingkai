@@ -1206,10 +1206,10 @@ export default function HomePage() {
       </section>
 
       {/* TESTIMONIALS SECTION (Warm, Humanist & Authentic Indonesian Stories) */}
-      <section style={{ padding: '80px 24px 100px', maxWidth: '1100px', margin: '0 auto' }}>
+      <section style={{ padding: '100px 24px 120px', maxWidth: '1240px', margin: '0 auto' }}>
         <div style={{ textAlign: 'center', marginBottom: '56px' }}>
           <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '10px' }}>
-            CERITA & KESAN TULUS
+            BUKU CERITA & ROLL KENANGAN
           </span>
           <h2 className="font-display-serif" style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)', fontWeight: 700, color: '#1D1D1F' }}>
             Tawa spontan yang tak sempat tertangkap lensa resmi.
@@ -1219,13 +1219,13 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: '32px' }}>
+        <div className="editorial-testimonial-grid">
           {/* Editorial Folio 1: Resepsi Pernikahan */}
           <article style={{
             background: '#FAF9F5',
             border: '1px solid rgba(0, 0, 0, 0.06)',
             borderRadius: '20px',
-            padding: '24px 20px 22px',
+            padding: '24px 22px 24px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -1233,7 +1233,7 @@ export default function HomePage() {
           }}>
             <div>
               {/* Folio Metadata Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
                   <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.08em', color: '#1D1D1F', textTransform: 'uppercase' }}>
@@ -1245,66 +1245,80 @@ export default function HomePage() {
                 </span>
               </div>
 
-              {/* Twin Photo Paper Prints (Matte white border, organic tilt, real paper shadow) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '6px 4px 12px' }}>
+              {/* Compact Layered Twin Photo Prints */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '215px',
+                margin: '8px 0 16px',
+                position: 'relative'
+              }}>
                 {/* Print 1: Left */}
-                <div style={{
+                <div className="photo-print-base" style={{
+                  width: '146px',
+                  height: '190px',
                   background: '#FFFFFF',
-                  padding: '6px 6px 14px',
-                  borderRadius: '3px',
+                  padding: '5px 5px 16px',
+                  borderRadius: '4px',
                   boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
-                  transform: 'rotate(-1.5deg)',
-                  transition: 'transform 0.3s ease'
+                  transform: 'rotate(-3deg) translateY(-2px)',
+                  zIndex: 1,
+                  flexShrink: 0
                 }}>
-                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                  <div style={{ width: '100%', height: 'calc(100% - 10px)', overflow: 'hidden', borderRadius: '2px', background: '#1D1D1F' }}>
                     <img
                       src="/images/testimonials/wedding_1.jpg"
                       alt="Selfie Tamu Meja 04"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
-                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>MEJA 04</span>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:14 WIB</span>
+                  <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>MEJA 04</span>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:14 WIB</span>
                   </div>
                 </div>
 
-                {/* Print 2: Right */}
-                <div style={{
+                {/* Print 2: Right (Overlapping) */}
+                <div className="photo-print-base" style={{
+                  width: '146px',
+                  height: '190px',
                   background: '#FFFFFF',
-                  padding: '6px 6px 14px',
-                  borderRadius: '3px',
-                  boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
-                  transform: 'rotate(1.8deg)',
-                  transition: 'transform 0.3s ease'
+                  padding: '5px 5px 16px',
+                  borderRadius: '4px',
+                  boxShadow: '0 12px 26px -4px rgba(0, 0, 0, 0.16), 0 4px 10px -2px rgba(0, 0, 0, 0.08)',
+                  transform: 'rotate(3.5deg) translateY(4px)',
+                  marginLeft: '-22px',
+                  zIndex: 2,
+                  flexShrink: 0
                 }}>
-                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                  <div style={{ width: '100%', height: 'calc(100% - 10px)', overflow: 'hidden', borderRadius: '2px', background: '#1D1D1F' }}>
                     <img
                       src="/images/testimonials/wedding_2.jpg"
                       alt="Candid Meja 02"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
-                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>MEJA 02</span>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:38 WIB</span>
+                  <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>MEJA 02</span>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:38 WIB</span>
                   </div>
                 </div>
               </div>
 
               {/* Story Narrative */}
-              <div style={{ marginTop: '16px' }}>
-                <h3 style={{ fontSize: '15.5px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.45, marginBottom: '10px' }}>
+              <div style={{ marginTop: '12px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.45, marginBottom: '8px' }}>
                   &ldquo;Fotografer sibuk di pelaminan, roll tamu merekam hebohnya meja kawan lama.&rdquo;
                 </h3>
-                <p style={{ color: '#515154', fontSize: '13.5px', lineHeight: 1.7 }}>
+                <p style={{ color: '#515154', fontSize: '13px', lineHeight: 1.65 }}>
                   Awalnya deg-degan kartu barcode di meja cuma dianggurin. Ternyata pas resepsi jalan, meja kuliah malah heboh gantian jepret selfie kebaya dan foto candid temen cowok yang lagi kalap nyomot prasmanan. Pas malemnya kita buka roll bareng di hotel, ketawa ngakak dapet jepretan spontan yang fotografer resmi gak sempet tangkap.
                 </p>
               </div>
             </div>
 
             {/* Credits Footnote */}
-            <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', marginTop: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>Sarah & Dimas</strong>
                 <span style={{ fontSize: '12px', color: '#86868B' }}>Plataran Cilandak, Jakarta</span>
@@ -1320,7 +1334,7 @@ export default function HomePage() {
             background: '#FAF9F5',
             border: '1px solid rgba(0, 0, 0, 0.06)',
             borderRadius: '20px',
-            padding: '24px 20px 22px',
+            padding: '24px 22px 24px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -1328,7 +1342,7 @@ export default function HomePage() {
           }}>
             <div>
               {/* Folio Metadata Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
                   <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.08em', color: '#1D1D1F', textTransform: 'uppercase' }}>
@@ -1340,66 +1354,80 @@ export default function HomePage() {
                 </span>
               </div>
 
-              {/* Twin Photo Paper Prints (Matte white border, organic tilt, real paper shadow) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '6px 4px 12px' }}>
+              {/* Compact Layered Twin Photo Prints */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '215px',
+                margin: '8px 0 16px',
+                position: 'relative'
+              }}>
                 {/* Print 1: Left */}
-                <div style={{
+                <div className="photo-print-base" style={{
+                  width: '146px',
+                  height: '190px',
                   background: '#FFFFFF',
-                  padding: '6px 6px 14px',
-                  borderRadius: '3px',
+                  padding: '5px 5px 16px',
+                  borderRadius: '4px',
                   boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
-                  transform: 'rotate(-1.8deg)',
-                  transition: 'transform 0.3s ease'
+                  transform: 'rotate(-3deg) translateY(-2px)',
+                  zIndex: 1,
+                  flexShrink: 0
                 }}>
-                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                  <div style={{ width: '100%', height: 'calc(100% - 10px)', overflow: 'hidden', borderRadius: '2px', background: '#1D1D1F' }}>
                     <img
                       src="/images/testimonials/birthday_1.jpg"
                       alt="Selfie Geng SMA"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
-                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>GENG 03</span>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>20:12 WIB</span>
+                  <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>GENG 03</span>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>20:12 WIB</span>
                   </div>
                 </div>
 
-                {/* Print 2: Right */}
-                <div style={{
+                {/* Print 2: Right (Overlapping) */}
+                <div className="photo-print-base" style={{
+                  width: '146px',
+                  height: '190px',
                   background: '#FFFFFF',
-                  padding: '6px 6px 14px',
-                  borderRadius: '3px',
-                  boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
-                  transform: 'rotate(1.5deg)',
-                  transition: 'transform 0.3s ease'
+                  padding: '5px 5px 16px',
+                  borderRadius: '4px',
+                  boxShadow: '0 12px 26px -4px rgba(0, 0, 0, 0.16), 0 4px 10px -2px rgba(0, 0, 0, 0.08)',
+                  transform: 'rotate(3.5deg) translateY(4px)',
+                  marginLeft: '-22px',
+                  zIndex: 2,
+                  flexShrink: 0
                 }}>
-                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                  <div style={{ width: '100%', height: 'calc(100% - 10px)', overflow: 'hidden', borderRadius: '2px', background: '#1D1D1F' }}>
                     <img
                       src="/images/testimonials/birthday_2.jpg"
                       alt="Candid Tiup Lilin"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
-                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>TIUP LILIN</span>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>20:45 WIB</span>
+                  <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>TIUP LILIN</span>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>20:45 WIB</span>
                   </div>
                 </div>
               </div>
 
               {/* Story Narrative */}
-              <div style={{ marginTop: '16px' }}>
-                <h3 style={{ fontSize: '15.5px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.45, marginBottom: '10px' }}>
+              <div style={{ marginTop: '12px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.45, marginBottom: '8px' }}>
                   &ldquo;Vibenya disposable camera 90-an, teman-teman sekelas langsung lepas tanpa jaim.&rdquo;
                 </h3>
-                <p style={{ color: '#515154', fontSize: '13.5px', lineHeight: 1.7 }}>
+                <p style={{ color: '#515154', fontSize: '13px', lineHeight: 1.65 }}>
                   Anak-anak SMA paling males disuruh foto kaku berjejer. Pas ada QR SudutBingkai di meja cafe, mereka langsung jepret candid dari berbagai sudut meja. Tone warnanya ada grain analog estetik tanpa perlu repot bawa kamera analog fisik. Momen pas tiup lilin juga ketangkep natural banget.
                 </p>
               </div>
             </div>
 
             {/* Credits Footnote */}
-            <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', marginTop: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>Clarissa & Geng SMA</strong>
                 <span style={{ fontSize: '12px', color: '#86868B' }}>Cafe Gathering, Surabaya</span>
@@ -1415,7 +1443,7 @@ export default function HomePage() {
             background: '#FAF9F5',
             border: '1px solid rgba(0, 0, 0, 0.06)',
             borderRadius: '20px',
-            padding: '24px 20px 22px',
+            padding: '24px 22px 24px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-between',
@@ -1423,7 +1451,7 @@ export default function HomePage() {
           }}>
             <div>
               {/* Folio Metadata Header */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
                   <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.08em', color: '#1D1D1F', textTransform: 'uppercase' }}>
@@ -1435,66 +1463,80 @@ export default function HomePage() {
                 </span>
               </div>
 
-              {/* Twin Photo Paper Prints (Matte white border, organic tilt, real paper shadow) */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '6px 4px 12px' }}>
+              {/* Compact Layered Twin Photo Prints */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                height: '215px',
+                margin: '8px 0 16px',
+                position: 'relative'
+              }}>
                 {/* Print 1: Left */}
-                <div style={{
+                <div className="photo-print-base" style={{
+                  width: '146px',
+                  height: '190px',
                   background: '#FFFFFF',
-                  padding: '6px 6px 14px',
-                  borderRadius: '3px',
+                  padding: '5px 5px 16px',
+                  borderRadius: '4px',
                   boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
-                  transform: 'rotate(-1.5deg)',
-                  transition: 'transform 0.3s ease'
+                  transform: 'rotate(-3deg) translateY(-2px)',
+                  zIndex: 1,
+                  flexShrink: 0
                 }}>
-                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                  <div style={{ width: '100%', height: 'calc(100% - 10px)', overflow: 'hidden', borderRadius: '2px', background: '#1D1D1F' }}>
                     <img
                       src="/images/testimonials/gathering_1.jpg"
                       alt="Selfie Rooftop SCBD"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
-                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>ROOFTOP</span>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:05 WIB</span>
+                  <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>ROOFTOP</span>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:05 WIB</span>
                   </div>
                 </div>
 
-                {/* Print 2: Right */}
-                <div style={{
+                {/* Print 2: Right (Overlapping) */}
+                <div className="photo-print-base" style={{
+                  width: '146px',
+                  height: '190px',
                   background: '#FFFFFF',
-                  padding: '6px 6px 14px',
-                  borderRadius: '3px',
-                  boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
-                  transform: 'rotate(1.8deg)',
-                  transition: 'transform 0.3s ease'
+                  padding: '5px 5px 16px',
+                  borderRadius: '4px',
+                  boxShadow: '0 12px 26px -4px rgba(0, 0, 0, 0.16), 0 4px 10px -2px rgba(0, 0, 0, 0.08)',
+                  transform: 'rotate(3.5deg) translateY(4px)',
+                  marginLeft: '-22px',
+                  zIndex: 2,
+                  flexShrink: 0
                 }}>
-                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                  <div style={{ width: '100%', height: 'calc(100% - 10px)', overflow: 'hidden', borderRadius: '2px', background: '#1D1D1F' }}>
                     <img
                       src="/images/testimonials/gathering_2.jpg"
                       alt="Candid Meja Makan Tim"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
-                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>CHEERS TIM</span>
-                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:40 WIB</span>
+                  <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>CHEERS TIM</span>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:40 WIB</span>
                   </div>
                 </div>
               </div>
 
               {/* Story Narrative */}
-              <div style={{ marginTop: '16px' }}>
-                <h3 style={{ fontSize: '15.5px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.45, marginBottom: '10px' }}>
+              <div style={{ marginTop: '12px' }}>
+                <h3 style={{ fontSize: '15px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.45, marginBottom: '8px' }}>
                   &ldquo;Biasanya mager upload foto kantor, ini malah seru-seruan jepret momen santai.&rdquo;
                 </h3>
-                <p style={{ color: '#515154', fontSize: '13.5px', lineHeight: 1.7 }}>
+                <p style={{ color: '#515154', fontSize: '13px', lineHeight: 1.65 }}>
                   Dipakai buat 120 karyawan di rooftop gathering. Kalau ngandelin Google Drive bersama pasti sepi peminat. Tapi pake SudutBingkai, semua meja langsung aktif jepret pas makan & cheers, dan fotonya langsung auto-sync tayang di proyektor venue. Suasana kantor jadi jauh lebih akrab dan hidup.
                 </p>
               </div>
             </div>
 
             {/* Credits Footnote */}
-            <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', marginTop: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>Rian Mahendra</strong>
                 <span style={{ fontSize: '12px', color: '#86868B' }}>People Lead, SCBD Jakarta</span>
