@@ -187,8 +187,23 @@ export default function FrameCustomizer({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
       {/* Category selector & Guide Trigger */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#86868B' }}>
+            KATEGORI TEMA BINGKAI
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowGuideModal(true)}
+            className="glass-pill"
+            style={{ padding: '4px 10px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '5px', color: '#C27803', cursor: 'pointer' }}
+          >
+            <HelpCircle size={13} />
+            <span>Panduan PNG Custom</span>
+          </button>
+        </div>
+
+        <div className="horizontal-scroll-row" style={{ gap: '8px', paddingBottom: '4px' }}>
           {(['all', 'wedding', 'classic', 'retro', 'party'] as const).map((cat) => (
             <button
               key={cat}
@@ -201,31 +216,22 @@ export default function FrameCustomizer({
                 fontWeight: activeCategory === cat ? 700 : 500,
                 background: activeCategory === cat ? '#1D1D1F' : 'rgba(255,255,255,0.7)',
                 color: activeCategory === cat ? '#FFFFFF' : '#1D1D1F',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
               {cat === 'all' && 'Semua (10+)'}
-              {cat === 'wedding' && '💍 Wedding & Romantis'}
-              {cat === 'classic' && '📸 Polaroid & Klasik'}
-              {cat === 'retro' && '🎞️ Vintage 90s & Film'}
-              {cat === 'party' && '✨ Party & Neon'}
+              {cat === 'wedding' && '💍 Wedding'}
+              {cat === 'classic' && '📸 Polaroid'}
+              {cat === 'retro' && '🎞️ Vintage'}
+              {cat === 'party' && '✨ Party'}
             </button>
           ))}
         </div>
-
-        <button
-          type="button"
-          onClick={() => setShowGuideModal(true)}
-          className="glass-pill"
-          style={{ padding: '6px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', color: '#C27803', cursor: 'pointer' }}
-        >
-          <HelpCircle size={14} />
-          <span>Panduan Buat Bingkai Sendiri (PNG)</span>
-        </button>
       </div>
 
       {/* Main Grid: Frame Selector (Left) and Live Interactive Preview (Right) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px', alignItems: 'start' }}>
+      <div className="frame-customizer-grid">
         {/* Left: Frame Picker Grid */}
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', maxHeight: '480px', overflowY: 'auto', paddingRight: '4px' }}>

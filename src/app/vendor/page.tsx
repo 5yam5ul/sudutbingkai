@@ -210,23 +210,23 @@ export default function VendorPortalPage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FBFBFA', color: '#1D1D1F' }}>
       {/* Top Navigation */}
-      <header className="glass-nav" style={{ padding: '16px 28px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      <header className="glass-nav" style={{ padding: 'calc(12px + env(safe-area-inset-top, 0px)) 20px 12px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', position: 'sticky', top: 0, zIndex: 50 }}>
+        <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
               <img 
                 src="/sudut-bingkai-logo.png" 
                 alt="Sudut Bingkai" 
-                style={{ height: '34px', width: 'auto', objectFit: 'contain', display: 'block' }} 
+                style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }} 
               />
             </Link>
             <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
-            <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
+            <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
               PORTAL MITRA VENDOR & WO
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ textAlign: 'right' }} className="desktop-only">
               <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>{companyName}</strong>
               <span style={{ fontSize: '11.5px', color: '#86868B' }}>Mitra Terverifikasi • {clients.length} Klien Aktif</span>
@@ -244,16 +244,16 @@ export default function VendorPortalPage() {
       </header>
 
       {/* Main Vendor Dashboard */}
-      <main style={{ maxWidth: '1240px', margin: '0 auto', padding: '36px 24px 80px' }}>
+      <main className="dashboard-main">
         {/* Vendor Header Hero */}
-        <div className="glass-card" style={{ padding: '36px', borderRadius: '24px', marginBottom: '32px' }}>
+        <div className="glass-card form-section-card" style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
-            <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
               {logoUrl ? (
                 <div style={{
-                  width: '68px',
-                  height: '68px',
-                  borderRadius: '18px',
+                  width: '60px',
+                  height: '60px',
+                  borderRadius: '16px',
                   overflow: 'hidden',
                   border: '1px solid rgba(0,0,0,0.08)',
                   background: '#FFFFFF',
@@ -263,18 +263,18 @@ export default function VendorPortalPage() {
                   <img src={logoUrl} alt={companyName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               ) : (
-                <div style={{ width: '68px', height: '68px', borderRadius: '18px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803' }}>
-                  <Building size={28} />
+                <div style={{ width: '60px', height: '60px', borderRadius: '16px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803', flexShrink: 0 }}>
+                  <Building size={24} />
                 </div>
               )}
 
               <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '999px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', fontSize: '11px', fontWeight: 600, marginBottom: '6px' }}>
-                  <Building size={13} />
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '3px 9px', borderRadius: '999px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', fontSize: '10.5px', fontWeight: 600, marginBottom: '6px' }}>
+                  <Building size={12} />
                   <span>Wedding Organizer Partner Hub</span>
                 </div>
 
-                <h1 className="font-display-serif" style={{ fontSize: '32px', fontWeight: 700, color: '#1D1D1F', marginBottom: '4px' }}>
+                <h1 className="font-display-serif" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.2rem)', fontWeight: 700, color: '#1D1D1F', marginBottom: '4px' }}>
                   {companyName}
                 </h1>
 
@@ -284,61 +284,62 @@ export default function VendorPortalPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <Link href="/" target="_blank" className="glass-pill" style={{ padding: '12px 18px', fontSize: '13.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <Link href="/" target="_blank" className="glass-pill" style={{ padding: '10px 16px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <ExternalLink size={14} />
-                <span>Lihat Logo di Beranda</span>
+                <span>Lihat di Beranda</span>
               </Link>
 
-              <Link href="/create" className="btn-apple-black" style={{ padding: '12px 24px', fontSize: '13.5px' }}>
-                <Plus size={16} />
-                <span>Tambah Acara Klien Baru</span>
+              <Link href="/create" className="btn-apple-black" style={{ padding: '10px 20px', fontSize: '13px' }}>
+                <Plus size={15} />
+                <span>Tambah Acara Klien</span>
               </Link>
             </div>
           </div>
 
           {/* Quick Metrics */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '28px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '24px' }}>
+          <div className="responsive-metrics-grid" style={{ marginTop: '24px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '20px' }}>
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>TOTAL PERNIKAHAN</span>
-              <strong style={{ fontSize: '26px', color: '#1D1D1F' }}>{clients.length} Acara</strong>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{clients.length} Acara</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>TOTAL FOTO KLIEN</span>
-              <strong style={{ fontSize: '26px', color: '#1D1D1F' }}>42 Momen</strong>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>42 Momen</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>SISA KUOTA BUNDLE</span>
-              <strong style={{ fontSize: '26px', color: '#27AE60' }}>7 Kuota Siap Pakai</strong>
+              <strong style={{ fontSize: '20px', color: '#27AE60' }}>7 Kuota Siap</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>STATUS KEMITRAAN</span>
-              <strong style={{ fontSize: '22px', color: '#C27803' }}>Featured WO Partner</strong>
+              <strong style={{ fontSize: '20px', color: '#C27803' }}>Featured Partner</strong>
             </div>
           </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '28px', flexWrap: 'wrap' }}>
+        {/* Tab Switcher - Horizontal Scroll on Mobile */}
+        <div className="horizontal-scroll-row" style={{ gap: '10px', marginBottom: '28px', paddingBottom: '6px' }}>
           <button
             onClick={() => setActiveTab('wholesale')}
             className="glass-pill"
             style={{
               background: activeTab === 'wholesale' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
               color: activeTab === 'wholesale' ? '#FFFFFF' : '#1D1D1F',
-              padding: '10px 20px',
-              fontSize: '13.5px',
+              padding: '10px 18px',
+              fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              whiteSpace: 'nowrap'
             }}
           >
-            <Calculator size={15} />
+            <Calculator size={14} />
             <span>Paket Grosir & Custom Calculator</span>
           </button>
 
@@ -348,16 +349,17 @@ export default function VendorPortalPage() {
             style={{
               background: activeTab === 'branding' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
               color: activeTab === 'branding' ? '#FFFFFF' : '#1D1D1F',
-              padding: '10px 20px',
-              fontSize: '13.5px',
+              padding: '10px 18px',
+              fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              whiteSpace: 'nowrap'
             }}
           >
-            <Upload size={15} />
+            <Upload size={14} />
             <span>Upload Logo & Co-Branding</span>
           </button>
 
@@ -367,16 +369,17 @@ export default function VendorPortalPage() {
             style={{
               background: activeTab === 'clients' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
               color: activeTab === 'clients' ? '#FFFFFF' : '#1D1D1F',
-              padding: '10px 20px',
-              fontSize: '13.5px',
+              padding: '10px 18px',
+              fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              whiteSpace: 'nowrap'
             }}
           >
-            <Users size={15} />
+            <Users size={14} />
             <span>Daftar Klien Pengantin ({clients.length})</span>
           </button>
 
@@ -386,16 +389,17 @@ export default function VendorPortalPage() {
             style={{
               background: activeTab === 'marketing' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
               color: activeTab === 'marketing' ? '#FFFFFF' : '#1D1D1F',
-              padding: '10px 20px',
-              fontSize: '13.5px',
+              padding: '10px 18px',
+              fontSize: '13px',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              whiteSpace: 'nowrap'
             }}
           >
-            <FileText size={15} />
+            <FileText size={14} />
             <span>Marketing Kit & Panduan MC</span>
           </button>
         </div>
@@ -404,7 +408,7 @@ export default function VendorPortalPage() {
         {activeTab === 'wholesale' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '36px' }}>
             {/* Top Wholesale Intro */}
-            <div className="glass-card" style={{ padding: '32px 36px', borderRadius: '24px', background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(246, 240, 230, 0.6) 100%)' }}>
+            <div className="glass-card form-section-card" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(246, 240, 230, 0.6) 100%)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
                 <div>
                   <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>

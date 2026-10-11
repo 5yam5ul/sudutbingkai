@@ -288,18 +288,18 @@ export default function BrideDashboardPage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FBFBFA', color: '#1D1D1F' }}>
       {/* Top Navigation */}
-      <header className="glass-nav" style={{ padding: '16px 28px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', position: 'sticky', top: 0, zIndex: 50 }}>
+      <header className="glass-nav" style={{ padding: 'calc(12px + env(safe-area-inset-top, 0px)) 20px 12px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
               <img 
                 src="/sudut-bingkai-logo.png" 
                 alt="Sudut Bingkai" 
-                style={{ height: '34px', width: 'auto', objectFit: 'contain', display: 'block' }} 
+                style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }} 
               />
             </Link>
             <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
-            <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
+            <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
               DASHBOARD PENGANTIN
             </span>
           </div>
@@ -330,7 +330,7 @@ export default function BrideDashboardPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{ textAlign: 'right' }} className="desktop-only">
               <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>{user?.name}</strong>
               <span style={{ fontSize: '11.5px', color: '#86868B' }}>{user?.email}</span>
@@ -348,9 +348,9 @@ export default function BrideDashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '36px 24px 80px' }}>
+      <main className="dashboard-main">
         {/* Event Quick Overview Card */}
-        <div className="glass-card" style={{ padding: '32px', borderRadius: '24px', marginBottom: '32px' }}>
+        <div className="glass-card form-section-card" style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -359,7 +359,7 @@ export default function BrideDashboardPage() {
                   ACARA AKTIF
                 </span>
               </div>
-              <h1 className="font-display-serif" style={{ fontSize: '32px', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
+              <h1 className="font-display-serif" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.2rem)', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
                 {event?.title || 'Album Pernikahan'}
               </h1>
               <p style={{ color: '#515154', fontSize: '14px' }}>
@@ -372,21 +372,20 @@ export default function BrideDashboardPage() {
               <button
                 onClick={copyGuestLink}
                 className="glass-pill"
-                style={{ padding: '9px 18px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                style={{ padding: '9px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
               >
                 {copied ? <Check size={14} color="#C27803" /> : <Share2 size={14} />}
-                <span>{copied ? 'Tautan Tersalin' : 'Salin Link Tamu'}</span>
+                <span>{copied ? 'Tersalin' : 'Salin Link'}</span>
               </button>
 
               <Link
                 href={`/event/${event?.id}/print`}
                 className="glass-pill"
-                style={{ padding: '9px 18px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ padding: '9px 16px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
                 <Printer size={14} />
                 <span>Kartu Meja</span>
               </Link>
-
 
               <Link
                 href={`/cam/${event?.id}`}
@@ -400,37 +399,37 @@ export default function BrideDashboardPage() {
           </div>
 
           {/* Metrics Bar */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginTop: '28px', borderTop: '1px solid rgba(0, 0, 0, 0.07)', paddingTop: '20px' }}>
+          <div className="responsive-metrics-grid" style={{ marginTop: '24px', borderTop: '1px solid rgba(0, 0, 0, 0.07)', paddingTop: '20px' }}>
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>TOTAL FOTO MASUK</span>
-              <strong style={{ fontSize: '22px', color: '#1D1D1F' }}>{photos.length} Momen</strong>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{photos.length} Momen</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>FILTER ANALOG</span>
-              <strong style={{ fontSize: '22px', color: '#C27803' }}>{presetInfo.name}</strong>
+              <strong style={{ fontSize: '20px', color: '#C27803' }}>{presetInfo.name}</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>BINGKAI AKTIF</span>
-              <strong style={{ fontSize: '22px', color: '#1D1D1F' }}>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>
                 {FRAME_TEMPLATES[frameId || 'minimal-gold']?.name?.split(' ')[0] || 'Minimal'}
               </strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>PESAN SUARA</span>
-              <strong style={{ fontSize: '22px', color: '#C27803' }}>{voiceNotes.length} Ucapan</strong>
+              <strong style={{ fontSize: '20px', color: '#C27803' }}>{voiceNotes.length} Ucapan</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>JATAH PER TAMU</span>
-              <strong style={{ fontSize: '22px', color: '#1D1D1F' }}>{event?.shotsPerGuest || 20} Foto</strong>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{event?.shotsPerGuest || 20} Foto</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>STATUS TAMPIL</span>
-              <strong style={{ fontSize: '22px', color: '#1D1D1F' }}>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>
                 {event?.revealMode === 'instant' ? 'Langsung' : 'Cuci Roll'}
               </strong>
             </div>
@@ -447,12 +446,13 @@ export default function BrideDashboardPage() {
                 background: activeTab === 'photos' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
                 color: activeTab === 'photos' ? '#FFFFFF' : '#1D1D1F',
                 padding: '8px 18px',
-                fontSize: '13.5px',
+                fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer'
               }}
             >
-              Galeri & Moderasi ({photos.length} Foto, {voiceNotes.length} Suara)
+              <span className="desktop-only">Galeri & Moderasi ({photos.length} Foto, {voiceNotes.length} Suara)</span>
+              <span className="mobile-only">Galeri ({photos.length})</span>
             </button>
 
             <button
@@ -462,12 +462,13 @@ export default function BrideDashboardPage() {
                 background: activeTab === 'settings' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
                 color: activeTab === 'settings' ? '#FFFFFF' : '#1D1D1F',
                 padding: '8px 18px',
-                fontSize: '13.5px',
+                fontSize: '13px',
                 fontWeight: 600,
                 cursor: 'pointer'
               }}
             >
-              Pengaturan & Bingkai
+              <span className="desktop-only">Pengaturan & Bingkai</span>
+              <span className="mobile-only">Pengaturan</span>
             </button>
           </div>
 
@@ -476,10 +477,11 @@ export default function BrideDashboardPage() {
               onClick={downloadAllPhotosAsZip}
               disabled={isZipping || photos.length === 0}
               className="btn-apple-black"
-              style={{ padding: '8px 18px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: isZipping ? 'wait' : 'pointer' }}
+              style={{ padding: '8px 16px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: isZipping ? 'wait' : 'pointer' }}
             >
-              {isZipping ? <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={14} />}
-              <span>{isZipping ? zipProgress : 'Unduh Semua Foto (.ZIP)'}</span>
+              {isZipping ? <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={13} />}
+              <span className="desktop-only">{isZipping ? zipProgress : 'Unduh Semua Foto (.ZIP)'}</span>
+              <span className="mobile-only">{isZipping ? zipProgress : 'Unduh ZIP'}</span>
             </button>
           )}
         </div>
@@ -589,57 +591,57 @@ export default function BrideDashboardPage() {
                     </p>
                   </div>
                 ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
+                  <div className="mobile-photo-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '20px' }}>
                     {filteredPhotos.map((photo) => (
                       <div
                         key={photo.id}
                         className="glass-card"
                         style={{
-                          borderRadius: '28px',
-                          padding: '14px 14px 18px 14px',
+                          borderRadius: '24px',
+                          padding: '12px 12px 16px 12px',
                           opacity: photo.isHidden ? 0.65 : 1,
                           position: 'relative'
                         }}
                       >
-                        <div style={{ aspectRatio: '3/4', borderRadius: '20px', overflow: 'hidden', background: '#000', marginBottom: '14px', position: 'relative' }}>
+                        <div style={{ aspectRatio: '3/4', borderRadius: '18px', overflow: 'hidden', background: '#000', marginBottom: '12px', position: 'relative' }}>
                           <img src={photo.imageData} alt={photo.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           {photo.isHidden && (
-                            <div style={{ position: 'absolute', top: '10px', left: '10px', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: '10.5px', padding: '4px 10px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <EyeOff size={11} />
-                              <span>Disembunyikan</span>
+                            <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: '10px', padding: '3px 8px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <EyeOff size={10} />
+                              <span>Hidden</span>
                             </div>
                           )}
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
-                          <div>
-                            <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>{photo.guestName}</strong>
-                            <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B' }}>#{photo.shotNumber}</span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px', flexWrap: 'wrap', gap: '6px' }}>
+                          <div style={{ minWidth: 0, flex: '1 1 65px' }}>
+                            <strong style={{ fontSize: '12px', color: '#1D1D1F', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{photo.guestName}</strong>
+                            <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#86868B' }}>#{photo.shotNumber}</span>
                           </div>
 
-                          <div style={{ display: 'flex', gap: '6px' }}>
+                          <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                             <button
                               onClick={() => toggleHidePhoto(photo.id, !!photo.isHidden)}
                               className="glass-pill"
                               style={{
-                                padding: '6px 10px',
+                                padding: '5px 8px',
                                 fontSize: '11px',
                                 cursor: 'pointer',
                                 color: photo.isHidden ? '#27AE60' : '#E74C3C',
                                 display: 'flex',
                                 alignItems: 'center',
-                                gap: '4px'
+                                gap: '3px'
                               }}
                               title={photo.isHidden ? 'Tampilkan kembali di layar' : 'Sembunyikan'}
                             >
                               {photo.isHidden ? <Eye size={12} /> : <EyeOff size={12} />}
-                              <span>{photo.isHidden ? 'Tampilkan' : 'Hide'}</span>
+                              <span className="desktop-only">{photo.isHidden ? 'Tampil' : 'Hide'}</span>
                             </button>
 
                             <button
                               onClick={() => handleDeletePhoto(photo.id)}
                               className="glass-pill"
-                              style={{ padding: '6px 10px', fontSize: '11px', cursor: 'pointer', color: '#86868B' }}
+                              style={{ padding: '5px 8px', fontSize: '11px', cursor: 'pointer', color: '#86868B' }}
                               title="Hapus foto permanen"
                             >
                               <Trash2 size={12} />
@@ -649,7 +651,7 @@ export default function BrideDashboardPage() {
                               href={photo.imageData}
                               download={`foto-${photo.guestName}.jpg`}
                               className="glass-pill"
-                              style={{ padding: '6px 10px', fontSize: '11px', textDecoration: 'none', color: '#1D1D1F' }}
+                              style={{ padding: '5px 8px', fontSize: '11px', textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center' }}
                               title="Unduh foto"
                             >
                               <Download size={12} />
@@ -742,7 +744,7 @@ export default function BrideDashboardPage() {
         {activeTab === 'settings' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
             {/* Section A: Frame Customizer */}
-            <div className="glass-card" style={{ padding: '36px', borderRadius: '24px' }}>
+            <div className="glass-card form-section-card">
               <div style={{ marginBottom: '24px' }}>
                 <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
                   KUSTOMISASI BINGKAI FOTO
@@ -772,8 +774,8 @@ export default function BrideDashboardPage() {
             </div>
 
             {/* Section B: Film Presets & Guest Filter Permission */}
-            <div className="glass-card" style={{ padding: '36px', borderRadius: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+            <div className="glass-card form-section-card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '14px' }}>
                 <div>
                   <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
                     EMULASI FILM ANALOG (8 PRESET)
@@ -953,7 +955,7 @@ export default function BrideDashboardPage() {
             </div>
 
             {/* Section C: Camera Rules & Reveal Mode */}
-            <div className="glass-card" style={{ padding: '36px', borderRadius: '24px', maxWidth: '720px' }}>
+            <div className="glass-card form-section-card" style={{ maxWidth: '720px' }}>
               <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
                 ATURAN KAMERA & PENGUNGKAPAN
               </span>
@@ -987,7 +989,7 @@ export default function BrideDashboardPage() {
                   <label style={{ display: 'block', fontSize: '12px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '8px' }}>
                     Waktu Buka Album (Reveal Mode)
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                  <div className="responsive-two-col">
                     <div
                       onClick={() => setRevealMode('instant')}
                       style={{

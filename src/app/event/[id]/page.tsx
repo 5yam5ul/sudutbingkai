@@ -249,17 +249,17 @@ export default function EventDashboardPage() {
         position: 'sticky',
         top: 0,
         zIndex: 50,
-        padding: '16px 24px',
+        padding: 'calc(12px + env(safe-area-inset-top, 0px)) 20px 12px',
         borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
       }}>
-        <div style={{ maxWidth: '1160px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Link href="/" style={{ textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ maxWidth: '1160px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <Link href="/" style={{ textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <ArrowLeft size={16} />
               <img 
                 src="/sudut-bingkai-logo.png" 
                 alt="Sudut Bingkai" 
-                style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }} 
+                style={{ height: '30px', width: 'auto', objectFit: 'contain', display: 'block' }} 
               />
             </Link>
             <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
@@ -268,19 +268,18 @@ export default function EventDashboardPage() {
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button onClick={copyGuestLink} className="glass-pill" style={{ padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button onClick={copyGuestLink} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
               {copied ? <Check size={14} color="#C27803" /> : <Share2 size={14} />}
-              <span>{copied ? 'Tautan Tersalin' : 'Salin Link Tamu'}</span>
+              <span>{copied ? 'Tersalin' : 'Salin Link'}</span>
             </button>
 
-            <Link href={`/event/${eventId}/print`} className="glass-pill" style={{ padding: '8px 16px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Link href={`/event/${eventId}/print`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Printer size={14} />
-              <span>Cetak Kartu Meja</span>
+              <span>Kartu Meja</span>
             </Link>
 
-
-            <Link href={`/cam/${eventId}`} className="btn-apple-black" style={{ padding: '8px 18px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Link href={`/cam/${eventId}`} className="btn-apple-black" style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Camera size={14} />
               <span>Buka Kamera</span>
             </Link>
@@ -289,23 +288,23 @@ export default function EventDashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main style={{ position: 'relative', zIndex: 10, padding: '40px 24px 80px', maxWidth: '1160px', margin: '0 auto' }}>
+      <main className="dashboard-main" style={{ position: 'relative', zIndex: 10 }}>
         {/* Event Header Banner */}
-        <div className="glass-card" style={{ padding: '36px', borderRadius: '28px', marginBottom: '40px' }}>
+        <div className="glass-card form-section-card" style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2ECC71' }} />
                 <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
                   ACARA AKTIF
                 </span>
               </div>
 
-              <h1 className="font-display-serif" style={{ fontSize: '38px', fontWeight: 700, marginBottom: '8px', color: '#1D1D1F' }}>
+              <h1 className="font-display-serif" style={{ fontSize: 'clamp(1.8rem, 4.5vw, 2.4rem)', fontWeight: 700, marginBottom: '8px', color: '#1D1D1F' }}>
                 {event?.title || 'Hari Pernikahan'}
               </h1>
 
-              <p style={{ color: '#515154', fontSize: '14.5px' }}>
+              <p style={{ color: '#515154', fontSize: '14px' }}>
                 Penyelenggara: <strong style={{ color: '#1D1D1F' }}>{event?.coupleOrHost}</strong>
                 {event?.location && ` • Lokasi: ${event.location}`}
               </p>
@@ -315,46 +314,47 @@ export default function EventDashboardPage() {
               onClick={downloadAllPhotosAsZip} 
               disabled={isZipping || photos.length === 0}
               className="btn-apple-black" 
-              style={{ padding: '12px 24px', fontSize: '13.5px', display: 'flex', alignItems: 'center', gap: '8px', cursor: isZipping ? 'wait' : 'pointer' }}
+              style={{ padding: '10px 20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: isZipping ? 'wait' : 'pointer' }}
             >
-              {isZipping ? <RefreshCw size={16} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={16} />}
-              <span>{isZipping ? zipProgress : `Unduh Arsip ZIP (${photos.length} Foto)`}</span>
+              {isZipping ? <RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={15} />}
+              <span className="desktop-only">{isZipping ? zipProgress : `Unduh Arsip ZIP (${photos.length} Foto)`}</span>
+              <span className="mobile-only">{isZipping ? zipProgress : `Unduh ZIP (${photos.length})`}</span>
             </button>
           </div>
 
           {/* Quick Metrics */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '16px', marginTop: '28px', borderTop: '1px solid rgba(0, 0, 0, 0.07)', paddingTop: '24px' }}>
+          <div className="responsive-metrics-grid" style={{ marginTop: '24px', borderTop: '1px solid rgba(0, 0, 0, 0.07)', paddingTop: '20px' }}>
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>TOTAL FOTO</span>
-              <strong style={{ fontSize: '22px', color: '#1D1D1F' }}>{photos.length} Momen</strong>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{photos.length} Momen</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>FILTER EMULASI</span>
-              <strong style={{ fontSize: '22px', color: '#C27803' }}>{presetInfo.name}</strong>
+              <strong style={{ fontSize: '20px', color: '#C27803' }}>{presetInfo.name}</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>BINGKAI RESMI</span>
-              <strong style={{ fontSize: '22px', color: '#1D1D1F' }}>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>
                 {FRAME_TEMPLATES[event?.frameId || 'minimal-gold']?.name?.split(' ')[0] || 'Minimal'}
               </strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>PESAN SUARA</span>
-              <strong style={{ fontSize: '22px', color: '#C27803' }}>{voiceNotes.length} Ucapan</strong>
+              <strong style={{ fontSize: '20px', color: '#C27803' }}>{voiceNotes.length} Ucapan</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>JATAH PER TAMU</span>
-              <strong style={{ fontSize: '22px', color: '#1D1D1F' }}>{event?.shotsPerGuest || 20} Foto</strong>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{event?.shotsPerGuest || 20} Foto</strong>
             </div>
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>STATUS PENGUNGKAPAN</span>
-              <strong style={{ fontSize: '22px', color: '#1D1D1F' }}>
-                {event?.revealMode === 'instant' ? 'Terbuka' : countdown.isExpired ? 'Selesai Dicuci' : 'Kamar Gelap (Cuci Roll)'}
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>
+                {event?.revealMode === 'instant' ? 'Terbuka' : countdown.isExpired ? 'Selesai Dicuci' : 'Kamar Gelap'}
               </strong>
             </div>
           </div>
@@ -362,7 +362,7 @@ export default function EventDashboardPage() {
 
         {/* Cuci Roll Developing Banner (When delayed & not expired) */}
         {event?.revealMode === 'delayed' && !countdown.isExpired && (
-          <div className="glass-card" style={{ padding: '28px 32px', borderRadius: '24px', marginBottom: '36px', background: 'linear-gradient(135deg, rgba(28, 25, 23, 0.96), rgba(15, 14, 12, 0.98))', color: '#FFF', border: '1px solid rgba(194, 120, 3, 0.35)' }}>
+          <div className="glass-card form-section-card" style={{ marginBottom: '32px', background: 'linear-gradient(135deg, rgba(28, 25, 23, 0.96), rgba(15, 14, 12, 0.98))', color: '#FFF', border: '1px solid rgba(194, 120, 3, 0.35)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                 <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(194, 120, 3, 0.2)', border: '1px solid #C27803', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -438,10 +438,10 @@ export default function EventDashboardPage() {
               </Link>
             </div>
           ) : (
-            <div style={{
+            <div className="mobile-photo-grid" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-              gap: '24px'
+              gap: '20px'
             }}>
               {photos.map((photo) => {
                 const isLocked = event?.revealMode === 'delayed' && !countdown.isExpired;
@@ -451,8 +451,8 @@ export default function EventDashboardPage() {
                     key={photo.id}
                     className="glass-card"
                     style={{
-                      borderRadius: '28px',
-                      padding: '14px 14px 18px 14px',
+                      borderRadius: '24px',
+                      padding: '12px 12px 16px 12px',
                       overflow: 'hidden',
                       cursor: isLocked ? 'default' : 'pointer'
                     }}
@@ -460,7 +460,7 @@ export default function EventDashboardPage() {
                       if (!isLocked) setActivePhoto(photo);
                     }}
                   >
-                    <div style={{ aspectRatio: '3/4', borderRadius: '20px', overflow: 'hidden', background: '#000', marginBottom: '14px', position: 'relative' }}>
+                    <div style={{ aspectRatio: '3/4', borderRadius: '18px', overflow: 'hidden', background: '#000', marginBottom: '12px', position: 'relative' }}>
                       <img
                         src={photo.imageData}
                         alt={`Foto oleh ${photo.guestName}`}
@@ -474,33 +474,33 @@ export default function EventDashboardPage() {
                       />
                       {isLocked && (
                         <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#FFF' }}>
-                          <Lock size={24} color="#F59E0B" />
-                          <span className="font-mono-film" style={{ fontSize: '10px', color: '#F59E0B', letterSpacing: '1px' }}>
+                          <Lock size={22} color="#F59E0B" />
+                          <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#F59E0B', letterSpacing: '1px' }}>
                             DALAM CUCI ROLL
                           </span>
                         </div>
                       )}
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 6px' }}>
-                      <div>
-                        <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block', fontWeight: 600 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px', flexWrap: 'wrap', gap: '4px' }}>
+                      <div style={{ minWidth: 0, flex: '1 1 65px' }}>
+                        <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {photo.guestName}
                         </strong>
-                        <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B' }}>
-                          Jepretan #{photo.shotNumber}
+                        <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#86868B' }}>
+                          #{photo.shotNumber}
                         </span>
                       </div>
 
                       {!isLocked ? (
-                        <div style={{ display: 'flex', gap: '6px' }}>
+                        <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSharePhoto(photo);
                             }}
                             className="glass-pill"
-                            style={{ padding: '7px 12px', fontSize: '11.5px', display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer' }}
+                            style={{ padding: '6px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
                             title="Bagikan ke WhatsApp/Instagram"
                           >
                             <Share2 size={12} />
@@ -511,14 +511,15 @@ export default function EventDashboardPage() {
                             download={`sudutbingkai-${photo.guestName}-${photo.shotNumber}.jpg`}
                             onClick={(e) => e.stopPropagation()}
                             className="glass-pill"
-                            style={{ padding: '7px 14px', fontSize: '11.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '5px' }}
+                            style={{ padding: '6px 8px', fontSize: '11px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            title="Unduh"
                           >
                             <Download size={12} />
-                            <span>Unduh</span>
+                            <span className="desktop-only">Unduh</span>
                           </a>
                         </div>
                       ) : (
-                        <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B' }}>Terkunci</span>
+                        <span className="font-mono-film" style={{ fontSize: '9px', color: '#86868B' }}>Terkunci</span>
                       )}
                     </div>
                   </div>

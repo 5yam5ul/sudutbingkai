@@ -167,23 +167,23 @@ function CreateEventForm() {
       </header>
 
       {/* Main Content */}
-      <main style={{ position: 'relative', zIndex: 10, padding: '48px 24px 80px', maxWidth: '780px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+      <main style={{ position: 'relative', zIndex: 10, padding: '28px 16px 80px', maxWidth: '780px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px' }}>
             SETUP ALBUM DIGITAL
           </span>
-          <h1 className="font-display-serif" style={{ fontSize: '36px', fontWeight: 700, marginBottom: '10px', color: '#1D1D1F' }}>
+          <h1 className="font-display-serif" style={{ fontSize: '32px', fontWeight: 700, marginBottom: '10px', color: '#1D1D1F' }}>
             Siapkan Wadah <em>Kenangan Acaramu</em>
           </h1>
-          <p style={{ color: '#6E6E73', fontSize: '14.5px', maxWidth: '520px', margin: '0 auto' }}>
+          <p style={{ color: '#6E6E73', fontSize: '14px', maxWidth: '520px', margin: '0 auto' }}>
             Atur nama acara, konfirmasi kuota paket yang sudah dibeli, pilih karakter warna film analog, dan dapatkan kartu barcode meja seketika.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* SECTION 1: INFORMASI ACARA & STATUS PAKET PEMBELIAN TERVERIFIKASI */}
-          <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+          <div className="glass-card form-section-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
                 01 • DETAIL ACARA & PAKET AKTIF
@@ -423,7 +423,7 @@ function CreateEventForm() {
           </div>
 
           {/* SECTION 2: KARAKTER WARNA FILM ANALOG (PREVIEW FOTO NYATA) */}
-          <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+          <div className="glass-card form-section-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
                 02 • KARAKTER WARNA FILM ANALOG (PREVIEW NYATA)
@@ -497,7 +497,7 @@ function CreateEventForm() {
             </div>
 
             {/* Presets Visual Grid with Photo Previews */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px' }}>
+            <div className="presets-grid-responsive">
               {Object.entries(FILM_PRESETS).map(([id, p]) => {
                 const presetId = id as FilmPresetId;
                 const isPrimary = primaryPreset === presetId;
@@ -667,7 +667,7 @@ function CreateEventForm() {
           </div>
 
           {/* SECTION 3: DESAIN BINGKAI FOTO (DUMMY NYATA + 10 BINGKAI MEWAH) */}
-          <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+          <div className="glass-card form-section-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
                 03 • DESAIN BINGKAI FOTO MEWAH
@@ -701,7 +701,7 @@ function CreateEventForm() {
           </div>
 
           {/* SECTION 4: ATURAN KAMERA & WAKTU BUKA ALBUM (CUCI ROLL) */}
-          <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+          <div className="glass-card form-section-card">
             <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px' }}>
               04 • ATURAN KAMERA & PENGUNGKAPAN
             </span>
@@ -715,7 +715,7 @@ function CreateEventForm() {
                 <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '8px' }}>
                   Kapan Foto Diungkapkan (Revealed)?
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div className="responsive-two-col">
                   <div
                     onClick={() => setRevealMode('instant')}
                     style={{

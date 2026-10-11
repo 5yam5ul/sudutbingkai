@@ -29,6 +29,11 @@
   --font-serif: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
 
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+
   --shadow-glass: 0 20px 48px -12px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.02), inset 0 1px 1px rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
   --shadow-card: 0 16px 40px -10px rgba(0, 0, 0, 0.05), inset 0 1px 1px rgba(255, 255, 255, 0.9);
   --shadow-floating: 0 30px 60px -15px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.9);
@@ -38,6 +43,7 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html {
@@ -48,10 +54,13 @@ html {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   overflow-x: hidden;
@@ -399,35 +408,36 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .responsive-mockup-wrapper {
-    height: 460px !important;
+    height: 420px !important;
     width: 100% !important;
-    max-width: 340px !important;
+    max-width: 320px !important;
     overflow: visible !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    margin: 16px auto 36px !important;
+    margin: 12px auto 32px !important;
+    position: relative !important;
   }
 
   .responsive-mockup-wrapper .phone-floating-left {
-    left: 6px !important;
-    top: 10px !important;
-    width: 195px !important;
-    height: 380px !important;
-    opacity: 0.92 !important;
-    border-radius: 32px !important;
+    left: 2px !important;
+    top: 15px !important;
+    width: 180px !important;
+    height: 350px !important;
+    opacity: 0.9 !important;
+    border-radius: 28px !important;
     border-width: 3px !important;
-    transform: perspective(1200px) rotateY(10deg) rotateX(4deg) rotateZ(-3deg) !important;
+    transform: perspective(1000px) rotateY(10deg) rotateX(4deg) rotateZ(-3deg) !important;
   }
 
   .responsive-mockup-wrapper .phone-floating-right {
-    right: 6px !important;
-    top: 30px !important;
-    width: 218px !important;
-    height: 410px !important;
-    border-radius: 32px !important;
+    right: 2px !important;
+    top: 35px !important;
+    width: 200px !important;
+    height: 375px !important;
+    border-radius: 28px !important;
     border-width: 3px !important;
-    transform: perspective(1200px) rotateY(-8deg) rotateX(4deg) rotateZ(3deg) !important;
+    transform: perspective(1000px) rotateY(-8deg) rotateX(4deg) rotateZ(3deg) !important;
   }
 }
 
@@ -557,3 +567,146 @@ h1, h2, h3, h4, h5, h6 {
     gap: 16px;
   }
 }
+
+/* ==========================================================================
+   MOBILE FIRST OPTIMIZATIONS (iOS / Android Mobile Viewports 360px - 430px)
+   ========================================================================== */
+
+/* Prevent iOS Safari auto-zoom on form inputs */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Mobile Glass Card Padding and Radius adjustments */
+@media (max-width: 640px) {
+  .glass-card {
+    padding: 20px 16px !important;
+    border-radius: 20px !important;
+  }
+
+  /* Interactive touch targets */
+  .btn-apple-black,
+  .btn-glass-secondary {
+    min-height: 48px;
+    padding: 12px 20px !important;
+  }
+
+  /* 2-Column Mobile Photo Gallery Standard */
+  .mobile-photo-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .mobile-photo-grid .glass-card {
+    padding: 8px 8px 12px 8px !important;
+    border-radius: 16px !important;
+  }
+
+  .mobile-photo-grid .glass-card img {
+    border-radius: 12px !important;
+  }
+}
+
+/* Horizontal Touch Swiping Container */
+.horizontal-scroll-row {
+  display: flex;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+
+.horizontal-scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
+.horizontal-scroll-row > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* Form Section Responsive Cards */
+.form-section-card {
+  padding: 32px;
+  border-radius: 24px;
+}
+
+@media (max-width: 640px) {
+  .form-section-card {
+    padding: 18px 14px !important;
+    border-radius: 20px !important;
+  }
+}
+
+/* Responsive Two-Column Collapse */
+.responsive-two-col {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .responsive-two-col {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Presets Grid on Create Page */
+.presets-grid-responsive {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+@media (max-width: 520px) {
+  .presets-grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Frame Customizer Grid */
+.frame-customizer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 680px) {
+  .frame-customizer-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+}
+
+/* Responsive Metrics Grid for Dashboard & Event Pages */
+.responsive-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 600px) {
+  .responsive-metrics-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px 10px !important;
+  }
+}
+
+/* Responsive Dashboard & Event Main Wrapper */
+.dashboard-main {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 36px 24px 80px;
+}
+
+@media (max-width: 640px) {
+  .dashboard-main {
+    padding: 20px 14px 80px !important;
+  }
+}
+

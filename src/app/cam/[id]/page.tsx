@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { 
   Zap, RotateCcw, ArrowLeft, ArrowRight, Camera, QrCode as QrIcon, 
   Check, Eye, Download, X, Heart, MessageSquare, CheckCircle2, Film,
-  Share2, Sparkles, Layers, Mic, MicOff, Play, Square, WifiOff
+  Share2, Sparkles, Layers, Mic, MicOff, Play, Square, WifiOff,
+  Image as ImageIcon, AlertTriangle, Upload
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
@@ -68,7 +69,9 @@ export default function GuestCameraPage() {
   const [lastShotThumb, setLastShotThumb] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
   const [showRollModal, setShowRollModal] = useState(false);
+  const [showWishModal, setShowWishModal] = useState(false);
   const [currentWish, setCurrentWish] = useState('');
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
   // Point 6: Voice Note Recording States (at Quota Exhausted)
   const [isRecording, setIsRecording] = useState(false);
@@ -245,8 +248,15 @@ export default function GuestCameraPage() {
     else setFlashMode('screen');
   };
 
-  const takePhoto = async () => {
-    if (isCapturing || !videoRef.current || shotCount >= maxShots) return;
+  // Core Image Processing & Cloud/Offline Roll Sync
+  const processAndUploadImage = async (
+    source: HTMLVideoElement | HTMLImageElement,
+    isMirroredUserFacing: boolean = false
+  ) => {
+    if (shotCount >= maxShots) {
+      toast.error('Jatah roll foto Anda sudah habis.');
+      return;
+    }
     setIsCapturing(true);
 
     // Audio effects: Shutter click + mechanical film winding ratchet
@@ -260,68 +270,41 @@ export default function GuestCameraPage() {
       } catch {}
     }
 
-    // Point 3: Flash handling (Hardware Torch or Screen flash)
-    if (flashMode === 'torch' && streamRef.current && facingMode === 'environment') {
-      try {
-        const track = streamRef.current.getVideoTracks()[0];
-        // @ts-ignore
-        const capabilities = track.getCapabilities?.();
-        // @ts-ignore
-        if (capabilities?.torch) {
-          // @ts-ignore
-          await track.applyConstraints({ advanced: [{ torch: true }] });
-          setTimeout(() => {
-            // @ts-ignore
-            track.applyConstraints({ advanced: [{ torch: false }] });
-          }, 350);
-        } else {
-          setFlashTrigger(true);
-          setTimeout(() => setFlashTrigger(false), 220);
-        }
-      } catch {
-        setFlashTrigger(true);
-        setTimeout(() => setFlashTrigger(false), 220);
-      }
-    } else if (flashMode === 'screen') {
-      setFlashTrigger(true);
-      setTimeout(() => setFlashTrigger(false), 220);
-    }
-
-    const video = videoRef.current;
     const canvas = canvasRef.current || document.createElement('canvas');
 
-    // Point 8: Set canvas dimensions based on chosen aspect ratio
+    // Multi-Aspect Ratio: '3:4' | '1:1' | '9:16'
     const targetAspect = aspectRatio === '1:1' ? 1 : aspectRatio === '9:16' ? 9 / 16 : 3 / 4;
     canvas.width = 1200;
     canvas.height = Math.round(1200 / targetAspect);
     const ctx = canvas.getContext('2d');
 
     if (ctx) {
-      const vW = video.videoWidth || 640;
-      const vH = video.videoHeight || 480;
-      const videoRatio = vW / vH;
+      const isVideo = source instanceof HTMLVideoElement;
+      const sW = isVideo ? source.videoWidth || 640 : source.naturalWidth || 640;
+      const sH = isVideo ? source.videoHeight || 480 : source.naturalHeight || 480;
+      const sourceRatio = sW / sH;
       let cW, cH, sX, sY;
 
-      if (videoRatio > targetAspect) {
-        cH = vH;
-        cW = vH * targetAspect;
-        sX = (vW - cW) / 2;
+      if (sourceRatio > targetAspect) {
+        cH = sH;
+        cW = sH * targetAspect;
+        sX = (sW - cW) / 2;
         sY = 0;
       } else {
-        cW = vW;
-        cH = vW / targetAspect;
+        cW = sW;
+        cH = sW / targetAspect;
         sX = 0;
-        sY = (vH - cH) / 2;
+        sY = (sH - cH) / 2;
       }
 
-      if (facingMode === 'user') {
+      if (isMirroredUserFacing) {
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
       }
 
-      ctx.drawImage(video, sX, sY, cW, cH, 0, 0, canvas.width, canvas.height);
+      ctx.drawImage(source, sX, sY, cW, cH, 0, 0, canvas.width, canvas.height);
 
-      if (facingMode === 'user') {
+      if (isMirroredUserFacing) {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
       }
 
@@ -442,6 +425,59 @@ export default function GuestCameraPage() {
     setTimeout(() => {
       setIsCapturing(false);
     }, 400);
+  };
+
+  const takePhoto = async () => {
+    if (isCapturing || !videoRef.current || shotCount >= maxShots) return;
+
+    // Point 3: Flash handling (Hardware Torch or Screen flash)
+    if (flashMode === 'torch' && streamRef.current && facingMode === 'environment') {
+      try {
+        const track = streamRef.current.getVideoTracks()[0];
+        // @ts-ignore
+        const capabilities = track.getCapabilities?.();
+        // @ts-ignore
+        if (capabilities?.torch) {
+          // @ts-ignore
+          await track.applyConstraints({ advanced: [{ torch: true }] });
+          setTimeout(() => {
+            // @ts-ignore
+            track.applyConstraints({ advanced: [{ torch: false }] });
+          }, 350);
+        } else {
+          setFlashTrigger(true);
+          setTimeout(() => setFlashTrigger(false), 220);
+        }
+      } catch {
+        setFlashTrigger(true);
+        setTimeout(() => setFlashTrigger(false), 220);
+      }
+    } else if (flashMode === 'screen') {
+      setFlashTrigger(true);
+      setTimeout(() => setFlashTrigger(false), 220);
+    }
+
+    await processAndUploadImage(videoRef.current, facingMode === 'user');
+  };
+
+  // Gallery Upload Fallback Handler
+  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        const img = new Image();
+        img.onload = async () => {
+          await processAndUploadImage(img, false);
+          toast.success('Foto dari galeri HP berhasil diproses bernuansa analog!');
+        };
+        img.src = event.target.result as string;
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   const downloadSinglePhoto = (dataUrl: string, shotNum: number) => {
@@ -635,6 +671,82 @@ export default function GuestCameraPage() {
           </div>
         </div>
 
+        {/* Camera Permission / Access Error Fallback State */}
+        {cameraError && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            zIndex: 35,
+            background: 'rgba(11, 10, 9, 0.94)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            textAlign: 'center'
+          }}>
+            <div style={{
+              width: '58px',
+              height: '58px',
+              borderRadius: '50%',
+              background: 'rgba(217, 119, 6, 0.15)',
+              color: '#D97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '16px'
+            }}>
+              <AlertTriangle size={28} />
+            </div>
+
+            <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', marginBottom: '8px' }}>
+              Izin Kamera Belum Aktif
+            </h3>
+
+            <p style={{ color: '#A1A1A6', fontSize: '13px', lineHeight: 1.5, maxWidth: '290px', marginBottom: '22px' }}>
+              {cameraError} Anda tetap bisa berpartisipasi dan memotret momen pernikahan dengan memilih foto langsung dari Galeri HP Anda:
+            </p>
+
+            <button
+              onClick={() => galleryInputRef.current?.click()}
+              className="btn-apple-black"
+              style={{
+                background: '#C27803',
+                color: '#FFFFFF',
+                border: 'none',
+                padding: '13px 24px',
+                borderRadius: '999px',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                marginBottom: '14px',
+                boxShadow: '0 8px 24px rgba(194, 120, 3, 0.3)'
+              }}
+            >
+              <ImageIcon size={17} />
+              <span>Unggah dari Galeri HP</span>
+            </button>
+
+            <button
+              onClick={startCamera}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#86868B',
+                fontSize: '12px',
+                textDecoration: 'underline',
+                cursor: 'pointer'
+              }}
+            >
+              Coba Buka Kamera Lagi
+            </button>
+          </div>
+        )}
+
         {/* Shutter Flash Animation */}
         {flashTrigger && (
           <div style={{
@@ -689,14 +801,14 @@ export default function GuestCameraPage() {
         </AnimatePresence>
       </div>
 
-      {/* Top HUD Bar */}
+      {/* Top HUD Bar with Safe Area Top */}
       <header style={{
         position: 'relative',
         zIndex: 20,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: '16px 18px',
+        padding: 'calc(14px + env(safe-area-inset-top, 0px)) 16px 8px',
         background: 'linear-gradient(180deg, rgba(11,10,9,0.92) 0%, transparent 100%)'
       }}>
         {/* Flash Mode Toggle (Screen vs Torch vs Off) */}
@@ -794,102 +906,91 @@ export default function GuestCameraPage() {
         </div>
       </header>
 
-      {/* Middle Floating Toggles: Aspect Ratio & Frame Switcher */}
+      {/* Sub-HUD: Aspect Ratio, Frame Switcher, and Sleek Wish Trigger */}
       <div style={{
         position: 'relative',
         zIndex: 20,
-        padding: '0 20px',
+        padding: '0 16px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        gap: '8px'
       }}>
-        {/* Aspect Ratio Switcher (1:1 / 3:4 / 9:16) */}
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          {/* Aspect Ratio Switcher (1:1 / 3:4 / 9:16) */}
+          <button
+            onClick={cycleAspectRatio}
+            style={{
+              background: 'rgba(15, 14, 13, 0.75)',
+              backdropFilter: 'blur(12px)',
+              border: '1px solid rgba(255, 255, 255, 0.18)',
+              padding: '5px 11px',
+              borderRadius: '999px',
+              color: '#FFFFFF',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px'
+            }}
+            title="Ganti Rasio Foto"
+          >
+            <Layers size={11} />
+            <span>{aspectRatio}</span>
+          </button>
+
+          {/* Frame Toggle (Event Frame vs RAW Photo) */}
+          {event?.allowGuestFrameToggle !== false && (
+            <button
+              onClick={() => setUseFrame(!useFrame)}
+              style={{
+                background: useFrame ? 'rgba(194, 120, 3, 0.85)' : 'rgba(15, 14, 13, 0.75)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                padding: '5px 11px',
+                borderRadius: '999px',
+                color: '#FFFFFF',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+              title="Pilih Pakai Bingkai atau Raw"
+            >
+              <Sparkles size={11} />
+              <span>{useFrame ? 'BINGKAI' : 'RAW'}</span>
+            </button>
+          )}
+        </div>
+
+        {/* Sleek Wish Trigger Button */}
         <button
-          onClick={cycleAspectRatio}
+          onClick={() => setShowWishModal(true)}
           style={{
-            background: 'rgba(15, 14, 13, 0.75)',
+            background: currentWish.trim() ? 'rgba(194, 120, 3, 0.9)' : 'rgba(15, 14, 13, 0.75)',
             backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.18)',
+            border: currentWish.trim() ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.18)',
             padding: '5px 12px',
             borderRadius: '999px',
             color: '#FFFFFF',
             fontSize: '11px',
-            fontWeight: 700,
+            fontWeight: 600,
             cursor: 'pointer',
             display: 'flex',
             alignItems: 'center',
-            gap: '5px'
+            gap: '5px',
+            maxWidth: '150px'
           }}
-          title="Ganti Rasio Foto"
+          title="Tuliskan ucapan untuk pengantin"
         >
-          <Layers size={12} />
-          <span>{aspectRatio}</span>
+          <Heart size={11} fill={currentWish.trim() ? 'currentColor' : 'none'} color={currentWish.trim() ? '#fff' : '#C27803'} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {currentWish.trim() ? `"${currentWish.trim()}"` : '+ Ucapan'}
+          </span>
         </button>
-
-        {/* Frame Toggle (Event Frame vs RAW Photo) */}
-        {event?.allowGuestFrameToggle !== false && (
-          <button
-            onClick={() => setUseFrame(!useFrame)}
-            style={{
-              background: useFrame ? 'rgba(194, 120, 3, 0.85)' : 'rgba(15, 14, 13, 0.75)',
-              backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
-              padding: '5px 12px',
-              borderRadius: '999px',
-              color: '#FFFFFF',
-              fontSize: '11px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px'
-            }}
-            title="Pilih Pakai Bingkai atau Raw"
-          >
-            <Sparkles size={12} />
-            <span>{useFrame ? 'BINGKAI: ON' : 'RAW: OFF'}</span>
-          </button>
-        )}
-      </div>
-
-      {/* Optional Wish Bar before shooting */}
-      <div style={{
-        position: 'relative',
-        zIndex: 20,
-        padding: '0 20px',
-        display: 'flex',
-        justifyContent: 'center',
-        marginTop: '8px'
-      }}>
-        <div style={{
-          background: 'rgba(15, 14, 13, 0.75)',
-          backdropFilter: 'blur(12px)',
-          borderRadius: '999px',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          padding: '4px 14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          maxWidth: '360px',
-          width: '100%'
-        }}>
-          <Heart size={13} color="#C27803" />
-          <input
-            type="text"
-            maxLength={60}
-            placeholder="Ketik ucapan untuk pengantin (opsional)..."
-            value={currentWish}
-            onChange={(e) => setCurrentWish(e.target.value)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              outline: 'none',
-              color: '#FFFFFF',
-              fontSize: '11.5px',
-              width: '100%'
-            }}
-          />
-        </div>
       </div>
 
       {/* Film Switcher Strip for Guests (when host enables allowGuestPresetSwitch) */}
@@ -950,16 +1051,25 @@ export default function GuestCameraPage() {
         </div>
       )}
 
-      {/* Bottom Shutter Controls */}
+      {/* Bottom Shutter Controls with Safe Area Bottom */}
       <footer style={{
         position: 'relative',
         zIndex: 20,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '16px 20px 24px',
+        padding: '10px 18px calc(14px + env(safe-area-inset-bottom, 0px))',
         background: 'linear-gradient(0deg, rgba(11,10,9,0.96) 0%, transparent 100%)'
       }}>
+        {/* Hidden File Input for Phone Gallery Upload Fallback */}
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleGalleryUpload}
+          style={{ display: 'none' }}
+        />
+
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', width: '100%', maxWidth: '380px' }}>
           {/* Flip Lens */}
           <button
@@ -968,8 +1078,8 @@ export default function GuestCameraPage() {
               background: 'rgba(255, 255, 255, 0.12)',
               border: 'none',
               color: '#fff',
-              width: '46px',
-              height: '46px',
+              width: '44px',
+              height: '44px',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
@@ -981,14 +1091,36 @@ export default function GuestCameraPage() {
             <RotateCcw size={18} />
           </button>
 
+          {/* Gallery Upload Fallback Button */}
+          <button
+            onClick={() => galleryInputRef.current?.click()}
+            disabled={shotCount >= maxShots || isCapturing}
+            style={{
+              background: 'rgba(255, 255, 255, 0.12)',
+              border: 'none',
+              color: '#fff',
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: (shotCount >= maxShots || isCapturing) ? 'not-allowed' : 'pointer'
+            }}
+            title="Unggah Foto dari Galeri HP"
+          >
+            <ImageIcon size={18} />
+          </button>
+
           {/* Shutter Button (Mechanical feel) */}
           <button
             onClick={takePhoto}
             disabled={isCapturing || remaining === 0}
             className="shutter-ring"
             style={{
-              width: '78px',
-              height: '78px',
+              width: '74px',
+              height: '74px',
               borderRadius: '50%',
               background: remaining === 0 ? '#4A4845' : '#FFFFFF',
               border: '4px solid #12110F',
@@ -1002,8 +1134,8 @@ export default function GuestCameraPage() {
             title="Ambil Foto"
           >
             <div style={{
-              width: '62px',
-              height: '62px',
+              width: '58px',
+              height: '58px',
               borderRadius: '50%',
               border: '2px solid rgba(0, 0, 0, 0.15)'
             }} />
@@ -1016,9 +1148,9 @@ export default function GuestCameraPage() {
               background: myPhotos.length > 0 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.12)',
               border: 'none',
               color: myPhotos.length > 0 ? '#1D1D1F' : '#FFFFFF',
-              width: '46px',
-              height: '46px',
-              borderRadius: '14px',
+              width: '44px',
+              height: '44px',
+              borderRadius: '13px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -1057,12 +1189,111 @@ export default function GuestCameraPage() {
         </div>
 
         {/* Subtle Co-Branding footer */}
-        <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.6, fontSize: '10px', color: '#86868B' }}>
+        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.6, fontSize: '10px', color: '#86868B' }}>
           <span>SudutBingkai</span>
           <span>•</span>
           <span>Tamu: <strong>{guestName || 'Undangan'}</strong></span>
         </div>
       </footer>
+
+      {/* Sleek Wish Input Drawer */}
+      <AnimatePresence>
+        {showWishModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.75)',
+              backdropFilter: 'blur(8px)',
+              zIndex: 110,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'flex-end'
+            }}
+            onClick={() => setShowWishModal(false)}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#FFFFFF',
+                color: '#1D1D1F',
+                borderTopLeftRadius: '24px',
+                borderTopRightRadius: '24px',
+                padding: '24px 20px calc(24px + env(safe-area-inset-bottom, 0px))',
+                position: 'relative'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Heart size={16} color="#C27803" />
+                  <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Tulis Ucapan Singkat</strong>
+                </div>
+                <button
+                  onClick={() => setShowWishModal(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: '#86868B' }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <p style={{ fontSize: '12px', color: '#6E6E73', marginBottom: '14px', lineHeight: 1.4 }}>
+                Ucapan ini akan menempel manis di foto jepretan Anda berikutnya.
+              </p>
+
+              <input
+                type="text"
+                autoFocus
+                maxLength={60}
+                placeholder="Contoh: Bahagia selalu Sarah & Dimas! 🎉"
+                value={currentWish}
+                onChange={(e) => setCurrentWish(e.target.value)}
+                className="glass-input"
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  fontSize: '15px',
+                  marginBottom: '16px'
+                }}
+              />
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                {currentWish && (
+                  <button
+                    onClick={() => setCurrentWish('')}
+                    style={{
+                      background: 'rgba(0,0,0,0.06)',
+                      border: 'none',
+                      borderRadius: '12px',
+                      padding: '12px 18px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      color: '#515154'
+                    }}
+                  >
+                    Hapus
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowWishModal(false)}
+                  className="btn-apple-black"
+                  style={{ flex: 1, padding: '12px', fontSize: '13.5px', borderRadius: '12px' }}
+                >
+                  Simpan Ucapan
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Guest Personal Roll Modal / Drawer with Motion Spring Animation */}
       <AnimatePresence>
@@ -1371,25 +1602,27 @@ export default function GuestCameraPage() {
     <div style={{
       width: '100%',
       height: '100%',
+      minHeight: '100%',
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
       display: 'flex',
       flexDirection: 'column',
-      justifyContent: 'center',
-      padding: '36px 28px',
+      padding: 'calc(24px + env(safe-area-inset-top, 0px)) 24px calc(28px + env(safe-area-inset-bottom, 0px))',
       background: '#FFFFFF',
       color: '#1D1D1F',
       position: 'relative'
     }}>
-      <div style={{ maxWidth: '340px', margin: '0 auto', width: '100%' }}>
+      <div style={{ maxWidth: '350px', margin: 'auto', width: '100%', padding: '12px 0' }}>
         <p className="font-mono-film" style={{ color: '#C27803', marginBottom: '8px' }}>
           {event?.coupleOrHost || 'Pernikahan Sarah & Dimas'}
         </p>
 
-        <h1 className="font-display-serif" style={{ fontSize: '32px', lineHeight: 1.15, marginBottom: '14px', color: '#1D1D1F' }}>
+        <h1 className="font-display-serif" style={{ fontSize: '30px', lineHeight: 1.15, marginBottom: '12px', color: '#1D1D1F' }}>
           Kamera Tamu <em>Digital</em>
         </h1>
 
-        <p style={{ color: '#515154', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '24px' }}>
-          Setiap momen yang kamu tangkap malam ini akan menjadi kejutan manis bagi yang berbahagia. Tersedia <strong>{maxShots} jepretan</strong> analog bernuansa {presetInfo.name}. Masukkan namamu untuk mulai membidik.
+        <p style={{ color: '#515154', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '22px' }}>
+          Setiap momen yang kamu tangkap akan langsung tersimpan di album kenangan {event?.coupleOrHost || 'pengantin'}. Tersedia <strong>{maxShots} jepretan</strong> analog bernuansa {presetInfo.name}.
         </p>
 
         <form onSubmit={handleNameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -1409,7 +1642,8 @@ export default function GuestCameraPage() {
                 width: '100%',
                 padding: '12px 16px',
                 borderRadius: '12px',
-                fontSize: '14px'
+                fontSize: '16px',
+                minHeight: '48px'
               }}
             />
           </div>
@@ -1417,16 +1651,16 @@ export default function GuestCameraPage() {
           <button
             type="submit"
             className="btn-apple-black"
-            style={{ width: '100%', padding: '14px', borderRadius: '12px', marginTop: '6px' }}
+            style={{ width: '100%', padding: '14px', borderRadius: '12px', marginTop: '6px', minHeight: '48px', fontSize: '15px' }}
           >
             <span>Buka Rana Kamera</span>
             <ArrowRight size={16} />
           </button>
         </form>
 
-        <div style={{ marginTop: '28px', paddingTop: '20px', borderTop: '1px solid rgba(0, 0, 0, 0.08)', display: 'flex', alignItems: 'center', gap: '8px', color: '#6E6E73', fontSize: '12px' }}>
+        <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid rgba(0, 0, 0, 0.08)', display: 'flex', alignItems: 'center', gap: '8px', color: '#6E6E73', fontSize: '12px' }}>
           <Check size={14} color="#C27803" />
-          <span>Foto langsung tersimpan ke album pengantin & roll Anda</span>
+          <span>Foto otomatis tersimpan ke album pengantin & roll Anda</span>
         </div>
       </div>
     </div>
@@ -1638,7 +1872,13 @@ export default function GuestCameraPage() {
 
   // MOBILE FULLSCREEN VIEW (100dvh edge to edge)
   return (
-    <div style={{ width: '100vw', height: '100dvh', overflow: 'hidden', background: '#0B0A09' }}>
+    <div style={{
+      width: '100vw',
+      height: '100dvh',
+      minHeight: '100vh',
+      overflow: 'hidden',
+      background: hasEnteredName ? '#0B0A09' : '#FFFFFF'
+    }}>
       {hasEnteredName ? cameraViewfinder : checkInScreen}
     </div>
   );

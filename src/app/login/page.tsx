@@ -44,33 +44,33 @@ export default function LoginPage() {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FBFBFA', color: '#1D1D1F', display: 'flex', flexDirection: 'column' }}>
       {/* Top Bar */}
-      <header className="glass-nav" style={{ padding: '16px 24px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)' }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', color: '#515154' }}>
+      <header className="glass-nav" style={{ padding: 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)' }}>
+        <div style={{ maxWidth: '960px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#515154' }}>
             <ArrowLeft size={16} />
-            <span style={{ fontSize: '13.5px', fontWeight: 500 }}>Kembali ke Beranda</span>
+            <span style={{ fontSize: '13px', fontWeight: 500 }}>Beranda</span>
           </Link>
 
           <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
             <img 
               src="/sudut-bingkai-logo.png" 
               alt="Sudut Bingkai" 
-              style={{ height: '34px', width: 'auto', objectFit: 'contain', display: 'block' }} 
+              style={{ height: '30px', width: 'auto', objectFit: 'contain', display: 'block' }} 
             />
           </Link>
 
-          <div style={{ width: '80px' }} />
+          <div style={{ width: '60px' }} className="desktop-only" />
         </div>
       </header>
 
       {/* Main Login Card */}
-      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px 80px' }}>
-        <div className="glass-card" style={{ maxWidth: '440px', width: '100%', borderRadius: '28px', padding: '36px 32px' }}>
-          <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px 60px' }}>
+        <div className="glass-card form-section-card" style={{ maxWidth: '440px', width: '100%' }}>
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
             <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
               PORTAL MASUK
             </span>
-            <h1 className="font-display-serif" style={{ fontSize: '28px', fontWeight: 700, color: '#1D1D1F' }}>
+            <h1 className="font-display-serif" style={{ fontSize: 'clamp(1.5rem, 4vw, 1.85rem)', fontWeight: 700, color: '#1D1D1F' }}>
               Selamat Datang Kembali
             </h1>
             <p style={{ color: '#6E6E73', fontSize: '13.5px', marginTop: '6px' }}>
@@ -86,7 +86,7 @@ export default function LoginPage() {
             background: 'rgba(0, 0, 0, 0.04)',
             padding: '4px',
             borderRadius: '14px',
-            marginBottom: '24px'
+            marginBottom: '20px'
           }}>
             <button
               type="button"
@@ -109,7 +109,7 @@ export default function LoginPage() {
               }}
             >
               <Heart size={14} color={role === 'host' ? '#C27803' : 'currentColor'} />
-              <span>Pengantin (Host)</span>
+              <span>Pengantin</span>
             </button>
 
             <button
@@ -133,7 +133,7 @@ export default function LoginPage() {
               }}
             >
               <Briefcase size={14} color={role === 'vendor' ? '#C27803' : 'currentColor'} />
-              <span>Mitra Vendor / WO</span>
+              <span>Mitra Vendor</span>
             </button>
           </div>
 
@@ -146,10 +146,11 @@ export default function LoginPage() {
             marginBottom: '20px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            gap: '8px'
           }}>
             <span style={{ fontSize: '12px', color: '#1D1D1F', fontWeight: 500 }}>
-              Uji coba instan tanpa password:
+              Uji coba instan demo:
             </span>
             <button
               onClick={() => loginAsDemo(role)}
@@ -161,7 +162,8 @@ export default function LoginPage() {
                 borderRadius: '8px',
                 fontSize: '11.5px',
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
               }}
             >
               Masuk Demo →
@@ -180,7 +182,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="glass-input"
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14px' }}
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '16px' }}
               />
             </div>
 
@@ -195,7 +197,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="glass-input"
-                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14px' }}
+                style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '16px' }}
               />
             </div>
 
@@ -203,7 +205,7 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               className="btn-apple-black"
-              style={{ width: '100%', padding: '14px', borderRadius: '12px', fontSize: '14.5px', marginTop: '6px' }}
+              style={{ width: '100%', padding: '14px', borderRadius: '12px', fontSize: '15px', marginTop: '6px' }}
             >
               <span>{loading ? 'Memverifikasi...' : 'Masuk ke Dashboard'}</span>
               <ArrowRight size={16} />

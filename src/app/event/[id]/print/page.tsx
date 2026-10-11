@@ -49,23 +49,25 @@ export default function PrintTableCardPage() {
       <div className="no-print" style={{
         background: '#0c0b0a',
         color: '#fff',
-        padding: '16px 24px',
+        padding: 'calc(12px + env(safe-area-inset-top, 0px)) 16px 12px',
         display: 'flex',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '10px'
       }}>
-        <Link href={`/event/${eventId}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px' }}>
+        <Link href={`/event/${eventId}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px' }}>
           <ArrowLeft size={16} />
-          <span>Kembali ke Dashboard</span>
+          <span>Kembali</span>
         </Link>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <span style={{ fontSize: '13px', color: 'var(--text-muted)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }} className="desktop-only">
             Format A6 Standar Display Meja
           </span>
-          <button onClick={handlePrint} className="btn-gold" style={{ padding: '8px 20px', fontSize: '13px', cursor: 'pointer' }}>
-            <Printer size={16} />
-            <span>Cetak / Simpan PDF</span>
+          <button onClick={handlePrint} className="btn-gold" style={{ padding: '8px 16px', fontSize: '12.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Printer size={15} />
+            <span>Cetak / PDF</span>
           </button>
         </div>
       </div>
