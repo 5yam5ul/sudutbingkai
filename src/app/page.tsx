@@ -13,165 +13,80 @@ const CURATED_PARTNERS = [
     name: 'Vows & Co. Wedding Planner',
     city: 'Jakarta Selatan',
     instagram: '@vowsandco.wo',
-    initials: 'V&C',
-    badgeBg: '#181715',
-    badgeColor: '#D4AF37',
-    badgeBorder: 'rgba(212, 175, 55, 0.4)',
-    iconType: 'monogram'
+    logoUrl: '/images/vendors/vows.jpg'
   },
   {
     name: 'Merajut Kisah Organizer',
     city: 'Bandung',
     instagram: '@merajutkisah.wo',
-    initials: 'MK',
-    badgeBg: '#281712',
-    badgeColor: '#F3C5AF',
-    badgeBorder: 'rgba(243, 197, 175, 0.35)',
-    iconType: 'rings'
+    logoUrl: '/images/vendors/merajut.jpg'
   },
   {
     name: 'Kirana Signature Wedding',
     city: 'Denpasar & Ubud, Bali',
     instagram: '@kiranaweddingbali',
-    initials: 'KS',
-    badgeBg: '#0B2219',
-    badgeColor: '#E6CBA2',
-    badgeBorder: 'rgba(230, 203, 162, 0.35)',
-    iconType: 'botanical'
+    logoUrl: '/images/vendors/kirana.jpg'
   },
   {
     name: 'Cerita Kita Planner',
     city: 'Surabaya',
     instagram: '@ceritakitaplanner',
-    initials: 'CK',
-    badgeBg: '#0E1A2C',
-    badgeColor: '#E5C483',
-    badgeBorder: 'rgba(229, 196, 131, 0.35)',
-    iconType: 'arch'
+    logoUrl: '/images/vendors/cerita.jpg'
   },
   {
     name: 'Kinasih Wedding Organizer',
     city: 'Yogyakarta',
     instagram: '@kinasih.wo',
-    initials: 'KW',
-    badgeBg: '#221913',
-    badgeColor: '#DBA877',
-    badgeBorder: 'rgba(219, 168, 119, 0.35)',
-    iconType: 'crest'
-  },
-  {
-    name: 'Janji Suci Project',
-    city: 'Medan',
-    instagram: '@janjisuciproject',
-    initials: 'JS',
-    badgeBg: '#261219',
-    badgeColor: '#F2B5C1',
-    badgeBorder: 'rgba(242, 181, 193, 0.35)',
-    iconType: 'monogram'
+    logoUrl: '/images/vendors/kinasih.jpg'
   },
   {
     name: 'Lensa Cerita Cinema & Studio',
     city: 'Jakarta Pusat',
     instagram: '@lensacerita.id',
-    initials: 'LC',
-    badgeBg: '#19191C',
-    badgeColor: '#E4E4E8',
-    badgeBorder: 'rgba(255, 255, 255, 0.22)',
-    iconType: 'camera'
-  },
-  {
-    name: 'Renjana Event Stylist',
-    city: 'Semarang & Solo',
-    instagram: '@renjana.stylist',
-    initials: 'RS',
-    badgeBg: '#1D1C18',
-    badgeColor: '#D8BC7B',
-    badgeBorder: 'rgba(216, 188, 123, 0.35)',
-    iconType: 'monogram'
+    logoUrl: '/images/vendors/lensa.jpg'
   }
 ];
 
 const renderVendorLogo = (v: any) => {
-  if (v.logoUrl) {
+  const logoSrc = v.logoUrl || v.logo;
+  if (logoSrc) {
     return (
-      <img
-        src={v.logoUrl}
-        alt={v.name}
-        style={{ width: '40px', height: '40px', borderRadius: '11px', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.08)' }}
-      />
+      <div style={{
+        width: '42px',
+        height: '42px',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        border: '1px solid rgba(0, 0, 0, 0.08)',
+        background: '#FFFFFF',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+        flexShrink: 0
+      }}>
+        <img
+          src={logoSrc}
+          alt={v.name}
+          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        />
+      </div>
     );
   }
 
   return (
     <div style={{
-      width: '40px',
-      height: '40px',
-      borderRadius: '11px',
-      background: v.badgeBg || '#181715',
-      border: `1px solid ${v.badgeBorder || 'rgba(194, 120, 3, 0.35)'}`,
+      width: '42px',
+      height: '42px',
+      borderRadius: '12px',
+      background: '#181715',
+      border: '1px solid rgba(194, 120, 3, 0.35)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       flexShrink: 0,
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
-      position: 'relative',
-      overflow: 'hidden'
+      color: '#E5C483',
+      fontFamily: "'Playfair Display', Georgia, serif",
+      fontSize: '13px',
+      fontWeight: 700
     }}>
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.16), transparent 70%)',
-        pointerEvents: 'none'
-      }} />
-
-      {v.iconType === 'rings' && (
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-          <circle cx="9" cy="12" r="5" stroke={v.badgeColor || '#E5C483'} strokeWidth="1.6" />
-          <circle cx="15" cy="12" r="5" stroke={v.badgeColor || '#E5C483'} strokeWidth="1.6" strokeDasharray="3 2" />
-        </svg>
-      )}
-
-      {v.iconType === 'camera' && (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={v.badgeColor || '#E5C483'} strokeWidth="1.7">
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
-          <circle cx="12" cy="13" r="4" />
-        </svg>
-      )}
-
-      {v.iconType === 'botanical' && (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={v.badgeColor || '#E5C483'} strokeWidth="1.6">
-          <path d="M12 22V8" />
-          <path d="M12 13c-3-2-6-1-8 2 2 3 5 2 8-2z" />
-          <path d="M12 9c3-2 6-1 8 2-2 3-5 2-8-2z" />
-          <circle cx="12" cy="4" r="2" fill={v.badgeColor || '#E5C483'} />
-        </svg>
-      )}
-
-      {v.iconType === 'arch' && (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={v.badgeColor || '#E5C483'} strokeWidth="1.6">
-          <path d="M4 21V10a8 8 0 0 1 16 0v11" />
-          <path d="M9 21v-7a3 3 0 0 1 6 0v7" />
-        </svg>
-      )}
-
-      {v.iconType === 'crest' && (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={v.badgeColor || '#E5C483'} strokeWidth="1.6">
-          <path d="M12 2L4 6v6c0 5 3.5 9.5 8 11 4.5-1.5 8-6 8-11V6l-8-4z" />
-          <path d="M12 7v10M7 12h10" />
-        </svg>
-      )}
-
-      {(v.iconType === 'monogram' || !v.iconType) && (
-        <span style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
-          fontSize: '12px',
-          fontWeight: 700,
-          color: v.badgeColor || '#E5C483',
-          letterSpacing: '-0.02em'
-        }}>
-          {v.initials || (v.name ? v.name.slice(0, 2).toUpperCase() : 'WO')}
-        </span>
-      )}
+      {v.name ? v.name.slice(0, 2).toUpperCase() : 'WO'}
     </div>
   );
 };
