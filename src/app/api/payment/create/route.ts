@@ -31,13 +31,19 @@ export async function POST(request: Request) {
       eventId, 
       isAddonPax = false, 
       paxAmount = 25, 
+      isWholesale = false,
+      wholesaleTitle = 'Paket Grosir',
+      eventsCount = 5,
       redirectUrl 
     } = body;
 
     let amount = 0;
     let description = '';
 
-    if (isAddonPax) {
+    if (isWholesale) {
+      amount = Number(body.amount) || 1120000;
+      description = `Paket Grosir WO ${wholesaleTitle} (${eventsCount} Acara) - SudutBingkai`;
+    } else if (isAddonPax) {
       amount = ADDON_PAX_PRICES[paxAmount] || (paxAmount * 2000);
       description = `Top Up Kuota Tamu +${paxAmount} Pax - SudutBingkai (${eventId || 'Acara'})`;
     } else {
@@ -58,7 +64,11 @@ export async function POST(request: Request) {
     }
 
     const hostUrl = request.headers.get('origin') || 'http://localhost:3000';
-    const finalRedirectUrl = redirectUrl || (eventId ? `${hostUrl}/event/${eventId}?paid=true` : `${hostUrl}/create?tier=${packageTier}&paid=true`);
+    const finalRedirectUrl = redirectUrl || (
+      isWholesale ? `${hostUrl}/vendor?paid=true` :
+      eventId ? `${hostUrl}/event/${eventId}?paid=true` : 
+      `${hostUrl}/create?tier=${packageTier}&paid=true`
+    );
 
     const invoiceResult = await createMayarInvoice({
       name,
@@ -67,7 +77,7 @@ export async function POST(request: Request) {
       amount,
       description,
       redirectUrl: finalRedirectUrl,
-      packageTier,
+      packageTier: isWholesale ? 'wedding' : packageTier,
       eventId,
       isAddonPax,
       paxAmount

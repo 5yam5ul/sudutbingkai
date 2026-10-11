@@ -7,11 +7,13 @@ import {
   Briefcase, Building, Plus, Users, QrCode, Camera, Download, 
   ExternalLink, ArrowRight, Check, Sliders, LogOut, 
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
-  DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2
+  DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
+  CreditCard, Sparkles
 } from 'lucide-react';
 import { UserAccount } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
 import ConfirmModal from '@/components/ConfirmModal';
+import MayarPaymentModal from '@/components/MayarPaymentModal';
 import { toast } from 'sonner';
 
 export default function VendorPortalPage() {
@@ -46,6 +48,77 @@ export default function VendorPortalPage() {
   const [logoUrl, setLogoUrl] = useState('https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=200&q=80');
   const [isSaving, setIsSaving] = useState(false);
   const [isBrandingSaved, setIsBrandingSaved] = useState(false);
+
+  // Mayar Payment State for Wholesale Packages
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [pendingPaymentData, setPendingPaymentData] = useState<{
+    amount: number;
+    title: string;
+    description: string;
+    isSimulation: boolean;
+    paymentUrl?: string;
+    eventsCount: number;
+  } | null>(null);
+  const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
+  const [voucherQuota, setVoucherQuota] = useState<number>(vendor.clientCount || 14);
+
+  const handleBuyWholesalePackage = async (packageTitle: string, eventsCount: number, price: number) => {
+    setPurchasingPlan(packageTitle);
+    try {
+      const payRes = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isWholesale: true,
+          amount: price,
+          wholesaleTitle: packageTitle,
+          eventsCount,
+          name: companyName || vendor.name,
+          email: vendor.email || 'vendor@sudutbingkai.id',
+          vendorId: vendor.id || 'vendor_vows_co'
+        })
+      });
+
+      const payData = await payRes.json();
+      if (payData.success) {
+        if (!payData.isSimulation && payData.paymentUrl && !payData.paymentUrl.startsWith('/')) {
+          window.location.href = payData.paymentUrl;
+          return;
+        }
+
+        setPendingPaymentData({
+          amount: payData.amount || price,
+          title: `Paket Grosir ${packageTitle}`,
+          description: `Voucher Kuota ${eventsCount} Acara untuk ${companyName}`,
+          isSimulation: payData.isSimulation ?? true,
+          paymentUrl: payData.paymentUrl,
+          eventsCount
+        });
+        setPaymentModalOpen(true);
+      } else {
+        toast.error('Gagal memproses pembayaran: ' + (payData.error || 'Terjadi kesalahan'));
+      }
+    } catch (e: any) {
+      toast.error('Error memulai pembayaran: ' + e.message);
+    } finally {
+      setPurchasingPlan(null);
+    }
+  };
+
+  const handlePaymentSuccess = () => {
+    setPaymentModalOpen(false);
+    const addedCount = pendingPaymentData?.eventsCount || 0;
+    setVoucherQuota(prev => prev + addedCount);
+    
+    // Update vendor session clientCount
+    const updatedVendor = { ...vendor, clientCount: (vendor.clientCount || 0) + addedCount };
+    setVendor(updatedVendor);
+    setClientSession(updatedVendor);
+
+    toast.success(`Pembayaran Berhasil! +${addedCount} Kuota Acara telah aktif di akun ${companyName}.`, {
+      duration: 5000
+    });
+  };
 
   // Custom Wholesale Calculator State
   const [customEvents, setCustomEvents] = useState<number>(5);
@@ -355,7 +428,7 @@ export default function VendorPortalPage() {
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>SISA KUOTA BUNDLE</span>
-              <strong style={{ fontSize: '20px', color: '#27AE60' }}>7 Kuota Siap</strong>
+              <strong style={{ fontSize: '20px', color: '#27AE60' }}>{voucherQuota} Kuota Siap</strong>
             </div>
 
             <div>
@@ -524,15 +597,15 @@ export default function VendorPortalPage() {
                     </ul>
                   </div>
 
-                  <a
-                    href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo SudutBingkai, saya dari WO ${companyName} ingin order Paket Grosir 3 Acara (Rp 1.120.000). Mohon info nomor rekening / invoice.`)}`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handleBuyWholesalePackage('3 Acara', 3, 1120000)}
+                    disabled={purchasingPlan === '3 Acara'}
                     className="glass-pill"
-                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', textDecoration: 'none', fontWeight: 600 }}
+                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', fontWeight: 600, width: '100%', cursor: 'pointer' }}
                   >
-                    Beli Paket 3 Acara
-                  </a>
+                    {purchasingPlan === '3 Acara' ? 'Menyiapkan...' : 'Beli Paket 3 Acara'}
+                  </button>
                 </div>
 
                 {/* 5 Acara */}
@@ -562,15 +635,15 @@ export default function VendorPortalPage() {
                     </ul>
                   </div>
 
-                  <a
-                    href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo SudutBingkai, saya dari WO ${companyName} ingin order Paket Grosir 5 Acara (Rp 1.745.000). Mohon info nomor rekening / invoice.`)}`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handleBuyWholesalePackage('5 Acara', 5, 1745000)}
+                    disabled={purchasingPlan === '5 Acara'}
                     className="glass-pill"
-                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', textDecoration: 'none', fontWeight: 600 }}
+                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', fontWeight: 600, width: '100%', cursor: 'pointer' }}
                   >
-                    Beli Paket 5 Acara
-                  </a>
+                    {purchasingPlan === '5 Acara' ? 'Menyiapkan...' : 'Beli Paket 5 Acara'}
+                  </button>
                 </div>
 
                 {/* 10 Acara (HIGHLIGHTED / POPULER) */}
@@ -605,15 +678,15 @@ export default function VendorPortalPage() {
                     </ul>
                   </div>
 
-                  <a
-                    href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo SudutBingkai, saya dari WO ${companyName} ingin order Paket Grosir Agency 10 Acara (Rp 2.990.000). Mohon info invoice dan aktivasinya.`)}`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handleBuyWholesalePackage('10 Acara', 10, 2990000)}
+                    disabled={purchasingPlan === '10 Acara'}
                     className="btn-apple-black"
-                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', textDecoration: 'none', background: '#C27803', color: '#FFFFFF' }}
+                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', background: '#C27803', color: '#FFFFFF', width: '100%', cursor: 'pointer' }}
                   >
-                    Beli Paket 10 Acara
-                  </a>
+                    {purchasingPlan === '10 Acara' ? 'Menyiapkan...' : 'Beli Paket 10 Acara'}
+                  </button>
                 </div>
 
                 {/* 20 Acara (ENTERPRISE) */}
@@ -643,15 +716,15 @@ export default function VendorPortalPage() {
                     </ul>
                   </div>
 
-                  <a
-                    href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo SudutBingkai, saya dari WO ${companyName} ingin order Paket Grosir Enterprise 20 Acara (Rp 5.490.000). Mohon info invoice dan aktivasinya.`)}`}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => handleBuyWholesalePackage('20 Acara', 20, 5490000)}
+                    disabled={purchasingPlan === '20 Acara'}
                     className="glass-pill"
-                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', textDecoration: 'none', fontWeight: 600 }}
+                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', fontWeight: 600, width: '100%', cursor: 'pointer' }}
                   >
-                    Beli Paket 20 Acara
-                  </a>
+                    {purchasingPlan === '20 Acara' ? 'Menyiapkan...' : 'Beli Paket 20 Acara'}
+                  </button>
                 </div>
 
                 {/* UNLIMITED ANNUAL */}
@@ -691,6 +764,37 @@ export default function VendorPortalPage() {
                     Konsultasi VIP Unlimited
                   </a>
                 </div>
+              </div>
+
+              {/* B2B Corporate Helper Banner */}
+              <div style={{
+                marginTop: '20px',
+                padding: '14px 18px',
+                background: 'rgba(0, 0, 0, 0.03)',
+                borderRadius: '14px',
+                border: '1px solid rgba(0, 0, 0, 0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#515154' }}>
+                  <ShieldCheck size={16} color="#C27803" />
+                  <span>
+                    <strong>Kebutuhan Korporat:</strong> Memerlukan Faktur Pajak PT, PKS Resmi, atau Pembayaran via Giro Perusahaan?
+                  </span>
+                </div>
+                <a
+                  href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Tim SudutBingkai, saya dari ${companyName} ingin konsultasi kebutuhan paket B2B / Faktur Pajak PT / PKS resmi.`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="glass-pill"
+                  style={{ fontSize: '11.5px', padding: '6px 12px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <MessageCircle size={13} color="#27AE60" />
+                  <span>Hubungi Tim Sales via WhatsApp</span>
+                </a>
               </div>
             </div>
 
@@ -906,20 +1010,29 @@ export default function VendorPortalPage() {
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <a
-                      href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Tim SudutBingkai, saya dari WO ${companyName}. Saya ingin order Paket Grosir Custom ${customEvents} Acara (${currentPlanInfo.name}) dengan total grosir Rp ${formatRp(wholesaleTotalPrice)} (Hemat Rp ${formatRp(savingsAmount)}). Mohon invoice dan petunjuk pembayarannya.`)}`}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
+                      onClick={() => handleBuyWholesalePackage(`Custom ${customEvents} Acara (${currentPlanInfo.name})`, customEvents, wholesaleTotalPrice)}
+                      disabled={purchasingPlan?.startsWith('Custom')}
                       className="btn-apple-black"
-                      style={{ textAlign: 'center', padding: '12px', fontSize: '13.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                      style={{ textAlign: 'center', padding: '12px', fontSize: '13.5px', width: '100%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                     >
-                      <MessageCircle size={16} />
-                      <span>Klaim Paket Custom via WhatsApp</span>
-                    </a>
+                      <CreditCard size={16} />
+                      <span>{purchasingPlan?.startsWith('Custom') ? 'Menyiapkan Checkout...' : `Beli Paket Custom Sekarang (Rp ${formatRp(wholesaleTotalPrice)})`}</span>
+                    </button>
 
-                    <span style={{ textAlign: 'center', fontSize: '11px', color: '#86868B' }}>
-                      Masa aktif kuota custom: 24 Bulan • Kuota tidak hangus
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '11px', color: '#86868B', marginTop: '2px' }}>
+                      <span>Masa aktif: 24 Bulan • Kuota tidak hangus</span>
+                      <a
+                        href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Tim SudutBingkai, saya dari WO ${companyName}. Saya ingin konsultasi / invoice resmi untuk Paket Grosir Custom ${customEvents} Acara (${currentPlanInfo.name}) total Rp ${formatRp(wholesaleTotalPrice)}.`)}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{ color: '#C27803', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
+                      >
+                        <MessageCircle size={12} />
+                        Minta Invoice Manual via WA
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1290,6 +1403,17 @@ export default function VendorPortalPage() {
         variant={confirmModal.variant}
         onConfirm={confirmModal.onConfirm}
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      {/* Mayar Payment Modal for Wholesale Quota */}
+      <MayarPaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        onSuccess={handlePaymentSuccess}
+        title={pendingPaymentData?.title || 'Paket Grosir Vendor'}
+        description={pendingPaymentData?.description || ''}
+        amount={pendingPaymentData?.amount || 1120000}
+        isSimulation={pendingPaymentData?.isSimulation}
       />
     </div>
   );
