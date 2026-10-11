@@ -209,14 +209,14 @@ export default function HomePage() {
               onClick={() => setMobileMenuOpen(false)}
               style={{ color: '#C27803', textDecoration: 'none', fontSize: '15px', fontWeight: 700, padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}
             >
-              Mitra Vendor & Event Organizer
+              Program Kemitraan WO
             </Link>
             <Link 
               href="/login" 
               onClick={() => setMobileMenuOpen(false)}
               style={{ color: '#515154', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '6px 0' }}
             >
-              Masuk Akun Pengantin / Vendor
+              Masuk ke Acara Saya
             </Link>
             <div style={{ display: 'flex', gap: '10px', paddingTop: '6px' }}>
               <Link 
@@ -458,50 +458,162 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* PARTNER WEDDING & EVENT ORGANIZER SECTION (Apple Luminous Glass) */}
-      <section style={{ padding: '60px 24px 68px', maxWidth: '1160px', margin: '0 auto', textAlign: 'center' }}>
-        <div style={{ marginBottom: '28px' }}>
-          <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px' }}>
-            JARINGAN MITRA EVENT & WEDDING ORGANIZER
+      {/* PARTNER WEDDING & EVENT ORGANIZER SECTION (Strategic Value Proposition) */}
+      <section style={{ padding: '64px 24px 72px', maxWidth: '1160px', margin: '0 auto', textAlign: 'center' }}>
+        <div style={{ marginBottom: '32px' }}>
+          <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px', letterSpacing: '0.08em' }}>
+            KOLABORASI & KEMITRAAN AGENSI
           </span>
-          <h3 className="font-display-serif" style={{ fontSize: '28px', fontWeight: 700, color: '#1D1D1F' }}>
-            Dipercaya oleh Puluhan <em>Event Planner, Wedding Organizer</em> & Stylist
+          <h3 className="font-display-serif" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1D1D1F' }}>
+            Dirancang untuk Melengkapi Layanan <em>Wedding Organizer & Event Planner</em>
           </h3>
-          <p style={{ color: '#6E6E73', fontSize: '13.5px', maxWidth: '560px', margin: '8px auto 0' }}>
-            Mitra EO & WO menyertakan SudutBingkai sebagai fasilitas kamera interaktif eksklusif untuk pernikahan klien, pesta ulang tahun, hingga gathering perusahaan.
+          <p style={{ color: '#6E6E73', fontSize: '14.5px', maxWidth: '620px', margin: '10px auto 0', lineHeight: 1.5 }}>
+            Beri nilai tambah interaktif untuk calon pengantin dan klien Anda tanpa modal alat fisik, tanpa instalasi aplikasi, dan tanpa beban operasional.
           </p>
         </div>
 
-        <div className="responsive-partners-row">
-          {vendors.map((v: any) => (
-            <div key={v.id} className="glass-card" style={{
-              borderRadius: '16px',
-              padding: '10px 18px',
+        {/* 3 Pillar Benefit Cards for Agencies & Vendors */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '20px',
+          textAlign: 'left',
+          marginBottom: '32px'
+        }}>
+          {/* Card 1 */}
+          <div className="glass-card" style={{
+            padding: '24px',
+            borderRadius: '22px',
+            background: 'rgba(255, 255, 255, 0.85)',
+            border: '1px solid rgba(0, 0, 0, 0.07)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
+              background: 'rgba(194, 120, 3, 0.12)',
               display: 'flex',
               alignItems: 'center',
-              gap: '12px',
-              background: 'rgba(255, 255, 255, 0.85)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+              justifyContent: 'center',
+              marginBottom: '14px',
+              color: '#C27803'
             }}>
-              {v.logoUrl && (
-                <img
-                  src={v.logoUrl}
-                  alt={v.name}
-                  style={{ width: '32px', height: '32px', borderRadius: '10px', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.06)' }}
-                />
-              )}
-              <div style={{ textAlign: 'left' }}>
-                <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>{v.name}</strong>
-                <span style={{ fontSize: '11px', color: '#86868B' }}>{v.city} • {v.instagram}</span>
-              </div>
+              <QrCode size={22} />
             </div>
-          ))}
+            <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+              Add-On Eksklusif untuk Klien
+            </strong>
+            <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
+              Sertakan kamera analog digital ini sebagai bonus atau fasilitas paket wedding premium Anda. Calon pengantin mendapatkan kenangan spontan dari sudut pandang para tamu.
+            </p>
+          </div>
+
+          {/* Card 2 */}
+          <div className="glass-card" style={{
+            padding: '24px',
+            borderRadius: '22px',
+            background: 'rgba(255, 255, 255, 0.85)',
+            border: '1px solid rgba(0, 0, 0, 0.07)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
+              background: 'rgba(194, 120, 3, 0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '14px',
+              color: '#C27803'
+            }}>
+              <Camera size={22} />
+            </div>
+            <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+              100% Bebas Ribet di Hari-H
+            </strong>
+            <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
+              Tamu tidak perlu antre instal aplikasi apa pun di App Store atau Play Store. Cukup letakkan barcode di meja resepsi, tamu scan dengan kamera HP bawaan dan langsung memotret.
+            </p>
+          </div>
+
+          {/* Card 3 */}
+          <div className="glass-card" style={{
+            padding: '24px',
+            borderRadius: '22px',
+            background: 'rgba(255, 255, 255, 0.85)',
+            border: '1px solid rgba(0, 0, 0, 0.07)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{
+              width: '42px',
+              height: '42px',
+              borderRadius: '12px',
+              background: 'rgba(194, 120, 3, 0.12)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: '14px',
+              color: '#C27803'
+            }}>
+              <Shield size={22} />
+            </div>
+            <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+              Tarif Mitra & Branding Agensi
+            </strong>
+            <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
+              Dapatkan harga khusus agensi untuk margin usaha Anda. Nama & logo Wedding Organizer Anda dapat disematkan langsung pada template kartu cetak barcode dan album digital.
+            </p>
+          </div>
         </div>
 
-        <div style={{ marginTop: '28px' }}>
-          <Link href="/vendor" style={{ fontSize: '13px', color: '#C27803', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-            <span>Anda Event atau Wedding Organizer? Daftarkan agensi & tampilkan logo Anda di sini</span>
-            <ArrowRight size={13} />
+        {/* Existing verified vendors row (if any exist in DB) */}
+        {vendors.length > 0 && (
+          <div className="responsive-partners-row" style={{ marginBottom: '28px' }}>
+            {vendors.map((v: any) => (
+              <div key={v.id} className="glass-card" style={{
+                borderRadius: '16px',
+                padding: '10px 18px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                background: 'rgba(255, 255, 255, 0.85)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+              }}>
+                {v.logoUrl && (
+                  <img
+                    src={v.logoUrl}
+                    alt={v.name}
+                    style={{ width: '32px', height: '32px', borderRadius: '10px', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.06)' }}
+                  />
+                )}
+                <div style={{ textAlign: 'left' }}>
+                  <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>{v.name}</strong>
+                  <span style={{ fontSize: '11px', color: '#86868B' }}>{v.city} • {v.instagram}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Call to action for agencies */}
+        <div style={{ display: 'inline-block' }}>
+          <Link
+            href="/vendor"
+            className="btn-apple-black"
+            style={{
+              padding: '12px 28px',
+              fontSize: '13.5px',
+              textDecoration: 'none',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12)'
+            }}
+          >
+            <span>Daftarkan Agensi WO / Vendor Anda & Pelajari Kemitraan</span>
+            <ArrowRight size={14} />
           </Link>
         </div>
       </section>
