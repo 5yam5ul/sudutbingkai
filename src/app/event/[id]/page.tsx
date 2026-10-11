@@ -522,6 +522,37 @@ export default function EventDashboardPage() {
                         <span className="font-mono-film" style={{ fontSize: '9px', color: '#86868B' }}>Terkunci</span>
                       )}
                     </div>
+
+                    {!isLocked && photo.caption && (
+                      <div
+                        style={{
+                          marginTop: '10px',
+                          padding: '8px 10px',
+                          borderRadius: '12px',
+                          background: 'rgba(194, 120, 3, 0.08)',
+                          border: '1px solid rgba(194, 120, 3, 0.22)',
+                          fontSize: '11.5px',
+                          color: '#78350F',
+                          lineHeight: '1.4',
+                          fontStyle: 'italic',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '6px'
+                        }}
+                      >
+                        <span style={{ fontSize: '12px', flexShrink: 0, fontStyle: 'normal' }}>💬</span>
+                        <span style={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          fontWeight: 500
+                        }}>
+                          &ldquo;{photo.caption}&rdquo;
+                        </span>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -631,13 +662,36 @@ export default function EventDashboardPage() {
               </button>
             </div>
 
-            <div style={{ borderRadius: '20px', overflow: 'hidden', background: '#000', maxHeight: '65vh', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ borderRadius: '20px', overflow: 'hidden', background: '#000', maxHeight: '60vh', display: 'flex', justifyContent: 'center' }}>
               <img
                 src={activePhoto.imageData}
                 alt={activePhoto.guestName}
-                style={{ maxWidth: '100%', maxHeight: '65vh', objectFit: 'contain' }}
+                style={{ maxWidth: '100%', maxHeight: '60vh', objectFit: 'contain' }}
               />
             </div>
+
+            {/* Guest Wish / Caption Callout */}
+            {activePhoto.caption && (
+              <div style={{
+                padding: '12px 14px',
+                borderRadius: '14px',
+                background: 'rgba(194, 120, 3, 0.08)',
+                border: '1px solid rgba(194, 120, 3, 0.25)',
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px'
+              }}>
+                <span style={{ fontSize: '18px', lineHeight: 1 }}>💬</span>
+                <div>
+                  <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#C27803', display: 'block', marginBottom: '3px', letterSpacing: '0.5px' }}>
+                    UCAPAN DARI {activePhoto.guestName.toUpperCase()}
+                  </span>
+                  <p style={{ margin: 0, fontSize: '13.5px', color: '#1D1D1F', fontStyle: 'italic', lineHeight: '1.5', fontWeight: 500 }}>
+                    &ldquo;{activePhoto.caption}&rdquo;
+                  </p>
+                </div>
+              </div>
+            )}
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
               <button

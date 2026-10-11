@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, AlertCircle, ChevronDown, Mic, Volume2, Sparkles, Layers, Lock, CheckCircle2 } from 'lucide-react';
+import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, AlertCircle, ChevronDown, Mic, Volume2, Sparkles, Layers, Lock, CheckCircle2, MessageSquare, X, Heart } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
 import { getClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
@@ -30,7 +30,8 @@ export default function BrideDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'photos' | 'settings'>('photos');
   const [gallerySubTab, setGallerySubTab] = useState<'photos' | 'voices'>('photos');
-  const [filterTab, setFilterTab] = useState<'all' | 'visible' | 'hidden'>('all');
+  const [filterTab, setFilterTab] = useState<'all' | 'visible' | 'hidden' | 'wishes'>('all');
+  const [activePhoto, setActivePhoto] = useState<PhotoRecord | null>(null);
   const [copied, setCopied] = useState(false);
 
   // Settings State
@@ -275,6 +276,7 @@ export default function BrideDashboardPage() {
   const filteredPhotos = photos.filter(p => {
     if (filterTab === 'visible') return !p.isHidden;
     if (filterTab === 'hidden') return !!p.isHidden;
+    if (filterTab === 'wishes') return !!p.caption && p.caption.trim().length > 0;
     return true;
   });
 
@@ -535,7 +537,7 @@ export default function BrideDashboardPage() {
             {gallerySubTab === 'photos' && (
               <div>
                 {/* Filter Pills */}
-                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
                   <button
                     onClick={() => setFilterTab('all')}
                     className="glass-pill"
@@ -550,6 +552,22 @@ export default function BrideDashboardPage() {
                     }}
                   >
                     Semua ({photos.length})
+                  </button>
+
+                  <button
+                    onClick={() => setFilterTab('wishes')}
+                    className="glass-pill"
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '9999px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      background: filterTab === 'wishes' ? 'rgba(20, 20, 22, 0.9)' : 'rgba(255,255,255,0.75)',
+                      color: filterTab === 'wishes' ? '#FFFFFF' : '#C27803'
+                    }}
+                  >
+                    💬 Ada Ucapan ({photos.filter(p => !!p.caption && p.caption.trim().length > 0).length})
                   </button>
 
                   <button
@@ -606,7 +624,11 @@ export default function BrideDashboardPage() {
                           position: 'relative'
                         }}
                       >
-                        <div style={{ aspectRatio: '3/4', borderRadius: '18px', overflow: 'hidden', background: '#000', marginBottom: '12px', position: 'relative' }}>
+                        <div
+                          style={{ aspectRatio: '3/4', borderRadius: '18px', overflow: 'hidden', background: '#000', marginBottom: '12px', position: 'relative', cursor: 'pointer' }}
+                          onClick={() => setActivePhoto(photo)}
+                          title="Klik untuk memperbesar & membaca ucapan"
+                        >
                           <img src={photo.imageData} alt={photo.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           {photo.isHidden && (
                             <div style={{ position: 'absolute', top: '8px', left: '8px', background: 'rgba(0,0,0,0.75)', color: '#fff', fontSize: '10px', padding: '3px 8px', borderRadius: '9999px', display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -617,7 +639,10 @@ export default function BrideDashboardPage() {
                         </div>
 
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px', flexWrap: 'wrap', gap: '6px' }}>
-                          <div style={{ minWidth: 0, flex: '1 1 65px' }}>
+                          <div
+                            style={{ minWidth: 0, flex: '1 1 65px', cursor: 'pointer' }}
+                            onClick={() => setActivePhoto(photo)}
+                          >
                             <strong style={{ fontSize: '12px', color: '#1D1D1F', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{photo.guestName}</strong>
                             <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#86868B' }}>#{photo.shotNumber}</span>
                           </div>
@@ -661,6 +686,41 @@ export default function BrideDashboardPage() {
                             </a>
                           </div>
                         </div>
+
+                        {/* Guest Wish / Caption Badge */}
+                        {photo.caption && (
+                          <div
+                            onClick={() => setActivePhoto(photo)}
+                            style={{
+                              marginTop: '10px',
+                              padding: '8px 10px',
+                              borderRadius: '12px',
+                              background: 'rgba(194, 120, 3, 0.08)',
+                              border: '1px solid rgba(194, 120, 3, 0.22)',
+                              fontSize: '11.5px',
+                              color: '#78350F',
+                              lineHeight: '1.4',
+                              fontStyle: 'italic',
+                              display: 'flex',
+                              alignItems: 'flex-start',
+                              gap: '6px',
+                              cursor: 'pointer'
+                            }}
+                            title="Klik untuk melihat foto & ucapan lengkap"
+                          >
+                            <span style={{ fontSize: '12px', flexShrink: 0, fontStyle: 'normal' }}>💬</span>
+                            <span style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              fontWeight: 500
+                            }}>
+                              &ldquo;{photo.caption}&rdquo;
+                            </span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -1151,6 +1211,140 @@ export default function BrideDashboardPage() {
                     <span>{isSavingSettings ? 'Menyimpan Pengaturan...' : saveSuccess ? '✓ Pengaturan & Bingkai Disimpan!' : 'Simpan Semua Perubahan'}</span>
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Lightbox / Detail Photo Modal */}
+        {activePhoto && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.85)',
+              backdropFilter: 'blur(10px)',
+              zIndex: 100,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px'
+            }}
+            onClick={() => setActivePhoto(null)}
+          >
+            <div
+              className="glass-card"
+              style={{
+                background: '#FFFFFF',
+                maxWidth: '520px',
+                width: '100%',
+                borderRadius: '24px',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '14px',
+                maxHeight: '90vh',
+                overflowY: 'auto'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <strong style={{ fontSize: '15px', color: '#1D1D1F', display: 'block' }}>{activePhoto.guestName}</strong>
+                  <span className="font-mono-film" style={{ fontSize: '11px', color: '#86868B' }}>
+                    Jepretan #{activePhoto.shotNumber} • {new Date(activePhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setActivePhoto(null)}
+                  className="glass-pill"
+                  style={{ padding: '6px 10px', fontSize: '12px', cursor: 'pointer' }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div style={{ borderRadius: '16px', overflow: 'hidden', background: '#000', maxHeight: '55vh', display: 'flex', justifyContent: 'center' }}>
+                <img
+                  src={activePhoto.imageData}
+                  alt={activePhoto.guestName}
+                  style={{ maxWidth: '100%', maxHeight: '55vh', objectFit: 'contain' }}
+                />
+              </div>
+
+              {/* Full Guest Wish Callout */}
+              {activePhoto.caption ? (
+                <div style={{
+                  padding: '12px 14px',
+                  borderRadius: '14px',
+                  background: 'rgba(194, 120, 3, 0.08)',
+                  border: '1px solid rgba(194, 120, 3, 0.25)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px'
+                }}>
+                  <span style={{ fontSize: '18px', lineHeight: 1 }}>💬</span>
+                  <div>
+                    <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#C27803', display: 'block', marginBottom: '3px', letterSpacing: '0.5px' }}>
+                      UCAPAN DARI {activePhoto.guestName.toUpperCase()}
+                    </span>
+                    <p style={{ margin: 0, fontSize: '13.5px', color: '#1D1D1F', fontStyle: 'italic', lineHeight: '1.5', fontWeight: 500 }}>
+                      &ldquo;{activePhoto.caption}&rdquo;
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: '12px', color: '#86868B', fontStyle: 'italic', textAlign: 'center', padding: '4px' }}>
+                  (Foto ini tidak disertai ucapan teks)
+                </div>
+              )}
+
+              {/* Moderation Actions in Lightbox */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', paddingTop: '4px' }}>
+                <button
+                  onClick={() => {
+                    toggleHidePhoto(activePhoto.id, !!activePhoto.isHidden);
+                    setActivePhoto(prev => prev ? { ...prev, isHidden: !prev.isHidden } : null);
+                  }}
+                  className="glass-pill"
+                  style={{
+                    padding: '10px',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    color: activePhoto.isHidden ? '#27AE60' : '#E74C3C',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {activePhoto.isHidden ? <Eye size={14} /> : <EyeOff size={14} />}
+                  <span>{activePhoto.isHidden ? 'Tampilkan' : 'Sembunyikan'}</span>
+                </button>
+
+                <a
+                  href={activePhoto.imageData}
+                  download={`foto-${activePhoto.guestName}.jpg`}
+                  className="glass-pill"
+                  style={{ padding: '10px', fontSize: '12px', textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  <Download size={14} />
+                  <span>Unduh</span>
+                </a>
+
+                <button
+                  onClick={() => {
+                    if (confirm('Yakin ingin menghapus foto ini permanen?')) {
+                      handleDeletePhoto(activePhoto.id);
+                      setActivePhoto(null);
+                    }
+                  }}
+                  className="glass-pill"
+                  style={{ padding: '10px', fontSize: '12px', cursor: 'pointer', color: '#E74C3C', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  <Trash2 size={14} />
+                  <span>Hapus</span>
+                </button>
               </div>
             </div>
           </div>

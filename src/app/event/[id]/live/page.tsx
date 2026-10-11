@@ -219,13 +219,39 @@ export default function LiveProjectorWallPage() {
                 />
               </div>
 
-              <div style={{ marginTop: '18px', textAlign: 'center', color: '#1a1815' }}>
+              <div style={{ marginTop: '18px', textAlign: 'center', color: '#1a1815', width: '100%' }}>
                 <span style={{ fontSize: '18px', fontWeight: '800', fontFamily: 'var(--font-display)', display: 'block' }}>
                   Diabadikan oleh @{currentPhoto.guestName}
                 </span>
                 <span style={{ fontSize: '13px', color: '#736d65', fontFamily: 'var(--font-lcd)', display: 'block', marginTop: '2px' }}>
                   FRAME #{currentPhoto.shotNumber} • {new Date(currentPhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                 </span>
+
+                {/* Live Guest Wish on Venue TV / Projector */}
+                {currentPhoto.caption && (
+                  <div style={{
+                    marginTop: '12px',
+                    padding: '8px 16px',
+                    background: 'rgba(194, 120, 3, 0.08)',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(194, 120, 3, 0.25)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    maxWidth: '95%'
+                  }}>
+                    <span style={{ fontSize: '14px' }}>💬</span>
+                    <span style={{
+                      fontSize: '13.5px',
+                      color: '#78350F',
+                      fontStyle: 'italic',
+                      fontWeight: 600,
+                      lineHeight: '1.4'
+                    }}>
+                      &ldquo;{currentPhoto.caption}&rdquo;
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

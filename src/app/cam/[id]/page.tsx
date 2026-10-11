@@ -1414,6 +1414,27 @@ export default function GuestCameraPage() {
                           </button>
                         </div>
                       </div>
+
+                      {photo.caption && (
+                        <div style={{
+                          padding: '0 10px 8px 10px',
+                          fontSize: '10px',
+                          color: '#78350F',
+                          fontStyle: 'italic',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <span style={{ fontSize: '10px', flexShrink: 0, fontStyle: 'normal' }}>💬</span>
+                          <span style={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            &ldquo;{photo.caption}&rdquo;
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
