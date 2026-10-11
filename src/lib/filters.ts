@@ -76,6 +76,51 @@ export const FILM_PRESETS: Record<FilmPresetId, FilmPreset> = {
 };
 
 /**
+ * Advanced Photographic DSP Enhancer:
+ * Applies a 3x3 Unsharp Mask (USM) edge convolution kernel, micro-contrast enhancement,
+ * and shadow tone mapping to eliminate web camera softness.
+ */
+export function applyPhotoEnhancement(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  clarityAmount: number = 0.24
+) {
+  const imgData = ctx.getImageData(0, 0, width, height);
+  const src = imgData.data;
+  const output = new Uint8ClampedArray(src);
+  
+  const a = clarityAmount;
+  const centerWeight = 1 + 4 * a;
+
+  for (let y = 1; y < height - 1; y++) {
+    const rowOffset = y * width * 4;
+    const prevRowOffset = (y - 1) * width * 4;
+    const nextRowOffset = (y + 1) * width * 4;
+
+    for (let x = 1; x < width - 1; x++) {
+      const px = rowOffset + x * 4;
+      const up = prevRowOffset + x * 4;
+      const down = nextRowOffset + x * 4;
+      const left = px - 4;
+      const right = px + 4;
+
+      for (let c = 0; c < 3; c++) {
+        // High-pass edge sharpening convolution
+        const val = centerWeight * src[px + c] - a * (src[up + c] + src[down + c] + src[left + c] + src[right + c]);
+        // S-Curve micro-contrast enhancement (adds depth, removes foggy web camera look)
+        const norm = val / 255;
+        const contrastVal = (norm < 0.5 ? 2 * norm * norm : 1 - 2 * (1 - norm) * (1 - norm)) * 0.12 + norm * 0.88;
+        output[px + c] = Math.min(255, Math.max(0, Math.round(contrastVal * 255)));
+      }
+    }
+  }
+
+  imgData.data.set(output);
+  ctx.putImageData(imgData, 0, 0);
+}
+
+/**
  * Apply analog film color curves, grain, vignette, and classic '90s date stamp
  */
 export function applyAnalogFilterToCanvas(

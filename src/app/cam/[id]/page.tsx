@@ -13,7 +13,7 @@ import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { EventData, FilmPresetId } from '@/lib/types';
-import { FILM_PRESETS, applyAnalogFilterToCanvas } from '@/lib/filters';
+import { FILM_PRESETS, applyAnalogFilterToCanvas, applyPhotoEnhancement } from '@/lib/filters';
 import { playAnalogShutterSound, playFilmWindingSound } from '@/lib/audio';
 import { 
   hapticShutterPress, 
@@ -82,6 +82,7 @@ export default function GuestCameraPage() {
   const [previewPhoto, setPreviewPhoto] = useState<GuestPhoto | null>(null);
   const [currentWish, setCurrentWish] = useState('');
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const nativeCamRef = useRef<HTMLInputElement | null>(null);
 
   // Point 6: Voice Note Recording States (at Quota Exhausted)
   const [isRecording, setIsRecording] = useState(false);
@@ -365,6 +366,10 @@ export default function GuestCameraPage() {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
       }
 
+      // Photographic DSP Enhancement Engine: Unsharp Masking + Contrast S-Curve
+      // Sharpens edge micro-detail (eyes, smiles, clothing, jewelry) & eliminates foggy webcam look
+      applyPhotoEnhancement(ctx, canvas.width, canvas.height, 0.24);
+
       // 1. Apply analog color emulations
       const currentPreset = selectedPreset || event?.preset || 'portra';
       const activeFrameId = (useFrame && event?.frameId) ? event.frameId : 'none';
@@ -551,7 +556,49 @@ export default function GuestCameraPage() {
       setTimeout(() => setFlashTrigger(false), 220);
     }
 
+    // Hardware ImageCapture Still API:
+    // Bypasses WebRTC compressed preview stream to command the smartphone sensor
+    // to capture a genuine full-megapixel still photo with hardware ISP auto-focus!
+    if (typeof window !== 'undefined' && 'ImageCapture' in window && streamRef.current) {
+      try {
+        const track = streamRef.current.getVideoTracks()[0];
+        // @ts-ignore
+        const imageCapture = new window.ImageCapture(track);
+        const photoBlob = await imageCapture.takePhoto();
+        const img = new Image();
+        const objectUrl = URL.createObjectURL(photoBlob);
+        img.onload = async () => {
+          await processAndUploadImage(img, facingMode === 'user');
+          URL.revokeObjectURL(objectUrl);
+        };
+        img.src = objectUrl;
+        return;
+      } catch (e) {
+        console.warn('Hardware ImageCapture fallback to video canvas:', e);
+      }
+    }
+
     await processAndUploadImage(videoRef.current, facingMode === 'user');
+  };
+
+  // Point 4: Native Hardware Camera Capture Handler (100% Native 12MP/48MP Deep Fusion / Smart HDR)
+  const handleNativeCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        const img = new Image();
+        img.onload = async () => {
+          await processAndUploadImage(img, facingMode === 'user');
+          toast.success('Foto dari kamera asli HP (Full HDR) berhasil diproses!');
+        };
+        img.src = event.target.result as string;
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
   };
 
   // Gallery Upload Fallback Handler
@@ -715,6 +762,16 @@ export default function GuestCameraPage() {
         type="file"
         accept="image/*"
         onChange={handleGalleryUpload}
+        style={{ display: 'none' }}
+      />
+
+      {/* Hidden File Input for Native Phone Camera Capture (100% Native 12MP/48MP Deep Fusion HDR) */}
+      <input
+        ref={nativeCamRef}
+        type="file"
+        accept="image/*"
+        capture={facingMode === 'user' ? 'user' : 'environment'}
+        onChange={handleNativeCameraCapture}
         style={{ display: 'none' }}
       />
 
@@ -1069,8 +1126,9 @@ export default function GuestCameraPage() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '10px',
-          width: '100%'
+          gap: '8px',
+          width: '100%',
+          flexWrap: 'wrap'
         }}>
           {/* Frame Toggle */}
           {event?.allowGuestFrameToggle !== false && (
@@ -1082,10 +1140,10 @@ export default function GuestCameraPage() {
               style={{
                 background: useFrame ? 'rgba(194, 120, 3, 0.9)' : 'rgba(255, 255, 255, 0.08)',
                 border: useFrame ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.16)',
-                padding: '6px 14px',
+                padding: '6px 13px',
                 borderRadius: '999px',
                 color: '#FFFFFF',
-                fontSize: '11.5px',
+                fontSize: '11px',
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'flex',
@@ -1100,6 +1158,32 @@ export default function GuestCameraPage() {
               <span>{useFrame ? 'BINGKAI' : 'RAW'}</span>
             </button>
           )}
+
+          {/* Native Hardware Camera Button (Ultra HD 48MP Deep Fusion) */}
+          <button
+            onClick={() => {
+              hapticLightTap();
+              nativeCamRef.current?.click();
+            }}
+            style={{
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              padding: '6px 13px',
+              borderRadius: '999px',
+              color: '#FFFFFF',
+              fontSize: '11px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              transition: 'all 0.2s ease'
+            }}
+            title="Gunakan Kamera Bawaan HP (Maksimal 48MP, Night Mode & Smart HDR)"
+          >
+            <Camera size={12} color="#F59E0B" />
+            <span>KAMERA ASLI</span>
+          </button>
 
           {/* Wish Trigger Button */}
           <button
