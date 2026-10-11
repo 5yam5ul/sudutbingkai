@@ -557,7 +557,6 @@ export default function HomePage() {
                       alt="Candid Wedding Moment"
                       width={160}
                       height={120}
-                      fetchPriority="high"
                       decoding="async"
                       className="film-portra"
                     />
@@ -570,7 +569,6 @@ export default function HomePage() {
                       alt="Candid Guests Laughter"
                       width={160}
                       height={120}
-                      fetchPriority="high"
                       decoding="async"
                       className="film-portra"
                     />
@@ -583,7 +581,6 @@ export default function HomePage() {
                       alt="Candid Celebration Cheers"
                       width={160}
                       height={120}
-                      fetchPriority="high"
                       decoding="async"
                       className="film-portra"
                     />
@@ -705,7 +702,6 @@ export default function HomePage() {
                   alt="Live Viewfinder Snapshot"
                   width={300}
                   height={220}
-                  fetchPriority="high"
                   decoding="async"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   className="film-portra"
