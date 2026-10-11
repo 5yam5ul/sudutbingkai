@@ -225,7 +225,7 @@ export default function HomePage() {
                 className="btn-glass-secondary" 
                 style={{ flex: 1, padding: '12px', fontSize: '13px', textAlign: 'center' }}
               >
-                Coba Kamera
+                Coba Kamera Demo
               </Link>
               <Link 
                 href="/create" 

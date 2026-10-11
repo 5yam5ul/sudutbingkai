@@ -397,6 +397,7 @@ div.desktop-only, section.desktop-only, header.desktop-only, p.desktop-only {
     display: none !important;
   }
   
+  .desktop-nav-actions > a,
   .desktop-nav-actions .action-desktop-only {
     display: none !important;
   }
