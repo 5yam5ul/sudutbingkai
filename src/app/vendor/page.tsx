@@ -334,6 +334,10 @@ export default function VendorPortalPage() {
               <img 
                 src="/sudut-bingkai-logo.png" 
                 alt="Sudut Bingkai" 
+                width={130}
+                height={32}
+                fetchPriority="high"
+                decoding="async"
                 style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }} 
               />
             </Link>

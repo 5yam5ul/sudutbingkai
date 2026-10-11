@@ -64,6 +64,10 @@ const renderVendorLogo = (v: any) => {
         <img
           src={logoSrc}
           alt={v.name}
+          width={42}
+          height={42}
+          loading="lazy"
+          decoding="async"
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </div>
@@ -224,6 +228,10 @@ export default function HomePage() {
             <img 
               src="/sudut-bingkai-logo.png" 
               alt="Sudut Bingkai" 
+              width={140}
+              height={34}
+              fetchPriority="high"
+              decoding="async"
               style={{ height: '34px', width: 'auto', objectFit: 'contain', display: 'block' }} 
             />
           </Link>
@@ -507,9 +515,9 @@ export default function HomePage() {
               boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)'
             }}>
               <div style={{ display: 'flex', marginLeft: '4px' }}>
-                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Avatar" style={{ width: '26px', height: '26px', borderRadius: '50%', border: '2px solid #FFFFFF', objectFit: 'cover' }} />
-                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt="Avatar" style={{ width: '26px', height: '26px', borderRadius: '50%', border: '2px solid #FFFFFF', marginLeft: '-8px', objectFit: 'cover' }} />
-                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80" alt="Avatar" style={{ width: '26px', height: '26px', borderRadius: '50%', border: '2px solid #FFFFFF', marginLeft: '-8px', objectFit: 'cover' }} />
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&q=80" alt="Avatar" width={26} height={26} decoding="async" style={{ width: '26px', height: '26px', borderRadius: '50%', border: '2px solid #FFFFFF', objectFit: 'cover' }} />
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&q=80" alt="Avatar" width={26} height={26} decoding="async" style={{ width: '26px', height: '26px', borderRadius: '50%', border: '2px solid #FFFFFF', marginLeft: '-8px', objectFit: 'cover' }} />
+                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=80&q=80" alt="Avatar" width={26} height={26} decoding="async" style={{ width: '26px', height: '26px', borderRadius: '50%', border: '2px solid #FFFFFF', marginLeft: '-8px', objectFit: 'cover' }} />
               </div>
               <span style={{ fontSize: '12.5px', color: '#515154' }}>
                 <strong style={{ color: '#C27803', fontWeight: 600 }}>500+ acara</strong> memakai SudutBingkai
@@ -547,6 +555,10 @@ export default function HomePage() {
                     <img
                       src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80"
                       alt="Candid Wedding Moment"
+                      width={160}
+                      height={120}
+                      fetchPriority="high"
+                      decoding="async"
                       className="film-portra"
                     />
                     <span className="film-cell-tag">▲ 24</span>
@@ -556,6 +568,10 @@ export default function HomePage() {
                     <img
                       src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=400&q=80"
                       alt="Candid Guests Laughter"
+                      width={160}
+                      height={120}
+                      fetchPriority="high"
+                      decoding="async"
                       className="film-portra"
                     />
                     <span className="film-cell-tag">▲ 24A</span>
@@ -565,6 +581,10 @@ export default function HomePage() {
                     <img
                       src="https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=400&q=80"
                       alt="Candid Celebration Cheers"
+                      width={160}
+                      height={120}
+                      fetchPriority="high"
+                      decoding="async"
                       className="film-portra"
                     />
                     <span className="film-cell-tag">▲ 25</span>
@@ -683,6 +703,10 @@ export default function HomePage() {
                 <img
                   src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=500&q=80"
                   alt="Live Viewfinder Snapshot"
+                  width={300}
+                  height={220}
+                  fetchPriority="high"
+                  decoding="async"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   className="film-portra"
                 />
@@ -741,6 +765,9 @@ export default function HomePage() {
                   <img
                     src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=120&q=80"
                     alt="Last Photo"
+                    width={34}
+                    height={34}
+                    decoding="async"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                 </div>
@@ -798,8 +825,8 @@ export default function HomePage() {
             <div className="hero-live-badge">
               <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)' }} />
               <div style={{ display: 'flex', marginLeft: '2px' }}>
-                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=60&q=80" alt="Guest" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #FFFFFF', objectFit: 'cover' }} />
-                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=60&q=80" alt="Guest" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #FFFFFF', marginLeft: '-6px', objectFit: 'cover' }} />
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=60&q=80" alt="Guest" width={20} height={20} decoding="async" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #FFFFFF', objectFit: 'cover' }} />
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=60&q=80" alt="Guest" width={20} height={20} decoding="async" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #FFFFFF', marginLeft: '-6px', objectFit: 'cover' }} />
               </div>
               <span style={{ fontSize: '11px', fontWeight: 600, color: '#1D1D1F' }}>
                 <strong style={{ color: '#C27803' }}>18 momen</strong> baru diunggah
@@ -1123,6 +1150,10 @@ export default function HomePage() {
               <img
                 src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=700&q=80"
                 alt="Emulation preview"
+                width={500}
+                height={667}
+                loading="lazy"
+                decoding="async"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
               <span style={{ position: 'absolute', bottom: '12px', right: '14px', color: '#ff9900', fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 'bold' }}>
@@ -1347,6 +1378,10 @@ export default function HomePage() {
                     <img
                       src="/images/testimonials/wedding_1.jpg"
                       alt="Selfie Tamu Meja 04"
+                      width={146}
+                      height={190}
+                      loading="lazy"
+                      decoding="async"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
@@ -1373,6 +1408,10 @@ export default function HomePage() {
                     <img
                       src="/images/testimonials/wedding_2.jpg"
                       alt="Candid Meja 02"
+                      width={146}
+                      height={190}
+                      loading="lazy"
+                      decoding="async"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
@@ -1456,6 +1495,10 @@ export default function HomePage() {
                     <img
                       src="/images/testimonials/birthday_1.jpg"
                       alt="Selfie Geng SMA"
+                      width={146}
+                      height={190}
+                      loading="lazy"
+                      decoding="async"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
@@ -1482,6 +1525,10 @@ export default function HomePage() {
                     <img
                       src="/images/testimonials/birthday_2.jpg"
                       alt="Candid Tiup Lilin"
+                      width={146}
+                      height={190}
+                      loading="lazy"
+                      decoding="async"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
@@ -1565,6 +1612,10 @@ export default function HomePage() {
                     <img
                       src="/images/testimonials/gathering_1.jpg"
                       alt="Selfie Rooftop SCBD"
+                      width={146}
+                      height={190}
+                      loading="lazy"
+                      decoding="async"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
@@ -1591,6 +1642,10 @@ export default function HomePage() {
                     <img
                       src="/images/testimonials/gathering_2.jpg"
                       alt="Candid Meja Makan Tim"
+                      width={146}
+                      height={190}
+                      loading="lazy"
+                      decoding="async"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
                   </div>
@@ -1678,6 +1733,10 @@ export default function HomePage() {
               <img 
                 src="/sudut-bingkai-logo.png" 
                 alt="Sudut Bingkai" 
+                width={160}
+                height={42}
+                loading="lazy"
+                decoding="async"
                 style={{ height: '42px', width: 'auto', objectFit: 'contain', display: 'block' }} 
               />
             </div>

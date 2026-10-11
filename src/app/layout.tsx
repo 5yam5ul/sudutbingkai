@@ -1,5 +1,29 @@
 import type { Metadata, Viewport } from 'next';
+import { Outfit, Playfair_Display, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
+import { Toaster } from 'sonner';
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-sans',
+  weight: ['300', '400', '500', '600', '700', '800', '900'],
+});
+
+const playfair = Playfair_Display({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-playfair',
+  weight: ['400', '600', '700'],
+  style: ['normal', 'italic'],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-mono',
+  weight: ['400', '500', '700'],
+});
 
 export const metadata: Metadata = {
   title: 'SudutBingkai • Kamera Sekali Pakai untuk Pernikahan & Acara',
@@ -21,16 +45,14 @@ export const viewport: Viewport = {
   themeColor: '#12110F',
 };
 
-import { Toaster } from 'sonner';
-
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="id">
-      <body>
+    <html lang="id" className={`${outfit.variable} ${playfair.variable} ${jetbrainsMono.variable}`}>
+      <body className={outfit.className}>
         {children}
         <Toaster 
           position="top-center" 
