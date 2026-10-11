@@ -91,12 +91,12 @@ export function applyAnalogFilterToCanvas(
 
   switch (presetId) {
     case 'portra': {
-      // Soft warm highlights, creamy skin tones, subtle grain
-      const grain = 14;
+      // Soft warm highlights, creamy skin tones, subtle organic 35mm grain
+      const grain = 9;
       for (let i = 0; i < data.length; i += 4) {
-        let r = data[i] * 1.06 + 8;
-        let g = data[i + 1] * 1.02 + 4;
-        let b = data[i + 2] * 0.94;
+        let r = data[i] * 1.05 + 6;
+        let g = data[i + 1] * 1.02 + 3;
+        let b = data[i + 2] * 0.95;
         const gN = (Math.random() - 0.5) * grain;
         data[i] = Math.min(255, Math.max(0, r + gN));
         data[i + 1] = Math.min(255, Math.max(0, g + gN));
@@ -107,19 +107,19 @@ export function applyAnalogFilterToCanvas(
       // Subtle warm vignette
       const grad = ctx.createRadialGradient(width/2, height/2, width*0.35, width/2, height/2, width*0.75);
       grad.addColorStop(0, 'rgba(255,245,230,0.02)');
-      grad.addColorStop(1, 'rgba(30,15,5,0.22)');
+      grad.addColorStop(1, 'rgba(30,15,5,0.18)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
       break;
     }
 
     case 'funsaver': {
-      // Classic 90s disposable: yellow-amber cast, punchy contrast, visible grain
-      const grain = 22;
+      // Classic 90s disposable: yellow-amber cast, punchy contrast, balanced nostalgic grain
+      const grain = 13;
       for (let i = 0; i < data.length; i += 4) {
-        let r = data[i] * 1.10 + 12;
-        let g = data[i + 1] * 1.03 + 6;
-        let b = data[i + 2] * 0.88 - 4;
+        let r = data[i] * 1.08 + 10;
+        let g = data[i + 1] * 1.02 + 5;
+        let b = data[i + 2] * 0.90 - 2;
         const gN = (Math.random() - 0.5) * grain;
         data[i] = Math.min(255, Math.max(0, r + gN));
         data[i + 1] = Math.min(255, Math.max(0, g + gN));
@@ -129,23 +129,23 @@ export function applyAnalogFilterToCanvas(
 
       const grad = ctx.createRadialGradient(width/2, height/2, width*0.3, width/2, height/2, width*0.78);
       grad.addColorStop(0, 'rgba(0,0,0,0)');
-      grad.addColorStop(1, 'rgba(20,10,0,0.34)');
+      grad.addColorStop(1, 'rgba(20,10,0,0.28)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
       break;
     }
 
     case 'quicksnap': {
-      // Fuji greens & cyan, snappy contrast
-      const grain = 20;
+      // Fuji greens & cyan, snappy crisp contrast
+      const grain = 11;
       for (let i = 0; i < data.length; i += 4) {
-        let r = data[i] * 0.94;
-        let g = data[i + 1] * 1.12 + 6;
-        let b = data[i + 2] * 1.06 + 8;
+        let r = data[i] * 0.95;
+        let g = data[i + 1] * 1.08 + 5;
+        let b = data[i + 2] * 1.04 + 6;
         // Contrast curve
-        r = ((r / 255 - 0.5) * 1.14 + 0.5) * 255;
-        g = ((g / 255 - 0.5) * 1.14 + 0.5) * 255;
-        b = ((b / 255 - 0.5) * 1.14 + 0.5) * 255;
+        r = ((r / 255 - 0.5) * 1.10 + 0.5) * 255;
+        g = ((g / 255 - 0.5) * 1.10 + 0.5) * 255;
+        b = ((b / 255 - 0.5) * 1.10 + 0.5) * 255;
         const gN = (Math.random() - 0.5) * grain;
         data[i] = Math.min(255, Math.max(0, r + gN));
         data[i + 1] = Math.min(255, Math.max(0, g + gN));
@@ -155,19 +155,19 @@ export function applyAnalogFilterToCanvas(
 
       const grad = ctx.createRadialGradient(width/2, height/2, width*0.3, width/2, height/2, width*0.75);
       grad.addColorStop(0, 'rgba(0,0,0,0)');
-      grad.addColorStop(1, 'rgba(0,25,15,0.30)');
+      grad.addColorStop(1, 'rgba(0,25,15,0.24)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
       break;
     }
 
     case 'ektar': {
-      // High saturation & high contrast
-      const grain = 16;
+      // Ultra fine grain, high saturation & high contrast
+      const grain = 8;
       for (let i = 0; i < data.length; i += 4) {
-        let r = ((data[i] / 255 - 0.5) * 1.25 + 0.5) * 255 * 1.12;
-        let g = ((data[i + 1] / 255 - 0.5) * 1.20 + 0.5) * 255 * 1.02;
-        let b = ((data[i + 2] / 255 - 0.5) * 1.15 + 0.5) * 255 * 0.95;
+        let r = ((data[i] / 255 - 0.5) * 1.18 + 0.5) * 255 * 1.08;
+        let g = ((data[i + 1] / 255 - 0.5) * 1.15 + 0.5) * 255 * 1.02;
+        let b = ((data[i + 2] / 255 - 0.5) * 1.12 + 0.5) * 255 * 0.96;
         const gN = (Math.random() - 0.5) * grain;
         data[i] = Math.min(255, Math.max(0, r + gN));
         data[i + 1] = Math.min(255, Math.max(0, g + gN));
@@ -177,7 +177,7 @@ export function applyAnalogFilterToCanvas(
 
       const grad = ctx.createRadialGradient(width/2, height/2, width*0.35, width/2, height/2, width*0.76);
       grad.addColorStop(0, 'rgba(255,180,0,0.02)');
-      grad.addColorStop(1, 'rgba(35,10,0,0.35)');
+      grad.addColorStop(1, 'rgba(35,10,0,0.28)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
       break;
@@ -185,11 +185,11 @@ export function applyAnalogFilterToCanvas(
 
     case 'cinestill': {
       // Tungsten cool look with warm halation
-      const grain = 18;
+      const grain = 10;
       for (let i = 0; i < data.length; i += 4) {
-        let r = data[i] * 0.92;
-        let g = data[i + 1] * 1.03 + 4;
-        let b = data[i + 2] * 1.18 + 14;
+        let r = data[i] * 0.94;
+        let g = data[i + 1] * 1.02 + 3;
+        let b = data[i + 2] * 1.12 + 10;
         const gN = (Math.random() - 0.5) * grain;
         data[i] = Math.min(255, Math.max(0, r + gN));
         data[i + 1] = Math.min(255, Math.max(0, g + gN));
@@ -199,18 +199,18 @@ export function applyAnalogFilterToCanvas(
 
       const grad = ctx.createRadialGradient(width/2, height/2, width*0.3, width/2, height/2, width*0.75);
       grad.addColorStop(0, 'rgba(255,80,0,0.04)');
-      grad.addColorStop(1, 'rgba(0,15,35,0.42)');
+      grad.addColorStop(1, 'rgba(0,15,35,0.32)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
       break;
     }
 
     case 'ilford': {
-      // True monochrome high-contrast film
-      const grain = 26;
+      // True monochrome classic film with fine silver grain
+      const grain = 15;
       for (let i = 0; i < data.length; i += 4) {
         let gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        gray = ((gray / 255 - 0.5) * 1.30 + 0.5) * 255;
+        gray = ((gray / 255 - 0.5) * 1.20 + 0.5) * 255;
         const gN = (Math.random() - 0.5) * grain;
         const val = Math.min(255, Math.max(0, gray + gN));
         data[i] = val;
@@ -221,19 +221,19 @@ export function applyAnalogFilterToCanvas(
 
       const grad = ctx.createRadialGradient(width/2, height/2, width*0.3, width/2, height/2, width*0.75);
       grad.addColorStop(0, 'rgba(0,0,0,0)');
-      grad.addColorStop(1, 'rgba(0,0,0,0.48)');
+      grad.addColorStop(1, 'rgba(0,0,0,0.36)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
       break;
     }
 
     case 'agfa': {
-      // Warm European pastel: slightly lifted blacks, soft warm pink-yellow highlights
-      const grain = 16;
+      // Warm European pastel: soft highlights, gentle film grain
+      const grain = 9;
       for (let i = 0; i < data.length; i += 4) {
-        let r = data[i] * 1.08 + 10;
-        let g = data[i + 1] * 1.02 + 6;
-        let b = data[i + 2] * 0.98 + 4;
+        let r = data[i] * 1.06 + 8;
+        let g = data[i + 1] * 1.02 + 4;
+        let b = data[i + 2] * 0.98 + 2;
         const gN = (Math.random() - 0.5) * grain;
         data[i] = Math.min(255, Math.max(0, r + gN));
         data[i + 1] = Math.min(255, Math.max(0, g + gN));
@@ -243,18 +243,18 @@ export function applyAnalogFilterToCanvas(
 
       const grad = ctx.createRadialGradient(width/2, height/2, width*0.35, width/2, height/2, width*0.8);
       grad.addColorStop(0, 'rgba(255,230,240,0.03)');
-      grad.addColorStop(1, 'rgba(60,20,30,0.20)');
+      grad.addColorStop(1, 'rgba(60,20,30,0.18)');
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, width, height);
       break;
     }
 
     case 'trix': {
-      // Moody gritty street B&W: heavy grain, deep crushed blacks, bright whites
-      const grain = 36;
+      // Moody street B&W: deep contrast, rich classic grain
+      const grain = 20;
       for (let i = 0; i < data.length; i += 4) {
         let gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        gray = ((gray / 255 - 0.5) * 1.55 + 0.5) * 255;
+        gray = ((gray / 255 - 0.5) * 1.35 + 0.5) * 255;
         const gN = (Math.random() - 0.5) * grain;
         const val = Math.min(255, Math.max(0, gray + gN));
         data[i] = val;

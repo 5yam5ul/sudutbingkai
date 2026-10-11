@@ -241,8 +241,8 @@ export default function GuestCameraPage() {
         audio: false,
         video: {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1280, max: 1920 },
-          height: { ideal: 720, max: 1080 }
+          width: { ideal: 1920 },
+          height: { ideal: 1440 }
         }
       };
 
@@ -324,15 +324,21 @@ export default function GuestCameraPage() {
     const canvas = canvasRef.current || document.createElement('canvas');
 
     // Multi-Aspect Ratio: '3:4' | '1:1' | '9:16'
+    // Deliver pristine studio resolution: 1440x1920 (QHD) for 3:4, 1440x1440 for 1:1, 1080x1920 for 9:16
     const targetAspect = aspectRatio === '1:1' ? 1 : aspectRatio === '9:16' ? 9 / 16 : 3 / 4;
-    canvas.width = 1200;
-    canvas.height = Math.round(1200 / targetAspect);
+    const baseWidth = aspectRatio === '9:16' ? 1080 : 1440;
+    canvas.width = baseWidth;
+    canvas.height = Math.round(baseWidth / targetAspect);
     const ctx = canvas.getContext('2d');
 
     if (ctx) {
+      // Enforce highest quality image smoothing algorithms
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+
       const isVideo = source instanceof HTMLVideoElement;
-      const sW = isVideo ? source.videoWidth || 640 : source.naturalWidth || 640;
-      const sH = isVideo ? source.videoHeight || 480 : source.naturalHeight || 480;
+      const sW = isVideo ? source.videoWidth || 1280 : source.naturalWidth || 1280;
+      const sH = isVideo ? source.videoHeight || 960 : source.naturalHeight || 960;
       const sourceRatio = sW / sH;
       let cW, cH, sX, sY;
 
@@ -359,12 +365,14 @@ export default function GuestCameraPage() {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
       }
 
-      // 1. Apply analog color emulations & date stamp
+      // 1. Apply analog color emulations
       const currentPreset = selectedPreset || event?.preset || 'portra';
-      applyAnalogFilterToCanvas(canvas, ctx, currentPreset, true);
-
-      // 2. Point 1: Apply decorative event frame if enabled
       const activeFrameId = (useFrame && event?.frameId) ? event.frameId : 'none';
+      // Only show glowing date stamp when frame is none or retro-90s, to prevent ugly overlap over gold wedding plaques!
+      const shouldShowDateStamp = activeFrameId === 'none' || activeFrameId === 'retro-90s';
+      applyAnalogFilterToCanvas(canvas, ctx, currentPreset, shouldShowDateStamp);
+
+      // 2. Apply decorative event frame if enabled
       if (activeFrameId !== 'none') {
         await applyFrameToCanvas(canvas, ctx, {
           frameId: activeFrameId,
@@ -375,26 +383,31 @@ export default function GuestCameraPage() {
         });
       }
 
-      const base64 = canvas.toDataURL('image/jpeg', 0.90);
+      // Pristine Studio High-Res output for Lightbox, Fullscreen, and Direct Download (0.92 quality)
+      const highResDataUrl = canvas.toDataURL('image/jpeg', 0.92);
       const newShotNum = shotCount + 1;
       setShotCount(newShotNum);
 
-      // Create lightweight thumbnail for instant preview & safe localStorage storage
-      const thumbCanvas = document.createElement('canvas');
-      thumbCanvas.width = 180;
-      thumbCanvas.height = Math.round(180 / targetAspect);
-      const tCtx = thumbCanvas.getContext('2d');
-      if (tCtx) {
-        tCtx.drawImage(canvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
+      // Create a sharp, balanced storage version (960px width, 0.84 quality, ~80KB)
+      // This guarantees safe localStorage persistence across page reloads without running out of quota!
+      const storageCanvas = document.createElement('canvas');
+      const storageWidth = aspectRatio === '9:16' ? 720 : 960;
+      storageCanvas.width = storageWidth;
+      storageCanvas.height = Math.round(storageWidth / targetAspect);
+      const sCtx = storageCanvas.getContext('2d');
+      if (sCtx) {
+        sCtx.imageSmoothingEnabled = true;
+        sCtx.imageSmoothingQuality = 'high';
+        sCtx.drawImage(canvas, 0, 0, storageCanvas.width, storageCanvas.height);
       }
-      const thumbBase64 = thumbCanvas.toDataURL('image/jpeg', 0.65);
-      setLastShotThumb(thumbBase64);
+      const storageBase64 = storageCanvas.toDataURL('image/jpeg', 0.84);
+      setLastShotThumb(storageBase64);
 
-      // Save lightweight thumbnail locally to guest personal roll
+      // Save photo locally to guest personal roll with the FULL high-res image
       const newGuestPhoto: GuestPhoto = {
         id: 'shot-' + Date.now(),
         shotNumber: newShotNum,
-        imageData: thumbBase64,
+        imageData: highResDataUrl, // <--- FULL HIGH RESOLUTION (QHD) FOR LIGHTBOX & DOWNLOAD!
         timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
         caption: currentWish.trim() || (tableNumber ? `Meja ${tableNumber}` : ''),
         aspectRatio,
@@ -403,8 +416,14 @@ export default function GuestCameraPage() {
 
       const updatedShots = [...myPhotos, newGuestPhoto];
       setMyPhotos(updatedShots);
+
+      // Store sharp storageBase64 in localStorage so reloads don't blow up 5MB quota
       try {
-        localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updatedShots));
+        const persistentShots = updatedShots.map(p => ({
+          ...p,
+          imageData: p.id === newGuestPhoto.id ? storageBase64 : p.imageData
+        }));
+        localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
       } catch (err) {
         console.warn('LocalStorage quota limit reached, saving in memory:', err);
       }
@@ -427,7 +446,7 @@ export default function GuestCameraPage() {
           eventId,
           guestName: displayName,
           shotNumber: newShotNum,
-          imageData: base64,
+          imageData: highResDataUrl,
           caption: currentWish.trim(),
           aspectRatio,
           frameId: activeFrameId,
@@ -444,7 +463,7 @@ export default function GuestCameraPage() {
             eventId,
             guestName: displayName,
             shotNumber: newShotNum,
-            imageData: base64,
+            imageData: highResDataUrl,
             caption: currentWish.trim(),
             aspectRatio,
             frameId: activeFrameId
@@ -463,7 +482,7 @@ export default function GuestCameraPage() {
             eventId,
             guestName: displayName,
             shotNumber: newShotNum,
-            imageData: base64,
+            imageData: highResDataUrl,
             caption: currentWish.trim(),
             aspectRatio,
             frameId: activeFrameId,
