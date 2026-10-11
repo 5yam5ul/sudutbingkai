@@ -651,30 +651,27 @@ export default function GuestCameraPage() {
         {/* Dynamic Framing Hairline Overlay (Changes with aspect ratio) */}
         <div style={{
           position: 'absolute',
-          top: aspectRatio === '1:1' ? '12%' : '8%',
-          bottom: aspectRatio === '1:1' ? '12%' : '14%',
-          width: aspectRatio === '9:16' ? 'calc(100% - 24px)' : 'calc(100% - 36px)',
+          top: aspectRatio === '1:1' ? '14%' : aspectRatio === '9:16' ? '6%' : '9%',
+          bottom: aspectRatio === '1:1' ? '20%' : aspectRatio === '9:16' ? '18%' : '17%',
+          width: aspectRatio === '9:16' ? 'calc(100% - 24px)' : 'calc(100% - 32px)',
           maxWidth: aspectRatio === '1:1' ? '360px' : aspectRatio === '9:16' ? '340px' : '420px',
           aspectRatio: aspectRatio === '1:1' ? '1/1' : aspectRatio === '9:16' ? '9/16' : '3/4',
-          border: '1px solid rgba(255, 255, 255, 0.28)',
-          borderRadius: '6px',
+          border: '1px solid rgba(255, 255, 255, 0.18)',
+          borderRadius: '12px',
           pointerEvents: 'none',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          padding: '12px',
-          transition: 'all 0.3s ease'
+          padding: '10px',
+          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ width: '14px', height: '14px', borderTop: '2.5px solid #C27803', borderLeft: '2.5px solid #C27803' }} />
-            <span style={{ width: '14px', height: '14px', borderTop: '2.5px solid #C27803', borderRight: '2.5px solid #C27803' }} />
-          </div>
-          <div style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.55)', fontSize: '20px', fontWeight: 300, letterSpacing: '4px' }}>
-            +
+            <span style={{ width: '12px', height: '12px', borderTop: '2px solid #C27803', borderLeft: '2px solid #C27803', borderTopLeftRadius: '3px' }} />
+            <span style={{ width: '12px', height: '12px', borderTop: '2px solid #C27803', borderRight: '2px solid #C27803', borderTopRightRadius: '3px' }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <span style={{ width: '14px', height: '14px', borderBottom: '2.5px solid #C27803', borderLeft: '2.5px solid #C27803' }} />
-            <span style={{ width: '14px', height: '14px', borderBottom: '2.5px solid #C27803', borderRight: '2.5px solid #C27803' }} />
+            <span style={{ width: '12px', height: '12px', borderBottom: '2px solid #C27803', borderLeft: '2px solid #C27803', borderBottomLeftRadius: '3px' }} />
+            <span style={{ width: '12px', height: '12px', borderBottom: '2px solid #C27803', borderRight: '2px solid #C27803', borderBottomRightRadius: '3px' }} />
           </div>
         </div>
 
@@ -808,45 +805,86 @@ export default function GuestCameraPage() {
         </AnimatePresence>
       </div>
 
-      {/* Top HUD Bar with Safe Area Top */}
+      {/* Single Minimalist Top HUD Bar */}
       <header style={{
-        position: 'relative',
-        zIndex: 20,
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 30,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 'calc(14px + env(safe-area-inset-top, 0px)) 16px 8px',
-        background: 'linear-gradient(180deg, rgba(11,10,9,0.92) 0%, transparent 100%)'
+        padding: 'calc(12px + env(safe-area-inset-top, 0px)) 16px 10px',
+        background: 'linear-gradient(180deg, rgba(11, 10, 9, 0.85) 0%, rgba(11, 10, 9, 0.4) 65%, transparent 100%)',
+        pointerEvents: 'auto'
       }}>
-        {/* Flash Mode Toggle (Screen vs Torch vs Off) */}
+        {/* Flash Mode Minimal Button */}
         <button
           onClick={cycleFlashMode}
           style={{
-            background: flashMode !== 'off' ? '#C27803' : 'rgba(255, 255, 255, 0.12)',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '999px',
-            padding: '6px 12px',
+            background: flashMode !== 'off' ? 'rgba(194, 120, 3, 0.9)' : 'rgba(255, 255, 255, 0.14)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
-            gap: '5px',
+            justifyContent: 'center',
+            color: '#FFFFFF',
             cursor: 'pointer',
-            fontSize: '11px',
-            fontWeight: 600
+            transition: 'all 0.2s ease'
           }}
-          title="Mode Lampu Kilat"
+          title={`Mode Kilat: ${flashMode.toUpperCase()}`}
         >
-          <Zap size={14} fill={flashMode !== 'off' ? 'currentColor' : 'none'} />
-          <span>{flashMode === 'torch' ? 'TORCH' : flashMode === 'screen' ? 'FLASH' : 'OFF'}</span>
+          <Zap size={16} fill={flashMode !== 'off' ? '#FFFFFF' : 'none'} />
         </button>
 
-        {/* Film Type Badge & Offline Indicator */}
+        {/* Center Film Canister Pill */}
+        <button
+          onClick={() => {
+            if (event?.allowGuestPresetSwitch && availablePresets.length > 1) {
+              const currentIndex = availablePresets.indexOf(selectedPreset);
+              const nextIndex = (currentIndex + 1) % availablePresets.length;
+              const nextPreset = availablePresets[nextIndex];
+              hapticDialClick();
+              setSelectedPreset(nextPreset);
+              toast.info(`Film: ${FILM_PRESETS[nextPreset]?.name || nextPreset}`);
+            }
+          }}
+          disabled={!event?.allowGuestPresetSwitch || availablePresets.length <= 1}
+          style={{
+            background: 'rgba(20, 19, 18, 0.78)',
+            backdropFilter: 'blur(12px)',
+            border: event?.allowGuestPresetSwitch && availablePresets.length > 1 ? '1px solid rgba(194, 120, 3, 0.65)' : '1px solid rgba(255, 255, 255, 0.16)',
+            padding: '7px 14px',
+            borderRadius: '999px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '7px',
+            color: '#FFFFFF',
+            cursor: event?.allowGuestPresetSwitch && availablePresets.length > 1 ? 'pointer' : 'default',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.35)'
+          }}
+          title={event?.allowGuestPresetSwitch ? 'Ketuk untuk ganti film analog' : 'Emulasi film acara'}
+        >
+          <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: presetInfo.accentColor || '#C27803' }} />
+          <span className="font-mono-film" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.12em' }}>
+            {presetInfo.name.toUpperCase()}
+          </span>
+          {event?.allowGuestPresetSwitch && availablePresets.length > 1 && (
+            <span style={{ fontSize: '10px', opacity: 0.75, color: '#C27803' }}>⇄</span>
+          )}
+        </button>
+
+        {/* Right Mechanical Frame Counter Window */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {offlineCount > 0 && (
             <div style={{
               background: 'rgba(217, 119, 6, 0.25)',
               border: '1px solid #D97706',
-              padding: '4px 8px',
+              padding: '3px 7px',
               borderRadius: '999px',
               display: 'flex',
               alignItems: 'center',
@@ -854,127 +892,100 @@ export default function GuestCameraPage() {
               fontSize: '10px',
               color: '#F59E0B'
             }}>
-              <WifiOff size={11} />
-              <span>{offlineCount} Offline</span>
+              <WifiOff size={10} />
+              <span>{offlineCount}</span>
             </div>
           )}
 
-          {/* Film Type Badge & Switcher */}
-          <button
-            onClick={() => {
-              if (event?.allowGuestPresetSwitch && availablePresets.length > 1) {
-                const currentIndex = availablePresets.indexOf(selectedPreset);
-                const nextIndex = (currentIndex + 1) % availablePresets.length;
-                const nextPreset = availablePresets[nextIndex];
-                setSelectedPreset(nextPreset);
-                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-                  try { navigator.vibrate(25); } catch {}
-                }
-                toast.info(`Film diganti: ${FILM_PRESETS[nextPreset]?.name || nextPreset}`);
-              }
-            }}
-            disabled={!event?.allowGuestPresetSwitch || availablePresets.length <= 1}
-            style={{
-              background: 'rgba(20, 19, 18, 0.85)',
-              backdropFilter: 'blur(12px)',
-              border: event?.allowGuestPresetSwitch && availablePresets.length > 1 ? '1px solid rgba(194, 120, 3, 0.6)' : '1px solid rgba(255, 255, 255, 0.15)',
-              padding: '6px 12px',
-              borderRadius: '999px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: event?.allowGuestPresetSwitch && availablePresets.length > 1 ? 'pointer' : 'default',
-              color: '#fff'
-            }}
-            title={event?.allowGuestPresetSwitch ? 'Ketuk untuk ganti film analog' : 'Emulasi film acara'}
-          >
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: presetInfo.accentColor || '#C27803' }} />
-            <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#fff' }}>
-              {presetInfo.name}
+          <div style={{
+            background: '#1A1815',
+            border: '1.5px solid rgba(255, 255, 255, 0.22)',
+            borderRadius: '8px',
+            padding: '4px 9px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.6)'
+          }}>
+            <span style={{ fontSize: '8px', color: '#86868B', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>SISA</span>
+            <span style={{
+              fontFamily: 'var(--font-mono)',
+              fontSize: '13.5px',
+              fontWeight: 800,
+              color: remaining <= 3 ? '#FF6B6B' : '#F59E0B',
+              lineHeight: 1.1,
+              letterSpacing: '0.04em'
+            }}>
+              {remaining.toString().padStart(2, '0')}
             </span>
-            {event?.allowGuestPresetSwitch && availablePresets.length > 1 && (
-              <span style={{ fontSize: '9px', opacity: 0.6, marginLeft: '2px' }}>⇄</span>
-            )}
-          </button>
-        </div>
-
-        {/* Counter Badge */}
-        <div style={{
-          background: 'rgba(20, 19, 18, 0.85)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
-          padding: '6px 12px',
-          borderRadius: '999px',
-          fontFamily: 'var(--font-mono)',
-          fontSize: '11px',
-          color: remaining <= 3 ? '#FF6B6B' : '#fff',
-          fontWeight: 600
-        }}>
-          {remaining.toString().padStart(2, '0')} / {maxShots} SISA
+          </div>
         </div>
       </header>
 
-      {/* Sub-HUD: Aspect Ratio, Frame Switcher, and Sleek Wish Trigger */}
+      {/* Floating Quick Controls Cluster (Positioned above shutter) */}
       <div style={{
-        position: 'relative',
-        zIndex: 20,
-        padding: '0 16px',
+        position: 'absolute',
+        bottom: 'calc(116px + env(safe-area-inset-bottom, 0px))',
+        left: 0,
+        right: 0,
+        zIndex: 25,
         display: 'flex',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         alignItems: 'center',
-        gap: '8px'
+        gap: '8px',
+        padding: '0 16px',
+        pointerEvents: 'auto'
       }}>
-        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-          {/* Aspect Ratio Switcher (1:1 / 3:4 / 9:16) */}
+        {/* Aspect Ratio Switcher */}
+        <button
+          onClick={cycleAspectRatio}
+          style={{
+            background: 'rgba(18, 17, 16, 0.68)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.16)',
+            padding: '6px 12px',
+            borderRadius: '999px',
+            color: '#FFFFFF',
+            fontSize: '11px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+          title="Ganti Rasio Foto"
+        >
+          <Layers size={11} />
+          <span>{aspectRatio}</span>
+        </button>
+
+        {/* Frame Toggle */}
+        {event?.allowGuestFrameToggle !== false && (
           <button
-            onClick={cycleAspectRatio}
+            onClick={() => {
+              hapticToggle();
+              setUseFrame(!useFrame);
+            }}
             style={{
-              background: 'rgba(15, 14, 13, 0.75)',
+              background: useFrame ? 'rgba(194, 120, 3, 0.85)' : 'rgba(18, 17, 16, 0.68)',
               backdropFilter: 'blur(12px)',
-              border: '1px solid rgba(255, 255, 255, 0.18)',
-              padding: '5px 11px',
+              border: useFrame ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.16)',
+              padding: '6px 12px',
               borderRadius: '999px',
               color: '#FFFFFF',
               fontSize: '11px',
-              fontWeight: 700,
+              fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '4px'
             }}
-            title="Ganti Rasio Foto"
+            title="Pilih Pakai Bingkai atau Raw"
           >
-            <Layers size={11} />
-            <span>{aspectRatio}</span>
+            <Sparkles size={11} />
+            <span>{useFrame ? 'BINGKAI' : 'RAW'}</span>
           </button>
-
-          {/* Frame Toggle (Event Frame vs RAW Photo) */}
-          {event?.allowGuestFrameToggle !== false && (
-            <button
-              onClick={() => {
-                hapticToggle();
-                setUseFrame(!useFrame);
-              }}
-              style={{
-                background: useFrame ? 'rgba(194, 120, 3, 0.85)' : 'rgba(15, 14, 13, 0.75)',
-                backdropFilter: 'blur(12px)',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
-                padding: '5px 11px',
-                borderRadius: '999px',
-                color: '#FFFFFF',
-                fontSize: '11px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px'
-              }}
-              title="Pilih Pakai Bingkai atau Raw"
-            >
-              <Sparkles size={11} />
-              <span>{useFrame ? 'BINGKAI' : 'RAW'}</span>
-            </button>
-          )}
-        </div>
+        )}
 
         {/* Sleek Wish Trigger Button */}
         <button
@@ -983,10 +994,10 @@ export default function GuestCameraPage() {
             setShowWishModal(true);
           }}
           style={{
-            background: currentWish.trim() ? 'rgba(194, 120, 3, 0.9)' : 'rgba(15, 14, 13, 0.75)',
+            background: currentWish.trim() ? 'rgba(194, 120, 3, 0.85)' : 'rgba(18, 17, 16, 0.68)',
             backdropFilter: 'blur(12px)',
-            border: currentWish.trim() ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.18)',
-            padding: '5px 12px',
+            border: currentWish.trim() ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.16)',
+            padding: '6px 12px',
             borderRadius: '999px',
             color: '#FFFFFF',
             fontSize: '11px',
@@ -995,82 +1006,30 @@ export default function GuestCameraPage() {
             display: 'flex',
             alignItems: 'center',
             gap: '5px',
-            maxWidth: '150px'
+            maxWidth: '140px'
           }}
           title="Tuliskan ucapan untuk pengantin"
         >
           <Heart size={11} fill={currentWish.trim() ? 'currentColor' : 'none'} color={currentWish.trim() ? '#fff' : '#C27803'} />
           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {currentWish.trim() ? `"${currentWish.trim()}"` : '+ Ucapan'}
+            {currentWish.trim() ? 'Tersimpan' : '+ Ucapan'}
           </span>
         </button>
       </div>
 
-      {/* Film Switcher Strip for Guests (when host enables allowGuestPresetSwitch) */}
-      {event?.allowGuestPresetSwitch && availablePresets.length > 1 && (
-        <div style={{
-          position: 'relative',
-          zIndex: 20,
-          padding: '6px 16px 2px',
-          display: 'flex',
-          gap: '7px',
-          overflowX: 'auto',
-          scrollbarWidth: 'none',
-          justifyContent: 'center',
-          alignItems: 'center'
-        }}>
-          {availablePresets.map((pid) => {
-            const p = FILM_PRESETS[pid];
-            if (!p) return null;
-            const isSelected = selectedPreset === pid;
-            return (
-              <button
-                key={pid}
-                onClick={() => {
-                  hapticDialClick();
-                  setSelectedPreset(pid);
-                  toast.info(`Film: ${p.name}`);
-                }}
-                style={{
-                  background: isSelected ? 'rgba(194, 120, 3, 0.92)' : 'rgba(15, 14, 13, 0.72)',
-                  backdropFilter: 'blur(10px)',
-                  border: isSelected ? '1.5px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.15)',
-                  color: '#FFFFFF',
-                  borderRadius: '999px',
-                  padding: '4px 10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  cursor: 'pointer',
-                  fontSize: '10.5px',
-                  fontWeight: isSelected ? 700 : 500,
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.15s ease',
-                  transform: isSelected ? 'scale(1.04)' : 'scale(1)'
-                }}
-              >
-                <span style={{
-                  width: '7px',
-                  height: '7px',
-                  borderRadius: '50%',
-                  background: p.accentColor || '#C27803'
-                }} />
-                <span>{p.name.replace(/^(Kodak|Fujifilm|Ilford|Agfa|CineStill)\s+/i, '')}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Bottom Shutter Controls with Safe Area Bottom */}
+      {/* Ergonomic Bottom Shutter Bar */}
       <footer style={{
-        position: 'relative',
-        zIndex: 20,
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        zIndex: 30,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '10px 18px calc(14px + env(safe-area-inset-bottom, 0px))',
-        background: 'linear-gradient(0deg, rgba(11,10,9,0.96) 0%, transparent 100%)'
+        padding: '12px 20px calc(14px + env(safe-area-inset-bottom, 0px))',
+        background: 'linear-gradient(0deg, rgba(11, 10, 9, 0.96) 0%, rgba(11, 10, 9, 0.72) 65%, transparent 100%)',
+        pointerEvents: 'auto'
       }}>
         {/* Hidden File Input for Phone Gallery Upload Fallback */}
         <input
@@ -1081,50 +1040,66 @@ export default function GuestCameraPage() {
           style={{ display: 'none' }}
         />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', width: '100%', maxWidth: '380px' }}>
-          {/* Flip Lens */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          maxWidth: '380px',
+          padding: '0 8px'
+        }}>
+          {/* Left: My Roll Preview (Slide Mount Style) */}
           <button
-            onClick={flipCamera}
-            style={{
-              background: 'rgba(255, 255, 255, 0.12)',
-              border: 'none',
-              color: '#fff',
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer'
+            onClick={() => {
+              hapticLightTap();
+              setShowRollModal(true);
             }}
-            title="Putar Kamera"
-          >
-            <RotateCcw size={18} />
-          </button>
-
-          {/* Gallery Upload Fallback Button */}
-          <button
-            onClick={() => galleryInputRef.current?.click()}
-            disabled={shotCount >= maxShots || isCapturing}
             style={{
-              background: 'rgba(255, 255, 255, 0.12)',
-              border: 'none',
-              color: '#fff',
-              width: '44px',
-              height: '44px',
-              borderRadius: '50%',
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1.5px solid rgba(255, 255, 255, 0.25)',
+              width: '48px',
+              height: '48px',
+              borderRadius: '13px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: (shotCount >= maxShots || isCapturing) ? 'not-allowed' : 'pointer'
+              cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.35)'
             }}
-            title="Unggah Foto dari Galeri HP"
+            title="Roll Foto Saya"
           >
-            <ImageIcon size={18} />
+            {lastShotThumb ? (
+              <img src={lastShotThumb} alt="My Roll" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <Film size={20} color="#FFFFFF" />
+            )}
+            {myPhotos.length > 0 && (
+              <span style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-2px',
+                background: '#C27803',
+                color: '#fff',
+                fontSize: '9.5px',
+                fontWeight: 700,
+                minWidth: '17px',
+                height: '17px',
+                borderRadius: '999px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 3px',
+                border: '1.5px solid #000'
+              }}>
+                {myPhotos.length}
+              </span>
+            )}
           </button>
 
-          {/* Shutter Button (Mechanical feel) */}
+          {/* Center: Tactile Mechanical Shutter Button */}
           <button
             onClick={takePhoto}
             onPointerDown={() => {
@@ -1135,12 +1110,12 @@ export default function GuestCameraPage() {
             disabled={isCapturing || remaining === 0}
             className="shutter-ring"
             style={{
-              width: '74px',
-              height: '74px',
+              width: '76px',
+              height: '76px',
               borderRadius: '50%',
-              background: remaining === 0 ? '#4A4845' : '#FFFFFF',
-              border: '4px solid #12110F',
-              outline: '3px solid rgba(255, 255, 255, 0.8)',
+              background: remaining === 0 ? '#3A3835' : '#FFFFFF',
+              border: '4px solid #141311',
+              outline: '3px solid rgba(255, 255, 255, 0.85)',
               cursor: remaining === 0 ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -1150,65 +1125,60 @@ export default function GuestCameraPage() {
             title="Ambil Foto"
           >
             <div style={{
-              width: '58px',
-              height: '58px',
+              width: '60px',
+              height: '60px',
               borderRadius: '50%',
-              border: '2px solid rgba(0, 0, 0, 0.15)'
+              background: remaining === 0 ? '#4A4845' : 'radial-gradient(circle, #FFFFFF 65%, #ECEBE6 100%)',
+              border: '2px solid rgba(0, 0, 0, 0.12)'
             }} />
           </button>
 
-          {/* My Roll Button (View Taken Photos) */}
-          <button
-            onClick={() => {
-              hapticLightTap();
-              setShowRollModal(true);
-            }}
-            style={{
-              background: myPhotos.length > 0 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.12)',
-              border: 'none',
-              color: myPhotos.length > 0 ? '#1D1D1F' : '#FFFFFF',
-              width: '44px',
-              height: '44px',
-              borderRadius: '13px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              position: 'relative',
-              overflow: 'hidden'
-            }}
-            title="Roll Foto Saya"
-          >
-            {lastShotThumb ? (
-              <img src={lastShotThumb} alt="My Roll" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              <Film size={18} />
-            )}
-            {myPhotos.length > 0 && (
-              <span style={{
-                position: 'absolute',
-                top: '2px',
-                right: '2px',
-                background: '#C27803',
+          {/* Right: Flip Camera & Gallery Upload Cluster */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              onClick={() => galleryInputRef.current?.click()}
+              disabled={shotCount >= maxShots || isCapturing}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
                 color: '#fff',
-                fontSize: '9px',
-                fontWeight: 700,
-                width: '14px',
-                height: '14px',
+                width: '36px',
+                height: '36px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                {myPhotos.length}
-              </span>
-            )}
-          </button>
+                justifyContent: 'center',
+                cursor: (shotCount >= maxShots || isCapturing) ? 'not-allowed' : 'pointer'
+              }}
+              title="Unggah Foto dari Galeri"
+            >
+              <ImageIcon size={15} />
+            </button>
+
+            <button
+              onClick={flipCamera}
+              style={{
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1.5px solid rgba(255, 255, 255, 0.25)',
+                color: '#fff',
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.35)'
+              }}
+              title="Putar Kamera"
+            >
+              <RotateCcw size={19} />
+            </button>
+          </div>
         </div>
 
-        {/* Subtle Co-Branding footer */}
-        <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.6, fontSize: '10px', color: '#86868B' }}>
+        {/* Guest Attribution Footer */}
+        <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', opacity: 0.6, fontSize: '10.5px', color: '#86868B' }}>
           <span>SudutBingkai</span>
           <span>•</span>
           <span>Tamu: <strong>{guestName || 'Undangan'}</strong></span>

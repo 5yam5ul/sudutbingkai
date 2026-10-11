@@ -54,28 +54,34 @@ export default function BrideDashboardPage() {
   const [zipProgress, setZipProgress] = useState('');
 
   useEffect(() => {
-    let current = getClientSession();
-    if (!current) {
-      current = DEMO_USERS['pengantin'];
+    const current = getClientSession();
+    if (!current || current.role !== 'host') {
+      router.push('/login');
+      return;
     }
     setUser(current);
-
-    fetchData();
+    fetchData(current);
   }, []);
 
-  const fetchData = async (targetEventId?: string) => {
+  const fetchData = async (currentUser?: UserAccount) => {
     try {
       setLoading(true);
-      const resEvents = await fetch('/api/events');
+      const email = currentUser?.email || user?.email || 'pengantin@sudutbingkai.id';
+      const resEvents = await fetch(`/api/events?hostEmail=${encodeURIComponent(email)}`);
       const dataEvents = await resEvents.json();
-      if (dataEvents.success && dataEvents.events.length > 0) {
-        setEvents(dataEvents.events);
-        
-        // Pick target event or first event
-        const selected: EventData = targetEventId 
-          ? dataEvents.events.find((e: EventData) => e.id === targetEventId) || dataEvents.events[0]
-          : dataEvents.events[0];
-          
+      let selected: EventData | null = null;
+      if (dataEvents.success && dataEvents.events && dataEvents.events.length > 0) {
+        selected = dataEvents.events[0];
+      } else {
+        const fallbackRes = await fetch('/api/events?id=wedding-sarah-dimas');
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData.success && fallbackData.event) {
+          selected = fallbackData.event;
+        }
+      }
+
+      if (selected) {
+        setEvents([selected]);
         setEvent(selected);
         setShotsPerGuest(selected.shotsPerGuest || 20);
         setRevealMode(selected.revealMode || 'instant');
@@ -115,9 +121,6 @@ export default function BrideDashboardPage() {
     }
   };
 
-  const handleSelectEvent = (id: string) => {
-    fetchData(id);
-  };
 
   const handleLogout = () => {
     clearClientSession();
@@ -304,29 +307,21 @@ export default function BrideDashboardPage() {
             </span>
           </div>
 
-          {/* Event Switcher if host has multiple events */}
-          {events.length > 1 && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '12px', color: '#86868B' }}>Pilih Acara:</span>
-              <select
-                value={event?.id || ''}
-                onChange={(e) => handleSelectEvent(e.target.value)}
-                style={{
-                  background: '#FFFFFF',
-                  border: '1px solid rgba(0,0,0,0.12)',
-                  borderRadius: '10px',
-                  padding: '6px 12px',
-                  fontSize: '12.5px',
-                  color: '#1D1D1F',
-                  fontWeight: 600,
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                {events.map(ev => (
-                  <option key={ev.id} value={ev.id}>{ev.title}</option>
-                ))}
-              </select>
+          {event && (
+            <div className="desktop-only" style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              background: 'rgba(194, 120, 3, 0.08)',
+              border: '1px solid rgba(194, 120, 3, 0.25)',
+              padding: '5px 14px',
+              borderRadius: '999px',
+              fontSize: '12px',
+              color: '#C27803',
+              fontWeight: 600
+            }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
+              <span>{event.title}</span>
             </div>
           )}
 

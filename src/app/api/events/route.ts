@@ -6,6 +6,8 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const hostEmail = searchParams.get('hostEmail');
+    const vendorId = searchParams.get('vendorId');
 
     if (id) {
       const event = await getEventById(id);
@@ -15,7 +17,21 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, event });
     }
 
-    const events = await getAllEvents();
+    let events = await getAllEvents();
+
+    if (hostEmail) {
+      const cleanHost = hostEmail.trim().toLowerCase();
+      events = events.filter(e => 
+        (e.hostEmail && e.hostEmail.toLowerCase() === cleanHost) ||
+        (cleanHost === 'pengantin@sudutbingkai.id' && (e.id === 'wedding-sarah-dimas' || e.id === 'demo-nikahan'))
+      );
+    } else if (vendorId) {
+      events = events.filter(e => 
+        e.vendorId === vendorId ||
+        (vendorId === 'vendor_vows_co' && (e.id === 'wedding-sarah-dimas' || e.id === 'demo-nikahan'))
+      );
+    }
+
     return NextResponse.json({ success: true, events });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });

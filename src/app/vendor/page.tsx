@@ -70,12 +70,15 @@ export default function VendorPortalPage() {
   // Load existing vendor data & events if exists
   useEffect(() => {
     const session = getClientSession();
-    if (session && session.role === 'vendor') {
-      setVendor(session);
-      if (session.companyName) setCompanyName(session.companyName);
-      if (session.instagram) setInstagram(session.instagram);
-      if (session.phone) setPhone(session.phone);
+    if (!session || session.role !== 'vendor') {
+      router.push('/login');
+      return;
     }
+
+    setVendor(session);
+    if (session.companyName) setCompanyName(session.companyName);
+    if (session.instagram) setInstagram(session.instagram);
+    if (session.phone) setPhone(session.phone);
 
     fetch('/api/vendors')
       .then(res => res.json())
@@ -90,7 +93,8 @@ export default function VendorPortalPage() {
       })
       .catch(console.error);
 
-    fetch('/api/events')
+    const vendorId = session?.id || 'vendor_vows_co';
+    fetch(`/api/events?vendorId=${encodeURIComponent(vendorId)}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.events && data.events.length > 0) {
