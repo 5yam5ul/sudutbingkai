@@ -7,7 +7,7 @@ import {
   Zap, RotateCcw, ArrowLeft, ArrowRight, Camera, QrCode as QrIcon, 
   Check, Eye, Download, X, Heart, MessageSquare, CheckCircle2, Film,
   Share2, Sparkles, Layers, Mic, MicOff, Play, Square, WifiOff,
-  Image as ImageIcon, AlertTriangle, Upload
+  Image as ImageIcon, AlertTriangle, Upload, Trash2
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
@@ -39,6 +39,7 @@ interface GuestPhoto {
 export default function GuestCameraPage() {
   const params = useParams();
   const eventId = params.id as string;
+  const isDemo = eventId === 'demo' || eventId === 'simulation' || eventId === 'test';
 
   const [event, setEvent] = useState<EventData | null>(null);
   const [guestName, setGuestName] = useState('');
@@ -78,6 +79,7 @@ export default function GuestCameraPage() {
   const [showToast, setShowToast] = useState(false);
   const [showRollModal, setShowRollModal] = useState(false);
   const [showWishModal, setShowWishModal] = useState(false);
+  const [previewPhoto, setPreviewPhoto] = useState<GuestPhoto | null>(null);
   const [currentWish, setCurrentWish] = useState('');
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -107,31 +109,60 @@ export default function GuestCameraPage() {
 
   // Fetch event data & handle offline sync listener
   useEffect(() => {
-    fetch(`/api/events?id=${eventId}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.event) {
-          setEvent(data.event);
-          setMaxShots(data.event.shotsPerGuest || 20);
-          if (data.event.preset) {
-            setSelectedPreset(data.event.preset);
+    if (isDemo) {
+      setEvent({
+        id: 'demo',
+        title: 'Simulasi Coba Kamera',
+        coupleOrHost: 'Tamu Uji Coba',
+        eventDate: new Date().toISOString(),
+        preset: 'portra',
+        allowedPresets: ['portra', 'funsaver', 'quicksnap', 'ektar', 'cinestill', 'ilford', 'agfa', 'trix'],
+        allowGuestPresetSwitch: true,
+        allowGuestFrameToggle: true,
+        shotsPerGuest: 20,
+        maxGuests: 1,
+        revealMode: 'instant',
+        frameId: 'minimal-gold',
+        createdAt: new Date().toISOString()
+      });
+      setMaxShots(20);
+      setLoadingEvent(false);
+      const savedName = localStorage.getItem(`sb_guest_${eventId}`);
+      if (savedName) {
+        setGuestName(savedName);
+        setHasEnteredName(true);
+      } else {
+        setGuestName('Tamu Uji Coba');
+        setHasEnteredName(true);
+      }
+    } else {
+      fetch(`/api/events?id=${eventId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.event) {
+            setEvent(data.event);
+            setMaxShots(data.event.shotsPerGuest || 20);
+            if (data.event.preset) {
+              setSelectedPreset(data.event.preset);
+            }
+            if (data.event.frameId === 'none') {
+              setUseFrame(false);
+            }
+          } else {
+            setEventNotFound(true);
           }
-          if (data.event.frameId === 'none') {
-            setUseFrame(false);
-          }
-        } else {
-          setEventNotFound(true);
-        }
-      })
-      .catch(() => setEventNotFound(true))
-      .finally(() => setLoadingEvent(false));
+        })
+        .catch(() => setEventNotFound(true))
+        .finally(() => setLoadingEvent(false));
 
-    try {
       const savedName = localStorage.getItem(`sb_guest_${eventId}`);
       if (savedName) {
         setGuestName(savedName);
         setHasEnteredName(true);
       }
+    }
+
+    try {
       const savedTable = localStorage.getItem(`sb_table_${eventId}`);
       if (savedTable) {
         setTableNumber(savedTable);
@@ -385,7 +416,12 @@ export default function GuestCameraPage() {
       // Point 5: Send high-res photo to server or store in offline queue if offline
       const displayName = tableNumber ? `${guestName} (${tableNumber})` : guestName;
 
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      if (isDemo) {
+        // PURE LOCAL SIMULATION DEMO!
+        // DO NOT hit server / database!
+        // Stored only locally in guest phone memory (localStorage).
+        toast.success(`Foto #${newShotNum} tersimpan di memori HP Anda (Mode Simulasi Demo)`);
+      } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
         addPhotoToOfflineQueue({
           id: newGuestPhoto.id,
           eventId,
@@ -445,6 +481,25 @@ export default function GuestCameraPage() {
     setTimeout(() => {
       setIsCapturing(false);
     }, 400);
+  };
+
+  const handleDeletePhoto = (photoId: string) => {
+    if (!confirm('Hapus foto ini dari Rol Film Anda?')) return;
+    const updated = myPhotos.filter(p => p.id !== photoId);
+    setMyPhotos(updated);
+    setShotCount(updated.length);
+    if (updated.length > 0) {
+      setLastShotThumb(updated[updated.length - 1].imageData);
+    } else {
+      setLastShotThumb(null);
+    }
+    try {
+      localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updated));
+    } catch (e) {
+      console.error(e);
+    }
+    setPreviewPhoto(null);
+    toast.success('Foto berhasil dihapus dari Rol Film Anda.');
   };
 
   const takePhoto = async () => {
@@ -654,8 +709,29 @@ export default function GuestCameraPage() {
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: 'calc(max(10px, env(safe-area-inset-top, 0px))) 16px 10px 16px',
-        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)'
+        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+        position: 'relative'
       }}>
+        {isDemo && (
+          <div style={{
+            position: 'absolute',
+            bottom: '-9px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: '#F59E0B',
+            color: '#000000',
+            fontWeight: 800,
+            fontSize: '9px',
+            padding: '1px 8px',
+            borderRadius: '999px',
+            letterSpacing: '0.05em',
+            boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)',
+            zIndex: 40,
+            pointerEvents: 'none'
+          }}>
+            SIMULASI DEMO • LOKAL
+          </div>
+        )}
         {/* Flash Mode Minimal Button */}
         <button
           onClick={cycleFlashMode}
@@ -1344,56 +1420,105 @@ export default function GuestCameraPage() {
                   {myPhotos.map((photo) => (
                     <div
                       key={photo.id}
+                      onClick={() => setPreviewPhoto(photo)}
                       style={{
                         background: '#FBFBFA',
-                        borderRadius: '12px',
+                        borderRadius: '14px',
                         overflow: 'hidden',
                         border: '1px solid rgba(0,0,0,0.08)',
                         display: 'flex',
-                        flexDirection: 'column'
+                        flexDirection: 'column',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                        position: 'relative'
                       }}
                     >
                       <div style={{ position: 'relative', width: '100%', aspectRatio: photo.aspectRatio === '1:1' ? '1/1' : photo.aspectRatio === '9:16' ? '9/16' : '3/4', background: '#000' }}>
                         <img src={photo.imageData} alt={`Jepretan #${photo.shotNumber}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <div style={{
+                          position: 'absolute',
+                          bottom: '6px',
+                          right: '6px',
+                          background: 'rgba(0,0,0,0.7)',
+                          backdropFilter: 'blur(4px)',
+                          borderRadius: '999px',
+                          padding: '3px 8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          color: '#fff',
+                          fontSize: '9.5px',
+                          fontWeight: 600
+                        }}>
+                          <Eye size={10} />
+                          <span>Lihat</span>
+                        </div>
                       </div>
 
                       <div style={{ padding: '8px 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B' }}>
+                        <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#86868B', fontWeight: 600 }}>
                           #{photo.shotNumber}
                         </span>
                         
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          {/* Point 2: Share Button */}
+                        <div style={{ display: 'flex', gap: '6px' }}>
                           <button
-                            onClick={() => handleSharePhoto(photo)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSharePhoto(photo);
+                            }}
                             title="Bagikan ke WhatsApp/IG"
                             style={{
-                              background: 'none',
+                              background: 'rgba(194, 120, 3, 0.1)',
                               border: 'none',
                               color: '#C27803',
+                              borderRadius: '6px',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              padding: '2px'
+                              padding: '4px'
                             }}
                           >
                             <Share2 size={13} />
                           </button>
 
                           <button
-                            onClick={() => downloadSinglePhoto(photo.imageData, photo.shotNumber)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadSinglePhoto(photo.imageData, photo.shotNumber);
+                            }}
                             title="Unduh ke HP"
                             style={{
-                              background: 'none',
+                              background: 'rgba(0, 0, 0, 0.05)',
                               border: 'none',
                               color: '#1D1D1F',
+                              borderRadius: '6px',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
-                              padding: '2px'
+                              padding: '4px'
                             }}
                           >
                             <Download size={13} />
+                          </button>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeletePhoto(photo.id);
+                            }}
+                            title="Hapus foto dari Rol"
+                            style={{
+                              background: 'rgba(239, 68, 68, 0.1)',
+                              border: 'none',
+                              color: '#EF4444',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              padding: '4px'
+                            }}
+                          >
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </div>
@@ -1471,6 +1596,251 @@ export default function GuestCameraPage() {
                 )}
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Point 1 & 2: Fullscreen Lightbox Preview Modal for My Roll */}
+      <AnimatePresence>
+        {previewPhoto && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(11, 10, 9, 0.96)',
+              backdropFilter: 'blur(20px)',
+              zIndex: 120,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: 'calc(max(14px, env(safe-area-inset-top, 0px))) 16px calc(max(18px, env(safe-area-inset-bottom, 0px))) 16px'
+            }}
+          >
+            {/* Lightbox Top Bar */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              color: '#FFFFFF',
+              zIndex: 10
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{
+                  background: 'rgba(194, 120, 3, 0.25)',
+                  border: '1px solid rgba(245, 158, 11, 0.5)',
+                  color: '#FBBF24',
+                  padding: '3px 10px',
+                  borderRadius: '999px',
+                  fontSize: '11px',
+                  fontFamily: 'var(--font-mono)',
+                  fontWeight: 700
+                }}>
+                  JEPRETAN #{previewPhoto.shotNumber}
+                </span>
+                {isDemo && (
+                  <span style={{
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: '#A1A1A6',
+                    padding: '3px 8px',
+                    borderRadius: '999px',
+                    fontSize: '10px'
+                  }}>
+                    Simulasi Lokal
+                  </span>
+                )}
+              </div>
+
+              <button
+                onClick={() => setPreviewPhoto(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.15)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Lightbox Center Image Viewport */}
+            <div style={{
+              flex: 1,
+              minHeight: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative',
+              padding: '12px 0'
+            }}>
+              {/* Navigation Prev */}
+              {myPhotos.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const idx = myPhotos.findIndex(p => p.id === previewPhoto.id);
+                    if (idx > 0) setPreviewPhoto(myPhotos[idx - 1]);
+                    else setPreviewPhoto(myPhotos[myPhotos.length - 1]);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    left: '4px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 15,
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#fff',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <ArrowLeft size={20} />
+                </button>
+              )}
+
+              <img
+                src={previewPhoto.imageData}
+                alt={`Jepretan #${previewPhoto.shotNumber}`}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: 'contain',
+                  borderRadius: '16px',
+                  boxShadow: '0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1)'
+                }}
+              />
+
+              {/* Navigation Next */}
+              {myPhotos.length > 1 && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const idx = myPhotos.findIndex(p => p.id === previewPhoto.id);
+                    if (idx < myPhotos.length - 1) setPreviewPhoto(myPhotos[idx + 1]);
+                    else setPreviewPhoto(myPhotos[0]);
+                  }}
+                  style={{
+                    position: 'absolute',
+                    right: '4px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    zIndex: 15,
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#fff',
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <ArrowRight size={20} />
+                </button>
+              )}
+            </div>
+
+            {/* Lightbox Footer: Caption & Action Bar */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', zIndex: 10 }}>
+              {previewPhoto.caption ? (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '14px',
+                  padding: '10px 14px',
+                  color: '#FFFFFF',
+                  fontSize: '12.5px',
+                  fontStyle: 'italic',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <MessageSquare size={14} color="#F59E0B" style={{ flexShrink: 0 }} />
+                  <span>&ldquo;{previewPhoto.caption}&rdquo;</span>
+                </div>
+              ) : null}
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px' }}>
+                <button
+                  onClick={() => downloadSinglePhoto(previewPhoto.imageData, previewPhoto.shotNumber)}
+                  className="btn-apple-black"
+                  style={{
+                    background: '#C27803',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: '14px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Download size={16} />
+                  <span>Simpan ke HP</span>
+                </button>
+
+                <button
+                  onClick={() => handleSharePhoto(previewPhoto)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.14)',
+                    color: '#FFFFFF',
+                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                    padding: '12px',
+                    borderRadius: '14px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Share2 size={16} />
+                  <span>Bagikan</span>
+                </button>
+
+                <button
+                  onClick={() => handleDeletePhoto(previewPhoto.id)}
+                  title="Hapus foto dari Rol"
+                  style={{
+                    background: 'rgba(239, 68, 68, 0.18)',
+                    color: '#EF4444',
+                    border: '1px solid rgba(239, 68, 68, 0.4)',
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

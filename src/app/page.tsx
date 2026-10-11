@@ -28,19 +28,19 @@ export default function HomePage() {
   };
 
   const pricingTiers = [
-    { name: 'Starter', price: 'Gratis', originalPrice: null, discountBadge: null, guests: 'Hingga 5 tamu', desc: 'Cocok untuk uji coba privat bersama keluarga dekat.', retention: '7 Hari', storage: '500 MB', popular: false, isFree: true },
-    { name: 'Mini', price: 'Rp 54.000', originalPrice: 'Rp 69.000', discountBadge: 'HEMAT 20%', guests: 'Hingga 15 tamu', desc: 'Untuk pesta kecil, intimate dinner, atau bridal shower.', retention: '30 Hari', storage: '2 GB', popular: false },
-    { name: 'Small', price: 'Rp 89.000', originalPrice: 'Rp 119.000', discountBadge: 'HEMAT 25%', guests: 'Hingga 35 tamu', desc: 'Cocok untuk gathering teman satu geng atau engagement.', retention: '60 Hari', storage: '5 GB', popular: false },
-    { name: 'Party', price: 'Rp 179.000', originalPrice: 'Rp 219.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 75 tamu', desc: 'Ulang tahun, intimate wedding, atau acara kantor.', retention: '90 Hari (3 Bulan)', storage: '10 GB', popular: false },
-    { name: 'Event', price: 'Rp 269.000', originalPrice: 'Rp 329.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 150 tamu', desc: 'Resepsi pernikahan sedang atau reuni akbar.', retention: '180 Hari (6 Bulan)', storage: '20 GB', popular: false },
-    { name: 'Wedding', price: 'Rp 499.000', originalPrice: 'Rp 599.000', discountBadge: 'HEMAT 17%', guests: 'Hingga 300 tamu', desc: 'Pilihan paling populer untuk pesta pernikahan lengkap.', retention: '365 Hari (1 Tahun Penuh)', storage: '50 GB Cloud Storage', popular: true },
-    { name: 'Unlimited', price: 'Rp 999.000', originalPrice: 'Rp 1.199.000', discountBadge: 'HEMAT 17%', guests: 'Tamu tanpa batas', desc: 'Festival, konser, atau wedding akbar ribuan tamu.', retention: '730 Hari (2 Tahun)', storage: 'Unlimited Fair-Usage', popular: false }
+    { name: 'Starter', price: 'Gratis', originalPrice: null, discountBadge: null, guests: 'Hingga 5 tamu', desc: 'Cocok untuk uji coba privat bersama keluarga dekat.', retention: '3 Hari', storage: '500 MB', popular: false, isFree: true },
+    { name: 'Mini', price: 'Rp 54.000', originalPrice: 'Rp 69.000', discountBadge: 'HEMAT 20%', guests: 'Hingga 15 tamu', desc: 'Untuk pesta kecil, intimate dinner, atau bridal shower.', retention: '7 Hari (1 Minggu)', storage: '1 GB', popular: false },
+    { name: 'Small', price: 'Rp 89.000', originalPrice: 'Rp 119.000', discountBadge: 'HEMAT 25%', guests: 'Hingga 35 tamu', desc: 'Cocok untuk gathering teman satu geng atau engagement.', retention: '14 Hari (2 Minggu)', storage: '2 GB', popular: false },
+    { name: 'Party', price: 'Rp 179.000', originalPrice: 'Rp 219.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 75 tamu', desc: 'Ulang tahun, intimate wedding, atau acara kantor.', retention: '30 Hari (1 Bulan)', storage: '5 GB', popular: false },
+    { name: 'Event', price: 'Rp 269.000', originalPrice: 'Rp 329.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 150 tamu', desc: 'Resepsi pernikahan sedang atau reuni akbar.', retention: '45 Hari (1.5 Bulan)', storage: '10 GB', popular: false },
+    { name: 'Wedding', price: 'Rp 499.000', originalPrice: 'Rp 599.000', discountBadge: 'HEMAT 17%', guests: 'Hingga 300 tamu', desc: 'Pilihan paling populer untuk pesta pernikahan lengkap.', retention: '60 Hari (2 Bulan)', storage: '20 GB Cloud Storage', popular: true },
+    { name: 'Unlimited', price: 'Rp 999.000', originalPrice: 'Rp 1.199.000', discountBadge: 'HEMAT 17%', guests: 'Tamu tanpa batas', desc: 'Festival, konser, atau wedding akbar ribuan tamu.', retention: '90 Hari (3 Bulan)', storage: '40 GB Cloud Storage', popular: false }
   ];
 
   const faqs = [
     {
       q: 'Berapa lama foto disimpan di web dan apa batasan penyimpanannya?',
-      a: 'Masa simpan dan kapasitas penyimpanan disesuaikan dengan paket yang Anda pilih: mulai dari 7 hari (Starter Gratis), 30–90 hari (Mini–Party), hingga 1 Tahun Penuh (50 GB Cloud Storage untuk Paket Wedding) dan 2 Tahun untuk Paket Unlimited. Seluruh foto beresolusi tinggi asli (maks. 10 MB/foto) dan rekaman pesan suara tamu dapat diunduh kapan saja oleh Pengantin maupun Vendor dalam format arsip ZIP lengkap tanpa biaya tambahan.'
+      a: 'Masa simpan dirancang efisien dan pas agar server tetap cepat: mulai dari 3–7 hari (Starter & Mini), 14–30 hari (Small & Party), hingga 60 Hari / 2 Bulan untuk Paket Wedding (20 GB Cloud) dan 90 Hari untuk Paket Unlimited. Selama masa aktif tersebut, pengantin dan keluarga dapat mengunduh seluruh arsip foto resolusi tinggi asli (ZIP) dan pesan suara ke laptop atau Google Drive mereka secara gratis.'
     },
     {
       q: 'Apakah SudutBingkai hanya untuk acara pernikahan?',
@@ -151,7 +151,7 @@ export default function HomePage() {
             <Link href="/login" className="action-desktop-only" style={{ color: '#1D1D1F', textDecoration: 'none', fontSize: '13px', fontWeight: 500, padding: '7px 12px' }}>
               Masuk
             </Link>
-            <Link href="/cam/wedding-sarah-dimas" className="glass-pill action-desktop-only" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
+            <Link href="/cam/demo" className="glass-pill action-desktop-only" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
               Coba Kamera
             </Link>
             <Link href="/create" className="btn-apple-black action-desktop-only" style={{ padding: '8px 18px', fontSize: '13px' }}>
@@ -220,7 +220,7 @@ export default function HomePage() {
             </Link>
             <div style={{ display: 'flex', gap: '10px', paddingTop: '6px' }}>
               <Link 
-                href="/cam/wedding-sarah-dimas" 
+                href="/cam/demo" 
                 onClick={() => setMobileMenuOpen(false)}
                 className="btn-glass-secondary" 
                 style={{ flex: 1, padding: '12px', fontSize: '13px', textAlign: 'center' }}
@@ -317,7 +317,7 @@ export default function HomePage() {
                 <ArrowRight size={16} />
               </Link>
 
-              <Link href="/cam/wedding-sarah-dimas" className="btn-glass-secondary" style={{ padding: '14px 24px', fontSize: '14.5px' }}>
+              <Link href="/cam/demo" className="btn-glass-secondary" style={{ padding: '14px 24px', fontSize: '14.5px' }}>
                 <Play size={14} fill="currentColor" />
                 <span>Coba Kamera Tamu</span>
               </Link>
@@ -817,7 +817,7 @@ export default function HomePage() {
 
           <div style={{ display: 'flex', gap: '32px', fontSize: '13px', color: '#515154' }}>
             <Link href="/create" style={{ color: 'inherit', textDecoration: 'none' }}>Buat Album</Link>
-            <Link href="/cam/wedding-sarah-dimas" style={{ color: 'inherit', textDecoration: 'none' }}>Kamera Tamu</Link>
+            <Link href="/cam/demo" style={{ color: 'inherit', textDecoration: 'none' }}>Kamera Tamu</Link>
             <Link href="/event/wedding-sarah-dimas" style={{ color: 'inherit', textDecoration: 'none' }}>Galeri Acara</Link>
           </div>
         </div>

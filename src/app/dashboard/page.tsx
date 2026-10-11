@@ -442,7 +442,7 @@ export default function BrideDashboardPage() {
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>MASA SIMPAN DATA</span>
               <strong style={{ fontSize: '20px', color: '#27AE60' }}>
-                {PACKAGE_TIERS[packageTier]?.retentionLabel || '1 Tahun'}
+                {PACKAGE_TIERS[packageTier]?.retentionLabel || '60 Hari (2 Bulan)'}
               </strong>
             </div>
           </div>
@@ -874,7 +874,7 @@ export default function BrideDashboardPage() {
                       Paket {PACKAGE_TIERS[packageTier]?.name || 'Wedding'}
                     </strong>
                     <span style={{ fontSize: '10.5px', color: '#86868B' }}>
-                      {PACKAGE_TIERS[packageTier]?.guestsLabel || 'Hingga 300 Tamu'} • {PACKAGE_TIERS[packageTier]?.shotsPerGuest || 25} Foto/Tamu • {PACKAGE_TIERS[packageTier]?.retentionLabel || '1 Tahun'} • {PACKAGE_TIERS[packageTier]?.storageCapacity || '50 GB'}
+                      {PACKAGE_TIERS[packageTier]?.guestsLabel || 'Hingga 300 Tamu'} • {PACKAGE_TIERS[packageTier]?.shotsPerGuest || 25} Foto/Tamu • {PACKAGE_TIERS[packageTier]?.retentionLabel || '60 Hari'} • {PACKAGE_TIERS[packageTier]?.storageCapacity || '20 GB'}
                     </span>
                   </div>
                 </div>
