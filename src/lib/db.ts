@@ -26,7 +26,7 @@ function ensureLocalDataFiles() {
   try {
     if (!fs.existsSync(EVENTS_FILE)) {
       const sampleEvent: EventData = {
-        id: 'demo-nikahan',
+        id: 'wedding-sarah-dimas',
         title: 'Pernikahan Sarah & Dimas',
         coupleOrHost: 'Sarah & Dimas',
         eventDate: '2026-11-20T09:00:00Z',
@@ -203,12 +203,13 @@ export async function getAllEvents(): Promise<EventData[]> {
 }
 
 export async function getEventById(id: string): Promise<EventData | null> {
+  const targetId = id === 'demo-nikahan' ? 'wedding-sarah-dimas' : id;
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .eq('id', id)
+        .or(`id.eq.${id},id.eq.${targetId}`)
         .maybeSingle();
 
       if (!error && data) {
@@ -224,7 +225,7 @@ export async function getEventById(id: string): Promise<EventData | null> {
 
   // Local JSON fallback
   const events = await getAllEvents();
-  return events.find(e => e.id === id) || null;
+  return events.find(e => e.id === id || e.id === targetId) || null;
 }
 
 export async function saveEvent(event: EventData): Promise<EventData> {
@@ -330,7 +331,11 @@ export async function getAllPhotos(eventId?: string, includeHidden: boolean = fa
         .order('timestamp', { ascending: false });
 
       if (eventId) {
-        query = query.eq('event_id', eventId);
+        if (eventId === 'wedding-sarah-dimas' || eventId === 'demo-nikahan') {
+          query = query.or('event_id.eq.wedding-sarah-dimas,event_id.eq.demo-nikahan');
+        } else {
+          query = query.eq('event_id', eventId);
+        }
       }
       if (!includeHidden) {
         query = query.eq('is_hidden', false);
@@ -355,7 +360,11 @@ export async function getAllPhotos(eventId?: string, includeHidden: boolean = fa
       const raw = fs.readFileSync(PHOTOS_FILE, 'utf8');
       let photos: PhotoRecord[] = JSON.parse(raw);
       if (eventId) {
-        photos = photos.filter(p => p.eventId === eventId);
+        if (eventId === 'wedding-sarah-dimas' || eventId === 'demo-nikahan') {
+          photos = photos.filter(p => p.eventId === 'wedding-sarah-dimas' || p.eventId === 'demo-nikahan');
+        } else {
+          photos = photos.filter(p => p.eventId === eventId);
+        }
       }
       if (!includeHidden) {
         photos = photos.filter(p => !p.isHidden);

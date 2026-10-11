@@ -431,10 +431,10 @@ export default function EventDashboardPage() {
               <Camera size={44} style={{ color: '#86868B', margin: '0 auto 16px' }} />
               <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#1D1D1F' }}>Belum ada foto yang masuk</h3>
               <p style={{ color: '#6E6E73', fontSize: '14px', maxWidth: '420px', margin: '0 auto 24px' }}>
-                Bagikan tautan kamera atau buka kamera tamu demo untuk mengambil jepretan pertama Anda.
+                Bagikan tautan kamera atau buka kamera tamu untuk mengambil jepretan pertama Anda.
               </p>
               <Link href={`/cam/${eventId}`} className="btn-apple-black" style={{ padding: '10px 22px', fontSize: '13.5px' }}>
-                Buka Kamera Tamu Demo
+                Buka Kamera Tamu
               </Link>
             </div>
           ) : (

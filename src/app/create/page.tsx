@@ -437,7 +437,7 @@ function CreateEventForm() {
               Pilih Emulasi Film Analog & Izin Tamu
             </h2>
             <p style={{ color: '#6E6E73', fontSize: '13.5px', marginBottom: '20px' }}>
-              Lihat simulasi visual di bawah. Tentukan <strong>Filter Utama</strong> sebagai signature tone acara Anda, dan centang filter tambahan yang bisa dipilih tamu di kamera mereka.
+              Lihat pratinjau visual di bawah. Tentukan <strong>Filter Utama</strong> sebagai signature tone acara Anda, dan centang filter tambahan yang bisa dipilih tamu di kamera mereka.
             </p>
 
             {/* Model Sample Switcher */}

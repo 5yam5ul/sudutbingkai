@@ -143,8 +143,8 @@ export default function HomePage() {
             <Link href="/login" className="action-desktop-only" style={{ color: '#1D1D1F', textDecoration: 'none', fontSize: '13px', fontWeight: 500, padding: '7px 12px' }}>
               Masuk
             </Link>
-            <Link href="/cam/demo-nikahan" className="glass-pill" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
-              Kamera Demo
+            <Link href="/cam/wedding-sarah-dimas" className="glass-pill" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
+              Coba Kamera
             </Link>
             <Link href="/create" className="btn-apple-black action-desktop-only" style={{ padding: '8px 18px', fontSize: '13px' }}>
               <span>Buat album</span>
@@ -212,12 +212,12 @@ export default function HomePage() {
             </Link>
             <div style={{ display: 'flex', gap: '10px', paddingTop: '6px' }}>
               <Link 
-                href="/cam/demo-nikahan" 
+                href="/cam/wedding-sarah-dimas" 
                 onClick={() => setMobileMenuOpen(false)}
                 className="btn-glass-secondary" 
                 style={{ flex: 1, padding: '12px', fontSize: '13px', textAlign: 'center' }}
               >
-                Kamera Demo
+                Coba Kamera
               </Link>
               <Link 
                 href="/create" 
@@ -297,7 +297,7 @@ export default function HomePage() {
                 <ArrowRight size={16} />
               </Link>
 
-              <Link href="/cam/demo-nikahan" className="btn-glass-secondary" style={{ padding: '14px 24px', fontSize: '14.5px' }}>
+              <Link href="/cam/wedding-sarah-dimas" className="btn-glass-secondary" style={{ padding: '14px 24px', fontSize: '14.5px' }}>
                 <Play size={14} fill="currentColor" />
                 <span>Coba Kamera Tamu</span>
               </Link>
@@ -789,8 +789,8 @@ export default function HomePage() {
 
           <div style={{ display: 'flex', gap: '32px', fontSize: '13px', color: '#515154' }}>
             <Link href="/create" style={{ color: 'inherit', textDecoration: 'none' }}>Buat Album</Link>
-            <Link href="/cam/demo-nikahan" style={{ color: 'inherit', textDecoration: 'none' }}>Kamera Demo</Link>
-            <Link href="/event/demo-nikahan" style={{ color: 'inherit', textDecoration: 'none' }}>Galeri Acara</Link>
+            <Link href="/cam/wedding-sarah-dimas" style={{ color: 'inherit', textDecoration: 'none' }}>Kamera Tamu</Link>
+            <Link href="/event/wedding-sarah-dimas" style={{ color: 'inherit', textDecoration: 'none' }}>Galeri Acara</Link>
           </div>
         </div>
 

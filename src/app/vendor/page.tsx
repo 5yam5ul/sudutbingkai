@@ -9,13 +9,14 @@ import {
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy
 } from 'lucide-react';
-import { getClientSession, setClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
+import { UserAccount } from '@/lib/types';
+import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
 
 export default function VendorPortalPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [vendor, setVendor] = useState(DEMO_USERS['vendor']);
+  const [vendor, setVendor] = useState<UserAccount>(SYSTEM_USERS['vendor']);
   const [activeTab, setActiveTab] = useState<'branding' | 'clients' | 'wholesale' | 'marketing'>('wholesale');
 
   // Vendor Branding & Logo State
@@ -35,7 +36,7 @@ export default function VendorPortalPage() {
   // Mock Vendor Clients
   const [clients, setClients] = useState([
     {
-      id: 'demo-nikahan',
+      id: 'wedding-sarah-dimas',
       title: 'Dimas & Sarah Wedding',
       date: '10 Oktober 2026',
       venue: 'Plataran Hutan Kota, Jakarta',

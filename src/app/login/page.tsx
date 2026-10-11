@@ -3,8 +3,8 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Shield, Heart, Briefcase, Check } from 'lucide-react';
-import { DEMO_USERS, setClientSession } from '@/lib/auth';
+import { ArrowLeft, ArrowRight, Shield, Heart, Briefcase, Check, AlertCircle } from 'lucide-react';
+import { authenticateUser, setClientSession } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -12,32 +12,44 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  const handleRoleChange = (newRole: 'host' | 'vendor') => {
+    setRole(newRole);
+    setErrorMsg('');
+    setEmail('');
+    setPassword('');
+  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMsg('');
     setLoading(true);
 
     setTimeout(() => {
-      if (role === 'vendor') {
-        const user = DEMO_USERS['vendor'];
+      const user = authenticateUser(email, password, role);
+      if (user) {
         setClientSession(user);
-        router.push('/vendor');
+        if (user.role === 'vendor') {
+          router.push('/vendor');
+        } else {
+          router.push('/dashboard');
+        }
       } else {
-        const user = DEMO_USERS['pengantin'];
-        setClientSession(user);
-        router.push('/dashboard');
+        setErrorMsg('Email atau kata sandi tidak cocok. Silakan gunakan kredensial resmi tertera di bawah.');
       }
       setLoading(false);
-    }, 400);
+    }, 350);
   };
 
-  const loginAsDemo = (demoRole: 'host' | 'vendor') => {
-    if (demoRole === 'vendor') {
-      setClientSession(DEMO_USERS['vendor']);
-      router.push('/vendor');
+  const handleFillCredentials = () => {
+    setErrorMsg('');
+    if (role === 'host') {
+      setEmail('pengantin@sudutbingkai.id');
+      setPassword('pengantin123');
     } else {
-      setClientSession(DEMO_USERS['pengantin']);
-      router.push('/dashboard');
+      setEmail('vendor@sudutbingkai.id');
+      setPassword('vendor123');
     }
   };
 
@@ -71,10 +83,10 @@ export default function LoginPage() {
               PORTAL MASUK
             </span>
             <h1 className="font-display-serif" style={{ fontSize: 'clamp(1.5rem, 4vw, 1.85rem)', fontWeight: 700, color: '#1D1D1F' }}>
-              Selamat Datang Kembali
+              Masuk ke Dashboard
             </h1>
             <p style={{ color: '#6E6E73', fontSize: '13.5px', marginTop: '6px' }}>
-              Pilih peran Anda untuk masuk ke dashboard kendali.
+              Pilih peran Anda untuk masuk ke akun kendali.
             </p>
           </div>
 
@@ -90,7 +102,7 @@ export default function LoginPage() {
           }}>
             <button
               type="button"
-              onClick={() => setRole('host')}
+              onClick={() => handleRoleChange('host')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -114,7 +126,7 @@ export default function LoginPage() {
 
             <button
               type="button"
-              onClick={() => setRole('vendor')}
+              onClick={() => handleRoleChange('vendor')}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -137,48 +149,68 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Quick Demo Access Bar */}
+          {/* Official Account Credentials Helper */}
           <div style={{
-            background: 'rgba(194, 120, 3, 0.08)',
-            border: '1px solid rgba(194, 120, 3, 0.2)',
+            background: 'rgba(194, 120, 3, 0.06)',
+            border: '1px solid rgba(194, 120, 3, 0.22)',
             borderRadius: '14px',
             padding: '12px 14px',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '8px'
+            marginBottom: '20px'
           }}>
-            <span style={{ fontSize: '12px', color: '#1D1D1F', fontWeight: 500 }}>
-              Uji coba instan demo:
-            </span>
-            <button
-              onClick={() => loginAsDemo(role)}
-              style={{
-                background: '#C27803',
-                color: '#fff',
-                border: 'none',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                fontSize: '11.5px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              Masuk Demo →
-            </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span className="font-mono-film" style={{ fontSize: '10px', color: '#C27803' }}>
+                AKUN UJI COBA RESMI
+              </span>
+              <button
+                type="button"
+                onClick={handleFillCredentials}
+                style={{
+                  background: '#FFFFFF',
+                  border: '1px solid rgba(194, 120, 3, 0.35)',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: '#C27803',
+                  cursor: 'pointer'
+                }}
+              >
+                Gunakan Akun Ini
+              </button>
+            </div>
+            <div style={{ fontSize: '12px', color: '#1D1D1F', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div>Email: <strong>{role === 'host' ? 'pengantin@sudutbingkai.id' : 'vendor@sudutbingkai.id'}</strong></div>
+              <div>Password: <strong>{role === 'host' ? 'pengantin123' : 'vendor123'}</strong></div>
+            </div>
           </div>
+
+          {errorMsg && (
+            <div style={{
+              background: 'rgba(231, 76, 60, 0.1)',
+              border: '1px solid rgba(231, 76, 60, 0.3)',
+              color: '#C0392B',
+              borderRadius: '12px',
+              padding: '10px 14px',
+              fontSize: '12.5px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <AlertCircle size={15} style={{ flexShrink: 0 }} />
+              <span>{errorMsg}</span>
+            </div>
+          )}
 
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '11.5px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
-                Email {role === 'vendor' ? 'Mitra WO' : 'Pengantin'}
+                Email {role === 'vendor' ? 'Mitra Vendor' : 'Pengantin'}
               </label>
               <input
                 type="email"
                 required
-                placeholder={role === 'vendor' ? 'arya@vowsandco.id' : 'sarah@sudutbingkai.id'}
+                placeholder={role === 'vendor' ? 'vendor@sudutbingkai.id' : 'pengantin@sudutbingkai.id'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="glass-input"

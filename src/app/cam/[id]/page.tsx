@@ -15,6 +15,14 @@ import { toast } from 'sonner';
 import { EventData, FilmPresetId } from '@/lib/types';
 import { FILM_PRESETS, applyAnalogFilterToCanvas } from '@/lib/filters';
 import { playAnalogShutterSound, playFilmWindingSound } from '@/lib/audio';
+import { 
+  hapticShutterPress, 
+  hapticShutterSlap, 
+  hapticDialClick, 
+  hapticToggle, 
+  hapticDoubleTick, 
+  hapticLightTap 
+} from '@/lib/haptics';
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
 import { addPhotoToOfflineQueue, flushOfflineQueue, getOfflinePhotosQueue } from '@/lib/offlineQueue';
 
@@ -231,11 +239,13 @@ export default function GuestCameraPage() {
   };
 
   const flipCamera = () => {
+    hapticToggle();
     setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
   };
 
   // Point 8: Cycle Aspect Ratios
   const cycleAspectRatio = () => {
+    hapticDialClick();
     if (aspectRatio === '3:4') setAspectRatio('1:1');
     else if (aspectRatio === '1:1') setAspectRatio('9:16');
     else setAspectRatio('3:4');
@@ -243,6 +253,7 @@ export default function GuestCameraPage() {
 
   // Point 3: Cycle Flash Modes
   const cycleFlashMode = () => {
+    hapticDoubleTick();
     if (flashMode === 'screen') setFlashMode('torch');
     else if (flashMode === 'torch') setFlashMode('off');
     else setFlashMode('screen');
@@ -264,11 +275,7 @@ export default function GuestCameraPage() {
     playFilmWindingSound();
 
     // Haptic feedback (hentakan rana mekanik analog)
-    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-      try {
-        navigator.vibrate([35, 45, 25]);
-      } catch {}
-    }
+    hapticShutterSlap();
 
     const canvas = canvasRef.current || document.createElement('canvas');
 
@@ -943,7 +950,10 @@ export default function GuestCameraPage() {
           {/* Frame Toggle (Event Frame vs RAW Photo) */}
           {event?.allowGuestFrameToggle !== false && (
             <button
-              onClick={() => setUseFrame(!useFrame)}
+              onClick={() => {
+                hapticToggle();
+                setUseFrame(!useFrame);
+              }}
               style={{
                 background: useFrame ? 'rgba(194, 120, 3, 0.85)' : 'rgba(15, 14, 13, 0.75)',
                 backdropFilter: 'blur(12px)',
@@ -968,7 +978,10 @@ export default function GuestCameraPage() {
 
         {/* Sleek Wish Trigger Button */}
         <button
-          onClick={() => setShowWishModal(true)}
+          onClick={() => {
+            hapticLightTap();
+            setShowWishModal(true);
+          }}
           style={{
             background: currentWish.trim() ? 'rgba(194, 120, 3, 0.9)' : 'rgba(15, 14, 13, 0.75)',
             backdropFilter: 'blur(12px)',
@@ -1014,10 +1027,8 @@ export default function GuestCameraPage() {
               <button
                 key={pid}
                 onClick={() => {
+                  hapticDialClick();
                   setSelectedPreset(pid);
-                  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
-                    try { navigator.vibrate(20); } catch {}
-                  }
                   toast.info(`Film: ${p.name}`);
                 }}
                 style={{
@@ -1116,6 +1127,11 @@ export default function GuestCameraPage() {
           {/* Shutter Button (Mechanical feel) */}
           <button
             onClick={takePhoto}
+            onPointerDown={() => {
+              if (!isCapturing && remaining > 0) {
+                hapticShutterPress();
+              }
+            }}
             disabled={isCapturing || remaining === 0}
             className="shutter-ring"
             style={{
@@ -1143,7 +1159,10 @@ export default function GuestCameraPage() {
 
           {/* My Roll Button (View Taken Photos) */}
           <button
-            onClick={() => setShowRollModal(true)}
+            onClick={() => {
+              hapticLightTap();
+              setShowRollModal(true);
+            }}
             style={{
               background: myPhotos.length > 0 ? '#FFFFFF' : 'rgba(255, 255, 255, 0.12)',
               border: 'none',
@@ -1747,7 +1766,7 @@ export default function GuestCameraPage() {
             </Link>
             <span style={{ color: 'rgba(0, 0, 0, 0.2)' }}>/</span>
             <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
-              STUDIO SIMULATOR
+              STUDIO KAMERA
             </span>
           </div>
 
@@ -1804,7 +1823,7 @@ export default function GuestCameraPage() {
             </h1>
 
             <p style={{ fontSize: '16px', color: '#515154', lineHeight: 1.7, marginBottom: '32px', maxWidth: '540px' }}>
-              Anda sedang membuka kamera tamu melalui browser desktop. Anda dapat menguji fitur langsung lewat simulator ponsel di samping, atau memindai QR code di bawah dengan kamera smartphone Anda untuk memotret di genggaman tangan.
+              Anda sedang membuka kamera tamu melalui browser desktop. Anda dapat langsung menggunakan kamera analog pada layar di samping, atau memindai QR code di bawah dengan smartphone Anda untuk memotret langsung di genggaman tangan.
             </p>
 
             {/* QR Scan Card */}
