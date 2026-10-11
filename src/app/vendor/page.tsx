@@ -8,9 +8,9 @@ import {
   ExternalLink, ArrowRight, Check, Sliders, LogOut, 
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
-  CreditCard, Sparkles, Wallet, Share2
+  CreditCard, Sparkles, Wallet, Share2, Video, Film, PlayCircle
 } from 'lucide-react';
-import { UserAccount } from '@/lib/types';
+import { UserAccount, VideoTestimonialSubmission } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
 import ConfirmModal from '@/components/ConfirmModal';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
@@ -21,7 +21,15 @@ export default function VendorPortalPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [vendor, setVendor] = useState<UserAccount>(SYSTEM_USERS['vendor']);
-  const [activeTab, setActiveTab] = useState<'wallet' | 'wholesale' | 'branding' | 'clients' | 'marketing'>('wallet');
+  const [activeTab, setActiveTab] = useState<'wallet' | 'wholesale' | 'testimonials' | 'branding' | 'clients' | 'marketing'>('wallet');
+
+  // Partner Testimonial Rewards State
+  const [testimonials, setTestimonials] = useState<VideoTestimonialSubmission[]>([]);
+  const [selectedTestiEvent, setSelectedTestiEvent] = useState<string>('');
+  const [testiVideoUrl, setTestiVideoUrl] = useState<string>('');
+  const [testiDuration, setTestiDuration] = useState<number>(65);
+  const [testiCaption, setTestiCaption] = useState<string>('');
+  const [isSubmittingTesti, setIsSubmittingTesti] = useState<boolean>(false);
 
   // Partner Wallet & Referral State
   const [walletBalance, setWalletBalance] = useState<number>(420000);
@@ -288,7 +296,66 @@ export default function VendorPortalPage() {
         }
       })
       .catch(console.error);
+
+    // Fetch vendor video testimonials
+    fetch(`/api/testimonials?vendorId=${encodeURIComponent(vendorId)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.testimonials) {
+          setTestimonials(data.testimonials);
+        }
+      })
+      .catch(console.error);
   }, []);
+
+  const handleSubmitTestimonial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedTestiEvent) {
+      toast.error('Silakan pilih acara klien terlebih dahulu.');
+      return;
+    }
+    if (!testiVideoUrl.trim()) {
+      toast.error('Silakan tempelkan link video testimoni (Google Drive / TikTok / IG Reels).');
+      return;
+    }
+    if (testiDuration < 60) {
+      toast.error('Durasi video testimoni minimal 60 detik (1 menit) untuk memenuhi syarat reward.');
+      return;
+    }
+
+    setIsSubmittingTesti(true);
+    try {
+      const res = await fetch('/api/testimonials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: selectedTestiEvent,
+          submitterType: 'vendor',
+          submitterId: vendor.id || 'vendor_vows_co',
+          submitterName: vendor.companyName || vendor.name,
+          submitterEmail: vendor.email,
+          videoType: 'link',
+          videoUrl: testiVideoUrl.trim(),
+          durationSeconds: Number(testiDuration),
+          caption: testiCaption.trim()
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Video testimoni berhasil dikirim! Tim kurasi akan memverifikasi dalam 1x24 jam & saldo Rp 50.000 otomatis dicairkan.');
+        setTestimonials(prev => [data.submission, ...prev]);
+        setTestiVideoUrl('');
+        setTestiCaption('');
+        setTestiDuration(65);
+      } else {
+        toast.error(data.error || 'Gagal mengirim video testimoni.');
+      }
+    } catch {
+      toast.error('Terjadi kesalahan jaringan.');
+    } finally {
+      setIsSubmittingTesti(false);
+    }
+  };
 
   const handleLogout = () => {
     clearClientSession();
@@ -568,6 +635,28 @@ export default function VendorPortalPage() {
             <Calculator size={14} />
             <span className="desktop-only">Beli Kuota Reseller (Grosir)</span>
             <span className="mobile-only">Beli Kuota</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('testimonials')}
+            className="glass-pill"
+            style={{
+              background: activeTab === 'testimonials' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
+              color: activeTab === 'testimonials' ? '#FFFFFF' : '#1D1D1F',
+              padding: '10px 18px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              whiteSpace: 'nowrap',
+              border: activeTab === 'testimonials' ? '1px solid #F59E0B' : '1px solid rgba(245, 158, 11, 0.3)'
+            }}
+          >
+            <Video size={14} color="#F59E0B" />
+            <span className="desktop-only">Bonus Video Testimoni (+Rp 50k)</span>
+            <span className="mobile-only">Bonus Video (+50k)</span>
           </button>
 
           <button
@@ -1343,6 +1432,283 @@ export default function VendorPortalPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: BONUS VIDEO TESTIMONI MITRA */}
+        {activeTab === 'testimonials' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* Banner Header */}
+            <div className="glass-card" style={{
+              padding: '32px 36px',
+              borderRadius: '24px',
+              border: '1.5px solid rgba(245, 158, 11, 0.3)',
+              background: 'linear-gradient(135deg, rgba(254, 243, 199, 0.45) 0%, rgba(255, 255, 255, 0.95) 100%)',
+              position: 'relative',
+              overflow: 'hidden'
+            }}>
+              <div style={{ position: 'relative', zIndex: 2, maxWidth: '820px' }}>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 12px',
+                  borderRadius: '999px',
+                  background: 'rgba(217, 119, 6, 0.12)',
+                  border: '1px solid rgba(217, 119, 6, 0.25)',
+                  color: '#B45309',
+                  fontSize: '11px',
+                  fontWeight: 700,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  marginBottom: '12px'
+                }}>
+                  <Sparkles size={13} />
+                  <span>Program Reward Video Kreator & WO</span>
+                </div>
+
+                <h2 className="font-display-serif" style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.3rem)', fontWeight: 700, color: '#1D1D1F', marginBottom: '10px' }}>
+                  Kirim 1 Video Testimoni, Dapatkan Bonus <span style={{ color: '#D97706' }}>Rp 50.000 / Acara</span>
+                </h2>
+
+                <p style={{ color: '#515154', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '24px' }}>
+                  Bantu ceritakan keseruan tamu saat memotret kamera analog di acara pernikahan klien Anda. Rekam video minimal 1 menit (60 detik), kirimkan tautannya, dan dapatkan bonus saldo komisi yang langsung bisa ditarik ke rekening bank Anda!
+                </p>
+
+                {/* 3 Syarat Kunci */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                  <div style={{ background: '#FFFFFF', padding: '16px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(245, 158, 11, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#D97706', marginBottom: '10px' }}>
+                      <Film size={16} />
+                    </div>
+                    <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>1. Durasi Minimal 60 Detik</strong>
+                    <span style={{ fontSize: '12px', color: '#6E6E73', lineHeight: 1.5 }}>
+                      Rekam suasana tamu di meja saat scan QR, ekspresi candid, atau tayangan layar videotron.
+                    </span>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '16px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(59, 130, 246, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563EB', marginBottom: '10px' }}>
+                      <Video size={16} />
+                    </div>
+                    <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>2. Format Vertikal 9:16</strong>
+                    <span style={{ fontSize: '12px', color: '#6E6E73', lineHeight: 1.5 }}>
+                      Video HP vertikal (TikTok/Reels/Google Drive) dengan kualitas jernih (min 720p/1080p).
+                    </span>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '16px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(16, 185, 129, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#059669', marginBottom: '10px' }}>
+                      <Wallet size={16} />
+                    </div>
+                    <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>3. Reward Rp 50.000 Cair</strong>
+                    <span style={{ fontSize: '12px', color: '#6E6E73', lineHeight: 1.5 }}>
+                      Setelah kurasi tim 1x24 jam disetujui, saldo komisi otomatis bertambah dan siap ditarik.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Submission Form and History Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '28px' }}>
+              {/* Form Input */}
+              <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+                <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '4px', fontSize: '11px' }}>
+                  FORMULIR KLAIM REWARD
+                </span>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', marginBottom: '8px' }}>
+                  Kirim Tautan Video Testimoni
+                </h3>
+                <p style={{ color: '#6E6E73', fontSize: '13px', lineHeight: 1.5, marginBottom: '22px' }}>
+                  Pastikan link video dapat diakses publik (Anyone with link / View only) jika menggunakan Google Drive.
+                </p>
+
+                <form onSubmit={handleSubmitTestimonial} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      Pilih Acara Klien *
+                    </label>
+                    <select
+                      value={selectedTestiEvent}
+                      onChange={(e) => setSelectedTestiEvent(e.target.value)}
+                      required
+                      className="glass-input"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', fontSize: '14px', background: '#FFFFFF' }}
+                    >
+                      <option value="">-- Pilih Acara Terdaftar --</option>
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.title} ({c.date})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      Link Video Testimoni (Min. 1 Menit) *
+                    </label>
+                    <input
+                      type="url"
+                      required
+                      placeholder="https://drive.google.com/... atau link TikTok / IG Reels"
+                      value={testiVideoUrl}
+                      onChange={(e) => setTestiVideoUrl(e.target.value)}
+                      className="glass-input"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', fontSize: '14px' }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#86868B', marginTop: '4px', display: 'block' }}>
+                      Dapat berupa link Google Drive, TikTok, Instagram Reels, atau YouTube Shorts.
+                    </span>
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B' }}>
+                        Durasi Video (Detik) *
+                      </label>
+                      <span className="font-mono-film" style={{ fontSize: '13px', fontWeight: 700, color: testiDuration >= 60 ? '#10B981' : '#EF4444' }}>
+                        {testiDuration} Detik {testiDuration >= 60 ? '✓ (Memenuhi Syarat)' : '⚠️ (Min. 60s)'}
+                      </span>
+                    </div>
+                    <input
+                      type="number"
+                      required
+                      min={60}
+                      max={600}
+                      value={testiDuration}
+                      onChange={(e) => setTestiDuration(parseInt(e.target.value) || 60)}
+                      className="glass-input"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', fontSize: '14px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      Catatan / Cerita Keseruan Tamu (Opsional)
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="Contoh: Tamu di meja 4 dan 5 heboh banget gantian foto candid, proyektor live wall bikin suasana ballroom makin hidup."
+                      value={testiCaption}
+                      onChange={(e) => setTestiCaption(e.target.value)}
+                      className="glass-input"
+                      style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', fontSize: '13.5px', resize: 'vertical' }}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingTesti}
+                    className="btn-apple-black"
+                    style={{
+                      width: '100%',
+                      padding: '14px',
+                      borderRadius: '14px',
+                      fontSize: '14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      marginTop: '6px'
+                    }}
+                  >
+                    <Video size={16} />
+                    <span>{isSubmittingTesti ? 'Mengirim Data...' : 'Kirim Video & Klaim Bonus Rp 50.000'}</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* Submission History */}
+              <div className="glass-card" style={{ padding: '32px', borderRadius: '24px', display: 'flex', flexDirection: 'column' }}>
+                <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '4px', fontSize: '11px' }}>
+                  RIWAYAT SUBMISSION
+                </span>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', marginBottom: '16px' }}>
+                  Status Kurasi Video ({testimonials.length})
+                </h3>
+
+                {testimonials.length === 0 ? (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', textAlign: 'center', color: '#86868B' }}>
+                    <Film size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                    <p style={{ fontSize: '13.5px', margin: 0 }}>Belum ada video testimoni yang diajukan.</p>
+                    <span style={{ fontSize: '12px', marginTop: '4px' }}>Unggah video pertama Anda melalui formulir di samping!</span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto', maxHeight: '480px' }}>
+                    {testimonials.map((t) => (
+                      <div
+                        key={t.id}
+                        style={{
+                          background: '#FFFFFF',
+                          border: '1px solid rgba(0,0,0,0.06)',
+                          borderRadius: '16px',
+                          padding: '16px 18px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '10px',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                          <div>
+                            <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>
+                              {t.eventTitle}
+                            </strong>
+                            <span style={{ fontSize: '11.5px', color: '#86868B' }}>
+                              Durasi: {t.durationSeconds} Detik • Dikirim: {new Date(t.submittedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          </div>
+
+                          {t.status === 'approved' ? (
+                            <span style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+                              ✓ Disetujui (+Rp 50.000)
+                            </span>
+                          ) : t.status === 'rejected' ? (
+                            <span style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+                              ✕ Perlu Revisi
+                            </span>
+                          ) : (
+                            <span style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#D97706', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+                              ⏳ Menunggu Kurasi
+                            </span>
+                          )}
+                        </div>
+
+                        {t.caption && (
+                          <p style={{ fontSize: '12px', color: '#515154', fontStyle: 'italic', margin: 0, background: 'rgba(0,0,0,0.02)', padding: '8px 10px', borderRadius: '8px' }}>
+                            &ldquo;{t.caption}&rdquo;
+                          </p>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.04)', fontSize: '12px' }}>
+                          <a
+                            href={t.videoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ color: '#C27803', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+                          >
+                            <ExternalLink size={13} />
+                            <span>Tonton Video</span>
+                          </a>
+
+                          <strong style={{ color: '#10B981', fontFamily: 'var(--font-mono)' }}>
+                            +Rp {t.rewardAmount.toLocaleString('id-ID')}
+                          </strong>
+                        </div>
+
+                        {t.adminNotes && (
+                          <div style={{ fontSize: '11.5px', color: '#6E6E73', background: 'rgba(0,0,0,0.03)', padding: '6px 10px', borderRadius: '8px' }}>
+                            <strong>Catatan Tim:</strong> {t.adminNotes}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -280,3 +280,36 @@ export interface PayoutRequest {
   requestedAt: string;
   processedAt?: string;
 }
+
+export interface VideoTestimonialSubmission {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  submitterType: 'vendor' | 'host';
+  submitterId: string;
+  submitterName: string;
+  submitterEmail?: string;
+  videoType: 'link' | 'file';
+  videoUrl: string; // Google Drive, TikTok, IG Reels, or R2/Storage URL
+  durationSeconds: number; // Minimal 60 seconds (1 minute)
+  caption?: string;
+  rewardAmount: number; // e.g. Rp 50.000
+  status: 'pending' | 'approved' | 'rejected';
+  adminNotes?: string;
+  rewardPaidAt?: string;
+  submittedAt: string;
+}
+
+export interface EventAddonItem {
+  id: string;
+  name: string;
+  category: 'physical_qr' | 'banner' | 'hardware_rental' | 'custom';
+  description: string;
+  price: number;
+  priceFormatted: string;
+  unit: string;
+  freeShippingJabodetabek: boolean;
+  imagePreviewUrl?: string;
+  isPopular?: boolean;
+}
+

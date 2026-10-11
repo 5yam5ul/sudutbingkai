@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount } from './types';
+import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission } from './types';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -9,6 +9,7 @@ const PHOTOS_FILE = path.join(DATA_DIR, 'photos.json');
 const INVOICES_FILE = path.join(DATA_DIR, 'invoices.json');
 const PAYOUTS_FILE = path.join(DATA_DIR, 'payouts.json');
 const VENDORS_FILE = path.join(DATA_DIR, 'vendors.json');
+const TESTIMONIALS_FILE = path.join(DATA_DIR, 'testimonials.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 
 // Safe file system helpers for local mode / fallback
@@ -76,6 +77,27 @@ function ensureLocalDataFiles() {
 
     if (!fs.existsSync(PAYOUTS_FILE)) {
       fs.writeFileSync(PAYOUTS_FILE, JSON.stringify([], null, 2), 'utf8');
+    }
+
+    if (!fs.existsSync(TESTIMONIALS_FILE)) {
+      const sampleTestimonial: VideoTestimonialSubmission = {
+        id: 'testi_sample_01',
+        eventId: 'wedding-sarah-dimas',
+        eventTitle: 'Pernikahan Sarah & Dimas',
+        submitterType: 'vendor',
+        submitterId: 'vendor-1',
+        submitterName: 'Vows & Co Wedding Organizer',
+        videoType: 'link',
+        videoUrl: 'https://drive.google.com/file/d/sample-wedding-testimonial/view',
+        durationSeconds: 78,
+        caption: 'Keseruan tamu saat heboh scan barcode di meja ballroom, antusiasme tinggi banget!',
+        rewardAmount: 50000,
+        status: 'approved',
+        adminNotes: 'Video jernih, durasi 78 detik, interaksi tamu sangat natural.',
+        rewardPaidAt: '2026-02-15T14:00:00Z',
+        submittedAt: '2026-02-15T11:20:00Z'
+      };
+      fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify([sampleTestimonial], null, 2), 'utf8');
     }
   } catch {
     // Ignore in read-only environment
@@ -765,3 +787,80 @@ export async function getPayoutRequests(vendorId?: string): Promise<PayoutReques
     return [];
   }
 }
+
+// ---------------------------------------------------------------------------
+// TESTIMONIAL VIDEO SUBMISSIONS (REVENUE REWARD)
+// ---------------------------------------------------------------------------
+
+export async function createTestimonialSubmission(data: Omit<VideoTestimonialSubmission, 'id' | 'submittedAt' | 'status'>): Promise<VideoTestimonialSubmission> {
+  ensureLocalDataFiles();
+  let submissions: VideoTestimonialSubmission[] = [];
+  try {
+    const raw = fs.existsSync(TESTIMONIALS_FILE) ? fs.readFileSync(TESTIMONIALS_FILE, 'utf8') : '[]';
+    submissions = JSON.parse(raw);
+  } catch {
+    submissions = [];
+  }
+
+  const newSub: VideoTestimonialSubmission = {
+    ...data,
+    id: `testi_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    status: 'pending',
+    submittedAt: new Date().toISOString()
+  };
+
+  submissions.unshift(newSub);
+  try {
+    fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(submissions, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('Failed to write testimonials file:', err);
+  }
+
+  return newSub;
+}
+
+export async function getAllTestimonials(): Promise<VideoTestimonialSubmission[]> {
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(TESTIMONIALS_FILE) ? fs.readFileSync(TESTIMONIALS_FILE, 'utf8') : '[]';
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export async function getTestimonialsByVendor(vendorId: string): Promise<VideoTestimonialSubmission[]> {
+  const all = await getAllTestimonials();
+  return all.filter(t => t.submitterId === vendorId || t.submitterEmail?.toLowerCase() === vendorId.toLowerCase());
+}
+
+export async function getTestimonialsByEvent(eventId: string): Promise<VideoTestimonialSubmission[]> {
+  const all = await getAllTestimonials();
+  return all.filter(t => t.eventId === eventId);
+}
+
+export async function updateTestimonialStatus(
+  id: string,
+  status: 'approved' | 'rejected',
+  adminNotes?: string
+): Promise<VideoTestimonialSubmission | null> {
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(TESTIMONIALS_FILE) ? fs.readFileSync(TESTIMONIALS_FILE, 'utf8') : '[]';
+    const list: VideoTestimonialSubmission[] = JSON.parse(raw);
+    const index = list.findIndex(t => t.id === id);
+    if (index === -1) return null;
+
+    list[index].status = status;
+    if (adminNotes) list[index].adminNotes = adminNotes;
+    if (status === 'approved') {
+      list[index].rewardPaidAt = new Date().toISOString();
+    }
+
+    fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(list, null, 2), 'utf8');
+    return list[index];
+  } catch {
+    return null;
+  }
+}
+
