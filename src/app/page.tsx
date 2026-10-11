@@ -1226,34 +1226,134 @@ export default function HomePage() {
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            background: 'rgba(255, 255, 255, 0.9)',
-            border: '1px solid rgba(0, 0, 0, 0.07)',
+            background: 'rgba(255, 255, 255, 0.95)',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
             boxShadow: '0 12px 32px rgba(0, 0, 0, 0.05)'
           }}>
-            <div style={{ position: 'relative', width: '100%', height: '230px', overflow: 'hidden' }}>
-              <img
-                src="/images/testimonials/wedding.jpg"
-                alt="Sarah & Dimas Wedding Reception"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+            {/* Visual: 2 Vertical Candid Snaps from Guest Roll */}
+            <div style={{
+              padding: '16px 16px 12px',
+              background: '#F8F8F6',
+              borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
+            }}>
               <div style={{
-                position: 'absolute',
-                top: '14px',
-                left: '14px',
-                background: 'rgba(18, 17, 15, 0.75)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: '999px',
-                padding: '4px 12px',
-                color: '#F59E0B',
-                fontSize: '11px',
-                fontWeight: 700,
-                fontFamily: 'var(--font-mono)'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '10px'
               }}>
-                • RESEPSI PERNIKAHAN •
+                <span style={{
+                  background: 'rgba(194, 120, 3, 0.12)',
+                  color: '#C27803',
+                  borderRadius: '999px',
+                  padding: '3px 10px',
+                  fontSize: '10.5px',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '0.04em'
+                }}>
+                  • RESEPSI PERNIKAHAN •
+                </span>
+                <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Camera size={10} color="#86868B" /> 2 FOTO ROLL TAMU
+                </span>
+              </div>
+
+              {/* 2 Vertical 3:4 Photos Side by Side */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {/* Photo 1: Selfie */}
+                <div style={{
+                  position: 'relative',
+                  aspectRatio: '3 / 4',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  background: '#1D1D1F',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                }}>
+                  <img
+                    src="/images/testimonials/wedding_1.jpg"
+                    alt="Selfie Tamu Meja 04"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(6px)',
+                    borderRadius: '6px',
+                    padding: '2px 6px',
+                    color: '#FFFFFF',
+                    fontSize: '9px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}>
+                    <span>Meja 04</span>
+                  </div>
+                  <div className="font-mono-film" style={{
+                    position: 'absolute',
+                    bottom: '6px',
+                    right: '8px',
+                    color: '#FF9900',
+                    fontSize: '9.5px',
+                    fontWeight: 700,
+                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
+                    letterSpacing: '0.04em'
+                  }}>
+                    &apos;24 09 14
+                  </div>
+                </div>
+
+                {/* Photo 2: Table Candid */}
+                <div style={{
+                  position: 'relative',
+                  aspectRatio: '3 / 4',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  background: '#1D1D1F',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                }}>
+                  <img
+                    src="/images/testimonials/wedding_2.jpg"
+                    alt="Candid Meja Prasmanan"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(6px)',
+                    borderRadius: '6px',
+                    padding: '2px 6px',
+                    color: '#FFFFFF',
+                    fontSize: '9px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}>
+                    <span>Meja 02</span>
+                  </div>
+                  <div className="font-mono-film" style={{
+                    position: 'absolute',
+                    bottom: '6px',
+                    right: '8px',
+                    color: '#FF9900',
+                    fontSize: '9.5px',
+                    fontWeight: 700,
+                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
+                    letterSpacing: '0.04em'
+                  }}>
+                    &apos;24 09 14
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ padding: '22px 24px 24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ display: 'flex', gap: '3px', marginBottom: '12px' }}>
                   {[...Array(5)].map((_, i) => (
@@ -1261,7 +1361,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <p style={{ color: '#333336', fontSize: '13.5px', lineHeight: 1.65, fontStyle: 'italic', marginBottom: '18px' }}>
-                  &ldquo;Awalnya deg-degan takut kartu barcode di meja cuma dianggurin sama tamu. Ternyata pas acara mulai, meja anak-anak muda sama temen kuliah malah heboh gantian foto-foto candid lucu yang fotografer resmi kita gak sempet tangkap. Pas malemnya kita buka roll fotonya bareng di kamar hotel, ketawa ngakak sampe nangis liat ekspresi random mereka. Worth it banget!&rdquo;
+                  &ldquo;Awalnya mikir kartu QR di meja bakal dianggurin. Taunya pas resepsi jalan, temen-temen meja kuliah sama sahabat cewek malah seru-seruan selfie flash pake kebaya dan foto candid temen cowok yang lagi kalap nyomot jajanan pasar. Pas malemnya kita cek web di kamar hotel, ketawa ngakak liat jepretan candid random yang fotografer resmi kita gak sempet tangkap. Berasa dapet harta karun!&rdquo;
                 </p>
               </div>
 
@@ -1283,34 +1383,134 @@ export default function HomePage() {
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            background: 'rgba(255, 255, 255, 0.9)',
-            border: '1px solid rgba(0, 0, 0, 0.07)',
+            background: 'rgba(255, 255, 255, 0.95)',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
             boxShadow: '0 12px 32px rgba(0, 0, 0, 0.05)'
           }}>
-            <div style={{ position: 'relative', width: '100%', height: '230px', overflow: 'hidden' }}>
-              <img
-                src="/images/testimonials/birthday.jpg"
-                alt="Sweet 17th Birthday Celebration"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+            {/* Visual: 2 Vertical Candid Snaps from Guest Roll */}
+            <div style={{
+              padding: '16px 16px 12px',
+              background: '#F8F8F6',
+              borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
+            }}>
               <div style={{
-                position: 'absolute',
-                top: '14px',
-                left: '14px',
-                background: 'rgba(18, 17, 15, 0.75)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: '999px',
-                padding: '4px 12px',
-                color: '#F59E0B',
-                fontSize: '11px',
-                fontWeight: 700,
-                fontFamily: 'var(--font-mono)'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '10px'
               }}>
-                • SWEET 17TH BIRTHDAY •
+                <span style={{
+                  background: 'rgba(194, 120, 3, 0.12)',
+                  color: '#C27803',
+                  borderRadius: '999px',
+                  padding: '3px 10px',
+                  fontSize: '10.5px',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '0.04em'
+                }}>
+                  • SWEET 17TH BIRTHDAY •
+                </span>
+                <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Camera size={10} color="#86868B" /> 2 FOTO ROLL TAMU
+                </span>
+              </div>
+
+              {/* 2 Vertical 3:4 Photos Side by Side */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {/* Photo 1: Teen Selfie */}
+                <div style={{
+                  position: 'relative',
+                  aspectRatio: '3 / 4',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  background: '#1D1D1F',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                }}>
+                  <img
+                    src="/images/testimonials/birthday_1.jpg"
+                    alt="Selfie Teman SMA"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(6px)',
+                    borderRadius: '6px',
+                    padding: '2px 6px',
+                    color: '#FFFFFF',
+                    fontSize: '9px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}>
+                    <span>Geng Meja 03</span>
+                  </div>
+                  <div className="font-mono-film" style={{
+                    position: 'absolute',
+                    bottom: '6px',
+                    right: '8px',
+                    color: '#FF9900',
+                    fontSize: '9.5px',
+                    fontWeight: 700,
+                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
+                    letterSpacing: '0.04em'
+                  }}>
+                    &apos;24 10 05
+                  </div>
+                </div>
+
+                {/* Photo 2: Candle Candid */}
+                <div style={{
+                  position: 'relative',
+                  aspectRatio: '3 / 4',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  background: '#1D1D1F',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                }}>
+                  <img
+                    src="/images/testimonials/birthday_2.jpg"
+                    alt="Momen Tiup Lilin"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(6px)',
+                    borderRadius: '6px',
+                    padding: '2px 6px',
+                    color: '#FFFFFF',
+                    fontSize: '9px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}>
+                    <span>Tiup Lilin</span>
+                  </div>
+                  <div className="font-mono-film" style={{
+                    position: 'absolute',
+                    bottom: '6px',
+                    right: '8px',
+                    color: '#FF9900',
+                    fontSize: '9.5px',
+                    fontWeight: 700,
+                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
+                    letterSpacing: '0.04em'
+                  }}>
+                    &apos;24 10 05
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ padding: '22px 24px 24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ display: 'flex', gap: '3px', marginBottom: '12px' }}>
                   {[...Array(5)].map((_, i) => (
@@ -1318,7 +1518,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <p style={{ color: '#333336', fontSize: '13.5px', lineHeight: 1.65, fontStyle: 'italic', marginBottom: '18px' }}>
-                  &ldquo;Temen-temen sekelas pada heboh karena vibenya kayak bawa kamera disposable beneran tapi gak ribet beli roll film. Hasil warna analognya estetik parah tanpa perlu diedit lagi, langsung pas buat feed IG. Suara wish mereka yang masuk di voice note juga bikin terharu banget pas diputer ulang.&rdquo;
+                  &ldquo;Anak-anak sekelas paling males kalau disuruh foto kaku. Pas ada QR SudutBingkai di meja cafe, mereka langsung heboh jepret pake hape masing-masing. Hasil warnanya ada grain analog estetik sama flash khas disposable 90-an tanpa harus repot bawa roll film fisik. Momen tiup lilin juga ketangkep dari berbagai sudut meja temen!&rdquo;
                 </p>
               </div>
 
@@ -1340,34 +1540,134 @@ export default function HomePage() {
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            background: 'rgba(255, 255, 255, 0.9)',
-            border: '1px solid rgba(0, 0, 0, 0.07)',
+            background: 'rgba(255, 255, 255, 0.95)',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
             boxShadow: '0 12px 32px rgba(0, 0, 0, 0.05)'
           }}>
-            <div style={{ position: 'relative', width: '100%', height: '230px', overflow: 'hidden' }}>
-              <img
-                src="/images/testimonials/gathering.jpg"
-                alt="Corporate Annual Dinner Gathering"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+            {/* Visual: 2 Vertical Candid Snaps from Guest Roll */}
+            <div style={{
+              padding: '16px 16px 12px',
+              background: '#F8F8F6',
+              borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
+            }}>
               <div style={{
-                position: 'absolute',
-                top: '14px',
-                left: '14px',
-                background: 'rgba(18, 17, 15, 0.75)',
-                backdropFilter: 'blur(8px)',
-                borderRadius: '999px',
-                padding: '4px 12px',
-                color: '#F59E0B',
-                fontSize: '11px',
-                fontWeight: 700,
-                fontFamily: 'var(--font-mono)'
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: '10px'
               }}>
-                • ANNUAL COMPANY DINNER •
+                <span style={{
+                  background: 'rgba(194, 120, 3, 0.12)',
+                  color: '#C27803',
+                  borderRadius: '999px',
+                  padding: '3px 10px',
+                  fontSize: '10.5px',
+                  fontWeight: 700,
+                  fontFamily: 'var(--font-mono)',
+                  letterSpacing: '0.04em'
+                }}>
+                  • ANNUAL COMPANY DINNER •
+                </span>
+                <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Camera size={10} color="#86868B" /> 2 FOTO ROLL TAMU
+                </span>
+              </div>
+
+              {/* 2 Vertical 3:4 Photos Side by Side */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                {/* Photo 1: Rooftop Selfie */}
+                <div style={{
+                  position: 'relative',
+                  aspectRatio: '3 / 4',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  background: '#1D1D1F',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                }}>
+                  <img
+                    src="/images/testimonials/gathering_1.jpg"
+                    alt="Rooftop Selfie Coworkers"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(6px)',
+                    borderRadius: '6px',
+                    padding: '2px 6px',
+                    color: '#FFFFFF',
+                    fontSize: '9px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}>
+                    <span>Rooftop SCBD</span>
+                  </div>
+                  <div className="font-mono-film" style={{
+                    position: 'absolute',
+                    bottom: '6px',
+                    right: '8px',
+                    color: '#FF9900',
+                    fontSize: '9.5px',
+                    fontWeight: 700,
+                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
+                    letterSpacing: '0.04em'
+                  }}>
+                    &apos;24 11 20
+                  </div>
+                </div>
+
+                {/* Photo 2: Table Toast */}
+                <div style={{
+                  position: 'relative',
+                  aspectRatio: '3 / 4',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  background: '#1D1D1F',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                }}>
+                  <img
+                    src="/images/testimonials/gathering_2.jpg"
+                    alt="Candid Meja Makan Kantor"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: '8px',
+                    left: '8px',
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(6px)',
+                    borderRadius: '6px',
+                    padding: '2px 6px',
+                    color: '#FFFFFF',
+                    fontSize: '9px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}>
+                    <span>Meja Tim Dev</span>
+                  </div>
+                  <div className="font-mono-film" style={{
+                    position: 'absolute',
+                    bottom: '6px',
+                    right: '8px',
+                    color: '#FF9900',
+                    fontSize: '9.5px',
+                    fontWeight: 700,
+                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
+                    letterSpacing: '0.04em'
+                  }}>
+                    &apos;24 11 20
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+            <div style={{ padding: '22px 24px 24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ display: 'flex', gap: '3px', marginBottom: '12px' }}>
                   {[...Array(5)].map((_, i) => (
@@ -1375,7 +1675,7 @@ export default function HomePage() {
                   ))}
                 </div>
                 <p style={{ color: '#333336', fontSize: '13.5px', lineHeight: 1.65, fontStyle: 'italic', marginBottom: '18px' }}>
-                  &ldquo;Dipakai buat 120 karyawan di rooftop gathering tahunan. Biasanya orang males upload foto kantor ke drive barengan, tapi pake SudutBingkai semua meja langsung aktif jepret momen santai pas makan dan karaokean. Live slideshow di proyektor venue juga bikin suasana makin hidup dan seru.&rdquo;
+                  &ldquo;Dipakai buat 120 karyawan di rooftop gathering tahunan. Biasanya orang males upload foto kantor ke Google Drive bersama, tapi pake SudutBingkai semua meja langsung aktif jepret pas makan & cheers. Hasil candid-nya langsung auto-sync tayang di layar proyektor venue, seru dan cairin suasana banget.&rdquo;
                 </p>
               </div>
 
