@@ -23,6 +23,19 @@ export const SYSTEM_USERS: Record<string, AuthAccount> = {
     phone: '08118899001',
     instagram: '@vowsandco.wo',
     tier: 'pro',
+    partnerTier: 'pro',
+    referralCode: 'VOWSANDCO',
+    walletBalance: 420000,
+    totalEarnings: 1260000,
+    bankAccount: {
+      bankName: 'BCA',
+      accountNumber: '8730129841',
+      accountHolder: 'Arya Pratama'
+    },
+    eventQuotaTokens: {
+      wedding: 2,
+      event: 1
+    },
     clientCount: 14
   }
 };

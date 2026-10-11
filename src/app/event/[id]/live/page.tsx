@@ -521,6 +521,39 @@ export default function LiveProjectorWallPage() {
         </div>
       )}
 
+      {/* Partner Co-Branding Watermark */}
+      {event?.vendorName && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '24px',
+          background: 'rgba(18, 16, 11, 0.82)',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
+          borderRadius: '16px',
+          padding: '8px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          backdropFilter: 'blur(10px)',
+          zIndex: 40,
+          boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
+        }}>
+          {event.vendorLogo ? (
+            <img src={event.vendorLogo} alt={event.vendorName} style={{ height: '22px', maxWidth: '80px', objectFit: 'contain' }} />
+          ) : (
+            <span style={{ fontSize: '14px' }}>✨</span>
+          )}
+          <div style={{ textAlign: 'left' }}>
+            <span style={{ fontSize: '9px', fontWeight: 600, color: '#86868B', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>
+              Official Organizer
+            </span>
+            <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#fff' }}>
+              {event.vendorName}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Ken Burns Keyframe CSS */}
       <style
         dangerouslySetInnerHTML={{

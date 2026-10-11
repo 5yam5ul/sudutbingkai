@@ -1,11 +1,14 @@
 import fs from 'fs';
 import path from 'path';
-import { EventData, PhotoRecord } from './types';
+import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount } from './types';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
 const PHOTOS_FILE = path.join(DATA_DIR, 'photos.json');
+const INVOICES_FILE = path.join(DATA_DIR, 'invoices.json');
+const PAYOUTS_FILE = path.join(DATA_DIR, 'payouts.json');
+const VENDORS_FILE = path.join(DATA_DIR, 'vendors.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 
 // Safe file system helpers for local mode / fallback
@@ -45,6 +48,34 @@ function ensureLocalDataFiles() {
 
     if (!fs.existsSync(PHOTOS_FILE)) {
       fs.writeFileSync(PHOTOS_FILE, JSON.stringify([], null, 2), 'utf8');
+    }
+
+    if (!fs.existsSync(INVOICES_FILE)) {
+      const sampleInvoice: InvoiceRecord = {
+        id: 'inv_wedding_sarah_dimas',
+        invoiceNumber: 'INV/SB/2026/02/0001',
+        eventId: 'wedding-sarah-dimas',
+        orderId: 'ord_sample_001',
+        buyerType: 'client',
+        buyerName: 'Sarah & Dimas',
+        buyerEmail: 'pengantin@sudutbingkai.id',
+        buyerPhone: '081298765432',
+        tierId: 'wedding',
+        tierName: 'Wedding (300 Tamu)',
+        originalPrice: 499000,
+        discountAmount: 49900,
+        discountCode: 'VOWSANDCO',
+        finalAmount: 449100,
+        paymentMethod: 'qris',
+        status: 'paid',
+        paidAt: '2026-02-14T10:30:00Z',
+        createdAt: '2026-02-14T10:25:00Z'
+      };
+      fs.writeFileSync(INVOICES_FILE, JSON.stringify([sampleInvoice], null, 2), 'utf8');
+    }
+
+    if (!fs.existsSync(PAYOUTS_FILE)) {
+      fs.writeFileSync(PAYOUTS_FILE, JSON.stringify([], null, 2), 'utf8');
     }
   } catch {
     // Ignore in read-only environment
@@ -595,5 +626,142 @@ export async function deletePhoto(id: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+// ==========================================
+// INVOICES ENGINE
+// ==========================================
+
+export async function createInvoice(data: Omit<InvoiceRecord, 'id' | 'createdAt' | 'invoiceNumber'> & Partial<Pick<InvoiceRecord, 'id' | 'createdAt' | 'invoiceNumber'>>): Promise<InvoiceRecord> {
+  ensureLocalDataFiles();
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+
+  let invoices: InvoiceRecord[] = [];
+  try {
+    const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
+    invoices = JSON.parse(raw);
+  } catch {
+    invoices = [];
+  }
+
+  const count = invoices.length + 1;
+  const invoiceNumber = data.invoiceNumber || `INV/SB/${year}/${month}/${String(count).padStart(4, '0')}`;
+  const id = data.id || `inv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const createdAt = data.createdAt || now.toISOString();
+
+  const newInvoice: InvoiceRecord = {
+    ...data,
+    id,
+    invoiceNumber,
+    createdAt
+  };
+
+  invoices.unshift(newInvoice);
+  try {
+    fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('Failed to write invoice file:', err);
+  }
+
+  return newInvoice;
+}
+
+export async function getInvoice(idOrNumber: string): Promise<InvoiceRecord | null> {
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
+    const invoices: InvoiceRecord[] = JSON.parse(raw);
+    const cleanQuery = idOrNumber.trim().toLowerCase();
+    return invoices.find(inv => 
+      inv.id.toLowerCase() === cleanQuery ||
+      inv.invoiceNumber.toLowerCase() === cleanQuery ||
+      (inv.eventId && inv.eventId.toLowerCase() === cleanQuery) ||
+      inv.orderId.toLowerCase() === cleanQuery
+    ) || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getInvoicesByEmail(email: string): Promise<InvoiceRecord[]> {
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
+    const invoices: InvoiceRecord[] = JSON.parse(raw);
+    const cleanEmail = email.trim().toLowerCase();
+    return invoices.filter(inv => inv.buyerEmail.toLowerCase() === cleanEmail);
+  } catch {
+    return [];
+  }
+}
+
+export async function updateInvoiceStatus(idOrNumber: string, status: 'pending' | 'paid' | 'cancelled', paidAt?: string): Promise<InvoiceRecord | null> {
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
+    const invoices: InvoiceRecord[] = JSON.parse(raw);
+    const cleanQuery = idOrNumber.trim().toLowerCase();
+    const idx = invoices.findIndex(inv => 
+      inv.id.toLowerCase() === cleanQuery ||
+      inv.invoiceNumber.toLowerCase() === cleanQuery ||
+      (inv.eventId && inv.eventId.toLowerCase() === cleanQuery) ||
+      inv.orderId.toLowerCase() === cleanQuery
+    );
+
+    if (idx < 0) return null;
+    invoices[idx].status = status;
+    if (paidAt) invoices[idx].paidAt = paidAt;
+    else if (status === 'paid' && !invoices[idx].paidAt) invoices[idx].paidAt = new Date().toISOString();
+
+    fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
+    return invoices[idx];
+  } catch {
+    return null;
+  }
+}
+
+// ==========================================
+// VENDOR PARTNERS & PAYOUTS ENGINE
+// ==========================================
+
+export async function createPayoutRequest(data: Omit<PayoutRequest, 'id' | 'requestedAt' | 'status'>): Promise<PayoutRequest> {
+  ensureLocalDataFiles();
+  let payouts: PayoutRequest[] = [];
+  try {
+    const raw = fs.existsSync(PAYOUTS_FILE) ? fs.readFileSync(PAYOUTS_FILE, 'utf8') : '[]';
+    payouts = JSON.parse(raw);
+  } catch {
+    payouts = [];
+  }
+
+  const newPayout: PayoutRequest = {
+    ...data,
+    id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    status: 'pending',
+    requestedAt: new Date().toISOString()
+  };
+
+  payouts.unshift(newPayout);
+  try {
+    fs.writeFileSync(PAYOUTS_FILE, JSON.stringify(payouts, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('Failed to write payouts file:', err);
+  }
+
+  return newPayout;
+}
+
+export async function getPayoutRequests(vendorId?: string): Promise<PayoutRequest[]> {
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(PAYOUTS_FILE) ? fs.readFileSync(PAYOUTS_FILE, 'utf8') : '[]';
+    const payouts: PayoutRequest[] = JSON.parse(raw);
+    if (!vendorId) return payouts;
+    return payouts.filter(p => p.vendorId === vendorId || p.vendorEmail.toLowerCase() === vendorId.toLowerCase());
+  } catch {
+    return [];
   }
 }

@@ -2346,6 +2346,15 @@ export default function GuestCameraPage() {
           <Check size={14} color="#C27803" />
           <span>Tersedia <strong>{maxShots} jepretan</strong> analog {presetInfo.name}</span>
         </div>
+
+        {event?.vendorName && (
+          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#86868B', fontSize: '11px' }}>
+            {event.vendorLogo ? (
+              <img src={event.vendorLogo} alt={event.vendorName} style={{ height: '16px', maxWidth: '64px', objectFit: 'contain' }} />
+            ) : null}
+            <span>Partner: <strong style={{ color: '#1D1D1F' }}>{event.vendorName}</strong></span>
+          </div>
+        )}
       </div>
     </div>
   );

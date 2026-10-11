@@ -8,7 +8,7 @@ import {
   ExternalLink, ArrowRight, Check, Sliders, LogOut, 
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
-  CreditCard, Sparkles
+  CreditCard, Sparkles, Wallet, Share2
 } from 'lucide-react';
 import { UserAccount } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
@@ -21,7 +21,55 @@ export default function VendorPortalPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [vendor, setVendor] = useState<UserAccount>(SYSTEM_USERS['vendor']);
-  const [activeTab, setActiveTab] = useState<'branding' | 'clients' | 'wholesale' | 'marketing'>('wholesale');
+  const [activeTab, setActiveTab] = useState<'wallet' | 'wholesale' | 'branding' | 'clients' | 'marketing'>('wallet');
+
+  // Partner Wallet & Referral State
+  const [walletBalance, setWalletBalance] = useState<number>(420000);
+  const [totalEarnings, setTotalEarnings] = useState<number>(1260000);
+  const [referralCode, setReferralCode] = useState<string>('VOWSANDCO');
+  const [partnerTier, setPartnerTier] = useState<string>('pro');
+  const [bankName, setBankName] = useState<string>('BCA');
+  const [accountNumber, setAccountNumber] = useState<string>('8730129841');
+  const [accountHolder, setAccountHolder] = useState<string>('Arya Pratama');
+  const [payoutModalOpen, setPayoutModalOpen] = useState(false);
+  const [payoutAmount, setPayoutAmount] = useState<number>(420000);
+  const [isRequestingPayout, setIsRequestingPayout] = useState(false);
+  const [copiedReferral, setCopiedReferral] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Referral commissions list
+  const [referralHistory, setReferralHistory] = useState([
+    {
+      id: 'ref_001',
+      invoiceNumber: 'INV/SB/2026/02/0001',
+      clientName: 'Sarah & Dimas',
+      tierName: 'Wedding (300 Tamu)',
+      date: '14 Februari 2026',
+      totalPaid: 449100,
+      commissionAmount: 67500,
+      status: 'Lunas / Cair'
+    },
+    {
+      id: 'ref_002',
+      invoiceNumber: 'INV/SB/2026/02/0002',
+      clientName: 'Anisa & Reza',
+      tierName: 'Event (150 Tamu)',
+      date: '28 Februari 2026',
+      totalPaid: 242100,
+      commissionAmount: 36000,
+      status: 'Lunas / Cair'
+    },
+    {
+      id: 'ref_003',
+      invoiceNumber: 'INV/SB/2026/03/0001',
+      clientName: 'Jonathan & Maya',
+      tierName: 'Party (75 Tamu)',
+      date: '7 Maret 2026',
+      totalPaid: 161100,
+      commissionAmount: 24000,
+      status: 'Lunas / Cair'
+    }
+  ]);
 
   // Custom Glass Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -118,6 +166,42 @@ export default function VendorPortalPage() {
     toast.success(`Pembayaran Berhasil! +${addedCount} Kuota Acara telah aktif di akun ${companyName}.`, {
       duration: 5000
     });
+  };
+
+  const handleCopyReferralCode = () => {
+    navigator.clipboard.writeText(referralCode);
+    setCopiedReferral(true);
+    toast.success(`Kode promo ${referralCode} disalin! Berikan ke klien Anda untuk diskon 10%.`);
+    setTimeout(() => setCopiedReferral(false), 2500);
+  };
+
+  const handleCopyReferralLink = () => {
+    const link = typeof window !== 'undefined' ? `${window.location.origin}/?ref=${referralCode}` : `https://sudutbingkai.vercel.app/?ref=${referralCode}`;
+    navigator.clipboard.writeText(link);
+    setCopiedLink(true);
+    toast.success('Tautan promosi mitra disalin! Siap dibagikan ke calon pengantin.');
+    setTimeout(() => setCopiedLink(false), 2500);
+  };
+
+  const handleRequestPayout = () => {
+    if (payoutAmount < 100000) {
+      toast.error('Batas minimal penarikan komisi adalah Rp 100.000.');
+      return;
+    }
+    if (payoutAmount > walletBalance) {
+      toast.error('Nominal penarikan melebihi saldo komisi tersedia.');
+      return;
+    }
+
+    setIsRequestingPayout(true);
+    setTimeout(() => {
+      setIsRequestingPayout(false);
+      setWalletBalance(prev => prev - payoutAmount);
+      setPayoutModalOpen(false);
+      toast.success(
+        `Permintaan penarikan Rp ${payoutAmount.toLocaleString('id-ID')} berhasil diajukan! Dana akan ditransfer ke rekening ${bankName} (${accountNumber} a/n ${accountHolder}) dalam 1x24 jam kerja.`
+      );
+    }, 1200);
   };
 
   // Custom Wholesale Calculator State
@@ -421,29 +505,50 @@ export default function VendorPortalPage() {
           {/* Quick Metrics */}
           <div className="responsive-metrics-grid" style={{ marginTop: '24px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '20px' }}>
             <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>TOTAL PERNIKAHAN</span>
-              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{clients.length} Acara</strong>
+              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>SALDO KOMISI AKTIF</span>
+              <strong style={{ fontSize: '20px', color: '#10B981' }}>Rp {walletBalance.toLocaleString('id-ID')}</strong>
             </div>
 
             <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>TOTAL FOTO KLIEN</span>
-              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>42 Momen</strong>
+              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>KODE PROMO KLIEN</span>
+              <strong style={{ fontSize: '20px', color: '#C27803', fontFamily: 'var(--font-mono)' }}>{referralCode}</strong>
             </div>
 
             <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>SISA KUOTA BUNDLE</span>
-              <strong style={{ fontSize: '20px', color: '#27AE60' }}>{voucherQuota} Kuota Siap</strong>
+              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>SISA KUOTA GROSIR</span>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{voucherQuota} Kuota Siap</strong>
             </div>
 
             <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>STATUS KEMITRAAN</span>
-              <strong style={{ fontSize: '20px', color: '#C27803' }}>Featured Partner</strong>
+              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>LEVEL KEMITRAAN</span>
+              <strong style={{ fontSize: '20px', color: '#C27803' }}>🥈 Mitra Pro (15%)</strong>
             </div>
           </div>
         </div>
 
         {/* Tab Switcher - Horizontal Scroll on Mobile */}
         <div className="horizontal-scroll-row" style={{ gap: '10px', marginBottom: '28px', paddingBottom: '6px' }}>
+          <button
+            onClick={() => setActiveTab('wallet')}
+            className="glass-pill"
+            style={{
+              background: activeTab === 'wallet' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
+              color: activeTab === 'wallet' ? '#FFFFFF' : '#1D1D1F',
+              padding: '10px 18px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Wallet size={14} />
+            <span className="desktop-only">Dompet Komisi & Kode Promo</span>
+            <span className="mobile-only">Komisi ({referralCode})</span>
+          </button>
+
           <button
             onClick={() => setActiveTab('wholesale')}
             className="glass-pill"
@@ -461,8 +566,8 @@ export default function VendorPortalPage() {
             }}
           >
             <Calculator size={14} />
-            <span className="desktop-only">Paket Grosir & Custom Calculator</span>
-            <span className="mobile-only">Paket Grosir</span>
+            <span className="desktop-only">Beli Kuota Reseller (Grosir)</span>
+            <span className="mobile-only">Beli Kuota</span>
           </button>
 
           <button
@@ -528,6 +633,205 @@ export default function VendorPortalPage() {
             <span className="mobile-only">Marketing Kit</span>
           </button>
         </div>
+
+        {/* TAB 1: DOMPET KOMISI & KODE PROMO REFERRAL */}
+        {activeTab === 'wallet' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* Banner Intro */}
+            <div className="glass-card form-section-card" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(253, 246, 236, 0.8) 100%)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+                <div>
+                  <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
+                    PROGRAM KEMITRAAN REFERRAL RESMI
+                  </span>
+                  <h2 style={{ fontSize: '26px', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
+                    Dompet Saldo Komisi & Kode Promo Klien
+                  </h2>
+                  <p style={{ color: '#515154', fontSize: '14px', maxWidth: '680px', lineHeight: 1.6 }}>
+                    Dapatkan komisi bersih <strong>15% per acara</strong> setiap kali calon pengantin menggunakan kode promo Anda. Klien Anda juga otomatis hemat <strong>10%</strong> di semua paket!
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ background: '#FFFFFF', padding: '12px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
+                    <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Level Mitra Anda</span>
+                    <strong style={{ fontSize: '14px', color: '#C27803' }}>🥈 Mitra Pro (15%)</strong>
+                  </div>
+                  <div style={{ background: '#FFFFFF', padding: '12px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
+                    <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Syarat Naik Level VIP (20%)</span>
+                    <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>{clients.length}/15 Acara</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2-Column Grid: Wallet Balance vs Referral Code */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+              {/* Card 1: Dompet Saldo */}
+              <div className="glass-card" style={{ padding: '28px', borderRadius: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <span className="font-mono-film" style={{ color: '#86868B', fontSize: '11px' }}>
+                      SALDO KOMISI AKTIF
+                    </span>
+                    <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '3px 10px', borderRadius: '999px', fontWeight: 600 }}>
+                      ✓ Siap Dicairkan
+                    </span>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '36px', fontWeight: 800, color: '#1D1D1F', letterSpacing: '-0.02em', margin: '0 0 4px 0' }}>
+                      Rp {walletBalance.toLocaleString('id-ID')}
+                    </h3>
+                    <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: 0 }}>
+                      Total komisi terkumpul sejauh ini: <strong>Rp {totalEarnings.toLocaleString('id-ID')}</strong>
+                    </p>
+                  </div>
+
+                  <div style={{ background: '#FBFBFA', borderRadius: '14px', padding: '12px 14px', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '20px', fontSize: '12px', color: '#515154' }}>
+                    Rekening Pencairan: <strong>{bankName} • {accountNumber}</strong> a/n <strong>{accountHolder}</strong>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPayoutModalOpen(true)}
+                  disabled={walletBalance < 100000}
+                  className="btn-apple-black"
+                  style={{ width: '100%', padding: '12px', fontSize: '13.5px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: walletBalance >= 100000 ? 'pointer' : 'not-allowed', opacity: walletBalance >= 100000 ? 1 : 0.6 }}
+                >
+                  <CreditCard size={16} />
+                  <span>Ajukan Penarikan Saldo (Payout)</span>
+                </button>
+              </div>
+
+              {/* Card 2: Kode Voucher Klien */}
+              <div className="glass-card" style={{ padding: '28px', borderRadius: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                    <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
+                      KODE PROMO KLIEN SAYA
+                    </span>
+                    <span style={{ fontSize: '11px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', padding: '3px 10px', borderRadius: '999px', fontWeight: 600 }}>
+                      Diskon 10% untuk Klien
+                    </span>
+                  </div>
+
+                  <div style={{ background: '#FFFDF9', border: '2px dashed #C27803', borderRadius: '18px', padding: '16px', textAlign: 'center', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#86868B', display: 'block', marginBottom: '4px' }}>
+                      KODE VOUCHER KEMITRAAN ANDA:
+                    </span>
+                    <strong style={{ fontFamily: 'var(--font-mono)', fontSize: '28px', letterSpacing: '3px', color: '#C27803', display: 'block' }}>
+                      {referralCode}
+                    </strong>
+                  </div>
+
+                  <p style={{ fontSize: '12.5px', color: '#515154', lineHeight: 1.5, margin: '0 0 16px' }}>
+                    Bagikan kode promo ini ke calon pengantin Anda. Saat mereka checkout, mereka hemat 10% dan Anda otomatis mendapatkan komisi 15% dari nilai paket.
+                  </p>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={handleCopyReferralCode}
+                    className="glass-pill"
+                    style={{ padding: '10px', fontSize: '12.5px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                  >
+                    {copiedReferral ? <Check size={14} color="#C27803" /> : <Copy size={14} />}
+                    <span>{copiedReferral ? 'Kode Tersalin!' : 'Salin Kode'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyReferralLink}
+                    className="glass-pill"
+                    style={{ padding: '10px', fontSize: '12.5px', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', borderColor: 'rgba(194, 120, 3, 0.4)', color: '#C27803' }}
+                  >
+                    {copiedLink ? <Check size={14} color="#C27803" /> : <Share2 size={14} />}
+                    <span>{copiedLink ? 'Link Tersalin!' : 'Salin Link Promo'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Riwayat Transaksi Referral & Komisi */}
+            <div className="glass-card form-section-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                    Riwayat Komisi dari Klien Pengantin
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#6E6E73', margin: '4px 0 0' }}>
+                    Daftar klien yang menggunakan kode voucher Anda dan komisi yang Anda hasilkan.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', color: '#86868B', fontSize: '11px', textTransform: 'uppercase' }}>
+                      <th style={{ padding: '10px 12px' }}>No. Invoice</th>
+                      <th style={{ padding: '10px 12px' }}>Klien & Acara</th>
+                      <th style={{ padding: '10px 12px' }}>Paket Acara</th>
+                      <th style={{ padding: '10px 12px' }}>Tanggal Acara</th>
+                      <th style={{ padding: '10px 12px' }}>Pembayaran Klien</th>
+                      <th style={{ padding: '10px 12px', color: '#C27803' }}>Komisi Anda (15%)</th>
+                      <th style={{ padding: '10px 12px', textAlign: 'right' }}>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {referralHistory.map((item) => (
+                      <tr key={item.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                        <td style={{ padding: '14px 12px', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                          {item.invoiceNumber}
+                        </td>
+                        <td style={{ padding: '14px 12px' }}>
+                          <strong style={{ color: '#1D1D1F' }}>{item.clientName}</strong>
+                        </td>
+                        <td style={{ padding: '14px 12px', color: '#515154' }}>
+                          {item.tierName}
+                        </td>
+                        <td style={{ padding: '14px 12px', color: '#6E6E73' }}>
+                          {item.date}
+                        </td>
+                        <td style={{ padding: '14px 12px' }}>
+                          Rp {item.totalPaid.toLocaleString('id-ID')}
+                        </td>
+                        <td style={{ padding: '14px 12px', fontWeight: 700, color: '#10B981' }}>
+                          +Rp {item.commissionAmount.toLocaleString('id-ID')}
+                        </td>
+                        <td style={{ padding: '14px 12px', textAlign: 'right' }}>
+                          <Link
+                            href={`/invoice/${item.invoiceNumber}`}
+                            target="_blank"
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              padding: '5px 12px',
+                              borderRadius: '999px',
+                              background: 'rgba(0,0,0,0.04)',
+                              border: '1px solid rgba(0,0,0,0.08)',
+                              color: '#1D1D1F',
+                              fontSize: '12px',
+                              textDecoration: 'none',
+                              fontWeight: 500
+                            }}
+                          >
+                            <span>Lihat Invoice</span>
+                            <ExternalLink size={12} />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* TAB: PAKET GROSIR & CUSTOM CALCULATOR */}
         {activeTab === 'wholesale' && (
@@ -1279,6 +1583,11 @@ export default function VendorPortalPage() {
                 </div>
 
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <Link href={`/invoice/${c.id}`} target="_blank" className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                    <FileText size={13} />
+                    <span>Invoice Resmi</span>
+                  </Link>
+
                   <Link href={`/event/${c.id}`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
                     Galeri Album
                   </Link>
@@ -1419,6 +1728,115 @@ export default function VendorPortalPage() {
         amount={pendingPaymentData?.amount || 1120000}
         isSimulation={pendingPaymentData?.isSimulation}
       />
+
+      {/* Payout Request Modal */}
+      {payoutModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.65)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px'
+        }}>
+          <div className="glass-card" style={{
+            maxWidth: '460px',
+            width: '100%',
+            backgroundColor: '#FFFFFF',
+            borderRadius: '24px',
+            padding: '32px 28px',
+            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.25)',
+            border: '1px solid rgba(0, 0, 0, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <CreditCard size={20} />
+              </div>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#1D1D1F' }}>
+                  Tarik Saldo Komisi
+                </h3>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>
+                  Saldo Tersedia: Rp {walletBalance.toLocaleString('id-ID')}
+                </span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#515154', lineHeight: 1.5, marginBottom: '20px' }}>
+              Dana komisi akan ditransfer langsung ke rekening bank terdaftar Anda melalui jaringan kliring BI-FAST resmi dalam 1x24 jam kerja.
+            </p>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
+                Nominal Penarikan (Minimal Rp 100.000)
+              </label>
+              <div style={{ position: 'relative' }}>
+                <span style={{ position: 'absolute', left: '14px', top: '50%', transform: 'translateY(-50%)', fontWeight: 700, color: '#86868B', fontSize: '14px' }}>
+                  Rp
+                </span>
+                <input
+                  type="number"
+                  value={payoutAmount}
+                  onChange={(e) => setPayoutAmount(Number(e.target.value))}
+                  min={100000}
+                  max={walletBalance}
+                  style={{
+                    width: '100%',
+                    padding: '12px 14px 12px 42px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(0,0,0,0.15)',
+                    fontSize: '15px',
+                    fontWeight: 700,
+                    outline: 'none'
+                  }}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setPayoutAmount(walletBalance)}
+                  style={{ fontSize: '11px', background: 'none', border: 'none', color: '#C27803', cursor: 'pointer', padding: 0, fontWeight: 600 }}
+                >
+                  Tarik Seluruh Saldo (Rp {walletBalance.toLocaleString('id-ID')})
+                </button>
+              </div>
+            </div>
+
+            <div style={{ background: '#FBFBFA', borderRadius: '14px', padding: '14px', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '24px', fontSize: '12.5px', color: '#515154' }}>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#86868B', display: 'block', marginBottom: '4px' }}>
+                REKENING BANK TUJUAN:
+              </span>
+              <strong>{bankName} • {accountNumber}</strong><br />
+              Atas Nama: <strong>{accountHolder}</strong>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setPayoutModalOpen(false)}
+                disabled={isRequestingPayout}
+                className="glass-pill"
+                style={{ padding: '11px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'center' }}
+              >
+                Batal
+              </button>
+
+              <button
+                type="button"
+                onClick={handleRequestPayout}
+                disabled={isRequestingPayout || payoutAmount < 100000 || payoutAmount > walletBalance}
+                className="btn-apple-black"
+                style={{ padding: '11px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'center' }}
+              >
+                {isRequestingPayout ? 'Memproses...' : 'Konfirmasi Tarik'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

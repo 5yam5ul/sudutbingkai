@@ -777,6 +777,35 @@ export default function EventDashboardPage() {
                 <span><strong>{photos.length}</strong> Momen Terabadikan</span>
               </div>
 
+              {event?.vendorName && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '5px 12px 5px 6px',
+                    borderRadius: '999px',
+                    background: 'rgba(255, 255, 255, 0.14)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.22)',
+                    color: '#FFFFFF',
+                    fontSize: '11.5px',
+                    fontWeight: 500
+                  }}
+                >
+                  {event.vendorLogo ? (
+                    <img
+                      src={event.vendorLogo}
+                      alt={event.vendorName}
+                      style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'contain', background: '#FFFFFF' }}
+                    />
+                  ) : (
+                    <span>✨</span>
+                  )}
+                  <span>WO: <strong style={{ color: '#FCD34D' }}>{event.vendorName}</strong></span>
+                </div>
+              )}
+
               {voiceNotes.length > 0 && (
                 <div
                   style={{

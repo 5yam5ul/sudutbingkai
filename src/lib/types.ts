@@ -191,6 +191,15 @@ export interface EventData {
   vendorName?: string;
   vendorLogo?: string;
   vendorInstagram?: string;
+  referralCodeUsed?: string;
+  commissionAmount?: number;
+  commissionStatus?: 'pending' | 'available' | 'withdrawn';
+  vendorCoBranding?: {
+    showLogoOnPrint?: boolean;
+    showLogoOnLive?: boolean;
+    showLogoOnGallery?: boolean;
+    showLogoOnFrame?: boolean;
+  };
 }
 
 export interface PhotoRecord {
@@ -208,6 +217,14 @@ export interface PhotoRecord {
   voiceNoteUrl?: string;
 }
 
+export type PartnerTier = 'regular' | 'pro' | 'vip';
+
+export interface PartnerBankAccount {
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+}
+
 export interface UserAccount {
   id: string;
   name: string;
@@ -218,5 +235,48 @@ export interface UserAccount {
   instagram?: string;
   logoUrl?: string;
   tier?: 'starter' | 'pro' | 'agency';
+  partnerTier?: PartnerTier;
+  referralCode?: string;
+  walletBalance?: number;
+  totalEarnings?: number;
+  bankAccount?: PartnerBankAccount;
+  eventQuotaTokens?: Record<string, number>;
   clientCount?: number;
+}
+
+export interface InvoiceRecord {
+  id: string;
+  invoiceNumber: string; // INV/SB/2026/02/0001
+  eventId?: string;
+  orderId: string;
+  buyerType: 'client' | 'vendor';
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone?: string;
+  companyName?: string;
+  tierId: EventPackageTier;
+  tierName: string;
+  originalPrice: number;
+  discountAmount: number;
+  discountCode?: string;
+  finalAmount: number;
+  paymentMethod: string; // 'qris' | 'va' | 'cc' | 'partner_token' | 'manual'
+  status: 'pending' | 'paid' | 'cancelled';
+  paidAt?: string;
+  createdAt: string;
+}
+
+export interface PayoutRequest {
+  id: string;
+  vendorId: string;
+  vendorEmail: string;
+  vendorName: string;
+  companyName?: string;
+  amount: number;
+  bankDetails: PartnerBankAccount;
+  status: 'pending' | 'approved' | 'rejected';
+  proofUrl?: string;
+  notes?: string;
+  requestedAt: string;
+  processedAt?: string;
 }

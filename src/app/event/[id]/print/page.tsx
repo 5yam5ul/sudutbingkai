@@ -300,10 +300,24 @@ export default function PrintTableCardPage() {
             color: ts.mutedColor,
             letterSpacing: '0.03em',
             borderTop: `1px solid ${ts.dividerColor}`,
-            paddingTop: '12px'
+            paddingTop: '12px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '3px'
           }}
         >
-          {customFooter}
+          {(event?.vendorName || eventId === 'wedding-sarah-dimas') && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '2px' }}>
+              {(event?.vendorLogo || eventId === 'wedding-sarah-dimas') && (
+                <span style={{ fontSize: '11px' }}>🏢</span>
+              )}
+              <span style={{ fontWeight: 700, color: ts.textColor, fontSize: format === 'mini' ? '9.5px' : '11px', letterSpacing: '0.5px' }}>
+                Organized with love by {event?.vendorName || 'Vows & Co. Wedding Planner'}
+              </span>
+            </div>
+          )}
+          <span>{customFooter}</span>
         </div>
       </div>
     </div>
