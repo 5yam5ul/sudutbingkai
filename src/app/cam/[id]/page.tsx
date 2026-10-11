@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  Zap, RotateCcw, ArrowLeft, ArrowRight, Camera, QrCode as QrIcon, 
+  Zap, ZapOff, RotateCcw, ArrowLeft, ArrowRight, Camera, QrCode as QrIcon, 
   Check, Eye, Download, X, Heart, MessageSquare, CheckCircle2, Film,
   Share2, Sparkles, Layers, Mic, MicOff, Play, Square, WifiOff,
   Image as ImageIcon, AlertTriangle, Upload, Trash2
@@ -48,7 +48,7 @@ export default function GuestCameraPage() {
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
   
   // Point 3: Flash modes: 'screen' (white screen strobe) | 'torch' (LED back hardware light) | 'off'
-  const [flashMode, setFlashMode] = useState<'screen' | 'torch' | 'off'>('screen');
+  const [flashMode, setFlashMode] = useState<'screen' | 'torch' | 'off'>('off');
   
   // Point 8: Multi-Aspect Ratio: '3:4' | '1:1' | '9:16'
   const [aspectRatio, setAspectRatio] = useState<'3:4' | '1:1' | '9:16'>('3:4');
@@ -286,10 +286,36 @@ export default function GuestCameraPage() {
     }
     return () => {
       if (streamRef.current) {
+        try {
+          const track = streamRef.current.getVideoTracks()[0];
+          // @ts-ignore
+          track?.applyConstraints?.({ advanced: [{ torch: false }] }).catch(() => {});
+        } catch {}
         streamRef.current.getTracks().forEach(t => t.stop());
       }
     };
   }, [hasEnteredName, facingMode]);
+
+  // Hardware Torch Control (Physical LED Flashlight on Back Camera)
+  const setHardwareTorch = async (enabled: boolean): Promise<boolean> => {
+    if (!streamRef.current || facingMode !== 'environment') return false;
+    try {
+      const track = streamRef.current.getVideoTracks()[0];
+      if (!track) return false;
+      // @ts-ignore
+      const capabilities = track.getCapabilities?.();
+      // @ts-ignore
+      if (capabilities?.torch) {
+        // @ts-ignore
+        await track.applyConstraints({ advanced: [{ torch: enabled }] });
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('Hardware torch error:', err);
+      return false;
+    }
+  };
 
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -302,8 +328,13 @@ export default function GuestCameraPage() {
     toast.success(`Selamat datang, ${guestName.trim()}! Kamera siap digunakan.`);
   };
 
-  const flipCamera = () => {
+  const flipCamera = async () => {
     hapticToggle();
+    if (flashMode === 'torch') {
+      await setHardwareTorch(false);
+      setFlashMode('screen');
+      toast.info('Kamera depan: dialihkan ke Flash Layar');
+    }
     setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
   };
 
@@ -315,12 +346,34 @@ export default function GuestCameraPage() {
     else setAspectRatio('3:4');
   };
 
-  // Point 3: Cycle Flash Modes
-  const cycleFlashMode = () => {
+  // Point 3: Cycle Flash Modes (Hardware Torch LED -> Screen Flash -> Off)
+  const cycleFlashMode = async () => {
     hapticDoubleTick();
-    if (flashMode === 'screen') setFlashMode('torch');
-    else if (flashMode === 'torch') setFlashMode('off');
-    else setFlashMode('screen');
+    if (flashMode === 'off') {
+      // 1. Try Hardware Torch LED on Back Camera first
+      if (facingMode === 'environment') {
+        const torchActive = await setHardwareTorch(true);
+        if (torchActive) {
+          setFlashMode('torch');
+          toast.success('🔦 Senter LED Kamera Menyala');
+          return;
+        }
+      }
+      // If hardware torch is not supported (e.g. iOS Safari WebRTC or front camera)
+      await setHardwareTorch(false);
+      setFlashMode('screen');
+      toast.info('⚡ Flash Layar Aktif (Kilat putih saat jepret)');
+    } else if (flashMode === 'torch') {
+      // 2. Switch from Hardware Torch to Screen Flash
+      await setHardwareTorch(false);
+      setFlashMode('screen');
+      toast.info('⚡ Flash Layar Aktif (Kilat putih saat jepret)');
+    } else {
+      // 3. Turn off flash
+      await setHardwareTorch(false);
+      setFlashMode('off');
+      toast.info('Flash Dimatikan');
+    }
   };
 
   // Core Image Processing & Cloud/Offline Roll Sync
@@ -548,31 +601,17 @@ export default function GuestCameraPage() {
   const takePhoto = async () => {
     if (isCapturing || !videoRef.current || shotCount >= maxShots) return;
 
-    // Point 3: Flash handling (Hardware Torch or Screen flash)
-    if (flashMode === 'torch' && streamRef.current && facingMode === 'environment') {
-      try {
-        const track = streamRef.current.getVideoTracks()[0];
-        // @ts-ignore
-        const capabilities = track.getCapabilities?.();
-        // @ts-ignore
-        if (capabilities?.torch) {
-          // @ts-ignore
-          await track.applyConstraints({ advanced: [{ torch: true }] });
-          setTimeout(() => {
-            // @ts-ignore
-            track.applyConstraints({ advanced: [{ torch: false }] });
-          }, 350);
-        } else {
-          setFlashTrigger(true);
-          setTimeout(() => setFlashTrigger(false), 220);
-        }
-      } catch {
-        setFlashTrigger(true);
-        setTimeout(() => setFlashTrigger(false), 220);
-      }
-    } else if (flashMode === 'screen') {
+    // Point 3: Flash handling (Hardware Torch or Screen Flash Strobe)
+    if (flashMode === 'screen') {
       setFlashTrigger(true);
-      setTimeout(() => setFlashTrigger(false), 220);
+      setTimeout(() => setFlashTrigger(false), 250);
+    } else if (flashMode === 'torch') {
+      if (facingMode === 'environment') {
+        await setHardwareTorch(true);
+      } else {
+        setFlashTrigger(true);
+        setTimeout(() => setFlashTrigger(false), 250);
+      }
     }
 
     // Hardware ImageCapture Still API:
@@ -816,8 +855,14 @@ export default function GuestCameraPage() {
         <button
           onClick={cycleFlashMode}
           style={{
-            background: flashMode !== 'off' ? 'rgba(194, 120, 3, 0.9)' : 'rgba(255, 255, 255, 0.1)',
-            border: flashMode !== 'off' ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.18)',
+            background: flashMode === 'torch'
+              ? '#F59E0B'
+              : flashMode === 'screen'
+                ? 'rgba(245, 158, 11, 0.25)'
+                : 'rgba(255, 255, 255, 0.08)',
+            border: flashMode !== 'off'
+              ? '1.5px solid #F59E0B'
+              : '1px solid rgba(255, 255, 255, 0.18)',
             width: '38px',
             height: '38px',
             borderRadius: '50%',
@@ -827,11 +872,21 @@ export default function GuestCameraPage() {
             color: '#FFFFFF',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            boxShadow: flashMode !== 'off' ? '0 0 12px rgba(245, 158, 11, 0.4)' : 'none'
+            boxShadow: flashMode === 'torch'
+              ? '0 0 16px rgba(245, 158, 11, 0.6)'
+              : flashMode === 'screen'
+                ? '0 0 10px rgba(245, 158, 11, 0.3)'
+                : 'none'
           }}
-          title={`Mode Kilat: ${flashMode.toUpperCase()}`}
+          title={flashMode === 'torch' ? 'Senter LED Kamera Aktif (Menyala)' : flashMode === 'screen' ? 'Flash Layar Aktif (Kilat saat jepret)' : 'Flash Mati'}
         >
-          <Zap size={16} fill={flashMode !== 'off' ? '#FFFFFF' : 'none'} color={flashMode !== 'off' ? '#FFF' : '#A1A1A6'} />
+          {flashMode === 'off' ? (
+            <ZapOff size={16} color="#86868B" />
+          ) : flashMode === 'torch' ? (
+            <Zap size={16} fill="#000000" color="#000000" />
+          ) : (
+            <Zap size={16} fill="#F59E0B" color="#F59E0B" />
+          )}
         </button>
 
         {/* Center Film Canister Pill */}
@@ -1055,15 +1110,14 @@ export default function GuestCameraPage() {
             </div>
           )}
 
-          {/* Shutter Flash Animation */}
+          {/* Fullscreen Shutter Flash Strobe (illuminates user's face and scene in dark rooms) */}
           {flashTrigger && (
             <div style={{
-              position: 'absolute',
+              position: 'fixed',
               inset: 0,
               background: '#ffffff',
-              zIndex: 90,
-              opacity: 0.98,
-              transition: 'opacity 0.22s ease-out'
+              zIndex: 99999,
+              pointerEvents: 'none'
             }} />
           )}
 
