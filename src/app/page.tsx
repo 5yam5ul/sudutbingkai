@@ -2,17 +2,34 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Play, Camera, Check, ChevronDown, ChevronRight, Tv, Shield, Download, QrCode, Menu, X, Mic } from 'lucide-react';
+import { ArrowRight, Play, Camera, Check, ChevronDown, ChevronRight, Tv, Shield, Download, QrCode, Menu, X, Mic, LogOut, Star } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
-import { FilmPresetId } from '@/lib/types';
+import { FilmPresetId, UserAccount } from '@/lib/types';
+import { getClientSession, clearClientSession } from '@/lib/auth';
+import { toast } from 'sonner';
+
+const CURATED_PARTNERS = [
+  { name: 'Vows & Co. Wedding Planner', city: 'Jakarta Selatan', instagram: '@vowsandco.wo', logo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80' },
+  { name: 'Merajut Kisah Organizer', city: 'Bandung', instagram: '@merajutkisah.wo', logo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80' },
+  { name: 'Kirana Signature Wedding', city: 'Denpasar & Ubud, Bali', instagram: '@kiranaweddingbali', logo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80' },
+  { name: 'Cerita Kita Planner', city: 'Surabaya', instagram: '@ceritakitaplanner', logo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=120&q=80' },
+  { name: 'Kinasih Wedding Organizer', city: 'Yogyakarta', instagram: '@kinasih.wo', logo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=120&q=80' },
+  { name: 'Janji Suci Project', city: 'Medan', instagram: '@janjisuciproject', logo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80' }
+];
 
 export default function HomePage() {
   const [activePreset, setActivePreset] = useState<FilmPresetId>('portra');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [vendors, setVendors] = useState<any[]>([]);
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    const session = getClientSession();
+    if (session) {
+      setCurrentUser(session);
+    }
+
     fetch('/api/vendors')
       .then(res => res.json())
       .then(data => {
@@ -23,18 +40,24 @@ export default function HomePage() {
       .catch(console.error);
   }, []);
 
+  const handleLogout = () => {
+    clearClientSession();
+    setCurrentUser(null);
+    toast.success('Berhasil keluar dari akun.');
+  };
+
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index);
   };
 
   const pricingTiers = [
-    { name: 'Starter', price: 'Gratis', originalPrice: null, discountBadge: null, guests: 'Hingga 5 tamu', desc: 'Cocok untuk uji coba privat bersama keluarga dekat.', retention: '3 Hari', storage: '500 MB', popular: false, isFree: true },
-    { name: 'Mini', price: 'Rp 54.000', originalPrice: 'Rp 69.000', discountBadge: 'HEMAT 20%', guests: 'Hingga 15 tamu', desc: 'Untuk pesta kecil, intimate dinner, atau bridal shower.', retention: '7 Hari (1 Minggu)', storage: '1 GB', popular: false },
-    { name: 'Small', price: 'Rp 89.000', originalPrice: 'Rp 119.000', discountBadge: 'HEMAT 25%', guests: 'Hingga 35 tamu', desc: 'Cocok untuk gathering teman satu geng atau engagement.', retention: '14 Hari (2 Minggu)', storage: '2 GB', popular: false },
-    { name: 'Party', price: 'Rp 179.000', originalPrice: 'Rp 219.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 75 tamu', desc: 'Ulang tahun, intimate wedding, atau acara kantor.', retention: '30 Hari (1 Bulan)', storage: '5 GB', popular: false },
-    { name: 'Event', price: 'Rp 269.000', originalPrice: 'Rp 329.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 150 tamu', desc: 'Resepsi pernikahan sedang atau reuni akbar.', retention: '45 Hari (1.5 Bulan)', storage: '10 GB', popular: false },
-    { name: 'Wedding', price: 'Rp 499.000', originalPrice: 'Rp 599.000', discountBadge: 'HEMAT 17%', guests: 'Hingga 300 tamu', desc: 'Pilihan paling populer untuk pesta pernikahan lengkap.', retention: '60 Hari (2 Bulan)', storage: '20 GB Cloud Storage', popular: true },
-    { name: 'Unlimited', price: 'Rp 999.000', originalPrice: 'Rp 1.199.000', discountBadge: 'HEMAT 17%', guests: 'Tamu tanpa batas', desc: 'Festival, konser, atau wedding akbar ribuan tamu.', retention: '90 Hari (3 Bulan)', storage: '40 GB Cloud Storage', popular: false }
+    { name: 'Starter', price: 'Gratis', originalPrice: null, discountBadge: null, guests: 'Hingga 5 tamu', desc: 'Cocok untuk uji coba privat bersama keluarga dekat.', retention: '3 Hari', storage: '500 MB', shotsPerGuest: '10 foto / tamu', popular: false, isFree: true },
+    { name: 'Mini', price: 'Rp 54.000', originalPrice: 'Rp 69.000', discountBadge: 'HEMAT 20%', guests: 'Hingga 15 tamu', desc: 'Untuk pesta kecil, intimate dinner, atau bridal shower.', retention: '7 Hari (1 Minggu)', storage: '1 GB', shotsPerGuest: '15 foto / tamu', popular: false },
+    { name: 'Small', price: 'Rp 89.000', originalPrice: 'Rp 119.000', discountBadge: 'HEMAT 25%', guests: 'Hingga 35 tamu', desc: 'Cocok untuk gathering teman satu geng atau engagement.', retention: '14 Hari (2 Minggu)', storage: '2 GB', shotsPerGuest: '20 foto / tamu', popular: false },
+    { name: 'Party', price: 'Rp 179.000', originalPrice: 'Rp 219.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 75 tamu', desc: 'Ulang tahun, intimate wedding, atau acara kantor.', retention: '30 Hari (1 Bulan)', storage: '5 GB', shotsPerGuest: '25 foto / tamu', popular: false },
+    { name: 'Event', price: 'Rp 269.000', originalPrice: 'Rp 329.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 150 tamu', desc: 'Resepsi pernikahan sedang atau reuni akbar.', retention: '45 Hari (1.5 Bulan)', storage: '10 GB', shotsPerGuest: '30 foto / tamu', popular: false },
+    { name: 'Wedding', price: 'Rp 499.000', originalPrice: 'Rp 599.000', discountBadge: 'HEMAT 17%', guests: 'Hingga 300 tamu', desc: 'Pilihan paling populer untuk pesta pernikahan lengkap.', retention: '60 Hari (2 Bulan)', storage: '20 GB Cloud Storage', shotsPerGuest: '36 foto / tamu (1 Roll Film)', popular: true },
+    { name: 'Unlimited', price: 'Rp 999.000', originalPrice: 'Rp 1.199.000', discountBadge: 'HEMAT 17%', guests: 'Tamu tanpa batas', desc: 'Festival, konser, atau wedding akbar ribuan tamu.', retention: '90 Hari (3 Bulan)', storage: '40 GB Cloud Storage', shotsPerGuest: '99 foto / tamu (Tanpa Batas)', popular: false }
   ];
 
   const faqs = [
@@ -148,9 +171,50 @@ export default function HomePage() {
 
           {/* Right Action Buttons */}
           <div className="desktop-nav-actions">
-            <Link href="/login" className="action-desktop-only" style={{ color: '#1D1D1F', textDecoration: 'none', fontSize: '13px', fontWeight: 500, padding: '7px 12px' }}>
-              Masuk
-            </Link>
+            {currentUser ? (
+              <div className="action-desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Link 
+                  href={currentUser.role === 'vendor' ? '/vendor' : '/dashboard'} 
+                  className="glass-pill"
+                  style={{ 
+                    padding: '7px 14px', 
+                    fontSize: '12.5px', 
+                    fontWeight: 600, 
+                    color: '#1D1D1F',
+                    textDecoration: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: 'rgba(194, 120, 3, 0.08)',
+                    borderColor: 'rgba(194, 120, 3, 0.25)'
+                  }}
+                >
+                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981' }} />
+                  <span>Dashboard ({currentUser.role === 'vendor' ? 'Mitra' : 'Pengantin'})</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  title="Keluar / Logout"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#86868B',
+                    padding: '6px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '50%'
+                  }}
+                >
+                  <LogOut size={16} />
+                </button>
+              </div>
+            ) : (
+              <Link href="/login" className="action-desktop-only" style={{ color: '#1D1D1F', textDecoration: 'none', fontSize: '13px', fontWeight: 500, padding: '7px 12px' }}>
+                Masuk
+              </Link>
+            )}
             <Link href="/cam/demo" className="glass-pill action-desktop-only" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
               Coba Kamera
             </Link>
@@ -211,13 +275,40 @@ export default function HomePage() {
             >
               Program Kemitraan WO
             </Link>
-            <Link 
-              href="/login" 
-              onClick={() => setMobileMenuOpen(false)}
-              style={{ color: '#515154', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '6px 0' }}
-            >
-              Masuk ke Acara Saya
-            </Link>
+            
+            {currentUser ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', paddingTop: '4px' }}>
+                <div style={{ padding: '12px 14px', borderRadius: '16px', background: 'rgba(194, 120, 3, 0.08)', border: '1px solid rgba(194, 120, 3, 0.2)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Sudah Masuk ({currentUser.role === 'vendor' ? 'Mitra WO' : 'Host'}):</span>
+                    <strong style={{ fontSize: '13.5px', color: '#1D1D1F' }}>{currentUser.name}</strong>
+                  </div>
+                  <button 
+                    onClick={handleLogout} 
+                    style={{ border: 'none', background: 'none', color: '#EF4444', fontSize: '12px', fontWeight: 600, cursor: 'pointer', padding: '4px 8px' }}
+                  >
+                    Keluar
+                  </button>
+                </div>
+                <Link 
+                  href={currentUser.role === 'vendor' ? '/vendor' : '/dashboard'} 
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="btn-apple-black" 
+                  style={{ padding: '12px', fontSize: '13.5px', textAlign: 'center', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                >
+                  <span>Buka Dashboard Saya</span>
+                  <ArrowRight size={14} />
+                </Link>
+              </div>
+            ) : (
+              <Link 
+                href="/login" 
+                onClick={() => setMobileMenuOpen(false)}
+                style={{ color: '#515154', textDecoration: 'none', fontSize: '14px', fontWeight: 500, padding: '6px 0' }}
+              >
+                Masuk ke Acara Saya
+              </Link>
+            )}
             <div style={{ display: 'flex', gap: '10px', paddingTop: '6px' }}>
               <Link 
                 href="/cam/demo" 
@@ -782,34 +873,63 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Existing verified vendors row (if any exist in DB) */}
-        {vendors.length > 0 && (
-          <div className="responsive-partners-row" style={{ marginBottom: '28px' }}>
-            {vendors.map((v: any) => (
-              <div key={v.id} className="glass-card" style={{
-                borderRadius: '16px',
-                padding: '10px 18px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                background: 'rgba(255, 255, 255, 0.85)',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
-              }}>
-                {v.logoUrl && (
-                  <img
-                    src={v.logoUrl}
-                    alt={v.name}
-                    style={{ width: '32px', height: '32px', borderRadius: '10px', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.06)' }}
-                  />
-                )}
-                <div style={{ textAlign: 'left' }}>
-                  <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>{v.name}</strong>
-                  <span style={{ fontSize: '11px', color: '#86868B' }}>{v.city} • {v.instagram}</span>
-                </div>
-              </div>
-            ))}
+        {/* Auto-Scrolling Infinite Vendor Marquee Slider */}
+        <div style={{ margin: '36px 0 28px' }}>
+          <div style={{ textAlign: 'center', marginBottom: '18px' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: '#86868B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+              Dipercaya oleh Komunitas Wedding Organizer & Event Planner Indonesia
+            </span>
           </div>
-        )}
+
+          <div className="vendor-marquee-container">
+            <div className="vendor-marquee-track">
+              {/* Double loop of curated + dynamic partners for infinite continuous smooth scroll */}
+              {[
+                ...CURATED_PARTNERS,
+                ...(vendors || []).map((v: any) => ({
+                  name: v.name,
+                  city: v.city || 'Indonesia',
+                  instagram: v.instagram || '@vendor',
+                  logo: v.logoUrl
+                })),
+                ...CURATED_PARTNERS,
+                ...(vendors || []).map((v: any) => ({
+                  name: v.name,
+                  city: v.city || 'Indonesia',
+                  instagram: v.instagram || '@vendor',
+                  logo: v.logoUrl
+                }))
+              ].map((v: any, idx: number) => (
+                <div
+                  key={`${v.name}-${idx}`}
+                  className="glass-card"
+                  style={{
+                    borderRadius: '16px',
+                    padding: '12px 20px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    background: 'rgba(255, 255, 255, 0.92)',
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    flexShrink: 0,
+                    minWidth: '250px'
+                  }}
+                >
+                  <img
+                    src={v.logoUrl || v.logo || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80'}
+                    alt={v.name}
+                    style={{ width: '38px', height: '38px', borderRadius: '10px', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.08)' }}
+                  />
+                  <div style={{ textAlign: 'left' }}>
+                    <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', whiteSpace: 'nowrap' }}>{v.name}</strong>
+                    <span style={{ fontSize: '11px', color: '#86868B', whiteSpace: 'nowrap' }}>{v.city} • {v.instagram}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
 
         {/* Call to action for agencies */}
         <div style={{ display: 'inline-block' }}>
@@ -1044,6 +1164,10 @@ export default function HomePage() {
                 <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.07)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '9px', fontSize: '12.5px', color: '#515154', marginBottom: '28px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={14} color="#C27803" />
+                    <span>Jatah Foto: <strong>{tier.shotsPerGuest}</strong></span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Check size={14} color="#C27803" />
                     <span>Masa Simpan: <strong>{tier.retention}</strong></span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1060,7 +1184,7 @@ export default function HomePage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={14} color="#C27803" />
-                    <span>Cetak kartu meja QR</span>
+                    <span>Cetak QR Meja Tamu</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={14} color="#C27803" />
@@ -1078,6 +1202,194 @@ export default function HomePage() {
               </Link>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* TESTIMONIALS SECTION (Warm, Humanist & Authentic Indonesian Stories) */}
+      <section style={{ padding: '80px 24px 100px', maxWidth: '1100px', margin: '0 auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: '56px' }}>
+          <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '10px' }}>
+            CERITA & KESAN TULUS
+          </span>
+          <h2 className="font-display-serif" style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)', fontWeight: 700, color: '#1D1D1F' }}>
+            Tawa spontan yang tak sempat tertangkap lensa resmi.
+          </h2>
+          <p style={{ color: '#6E6E73', fontSize: '15px', maxWidth: '620px', margin: '14px auto 0', lineHeight: 1.6 }}>
+            Dari riuhnya meja tamu resepsi, serunya pesta ulang tahun teman sekelas, hingga hangatnya gathering kantor — inilah momen candid yang direkam langsung dari sudut pandang para tamu.
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '28px' }}>
+          {/* Testimonial 1: Wedding */}
+          <div className="glass-card" style={{
+            borderRadius: '24px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'rgba(255, 255, 255, 0.9)',
+            border: '1px solid rgba(0, 0, 0, 0.07)',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ position: 'relative', width: '100%', height: '230px', overflow: 'hidden' }}>
+              <img
+                src="/images/testimonials/wedding.jpg"
+                alt="Sarah & Dimas Wedding Reception"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div style={{
+                position: 'absolute',
+                top: '14px',
+                left: '14px',
+                background: 'rgba(18, 17, 15, 0.75)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '999px',
+                padding: '4px 12px',
+                color: '#F59E0B',
+                fontSize: '11px',
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono)'
+              }}>
+                • RESEPSI PERNIKAHAN •
+              </div>
+            </div>
+
+            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', gap: '3px', marginBottom: '12px' }}>
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={15} fill="#C27803" color="#C27803" />
+                  ))}
+                </div>
+                <p style={{ color: '#333336', fontSize: '13.5px', lineHeight: 1.65, fontStyle: 'italic', marginBottom: '18px' }}>
+                  &ldquo;Awalnya deg-degan takut kartu barcode di meja cuma dianggurin sama tamu. Ternyata pas acara mulai, meja anak-anak muda sama temen kuliah malah heboh gantian foto-foto candid lucu yang fotografer resmi kita gak sempet tangkap. Pas malemnya kita buka roll fotonya bareng di kamar hotel, ketawa ngakak sampe nangis liat ekspresi random mereka. Worth it banget!&rdquo;
+                </p>
+              </div>
+
+              <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>Sarah & Dimas</strong>
+                  <span style={{ fontSize: '12px', color: '#86868B' }}>Plataran Cilandak, Jakarta Selatan</span>
+                </div>
+                <span style={{ fontSize: '11px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                  Host Terverifikasi
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Testimonial 2: Birthday */}
+          <div className="glass-card" style={{
+            borderRadius: '24px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'rgba(255, 255, 255, 0.9)',
+            border: '1px solid rgba(0, 0, 0, 0.07)',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ position: 'relative', width: '100%', height: '230px', overflow: 'hidden' }}>
+              <img
+                src="/images/testimonials/birthday.jpg"
+                alt="Sweet 17th Birthday Celebration"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div style={{
+                position: 'absolute',
+                top: '14px',
+                left: '14px',
+                background: 'rgba(18, 17, 15, 0.75)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '999px',
+                padding: '4px 12px',
+                color: '#F59E0B',
+                fontSize: '11px',
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono)'
+              }}>
+                • SWEET 17TH BIRTHDAY •
+              </div>
+            </div>
+
+            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', gap: '3px', marginBottom: '12px' }}>
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={15} fill="#C27803" color="#C27803" />
+                  ))}
+                </div>
+                <p style={{ color: '#333336', fontSize: '13.5px', lineHeight: 1.65, fontStyle: 'italic', marginBottom: '18px' }}>
+                  &ldquo;Temen-temen sekelas pada heboh karena vibenya kayak bawa kamera disposable beneran tapi gak ribet beli roll film. Hasil warna analognya estetik parah tanpa perlu diedit lagi, langsung pas buat feed IG. Suara wish mereka yang masuk di voice note juga bikin terharu banget pas diputer ulang.&rdquo;
+                </p>
+              </div>
+
+              <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>Clarissa & Geng SMA</strong>
+                  <span style={{ fontSize: '12px', color: '#86868B' }}>Cafe Gathering, Surabaya</span>
+                </div>
+                <span style={{ fontSize: '11px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                  Host Terverifikasi
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Testimonial 3: Company Gathering */}
+          <div className="glass-card" style={{
+            borderRadius: '24px',
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'rgba(255, 255, 255, 0.9)',
+            border: '1px solid rgba(0, 0, 0, 0.07)',
+            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.05)'
+          }}>
+            <div style={{ position: 'relative', width: '100%', height: '230px', overflow: 'hidden' }}>
+              <img
+                src="/images/testimonials/gathering.jpg"
+                alt="Corporate Annual Dinner Gathering"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div style={{
+                position: 'absolute',
+                top: '14px',
+                left: '14px',
+                background: 'rgba(18, 17, 15, 0.75)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '999px',
+                padding: '4px 12px',
+                color: '#F59E0B',
+                fontSize: '11px',
+                fontWeight: 700,
+                fontFamily: 'var(--font-mono)'
+              }}>
+                • ANNUAL COMPANY DINNER •
+              </div>
+            </div>
+
+            <div style={{ padding: '24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', gap: '3px', marginBottom: '12px' }}>
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} size={15} fill="#C27803" color="#C27803" />
+                  ))}
+                </div>
+                <p style={{ color: '#333336', fontSize: '13.5px', lineHeight: 1.65, fontStyle: 'italic', marginBottom: '18px' }}>
+                  &ldquo;Dipakai buat 120 karyawan di rooftop gathering tahunan. Biasanya orang males upload foto kantor ke drive barengan, tapi pake SudutBingkai semua meja langsung aktif jepret momen santai pas makan dan karaokean. Live slideshow di proyektor venue juga bikin suasana makin hidup dan seru.&rdquo;
+                </p>
+              </div>
+
+              <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>Rian Mahendra</strong>
+                  <span style={{ fontSize: '12px', color: '#86868B' }}>People Lead, Tech Studio SCBD</span>
+                </div>
+                <span style={{ fontSize: '11px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                  Host Terverifikasi
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 

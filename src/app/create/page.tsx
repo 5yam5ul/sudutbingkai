@@ -12,6 +12,7 @@ import { FilmPresetId, EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
 import { FrameId } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
+import { toast } from 'sonner';
 
 function CreateEventForm() {
   const router = useRouter();
@@ -87,13 +88,13 @@ function CreateEventForm() {
   const togglePresetAllowed = (presetId: FilmPresetId) => {
     if (allowedPresets.includes(presetId)) {
       if (allowedPresets.length <= 1) {
-        alert('Minimal harus ada 1 filter yang aktif!');
+        toast.error('Minimal harus ada 1 filter yang aktif!');
         return;
       }
       setAllowedPresets(prev => prev.filter(p => p !== presetId));
     } else {
       if (allowedPresets.length >= activeTier.maxPresets) {
-        alert(`Batas ${activeTier.name} maksimal ${activeTier.maxPresets} filter analog. Silakan upgrade paket jika ingin menambah filter.`);
+        toast.error(`Batas ${activeTier.name} maksimal ${activeTier.maxPresets} filter analog. Silakan upgrade paket jika ingin menambah filter.`);
         return;
       }
       setAllowedPresets(prev => [...prev, presetId]);
@@ -156,10 +157,10 @@ function CreateEventForm() {
       if (data.success && data.event) {
         router.push(`/event/${data.event.slug || data.event.id}`);
       } else {
-        alert('Gagal membuat acara: ' + (data.error || 'Terjadi kesalahan'));
+        toast.error('Gagal membuat acara: ' + (data.error || 'Terjadi kesalahan'));
       }
     } catch (err: unknown) {
-      alert('Error: ' + (err as Error).message);
+      toast.error('Error: ' + (err as Error).message);
     } finally {
       setLoading(false);
     }

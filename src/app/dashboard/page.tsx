@@ -9,6 +9,9 @@ import { getClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FrameId, FRAME_TEMPLATES } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
+import ConfirmModal from '@/components/ConfirmModal';
+import SkeletonLoader from '@/components/SkeletonLoader';
+import { toast } from 'sonner';
 import JSZip from 'jszip';
 
 interface VoiceNoteRecord {
@@ -33,6 +36,23 @@ export default function BrideDashboardPage() {
   const [filterTab, setFilterTab] = useState<'all' | 'visible' | 'hidden' | 'wishes'>('all');
   const [activePhoto, setActivePhoto] = useState<PhotoRecord | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Custom Glass Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmText: 'Lanjutkan',
+    variant: 'primary',
+    onConfirm: () => {}
+  });
 
   // Settings State
   const [shotsPerGuest, setShotsPerGuest] = useState(20);
@@ -156,20 +176,30 @@ export default function BrideDashboardPage() {
     }
   };
 
-  const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus foto ini secara permanen?')) return;
-    setPhotos(prev => prev.filter(p => p.id !== photoId));
-
-    try {
-      await fetch(`/api/photos?id=${photoId}`, { method: 'DELETE' });
-    } catch (err) {
-      console.error('Gagal menghapus foto:', err);
-    }
+  const handleDeletePhoto = (photoId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Foto Permanen?',
+      description: 'Foto ini akan dihapus dari album dan tidak dapat dipulihkan kembali.',
+      confirmText: 'Hapus Foto',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setPhotos(prev => prev.filter(p => p.id !== photoId));
+        if (activePhoto?.id === photoId) setActivePhoto(null);
+        toast.success('Foto berhasil dihapus.');
+        try {
+          await fetch(`/api/photos?id=${photoId}`, { method: 'DELETE' });
+        } catch (err) {
+          console.error('Gagal menghapus foto:', err);
+        }
+      }
+    });
   };
 
   const downloadAllPhotosAsZip = async () => {
     if (photos.length === 0) {
-      alert('Belum ada foto yang diambil oleh tamu.');
+      toast.info('Belum ada foto yang diambil oleh tamu.');
       return;
     }
     setIsZipping(true);
@@ -217,22 +247,33 @@ export default function BrideDashboardPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
+      toast.success('File ZIP berhasil diunduh!');
     } catch (err: unknown) {
-      alert('Gagal membuat file ZIP: ' + (err as Error).message);
+      toast.error('Gagal membuat file ZIP: ' + (err as Error).message);
     } finally {
       setIsZipping(false);
       setZipProgress('');
     }
   };
 
-  const handleDeleteVoiceNote = async (noteId: string) => {
-    if (!confirm('Apakah Anda yakin ingin menghapus pesan suara ini?')) return;
-    setVoiceNotes(prev => prev.filter(n => n.id !== noteId));
-    try {
-      await fetch(`/api/voice-notes?id=${noteId}`, { method: 'DELETE' });
-    } catch (err) {
-      console.error('Gagal menghapus pesan suara:', err);
-    }
+  const handleDeleteVoiceNote = (noteId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Pesan Suara?',
+      description: 'Pesan suara dari tamu ini akan dihapus dari arsip kenangan Anda.',
+      confirmText: 'Hapus Suara',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setVoiceNotes(prev => prev.filter(n => n.id !== noteId));
+        toast.success('Pesan suara berhasil dihapus.');
+        try {
+          await fetch(`/api/voice-notes?id=${noteId}`, { method: 'DELETE' });
+        } catch (err) {
+          console.error('Gagal menghapus pesan suara:', err);
+        }
+      }
+    });
   };
 
   const handleSaveSettings = async () => {
@@ -262,12 +303,13 @@ export default function BrideDashboardPage() {
       if (data.success && data.event) {
         setEvent(data.event);
         setSaveSuccess(true);
+        toast.success('Pengaturan album berhasil disimpan!');
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
-        alert('Gagal menyimpan: ' + (data.error || 'Terjadi kesalahan'));
+        toast.error('Gagal menyimpan: ' + (data.error || 'Terjadi kesalahan'));
       }
     } catch (err: unknown) {
-      alert('Error menyimpan pengaturan: ' + (err as Error).message);
+      toast.error('Error menyimpan pengaturan: ' + (err as Error).message);
     } finally {
       setIsSavingSettings(false);
     }
@@ -281,11 +323,7 @@ export default function BrideDashboardPage() {
   });
 
   if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FBFBFA' }}>
-        <RefreshCw size={32} style={{ animation: 'spin 1.5s linear infinite', color: '#C27803' }} />
-      </div>
-    );
+    return <SkeletonLoader title="Memuat Dashboard Pengantin..." subtitle="Menyiapkan rol film dan ringkasan foto tamu" />;
   }
 
   const presetInfo = event ? FILM_PRESETS[event.preset] || FILM_PRESETS.portra : FILM_PRESETS.portra;
@@ -380,7 +418,7 @@ export default function BrideDashboardPage() {
                 style={{ padding: '9px 12px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
                 <Printer size={14} />
-                <span>Kartu Meja</span>
+                <span>Cetak QR Meja Tamu</span>
               </Link>
 
               <Link
@@ -1002,7 +1040,7 @@ export default function BrideDashboardPage() {
                                 if (e.target.checked) {
                                   const maxP = PACKAGE_TIERS[packageTier]?.maxPresets || 4;
                                   if (allowedPresets.length >= maxP) {
-                                    alert(`Batas paket ${PACKAGE_TIERS[packageTier]?.name || ''} maksimal ${maxP} filter.`);
+                                    toast.error(`Batas paket ${PACKAGE_TIERS[packageTier]?.name || ''} maksimal ${maxP} filter.`);
                                     return;
                                   }
                                   setAllowedPresets([...allowedPresets, pid]);
@@ -1139,27 +1177,38 @@ export default function BrideDashboardPage() {
                         </div>
                         <button
                           type="button"
-                          onClick={async () => {
-                            if (confirm('Buka album sekarang? Semua foto tamu akan langsung dapat dilihat dan diunduh di galeri.')) {
-                              setRevealMode('instant');
-                              setRevealTime('');
-                              setIsSavingSettings(true);
-                              try {
-                                const res = await fetch('/api/events', {
-                                  method: 'PATCH',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({ id: event?.id, revealMode: 'instant', revealTime: '' })
-                                });
-                                const d = await res.json();
-                                if (d.success && d.event) {
-                                  setEvent(d.event);
-                                  setSaveSuccess(true);
-                                  setTimeout(() => setSaveSuccess(false), 3000);
+                          onClick={() => {
+                            setConfirmModal({
+                              isOpen: true,
+                              title: 'Buka Album Sekarang?',
+                              description: 'Semua foto tamu akan langsung dapat dilihat dan diunduh di galeri acara tanpa menunggu jadwal cuci roll.',
+                              confirmText: 'Buka Sekarang',
+                              variant: 'warning',
+                              onConfirm: async () => {
+                                setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                                setRevealMode('instant');
+                                setRevealTime('');
+                                setIsSavingSettings(true);
+                                try {
+                                  const res = await fetch('/api/events', {
+                                    method: 'PATCH',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ id: event?.id, revealMode: 'instant', revealTime: '' })
+                                  });
+                                  const d = await res.json();
+                                  if (d.success && d.event) {
+                                    setEvent(d.event);
+                                    setSaveSuccess(true);
+                                    toast.success('Album langsung dibuka untuk seluruh tamu!');
+                                    setTimeout(() => setSaveSuccess(false), 3000);
+                                  }
+                                } catch (e) {
+                                  toast.error('Gagal membuka album.');
+                                } finally {
+                                  setIsSavingSettings(false);
                                 }
-                              } finally {
-                                setIsSavingSettings(false);
                               }
-                            }
+                            });
                           }}
                           style={{
                             padding: '6px 12px',
@@ -1340,12 +1389,7 @@ export default function BrideDashboardPage() {
                 </a>
 
                 <button
-                  onClick={() => {
-                    if (confirm('Yakin ingin menghapus foto ini permanen?')) {
-                      handleDeletePhoto(activePhoto.id);
-                      setActivePhoto(null);
-                    }
-                  }}
+                  onClick={() => handleDeletePhoto(activePhoto.id)}
                   className="glass-pill"
                   style={{ padding: '10px', fontSize: '12px', cursor: 'pointer', color: '#E74C3C', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
                 >
@@ -1357,6 +1401,17 @@ export default function BrideDashboardPage() {
           </div>
         )}
       </main>
+
+      {/* Sleek Custom Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        confirmText={confirmModal.confirmText}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

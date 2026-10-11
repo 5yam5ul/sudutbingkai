@@ -15,6 +15,9 @@ import { FILM_PRESETS } from '@/lib/filters';
 import { FRAME_TEMPLATES } from '@/lib/frames';
 import JSZip from 'jszip';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
+import ConfirmModal from '@/components/ConfirmModal';
+import SkeletonLoader from '@/components/SkeletonLoader';
+import { toast } from 'sonner';
 
 interface VoiceNoteRecord {
   id: string;
@@ -69,6 +72,23 @@ export default function EventDashboardPage() {
   const [copied, setCopied] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState('');
+
+  // Custom Glass Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmText: 'Lanjutkan',
+    variant: 'primary',
+    onConfirm: () => {}
+  });
 
   // Cuci Roll Countdown State
   const [countdown, setCountdown] = useState<{ hours: number; minutes: number; seconds: number; isExpired: boolean }>({
@@ -228,21 +248,33 @@ export default function EventDashboardPage() {
     return () => clearInterval(timer);
   }, [event]);
 
-  const handleForceReveal = async () => {
-    if (!confirm('Buka album sekarang dan selesaikan cuci roll? Semua foto akan langsung dapat dilihat.')) return;
-    try {
-      const res = await fetch('/api/events', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: eventId, revealMode: 'instant' })
-      });
-      const data = await res.json();
-      if (data.success && data.event) {
-        setEvent(data.event);
+  const handleForceReveal = () => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Buka Album Sekarang?',
+      description: 'Selesaikan proses cuci roll sekarang. Semua foto tamu akan langsung dapat dilihat dan dinikmati di galeri acara.',
+      confirmText: 'Buka Album',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await fetch('/api/events', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: eventId, revealMode: 'instant' })
+          });
+          const data = await res.json();
+          if (data.success && data.event) {
+            setEvent(data.event);
+            toast.success('Rol film selesai dicuci! Galeri foto terbuka penuh.');
+          } else {
+            toast.error('Gagal membuka album: ' + (data.error || 'Terjadi kesalahan'));
+          }
+        } catch (e) {
+          toast.error('Error membuka album.');
+        }
       }
-    } catch (e) {
-      console.error(e);
-    }
+    });
   };
 
   const handleSharePhoto = async (photo: PhotoRecord) => {
@@ -301,12 +333,12 @@ export default function EventDashboardPage() {
       if (data.success && data.event) {
         setEvent(data.event);
         setShowTopUpPaxModal(false);
-        alert(`Berhasil menambahkan +${additionalPaxAmount} kuota tamu! Total kapasitas sekarang: ${data.event.maxGuests + (data.event.additionalPax || 0)} pax.`);
+        toast.success(`Berhasil menambahkan +${additionalPaxAmount} kuota tamu! Total kapasitas: ${data.event.maxGuests + (data.event.additionalPax || 0)} pax.`);
       } else {
-        alert('Gagal menambah kuota: ' + (data.error || 'Terjadi kesalahan'));
+        toast.error('Gagal menambah kuota: ' + (data.error || 'Terjadi kesalahan'));
       }
     } catch (e: any) {
-      alert('Error: ' + e.message);
+      toast.error('Error: ' + e.message);
     } finally {
       setIsUpdatingPax(false);
     }
@@ -377,7 +409,7 @@ export default function EventDashboardPage() {
 
   const downloadAllPhotosAsZip = async (targetPhotos = displayedPhotos, customTag?: string) => {
     if (targetPhotos.length === 0) {
-      alert('Belum ada foto yang dipilih untuk diunduh.');
+      toast.info('Belum ada foto yang dipilih untuk diunduh.');
       return;
     }
     setIsZipping(true);
@@ -427,8 +459,9 @@ export default function EventDashboardPage() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
+      toast.success('File ZIP berhasil diunduh!');
     } catch (err: unknown) {
-      alert('Gagal membuat file ZIP: ' + (err as Error).message);
+      toast.error('Gagal membuat file ZIP: ' + (err as Error).message);
     } finally {
       setIsZipping(false);
       setZipProgress('');
@@ -436,14 +469,7 @@ export default function EventDashboardPage() {
   };
 
   if (loading) {
-    return (
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FBFBFA', color: '#1D1D1F' }}>
-        <div style={{ textAlign: 'center' }}>
-          <RefreshCw size={32} style={{ animation: 'spin 1.5s linear infinite', margin: '0 auto 16px', color: '#C27803' }} />
-          <p style={{ color: '#6E6E73', fontSize: '14px' }}>Memuat Album Acara...</p>
-        </div>
-      </div>
-    );
+    return <SkeletonLoader title="Memuat Album Acara..." subtitle="Menyelaraskan jepretan kamera analog dari sudut pandang para tamu" />;
   }
 
   const presetInfo = event ? FILM_PRESETS[event.preset] || FILM_PRESETS.portra : FILM_PRESETS.portra;
@@ -495,7 +521,7 @@ export default function EventDashboardPage() {
 
             <Link href={`/event/${eventId}/print`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Printer size={14} />
-              <span>Kartu Meja</span>
+              <span>Cetak QR Meja Tamu</span>
             </Link>
 
             <Link href={`/cam/${eventId}`} className="btn-apple-black" style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1641,6 +1667,17 @@ export default function EventDashboardPage() {
         description={pendingPaymentData?.description || ''}
         amount={pendingPaymentData?.amount || 49000}
         isSimulation={pendingPaymentData?.isSimulation}
+      />
+
+      {/* Sleek Custom Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        confirmText={confirmModal.confirmText}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
   );

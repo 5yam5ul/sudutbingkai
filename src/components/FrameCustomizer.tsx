@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
 import { Upload, Image as ImageIcon, HelpCircle, Check, Sliders, Info, Download } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface FrameCustomizerProps {
   initialFrameId?: FrameId;
@@ -123,7 +124,7 @@ export default function FrameCustomizer({
     if (!file) return;
 
     if (!file.type.includes('png')) {
-      alert('File harus berformat PNG transparan!');
+      toast.error('File harus berformat PNG transparan!');
       return;
     }
 
@@ -141,11 +142,12 @@ export default function FrameCustomizer({
       if (data.success && data.url) {
         setCustomFrameUrl(data.url);
         setSelectedFrame('custom');
+        toast.success('Bingkai custom berhasil diunggah!');
       } else {
-        alert('Gagal mengunggah file: ' + (data.error || 'Terjadi kesalahan'));
+        toast.error('Gagal mengunggah file: ' + (data.error || 'Terjadi kesalahan'));
       }
     } catch (err: unknown) {
-      alert('Error mengunggah: ' + (err as Error).message);
+      toast.error('Error mengunggah: ' + (err as Error).message);
     } finally {
       setIsUploading(false);
     }

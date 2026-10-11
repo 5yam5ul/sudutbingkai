@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, ArrowRight, Shield, Heart, Briefcase, Check, AlertCircle } from 'lucide-react';
-import { authenticateUser, setClientSession } from '@/lib/auth';
+import { authenticateUser, setClientSession, getClientSession } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -13,6 +13,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    const existing = getClientSession();
+    if (existing) {
+      if (existing.role === 'vendor') {
+        router.push('/vendor');
+      } else {
+        router.push('/dashboard');
+      }
+    }
+  }, [router]);
 
   const handleRoleChange = (newRole: 'host' | 'vendor') => {
     setRole(newRole);

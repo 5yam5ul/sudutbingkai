@@ -25,6 +25,7 @@ import {
 } from '@/lib/haptics';
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
 import { addPhotoToOfflineQueue, flushOfflineQueue, getOfflinePhotosQueue } from '@/lib/offlineQueue';
+import ConfirmModal from '@/components/ConfirmModal';
 
 interface GuestPhoto {
   id: string;
@@ -79,6 +80,23 @@ export default function GuestCameraPage() {
   const [tableNumber, setTableNumber] = useState('');
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+
+  // Custom Glass Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmText: 'Lanjutkan',
+    variant: 'primary',
+    onConfirm: () => {}
+  });
   
   // Point 3: Flash modes: 'screen' (white screen strobe) | 'torch' (LED back hardware light) | 'off'
   const [flashMode, setFlashMode] = useState<'screen' | 'torch' | 'off'>('off');
@@ -623,22 +641,31 @@ export default function GuestCameraPage() {
   };
 
   const handleDeletePhoto = (photoId: string) => {
-    if (!confirm('Hapus foto ini dari Rol Film Anda?')) return;
-    const updated = myPhotos.filter(p => p.id !== photoId);
-    setMyPhotos(updated);
-    setShotCount(updated.length);
-    if (updated.length > 0) {
-      setLastShotThumb(updated[updated.length - 1].imageData);
-    } else {
-      setLastShotThumb(null);
-    }
-    try {
-      localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
-    }
-    setPreviewPhoto(null);
-    toast.success('Foto berhasil dihapus dari Rol Film Anda.');
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus dari Rol Film?',
+      description: 'Foto ini akan dihapus dari rol kamera Anda dan kuota jepretan Anda akan dikembalikan.',
+      confirmText: 'Hapus Foto',
+      variant: 'danger',
+      onConfirm: () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        const updated = myPhotos.filter(p => p.id !== photoId);
+        setMyPhotos(updated);
+        setShotCount(updated.length);
+        if (updated.length > 0) {
+          setLastShotThumb(updated[updated.length - 1].imageData);
+        } else {
+          setLastShotThumb(null);
+        }
+        try {
+          localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updated));
+        } catch (e) {
+          console.error(e);
+        }
+        setPreviewPhoto(null);
+        toast.success('Foto berhasil dihapus dari Rol Film Anda.');
+      }
+    });
   };
 
   const takePhoto = async () => {
@@ -2523,6 +2550,16 @@ export default function GuestCameraPage() {
             </div>
           </div>
         </main>
+
+        <ConfirmModal
+          isOpen={confirmModal.isOpen}
+          title={confirmModal.title}
+          description={confirmModal.description}
+          confirmText={confirmModal.confirmText}
+          variant={confirmModal.variant}
+          onConfirm={confirmModal.onConfirm}
+          onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        />
       </div>
     );
   }
@@ -2537,6 +2574,16 @@ export default function GuestCameraPage() {
       background: hasEnteredName ? '#0B0A09' : '#FFFFFF'
     }}>
       {hasEnteredName ? cameraViewfinder : checkInScreen}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        confirmText={confirmModal.confirmText}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

@@ -5,8 +5,10 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
-import { Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw } from 'lucide-react';
+import { Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw, Layout, Film, Grid, SplitSquareVertical, Clock, Sparkles } from 'lucide-react';
 import { EventData, PhotoRecord } from '@/lib/types';
+
+type SlideshowMode = 'polaroid' | 'kenburns' | 'split' | 'mosaic';
 
 export default function LiveProjectorWallPage() {
   const params = useParams();
@@ -17,6 +19,10 @@ export default function LiveProjectorWallPage() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Slideshow presentation options
+  const [displayMode, setDisplayMode] = useState<SlideshowMode>('polaroid');
+  const [cycleSpeed, setCycleSpeed] = useState<number>(5000);
 
   // Persistent reference to track previous photo count without stale closure
   const lastCountRef = useRef<number>(-1);
@@ -57,21 +63,21 @@ export default function LiveProjectorWallPage() {
     return () => clearInterval(interval);
   }, [eventId]);
 
-  // Slideshow cycle every 5 seconds
+  // Slideshow cycle respecting cycleSpeed
   useEffect(() => {
     if (photos.length <= 1) return;
     const slideTimer = setInterval(() => {
       setCurrentIndex((prev) => (prev + 1) % photos.length);
-    }, 5000);
+    }, cycleSpeed);
     return () => clearInterval(slideTimer);
-  }, [photos.length]);
+  }, [photos.length, cycleSpeed]);
 
   // Generate Corner QR Code
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const guestUrl = `${window.location.origin}/cam/${eventId}`;
       QRCode.toDataURL(guestUrl, {
-        width: 180,
+        width: 280,
         margin: 1,
         color: { dark: '#000000', light: '#ffffff' }
       }).then(url => setQrDataUrl(url));
@@ -106,97 +112,155 @@ export default function LiveProjectorWallPage() {
         top: 0,
         left: 0,
         right: 0,
-        padding: '16px 24px',
+        padding: '14px 24px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)',
-        zIndex: 40
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.85), transparent)',
+        zIndex: 50,
+        gap: '12px',
+        flexWrap: 'wrap'
       }}>
-        <Link href={`/event/${eventId}`} style={{ color: 'var(--text-secondary)', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>
-          <ArrowLeft size={16} />
-          <span>Keluar ke Dashboard</span>
-        </Link>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-            Foto ke-{photos.length > 0 ? currentIndex + 1 : 0} dari {photos.length}
+          <Link href={`/event/${eventId}`} style={{ color: '#86868B', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
+            <ArrowLeft size={16} />
+            <span>Kembali</span>
+          </Link>
+          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
+          <span style={{ fontSize: '13px', fontWeight: 700, color: '#F59E0B' }}>
+            {event?.title || 'Live Photo Wall'}
           </span>
+          <span style={{ fontSize: '12px', color: '#86868B' }}>
+            ({photos.length > 0 ? currentIndex + 1 : 0} / {photos.length} foto)
+          </span>
+        </div>
+
+        {/* Presentation Controls Toolbar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          {/* Mode Switchers */}
+          <div style={{
+            display: 'flex',
+            background: 'rgba(255, 255, 255, 0.08)',
+            padding: '3px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.12)'
+          }}>
+            {[
+              { id: 'polaroid', label: 'Polaroid', icon: <Film size={13} /> },
+              { id: 'kenburns', label: 'Sinematik Zoom', icon: <Camera size={13} /> },
+              { id: 'split', label: 'Split QR Meja', icon: <SplitSquareVertical size={13} /> },
+              { id: 'mosaic', label: 'Mosaik Wall', icon: <Grid size={13} /> }
+            ].map(m => (
+              <button
+                key={m.id}
+                onClick={() => setDisplayMode(m.id as SlideshowMode)}
+                style={{
+                  padding: '5px 10px',
+                  borderRadius: '9px',
+                  border: 'none',
+                  background: displayMode === m.id ? '#C27803' : 'transparent',
+                  color: displayMode === m.id ? '#FFFFFF' : '#A1A1A6',
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'background 0.2s'
+                }}
+              >
+                {m.icon}
+                <span>{m.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Speed Toggle */}
+          <div style={{
+            display: 'flex',
+            background: 'rgba(255, 255, 255, 0.08)',
+            padding: '3px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.12)'
+          }}>
+            {[
+              { val: 3000, label: '3s' },
+              { val: 5000, label: '5s' },
+              { val: 8000, label: '8s' }
+            ].map(s => (
+              <button
+                key={s.val}
+                onClick={() => setCycleSpeed(s.val)}
+                style={{
+                  padding: '5px 8px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: cycleSpeed === s.val ? 'rgba(255, 255, 255, 0.25)' : 'transparent',
+                  color: '#FFFFFF',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Fullscreen Button */}
           <button
             onClick={toggleFullscreen}
             style={{
-              background: 'rgba(255,255,255,0.1)',
-              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
               color: '#fff',
-              padding: '8px 14px',
-              borderRadius: 'var(--radius-sm)',
+              padding: '6px 12px',
+              borderRadius: '12px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              fontSize: '13px'
+              fontSize: '12px'
             }}
           >
-            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             <span>{isFullscreen ? 'Kecilkan' : 'Layar Penuh (F11)'}</span>
           </button>
         </div>
       </header>
 
-      {/* Main Stage Display */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 20px 40px' }}>
+      {/* Main Slideshow Stage */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '70px 20px 40px', position: 'relative' }}>
         {photos.length === 0 ? (
           <div style={{ textAlign: 'center', maxWidth: '500px' }}>
             <div style={{
               width: '80px',
               height: '80px',
               borderRadius: '50%',
-              background: 'rgba(212, 175, 55, 0.15)',
+              background: 'rgba(194, 120, 3, 0.15)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 24px',
-              color: 'var(--gold-primary)'
+              color: '#F59E0B'
             }}>
               <Camera size={40} />
             </div>
-            <h1 style={{ fontSize: '32px', marginBottom: '12px' }}>
+            <h1 style={{ fontSize: '32px', marginBottom: '12px', fontFamily: 'var(--font-display-serif)' }}>
               {event?.title || 'Live Photo Wall'}
             </h1>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '16px', lineHeight: 1.6, marginBottom: '28px' }}>
-              Menunggu jepretan candid pertama dari meja tamu! Pindai kode QR di sudut layar atau kartu meja untuk memotret.
+            <p style={{ color: '#A1A1A6', fontSize: '16px', lineHeight: 1.6, marginBottom: '28px' }}>
+              Menunggu jepretan candid pertama dari meja tamu! Pindai kode QR di sudut layar atau kartu meja tamu untuk memotret.
             </p>
           </div>
-        ) : (
+        ) : displayMode === 'polaroid' ? (
+          /* MODE 1: POLAROID SPOTLIGHT */
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '900px', width: '100%' }}>
-            {/* Event Name Tag */}
-            <div style={{ textAlign: 'center', marginBottom: '18px' }}>
-              <div style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '4px 14px',
-                borderRadius: '999px',
-                background: 'rgba(212, 175, 55, 0.15)',
-                border: '1px solid var(--border-gold)',
-                color: 'var(--gold-light)',
-                fontSize: '11px',
-                fontWeight: '700',
-                textTransform: 'uppercase',
-                letterSpacing: '0.08em',
-                marginBottom: '6px'
-              }}>
-                <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor' }} />
-                <span>{event?.title || 'Momen Tamu'}</span>
-              </div>
-            </div>
-
-            {/* Featured Photo Frame (Cinema Polaroid Style) */}
             <div style={{
-              background: '#faf8f5',
-              padding: '16px 16px 48px 16px',
+              background: '#FAF8F5',
+              padding: '16px 16px 40px 16px',
               borderRadius: '24px',
-              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.9), 0 0 40px rgba(212, 175, 55, 0.15)',
+              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.9), 0 0 50px rgba(194, 120, 3, 0.18)',
               width: '100%',
               maxWidth: '460px',
               transition: 'all 0.5s ease',
@@ -209,7 +273,7 @@ export default function LiveProjectorWallPage() {
                 aspectRatio: '3/4',
                 borderRadius: '16px',
                 overflow: 'hidden',
-                background: '#12100b',
+                background: '#12100B',
                 position: 'relative'
               }}>
                 <img
@@ -219,15 +283,14 @@ export default function LiveProjectorWallPage() {
                 />
               </div>
 
-              <div style={{ marginTop: '18px', textAlign: 'center', color: '#1a1815', width: '100%' }}>
+              <div style={{ marginTop: '16px', textAlign: 'center', color: '#1A1815', width: '100%' }}>
                 <span style={{ fontSize: '18px', fontWeight: '800', fontFamily: 'var(--font-display)', display: 'block' }}>
                   Diabadikan oleh @{currentPhoto.guestName}
                 </span>
-                <span style={{ fontSize: '13px', color: '#736d65', fontFamily: 'var(--font-lcd)', display: 'block', marginTop: '2px' }}>
+                <span style={{ fontSize: '13px', color: '#736D65', fontFamily: 'var(--font-lcd)', display: 'block', marginTop: '2px' }}>
                   FRAME #{currentPhoto.shotNumber} • {new Date(currentPhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
                 </span>
 
-                {/* Live Guest Wish on Venue TV / Projector */}
                 {currentPhoto.caption && (
                   <div style={{
                     marginTop: '12px',
@@ -255,40 +318,227 @@ export default function LiveProjectorWallPage() {
               </div>
             </div>
           </div>
+        ) : displayMode === 'kenburns' ? (
+          /* MODE 2: CINEMATIC FULLSCREEN KEN BURNS ZOOM */
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <div
+              key={currentPhoto.id}
+              style={{
+                position: 'absolute',
+                inset: '-20px',
+                backgroundImage: `url(${currentPhoto.imageData})`,
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                filter: 'brightness(0.9)',
+                animation: 'kenBurnsMotion 14s ease-in-out infinite alternate'
+              }}
+            />
+            {/* Film vignette & dark gradient */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.85) 100%), linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 40%)'
+            }} />
+
+            {/* Bottom Title Card Overlay */}
+            <div style={{
+              position: 'absolute',
+              bottom: '40px',
+              left: '40px',
+              maxWidth: '650px',
+              zIndex: 20
+            }}>
+              <span className="font-mono-film" style={{ color: '#F59E0B', fontSize: '12px', letterSpacing: '0.1em', display: 'block', marginBottom: '4px' }}>
+                • ROLL FRAME #{currentPhoto.shotNumber} • {new Date(currentPhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+              <h2 className="font-display-serif" style={{ fontSize: '36px', fontWeight: 800, color: '#FFFFFF', margin: '0 0 8px' }}>
+                Diabadikan oleh {currentPhoto.guestName}
+              </h2>
+              {currentPhoto.caption && (
+                <p style={{ fontSize: '18px', color: '#FDE68A', fontStyle: 'italic', margin: 0, lineHeight: 1.4 }}>
+                  &ldquo;{currentPhoto.caption}&rdquo;
+                </p>
+              )}
+            </div>
+          </div>
+        ) : displayMode === 'split' ? (
+          /* MODE 3: SPLIT-SCREEN (Giant QR on Left, Live Photo on Right) */
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(320px, 420px) 1fr',
+            gap: '40px',
+            maxWidth: '1200px',
+            width: '100%',
+            height: 'calc(100vh - 120px)',
+            alignItems: 'center'
+          }}>
+            {/* Left QR Column */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              border: '1px solid rgba(194, 120, 3, 0.3)',
+              borderRadius: '28px',
+              padding: '36px 28px',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5)'
+            }}>
+              <span className="font-mono-film" style={{ color: '#F59E0B', fontSize: '12px', letterSpacing: '0.1em', display: 'block', marginBottom: '8px' }}>
+                LIVE GUEST CAMERA
+              </span>
+              <h2 className="font-display-serif" style={{ fontSize: '26px', fontWeight: 700, margin: '0 0 16px', color: '#FFFFFF' }}>
+                Ayo Ikut Memotret!
+              </h2>
+
+              <div style={{
+                background: '#FFFFFF',
+                padding: '16px',
+                borderRadius: '20px',
+                boxShadow: '0 12px 30px rgba(0,0,0,0.3)',
+                marginBottom: '20px'
+              }}>
+                {qrDataUrl && (
+                  <img src={qrDataUrl} alt="Scan QR Meja" style={{ width: '220px', height: '220px', display: 'block' }} />
+                )}
+              </div>
+
+              <p style={{ color: '#D1D5DB', fontSize: '14px', lineHeight: 1.5, margin: 0 }}>
+                Arahkan kamera HP ke barcode meja atau layar ini untuk membuka kamera analog sekali pakai.
+              </p>
+            </div>
+
+            {/* Right Photo Column */}
+            <div style={{
+              height: '100%',
+              maxHeight: '620px',
+              borderRadius: '28px',
+              overflow: 'hidden',
+              position: 'relative',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.8)',
+              border: '1px solid rgba(255, 255, 255, 0.1)'
+            }}>
+              <img
+                src={currentPhoto.imageData}
+                alt={currentPhoto.guestName}
+                style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#0D0C0A' }}
+              />
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: '24px 28px',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)'
+              }}>
+                <strong style={{ fontSize: '20px', color: '#FFF', display: 'block' }}>@{currentPhoto.guestName}</strong>
+                {currentPhoto.caption && (
+                  <span style={{ fontSize: '15px', color: '#FDE68A', fontStyle: 'italic', display: 'block', marginTop: '4px' }}>
+                    &ldquo;{currentPhoto.caption}&rdquo;
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* MODE 4: MOSAIC WALL (Multi-photo Masonry Grid) */
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gap: '20px',
+            maxWidth: '1200px',
+            width: '100%'
+          }}>
+            {photos.slice(0, 6).map((p, idx) => (
+              <div
+                key={p.id}
+                style={{
+                  background: '#FAF8F5',
+                  padding: '12px 12px 24px',
+                  borderRadius: '18px',
+                  boxShadow: '0 16px 36px rgba(0,0,0,0.6)',
+                  border: idx === currentIndex % 6 ? '2px solid #C27803' : '1px solid rgba(255,255,255,0.1)',
+                  transform: idx === currentIndex % 6 ? 'scale(1.03)' : 'scale(1)',
+                  transition: 'all 0.4s ease'
+                }}
+              >
+                <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '12px', overflow: 'hidden', background: '#12100B' }}>
+                  <img src={p.imageData} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div style={{ marginTop: '10px', textAlign: 'center', color: '#1A1815' }}>
+                  <strong style={{ fontSize: '13px', display: 'block' }}>@{p.guestName}</strong>
+                  {p.caption && (
+                    <span style={{ fontSize: '11px', color: '#78350F', fontStyle: 'italic', display: 'block', marginTop: '2px' }}>
+                      &ldquo;{p.caption}&rdquo;
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </main>
 
-      {/* Floating Corner QR Code (For Guests in Audience) */}
-      <div style={{
-        position: 'absolute',
-        bottom: '24px',
-        right: '24px',
-        background: 'rgba(20, 18, 15, 0.92)',
-        border: '1px solid var(--border-gold)',
-        borderRadius: '18px',
-        padding: '14px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '14px',
-        boxShadow: '0 15px 35px rgba(0,0,0,0.7)',
-        backdropFilter: 'blur(10px)',
-        zIndex: 30
-      }}>
-        {qrDataUrl && (
-          <img src={qrDataUrl} alt="Scan QR Meja" style={{ width: '70px', height: '70px', borderRadius: '8px' }} />
-        )}
-        <div style={{ textAlign: 'left' }}>
-          <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--gold-primary)', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block' }}>
-            Ikut Memotret
-          </span>
-          <span style={{ fontSize: '13px', fontWeight: '700', color: '#fff', display: 'block' }}>
-            Scan Lewat HP-mu
-          </span>
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-            Tanpa Perlu Unduh App
-          </span>
+      {/* Floating Corner QR Code (For Guests in Audience - Hidden in Split mode since already large) */}
+      {displayMode !== 'split' && (
+        <div style={{
+          position: 'absolute',
+          bottom: '24px',
+          right: '24px',
+          background: 'rgba(20, 18, 15, 0.94)',
+          border: '1px solid rgba(194, 120, 3, 0.4)',
+          borderRadius: '18px',
+          padding: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '14px',
+          boxShadow: '0 15px 35px rgba(0,0,0,0.7)',
+          backdropFilter: 'blur(10px)',
+          zIndex: 40
+        }}>
+          {qrDataUrl && (
+            <img src={qrDataUrl} alt="Scan QR Meja" style={{ width: '70px', height: '70px', borderRadius: '8px' }} />
+          )}
+          <div style={{ textAlign: 'left' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block' }}>
+              Ikut Memotret
+            </span>
+            <span style={{ fontSize: '13px', fontWeight: '700', color: '#fff', display: 'block' }}>
+              Scan Lewat HP-mu
+            </span>
+            <span style={{ fontSize: '10px', color: '#86868B' }}>
+              Tanpa Perlu Unduh App
+            </span>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Ken Burns Keyframe CSS */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        @keyframes kenBurnsMotion {
+          0% {
+            transform: scale(1) translate(0, 0);
+          }
+          50% {
+            transform: scale(1.08) translate(-1.5%, -1.5%);
+          }
+          100% {
+            transform: scale(1.04) translate(1%, 0.5%);
+          }
+        }
+      `
+        }}
+      />
     </div>
   );
 }

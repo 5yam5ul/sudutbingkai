@@ -7,10 +7,12 @@ import {
   Briefcase, Building, Plus, Users, QrCode, Camera, Download, 
   ExternalLink, ArrowRight, Check, Sliders, LogOut, 
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
-  DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy
+  DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2
 } from 'lucide-react';
 import { UserAccount } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
+import ConfirmModal from '@/components/ConfirmModal';
+import { toast } from 'sonner';
 
 export default function VendorPortalPage() {
   const router = useRouter();
@@ -18,6 +20,23 @@ export default function VendorPortalPage() {
 
   const [vendor, setVendor] = useState<UserAccount>(SYSTEM_USERS['vendor']);
   const [activeTab, setActiveTab] = useState<'branding' | 'clients' | 'wholesale' | 'marketing'>('wholesale');
+
+  // Custom Glass Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmText: 'Lanjutkan',
+    variant: 'primary',
+    onConfirm: () => {}
+  });
 
   // Vendor Branding & Logo State
   const [companyName, setCompanyName] = useState('Vows & Co. Wedding Planner');
@@ -124,7 +143,7 @@ export default function VendorPortalPage() {
     if (!file) return;
 
     if (file.size > 2 * 1024 * 1024) {
-      alert('Ukuran file logo maksimal 2MB.');
+      toast.error('Ukuran file logo maksimal 2MB.');
       return;
     }
 
@@ -135,6 +154,26 @@ export default function VendorPortalPage() {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleDeleteClient = (clientId: string, clientTitle: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Acara Klien?',
+      description: `Apakah Anda yakin ingin menghapus acara "${clientTitle}"? Seluruh arsip rol foto dan akses tamu untuk acara ini akan dihapus dari dashboard agensi Anda.`,
+      confirmText: 'Hapus Acara',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setClients(prev => prev.filter(c => c.id !== clientId));
+        toast.success(`Acara "${clientTitle}" berhasil dihapus.`);
+        try {
+          await fetch(`/api/events?id=${clientId}`, { method: 'DELETE' });
+        } catch (e) {
+          console.error('Gagal menghapus event klien:', e);
+        }
+      }
+    });
   };
 
   const handleSaveBranding = async (e: React.FormEvent) => {
@@ -1122,19 +1161,39 @@ export default function VendorPortalPage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                   <Link href={`/event/${c.id}`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
                     Galeri Album
                   </Link>
 
                   <Link href={`/event/${c.id}/print`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
-                    Kartu Meja QR
+                    Cetak QR Meja Tamu
                   </Link>
-
 
                   <Link href={`/cam/${c.id}`} className="btn-apple-black" style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none' }}>
                     Kamera Tamu
                   </Link>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteClient(c.id, c.title)}
+                    className="glass-pill"
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: '12.5px',
+                      color: '#EF4444',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      background: 'rgba(239, 68, 68, 0.05)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px'
+                    }}
+                    title="Hapus Klien Acara"
+                  >
+                    <Trash2 size={13} />
+                    <span>Hapus</span>
+                  </button>
                 </div>
               </div>
             ))}
@@ -1221,6 +1280,17 @@ export default function VendorPortalPage() {
           </div>
         )}
       </main>
+
+      {/* Sleek Custom Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        confirmText={confirmModal.confirmText}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }
