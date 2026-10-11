@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, CheckCircle2, MessageSquare, X, Heart } from 'lucide-react';
+import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, CheckCircle2, MessageSquare, X, Heart, Upload } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
 import { getClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
@@ -67,6 +67,8 @@ export default function BrideDashboardPage() {
   const [frameText, setFrameText] = useState('');
   const [allowGuestFrameToggle, setAllowGuestFrameToggle] = useState(true);
   const [allowVoiceNote, setAllowVoiceNote] = useState(true);
+  const [coverUrl, setCoverUrl] = useState<string>('');
+  const [isUploadingCover, setIsUploadingCover] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
@@ -109,6 +111,7 @@ export default function BrideDashboardPage() {
     setFrameText(selected.frameText || '');
     setAllowGuestFrameToggle(selected.allowGuestFrameToggle !== false);
     setAllowVoiceNote(selected.allowVoiceNote !== false);
+    setCoverUrl(selected.coverUrl || '');
 
     // Fetch all photos including hidden for host moderation
     try {
@@ -318,6 +321,32 @@ export default function BrideDashboardPage() {
     });
   };
 
+  const handleUploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingCover(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'cover');
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        setCoverUrl(data.url);
+        toast.success('Foto cover berhasil diunggah! Jangan lupa klik Simpan Pengaturan di bawah.');
+      } else {
+        toast.error('Gagal mengunggah foto: ' + (data.error || 'Terjadi kesalahan'));
+      }
+    } catch (err: unknown) {
+      toast.error('Error mengunggah foto: ' + (err as Error).message);
+    } finally {
+      setIsUploadingCover(false);
+    }
+  };
+
   const handleSaveSettings = async () => {
     if (!event) return;
     setIsSavingSettings(true);
@@ -338,7 +367,8 @@ export default function BrideDashboardPage() {
           customFrameUrl: customFrameUrl || undefined,
           frameText,
           allowGuestFrameToggle,
-          allowVoiceNote
+          allowVoiceNote,
+          coverUrl: coverUrl || undefined
         })
       });
       const data = await res.json();
@@ -981,6 +1011,207 @@ export default function BrideDashboardPage() {
         {/* TAB 2: PENGATURAN ACARA & BINGKAI */}
         {activeTab === 'settings' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* Section 0: Hero Cover Banner Tamu */}
+            <div className="glass-card form-section-card">
+              <div style={{ marginBottom: '20px' }}>
+                <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
+                  FOTO COVER GALERI TAMU (HERO BANNER)
+                </span>
+                <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
+                  Cover Sinematik Halaman Tamu Undangan
+                </h2>
+                <p style={{ color: '#6E6E73', fontSize: '13.5px' }}>
+                  Foto utama yang tampil megah di bagian atas galeri bersama tamu saat mereka membuka tautan undangan.
+                </p>
+              </div>
+
+              {/* Live Preview Card */}
+              <div
+                style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '240px',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  marginBottom: '20px',
+                  boxShadow: '0 12px 32px rgba(0, 0, 0, 0.12)',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  backgroundColor: '#111'
+                }}
+              >
+                <img
+                  src={coverUrl || '/samples/dummy-couple.jpg'}
+                  alt="Cover Preview"
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover'
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/samples/dummy-couple.jpg';
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.6) 100%)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-end',
+                    padding: '24px 20px',
+                    color: '#fff'
+                  }}
+                >
+                  <span style={{ fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', color: '#D4AF37', fontWeight: 600, marginBottom: '4px' }}>
+                    THE WEDDING CELEBRATION OF
+                  </span>
+                  <h3 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: '26px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
+                    {event?.coupleOrHost || 'Sarah & Dimas'}
+                  </h3>
+                  <p style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.85)', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{event?.eventDate || '14 FEBRUARI 2026'}</span>
+                    <span>•</span>
+                    <span>{event?.location || 'The Glasshouse, Jakarta'}</span>
+                  </p>
+                </div>
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '14px',
+                    right: '14px',
+                    background: 'rgba(0,0,0,0.55)',
+                    backdropFilter: 'blur(8px)',
+                    color: '#fff',
+                    fontSize: '11px',
+                    padding: '4px 10px',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    fontWeight: 500
+                  }}
+                >
+                  👁️ Live Preview Tamu
+                </div>
+              </div>
+
+              {/* Upload Controls & URL Input */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
+                    Unggah dari Perangkat / Komputer
+                  </label>
+                  <label
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '12px 18px',
+                      borderRadius: '12px',
+                      background: '#1D1D1F',
+                      color: '#fff',
+                      fontSize: '13.5px',
+                      fontWeight: 600,
+                      cursor: isUploadingCover ? 'wait' : 'pointer',
+                      transition: 'all 0.2s',
+                      opacity: isUploadingCover ? 0.7 : 1
+                    }}
+                  >
+                    <Upload size={16} />
+                    {isUploadingCover ? 'Mengunggah Foto...' : 'Pilih Foto Pengantin (JPG/PNG)'}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      disabled={isUploadingCover}
+                      onChange={handleUploadCover}
+                    />
+                  </label>
+                  <p style={{ fontSize: '11.5px', color: '#86868B', marginTop: '6px' }}>
+                    Rekomendasi rasio landscape (16:9 atau 3:2), resolusi minimal 1200x800px.
+                  </p>
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
+                    Atau Masukkan URL Gambar Web
+                  </label>
+                  <input
+                    type="url"
+                    value={coverUrl}
+                    onChange={(e) => setCoverUrl(e.target.value)}
+                    placeholder="https://... (URL foto prewedding)"
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(0,0,0,0.12)',
+                      fontSize: '13px',
+                      outline: 'none',
+                      backgroundColor: '#FFFFFF'
+                    }}
+                  />
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+                    {coverUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setCoverUrl('')}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#FF3B30',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          padding: 0,
+                          fontWeight: 500
+                        }}
+                      >
+                        Hapus foto & kembali ke default
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Preset Shortcuts */}
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#6E6E73', display: 'block', marginBottom: '8px' }}>
+                  CONTOH FOTO SAMPEL CEPAT:
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {[
+                    { label: '👰 Sarah & Dimas (Default)', url: '/samples/dummy-couple.jpg' },
+                    { label: '🥂 Suasana Tamu & Pesta', url: '/samples/dummy-guests.jpg' },
+                    { label: '✨ Romantic Warmth (Unsplash)', url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80' },
+                    { label: '🌅 Sunset Silhouette (Unsplash)', url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1600&q=80' },
+                  ].map((p, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setCoverUrl(p.url);
+                        toast.success(`Foto cover diubah ke "${p.label}". Simpan pengaturan di bawah.`);
+                      }}
+                      style={{
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        borderRadius: '20px',
+                        border: coverUrl === p.url ? '1px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                        background: coverUrl === p.url ? '#FFF8ED' : '#FFFFFF',
+                        color: coverUrl === p.url ? '#C27803' : '#1D1D1F',
+                        cursor: 'pointer',
+                        fontWeight: coverUrl === p.url ? 600 : 400,
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Section A: Frame Customizer */}
             <div className="glass-card form-section-card">
               <div style={{ marginBottom: '24px' }}>

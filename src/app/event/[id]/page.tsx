@@ -19,6 +19,7 @@ import MayarPaymentModal from '@/components/MayarPaymentModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { toast } from 'sonner';
+import { getClientSession } from '@/lib/auth';
 
 interface VoiceNoteRecord {
   id: string;
@@ -73,6 +74,14 @@ export default function EventDashboardPage() {
   const [copied, setCopied] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState('');
+  const [isHost, setIsHost] = useState(false);
+
+  useEffect(() => {
+    const session = getClientSession();
+    if (session && (session.role === 'host' || session.role === 'vendor' || session.role === 'admin')) {
+      setIsHost(true);
+    }
+  }, []);
 
   // Custom Glass Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -316,7 +325,28 @@ export default function EventDashboardPage() {
     const url = `${window.location.origin}/cam/${slugOrId}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
+    toast.success('Tautan kamera tamu disalin!');
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleShareGallery = async () => {
+    const url = window.location.href;
+    const title = event?.coupleOrHost ? `Galeri Foto Bersama: ${event.coupleOrHost}` : (event?.title || 'Galeri Foto Sudut Bingkai');
+    const text = `Lihat dan bagikan momen foto kebersamaan kita di acara ${event?.coupleOrHost || event?.title || 'spesial ini'}!`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        return;
+      } catch {
+        // user dismissed
+      }
+    }
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast.success('Tautan galeri berhasil disalin!');
+      setTimeout(() => setCopied(false), 2500);
+    }
   };
 
   const executeTopUpPax = async (additionalPaxAmount: number) => {
@@ -510,27 +540,31 @@ export default function EventDashboardPage() {
             </Link>
             <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
             <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
-              GALERI & KENDALI ACARA
+              GALERI BERSAMA TAMU
             </span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button onClick={copyGuestLink} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+            <button onClick={handleShareGallery} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
               {copied ? <Check size={14} color="#C27803" /> : <Share2 size={14} />}
-              <span>{copied ? 'Tersalin' : 'Salin Link'}</span>
+              <span>{copied ? 'Tersalin' : 'Bagikan'}</span>
             </button>
 
-            <Link href={`/event/${eventId}/print`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Printer size={14} />
-              <span>Cetak Barcode</span>
-            </Link>
+            {isHost && (
+              <>
+                <Link href={`/event/${eventId}/print`} className="glass-pill" style={{ padding: '8px 12px', fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                  <Printer size={13} />
+                  <span>Cetak Barcode</span>
+                </Link>
 
-            <Link href="/dashboard" className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <SlidersHorizontal size={14} />
-              <span>Dashboard</span>
-            </Link>
+                <Link href={`/dashboard?eventId=${eventId}`} className="glass-pill" style={{ padding: '8px 12px', fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px', borderColor: 'rgba(194, 120, 3, 0.4)', color: '#C27803' }}>
+                  <SlidersHorizontal size={13} />
+                  <span>Dashboard Host</span>
+                </Link>
+              </>
+            )}
 
-            <Link href={`/cam/${eventId}`} className="btn-apple-black" style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Link href={`/cam/${event?.slug || eventId}`} className="btn-apple-black" style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Camera size={14} />
               <span>Buka Kamera</span>
             </Link>
@@ -540,135 +574,323 @@ export default function EventDashboardPage() {
 
       {/* Main Content */}
       <main className="dashboard-main" style={{ position: 'relative', zIndex: 10 }}>
-        {/* Event Header Banner */}
-        <div className="glass-card form-section-card" style={{ marginBottom: '32px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2ECC71' }} />
-                <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
-                  ACARA AKTIF
-                </span>
-              </div>
-
-              <h1 className="font-display-serif" style={{ fontSize: 'clamp(1.8rem, 4.5vw, 2.4rem)', fontWeight: 700, marginBottom: '8px', color: '#1D1D1F' }}>
-                {event?.title || 'Hari Pernikahan'}
-              </h1>
-
-              <p style={{ color: '#515154', fontSize: '14px' }}>
-                Penyelenggara: <strong style={{ color: '#1D1D1F' }}>{event?.coupleOrHost}</strong>
-                {event?.location && ` • Lokasi: ${event.location}`}
-              </p>
-            </div>
-
-            <button 
-              onClick={() => downloadAllPhotosAsZip(displayedPhotos)} 
-              disabled={isZipping || displayedPhotos.length === 0}
-              className="btn-apple-black" 
-              style={{ padding: '10px 20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: isZipping ? 'wait' : 'pointer' }}
-            >
-              {isZipping ? <RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={15} />}
-              <span className="desktop-only">
-                {isZipping ? zipProgress : selectedGuest === 'all' ? `Unduh Arsip ZIP (${photos.length} Foto)` : `Unduh ZIP ${selectedGuest} (${displayedPhotos.length} Foto)`}
-              </span>
-              <span className="mobile-only">
-                {isZipping ? zipProgress : `Unduh ZIP (${displayedPhotos.length})`}
-              </span>
-            </button>
+        {/* Cinematic Hero Cover Section */}
+        <div
+          style={{
+            position: 'relative',
+            borderRadius: '28px',
+            overflow: 'hidden',
+            marginBottom: '32px',
+            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.14)',
+            backgroundColor: '#161412',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
+            minHeight: '440px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end'
+          }}
+        >
+          {/* Background Cover Image with Cinematic Vignette */}
+          <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
+            <img
+              src={event?.coverUrl || '/samples/dummy-couple.jpg'}
+              alt={event?.coupleOrHost || 'Foto Pengantin'}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center 35%'
+              }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/samples/dummy-couple.jpg';
+              }}
+            />
+            {/* Cinematic Gradient: ensures perfect typography contrast */}
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'linear-gradient(to top, rgba(14, 12, 10, 0.95) 0%, rgba(14, 12, 10, 0.65) 45%, rgba(14, 12, 10, 0.25) 75%, rgba(14, 12, 10, 0.45) 100%)'
+              }}
+            />
+            <div
+              style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'radial-gradient(ellipse at bottom, rgba(194, 120, 3, 0.2) 0%, transparent 70%)',
+                pointerEvents: 'none'
+              }}
+            />
           </div>
 
-          {/* Quick Metrics */}
-          <div className="responsive-metrics-grid" style={{ marginTop: '24px', borderTop: '1px solid rgba(0, 0, 0, 0.07)', paddingTop: '20px' }}>
-            <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>TOTAL FOTO</span>
-              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{photos.length} Momen</strong>
+          {/* Top Floating Badges */}
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 2,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '24px 28px',
+              width: '100%'
+            }}
+          >
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 14px',
+                borderRadius: '999px',
+                background: 'rgba(0, 0, 0, 0.5)',
+                backdropFilter: 'blur(12px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#FFFFFF',
+                fontSize: '11px',
+                fontWeight: 600,
+                letterSpacing: '0.04em'
+              }}
+            >
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981' }} />
+              <span>GALERI BERSAMA TAMU</span>
             </div>
 
-            <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>KUOTA TAMU (PAX)</span>
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
-                <strong style={{ fontSize: '20px', color: uniqueGuests.length >= ((event?.maxGuests || 150) + (event?.additionalPax || 0)) ? '#E11D48' : '#1D1D1F' }}>
-                  {uniqueGuests.length} / {(event?.maxGuests || 150) + (event?.additionalPax || 0)} Pax
-                </strong>
-                {event?.additionalPax ? (
-                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>
-                    (+{event.additionalPax})
+            {isHost && (
+              <Link
+                href={`/dashboard?eventId=${eventId}`}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '999px',
+                  background: 'rgba(194, 120, 3, 0.88)',
+                  backdropFilter: 'blur(12px)',
+                  color: '#FFFFFF',
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 14px rgba(194, 120, 3, 0.35)'
+                }}
+              >
+                <SlidersHorizontal size={12} />
+                <span>Kelola di Dashboard</span>
+              </Link>
+            )}
+          </div>
+
+          {/* Bottom Hero Content */}
+          <div
+            style={{
+              position: 'relative',
+              zIndex: 2,
+              padding: '28px 32px 36px',
+              maxWidth: '920px'
+            }}
+          >
+            <div style={{ display: 'inline-block', marginBottom: '8px' }}>
+              <span
+                style={{
+                  color: '#E5C07B',
+                  fontSize: '11.5px',
+                  fontWeight: 600,
+                  letterSpacing: '3px',
+                  textTransform: 'uppercase',
+                  display: 'inline-block',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.6)'
+                }}
+              >
+                THE WEDDING CELEBRATION OF
+              </span>
+            </div>
+
+            <h1
+              style={{
+                fontFamily: 'var(--font-serif), Georgia, serif',
+                fontSize: 'clamp(2.2rem, 5.5vw, 3.8rem)',
+                fontWeight: 700,
+                color: '#FFFFFF',
+                margin: '0 0 10px 0',
+                letterSpacing: '-0.02em',
+                lineHeight: 1.15,
+                textShadow: '0 3px 18px rgba(0, 0, 0, 0.65)'
+              }}
+            >
+              {event?.coupleOrHost || event?.title || 'Sarah & Dimas'}
+            </h1>
+
+            {/* Date & Location */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: '13.5px',
+                marginBottom: '20px'
+              }}
+            >
+              {event?.eventDate && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <span>📅</span>
+                  <strong style={{ color: '#FFFFFF' }}>{event.eventDate}</strong>
+                </span>
+              )}
+              {event?.location && (
+                <>
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    <span>📍</span>
+                    <span>{event.location}</span>
                   </span>
-                ) : null}
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowTopUpPaxModal(true)}
+                </>
+              )}
+            </div>
+
+            {/* Joyful Celebration Counters */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '10px',
+                marginBottom: '26px'
+              }}
+            >
+              <div
                 style={{
-                  marginTop: '5px',
-                  background: 'rgba(194, 120, 3, 0.1)',
-                  border: '1px solid rgba(194, 120, 3, 0.3)',
-                  color: '#C27803',
-                  padding: '3px 10px',
-                  borderRadius: '999px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '999px',
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF',
+                  fontSize: '12px',
+                  fontWeight: 500
                 }}
               >
-                <span>+ Tambah Pax</span>
-              </button>
+                <span>📸</span>
+                <span><strong>{photos.length}</strong> Momen Terabadikan</span>
+              </div>
+
+              {voiceNotes.length > 0 && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    borderRadius: '999px',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  <span>🎙️</span>
+                  <span><strong>{voiceNotes.length}</strong> Ucapan Hangat</span>
+                </div>
+              )}
+
+              {uniqueGuests.length > 0 && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 14px',
+                    borderRadius: '999px',
+                    background: 'rgba(255, 255, 255, 0.12)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    color: '#FFFFFF',
+                    fontSize: '12px',
+                    fontWeight: 500
+                  }}
+                >
+                  <span>👥</span>
+                  <span><strong>{uniqueGuests.length}</strong> Tamu Berbagi Sudut Pandang</span>
+                </div>
+              )}
             </div>
 
-            <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>FILTER EMULASI</span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <strong style={{ fontSize: '20px', color: '#C27803' }}>{presetInfo.name}</strong>
-              </div>
-              <button
-                type="button"
-                onClick={handleTogglePresetMode}
-                disabled={isUpdatingPresetMode}
+            {/* Hero Action Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <Link
+                href={`/cam/${event?.slug || eventId}`}
                 style={{
-                  marginTop: '5px',
-                  background: 'rgba(0, 0, 0, 0.04)',
-                  border: '1px solid rgba(0, 0, 0, 0.1)',
-                  color: '#515154',
-                  padding: '3px 9px',
-                  borderRadius: '999px',
-                  fontSize: '10.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '4px'
+                  gap: '8px',
+                  padding: '12px 26px',
+                  borderRadius: '999px',
+                  background: 'linear-gradient(135deg, #E5C07B 0%, #C27803 100%)',
+                  color: '#161412',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  boxShadow: '0 8px 24px rgba(194, 120, 3, 0.4)',
+                  transition: 'transform 0.2s ease',
+                  cursor: 'pointer'
                 }}
-                title="Ganti mode kurasi atau bebas filter untuk tamu"
               >
-                <span>{event?.allowGuestPresetSwitch ? 'Bebas Pilih ⇄' : 'Terkunci 1 Warna 🔒'}</span>
+                <Camera size={17} />
+                <span>Buka Kamera & Jepret Momen</span>
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleShareGallery}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '12px 20px',
+                  borderRadius: '999px',
+                  background: 'rgba(255, 255, 255, 0.16)',
+                  backdropFilter: 'blur(12px)',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  color: '#FFFFFF',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                {copied ? <Check size={16} color="#E5C07B" /> : <Share2 size={16} />}
+                <span>{copied ? 'Tautan Galeri Tersalin!' : 'Bagikan Galeri'}</span>
               </button>
-            </div>
 
-            <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>BINGKAI RESMI</span>
-              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>
-                {FRAME_TEMPLATES[event?.frameId || 'minimal-gold']?.name?.split(' ')[0] || 'Minimal'}
-              </strong>
-            </div>
-
-            <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>PESAN SUARA</span>
-              <strong style={{ fontSize: '20px', color: '#C27803' }}>{voiceNotes.length} Ucapan</strong>
-            </div>
-
-            <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>JATAH PER TAMU</span>
-              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{event?.shotsPerGuest || 20} Foto</strong>
-            </div>
-
-            <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>STATUS PENGUNGKAPAN</span>
-              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>
-                {event?.revealMode === 'instant' ? 'Terbuka' : countdown.isExpired ? 'Selesai Dicuci' : 'Kamar Gelap'}
-              </strong>
+              {photos.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => downloadAllPhotosAsZip(displayedPhotos)}
+                  disabled={isZipping}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 20px',
+                    borderRadius: '999px',
+                    background: 'rgba(0, 0, 0, 0.4)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(255, 255, 255, 0.18)',
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    cursor: isZipping ? 'wait' : 'pointer'
+                  }}
+                >
+                  {isZipping ? <RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={15} />}
+                  <span>{isZipping ? zipProgress : 'Unduh ZIP Foto'}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -883,14 +1105,43 @@ export default function EventDashboardPage() {
           )}
 
           {photos.length === 0 ? (
-            <div className="glass-card" style={{ padding: '64px 24px', textAlign: 'center', borderRadius: '24px' }}>
-              <Camera size={44} style={{ color: '#86868B', margin: '0 auto 16px' }} />
-              <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '8px', color: '#1D1D1F' }}>Belum ada foto yang masuk</h3>
-              <p style={{ color: '#6E6E73', fontSize: '14px', maxWidth: '420px', margin: '0 auto 24px' }}>
-                Bagikan tautan kamera atau buka kamera tamu untuk mengambil jepretan pertama Anda.
+            <div className="glass-card" style={{ padding: '72px 24px', textAlign: 'center', borderRadius: '28px', maxWidth: '640px', margin: '0 auto' }}>
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: 'rgba(194, 120, 3, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                  color: '#C27803'
+                }}
+              >
+                <Camera size={32} />
+              </div>
+              <h3 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: '24px', fontWeight: 700, marginBottom: '10px', color: '#1D1D1F' }}>
+                Jadilah yang Pertama Mengisi Rol Foto
+              </h3>
+              <p style={{ color: '#6E6E73', fontSize: '14.5px', lineHeight: 1.6, maxWidth: '460px', margin: '0 auto 26px' }}>
+                Belum ada jepretan kamera dari para tamu. Abadikan senyum, tatapan bahagia, dan momen hangat untuk kedua pengantin sekarang juga.
               </p>
-              <Link href={`/cam/${event?.slug || eventId}`} className="btn-apple-black" style={{ padding: '10px 22px', fontSize: '13.5px' }}>
-                Buka Kamera Tamu
+              <Link
+                href={`/cam/${event?.slug || eventId}`}
+                className="btn-apple-black"
+                style={{
+                  padding: '12px 28px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  borderRadius: '999px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Camera size={16} />
+                <span>Buka Kamera Sekarang</span>
               </Link>
             </div>
           ) : displayedPhotos.length === 0 ? (

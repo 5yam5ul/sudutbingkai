@@ -120,6 +120,7 @@ export async function PATCH(request: Request) {
     if (body.frameText !== undefined) updates.frameText = body.frameText;
     if (body.allowVoiceNote !== undefined) updates.allowVoiceNote = body.allowVoiceNote;
     if (body.allowGuestFrameToggle !== undefined) updates.allowGuestFrameToggle = body.allowGuestFrameToggle;
+    if (body.coverUrl !== undefined) updates.coverUrl = body.coverUrl;
 
     const updated = await updateEvent(body.id, updates);
     if (!updated) {
