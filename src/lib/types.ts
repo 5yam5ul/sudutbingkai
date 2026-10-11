@@ -27,6 +27,11 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
   maxPresets: number;
   badge: string;
   desc: string;
+  retentionLabel: string;
+  retentionDays: number;
+  storageCapacity: string;
+  maxFileSize: string;
+  maxVoiceDuration: string;
   popular?: boolean;
   isFree?: boolean;
 }> = {
@@ -40,6 +45,11 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxPresets: 1,
     badge: 'GRATIS • 5 TAMU',
     desc: 'Cocok untuk uji coba privat bersama keluarga dekat.',
+    retentionLabel: 'Penyimpanan 7 Hari',
+    retentionDays: 7,
+    storageCapacity: '500 MB Cloud Storage',
+    maxFileSize: '10 MB / foto',
+    maxVoiceDuration: '15 detik / pesan suara',
     isFree: true
   },
   mini: {
@@ -53,7 +63,12 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     shotsPerGuest: 15,
     maxPresets: 2,
     badge: 'HEMAT 20% • 15 TAMU',
-    desc: 'Untuk pesta kecil, intimate dinner, atau bridal shower.'
+    desc: 'Untuk pesta kecil, intimate dinner, atau bridal shower.',
+    retentionLabel: 'Penyimpanan 30 Hari (1 Bulan)',
+    retentionDays: 30,
+    storageCapacity: '2 GB Cloud Storage',
+    maxFileSize: '10 MB / foto',
+    maxVoiceDuration: '15 detik / pesan suara'
   },
   small: {
     id: 'small',
@@ -66,7 +81,12 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     shotsPerGuest: 15,
     maxPresets: 3,
     badge: 'HEMAT 25% • 35 TAMU',
-    desc: 'Cocok untuk gathering teman satu geng atau engagement.'
+    desc: 'Cocok untuk gathering teman satu geng atau engagement.',
+    retentionLabel: 'Penyimpanan 60 Hari (2 Bulan)',
+    retentionDays: 60,
+    storageCapacity: '5 GB Cloud Storage',
+    maxFileSize: '10 MB / foto',
+    maxVoiceDuration: '15 detik / pesan suara'
   },
   party: {
     id: 'party',
@@ -79,7 +99,12 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     shotsPerGuest: 20,
     maxPresets: 4,
     badge: 'HEMAT 18% • 75 TAMU',
-    desc: 'Ulang tahun, intimate wedding, atau acara kantor.'
+    desc: 'Ulang tahun, intimate wedding, atau acara kantor.',
+    retentionLabel: 'Penyimpanan 90 Hari (3 Bulan)',
+    retentionDays: 90,
+    storageCapacity: '10 GB Cloud Storage',
+    maxFileSize: '10 MB / foto',
+    maxVoiceDuration: '15 detik / pesan suara'
   },
   event: {
     id: 'event',
@@ -92,7 +117,12 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     shotsPerGuest: 20,
     maxPresets: 5,
     badge: 'HEMAT 18% • 150 TAMU',
-    desc: 'Resepsi pernikahan sedang atau reuni akbar.'
+    desc: 'Resepsi pernikahan sedang atau reuni akbar.',
+    retentionLabel: 'Penyimpanan 180 Hari (6 Bulan)',
+    retentionDays: 180,
+    storageCapacity: '20 GB Cloud Storage',
+    maxFileSize: '10 MB / foto',
+    maxVoiceDuration: '15 detik / pesan suara'
   },
   wedding: {
     id: 'wedding',
@@ -106,6 +136,11 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxPresets: 8,
     badge: 'PALING POPULER • 300 TAMU',
     desc: 'Pilihan paling populer untuk pesta pernikahan lengkap.',
+    retentionLabel: 'Penyimpanan 365 Hari (1 Tahun Penuh)',
+    retentionDays: 365,
+    storageCapacity: '50 GB Cloud Storage',
+    maxFileSize: '10 MB / foto',
+    maxVoiceDuration: '15 detik / pesan suara',
     popular: true
   },
   unlimited: {
@@ -119,7 +154,12 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     shotsPerGuest: 35,
     maxPresets: 8,
     badge: 'HEMAT 17% • TANPA BATAS',
-    desc: 'Festival, konser, atau wedding akbar ribuan tamu.'
+    desc: 'Festival, konser, atau wedding akbar ribuan tamu.',
+    retentionLabel: 'Penyimpanan 730 Hari (2 Tahun)',
+    retentionDays: 730,
+    storageCapacity: 'Unlimited Fair-Usage Cloud Storage',
+    maxFileSize: '10 MB / foto',
+    maxVoiceDuration: '15 detik / pesan suara'
   }
 };
 

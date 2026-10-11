@@ -356,20 +356,25 @@ function CreateEventForm() {
                 </div>
 
                 {/* Active Quotas Locked Display */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '10px' }}>
                   <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
                     <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '2px' }}>KAPASITAS TAMU</span>
-                    <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>{activeTier.guestsLabel}</strong>
+                    <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>{activeTier.guestsLabel}</strong>
                   </div>
 
                   <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
                     <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '2px' }}>JATAH FOTO</span>
-                    <strong style={{ fontSize: '15px', color: '#C27803' }}>{activeTier.shotsPerGuest} Jepretan / Tamu</strong>
+                    <strong style={{ fontSize: '14px', color: '#C27803' }}>{activeTier.shotsPerGuest} Foto / Tamu</strong>
                   </div>
 
                   <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
                     <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '2px' }}>KUOTA FILTER FILM</span>
-                    <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Maks {activeTier.maxPresets} Filter</strong>
+                    <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>Maks {activeTier.maxPresets} Filter</strong>
+                  </div>
+
+                  <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                    <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '2px' }}>MASA SIMPAN AWAN</span>
+                    <strong style={{ fontSize: '14px', color: '#27AE60' }}>{activeTier.retentionLabel}</strong>
                   </div>
                 </div>
 

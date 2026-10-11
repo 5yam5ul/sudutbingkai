@@ -180,10 +180,29 @@ export default function GuestCameraPage() {
     };
   }, [eventId]);
 
+  const attachStreamToVideo = (element: HTMLVideoElement | null, stream: MediaStream | null) => {
+    if (!element || !stream) return;
+    if (element.srcObject !== stream) {
+      element.srcObject = stream;
+    }
+    element.onloadedmetadata = () => {
+      element.play().catch(() => {});
+    };
+    element.play().catch(() => {});
+  };
+
+  const handleVideoRef = (el: HTMLVideoElement | null) => {
+    videoRef.current = el;
+    if (el && streamRef.current) {
+      attachStreamToVideo(el, streamRef.current);
+    }
+  };
+
   const startCamera = async () => {
     setCameraError(null);
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
     }
 
     try {
@@ -191,25 +210,19 @@ export default function GuestCameraPage() {
         audio: false,
         video: {
           facingMode: { ideal: facingMode },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
+          width: { ideal: 1280, max: 1920 },
+          height: { ideal: 720, max: 1080 }
         }
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
-      }
+      attachStreamToVideo(videoRef.current, stream);
     } catch (err) {
       try {
         const fallback = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         streamRef.current = fallback;
-        if (videoRef.current) {
-          videoRef.current.srcObject = fallback;
-          await videoRef.current.play();
-        }
+        attachStreamToVideo(videoRef.current, fallback);
       } catch (fErr) {
         setCameraError('Izinkan akses kamera di browser ponsel Anda untuk memotret.');
       }
@@ -774,10 +787,13 @@ export default function GuestCameraPage() {
           justifyContent: 'center'
         }}>
           <video
-            ref={videoRef}
+            ref={handleVideoRef}
             playsInline
             muted
             autoPlay
+            onLoadedMetadata={(e) => {
+              e.currentTarget.play().catch(() => {});
+            }}
             style={{
               width: '100%',
               height: '100%',
