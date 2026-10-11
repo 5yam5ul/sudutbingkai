@@ -1219,477 +1219,291 @@ export default function HomePage() {
           </p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '28px' }}>
-          {/* Testimonial 1: Wedding */}
-          <div className="glass-card" style={{
-            borderRadius: '24px',
-            overflow: 'hidden',
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(330px, 1fr))', gap: '32px' }}>
+          {/* Editorial Folio 1: Resepsi Pernikahan */}
+          <article style={{
+            background: '#FAF9F5',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: '20px',
+            padding: '24px 20px 22px',
             display: 'flex',
             flexDirection: 'column',
-            background: 'rgba(255, 255, 255, 0.95)',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.05)'
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.03)'
           }}>
-            {/* Visual: 2 Vertical Candid Snaps from Guest Roll */}
-            <div style={{
-              padding: '16px 16px 12px',
-              background: '#F8F8F6',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '10px'
-              }}>
-                <span style={{
-                  background: 'rgba(194, 120, 3, 0.12)',
-                  color: '#C27803',
-                  borderRadius: '999px',
-                  padding: '3px 10px',
-                  fontSize: '10.5px',
-                  fontWeight: 700,
-                  fontFamily: 'var(--font-mono)',
-                  letterSpacing: '0.04em'
-                }}>
-                  • RESEPSI PERNIKAHAN •
-                </span>
-                <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Camera size={10} color="#86868B" /> 2 FOTO ROLL TAMU
+            <div>
+              {/* Folio Metadata Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.08em', color: '#1D1D1F', textTransform: 'uppercase' }}>
+                    Resepsi Pernikahan
+                  </span>
+                </div>
+                <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#86868B' }}>
+                  Roll 48 Foto
                 </span>
               </div>
 
-              {/* 2 Vertical 3:4 Photos Side by Side */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {/* Photo 1: Selfie */}
+              {/* Twin Photo Paper Prints (Matte white border, organic tilt, real paper shadow) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '6px 4px 12px' }}>
+                {/* Print 1: Left */}
                 <div style={{
-                  position: 'relative',
-                  aspectRatio: '3 / 4',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  background: '#1D1D1F',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                  background: '#FFFFFF',
+                  padding: '6px 6px 14px',
+                  borderRadius: '3px',
+                  boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
+                  transform: 'rotate(-1.5deg)',
+                  transition: 'transform 0.3s ease'
                 }}>
-                  <img
-                    src="/images/testimonials/wedding_1.jpg"
-                    alt="Selfie Tamu Meja 04"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    left: '8px',
-                    background: 'rgba(0, 0, 0, 0.65)',
-                    backdropFilter: 'blur(6px)',
-                    borderRadius: '6px',
-                    padding: '2px 6px',
-                    color: '#FFFFFF',
-                    fontSize: '9px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px'
-                  }}>
-                    <span>Meja 04</span>
+                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                    <img
+                      src="/images/testimonials/wedding_1.jpg"
+                      alt="Selfie Tamu Meja 04"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   </div>
-                  <div className="font-mono-film" style={{
-                    position: 'absolute',
-                    bottom: '6px',
-                    right: '8px',
-                    color: '#FF9900',
-                    fontSize: '9.5px',
-                    fontWeight: 700,
-                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
-                    letterSpacing: '0.04em'
-                  }}>
-                    &apos;24 09 14
+                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>MEJA 04</span>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:14 WIB</span>
                   </div>
                 </div>
 
-                {/* Photo 2: Table Candid */}
+                {/* Print 2: Right */}
                 <div style={{
-                  position: 'relative',
-                  aspectRatio: '3 / 4',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  background: '#1D1D1F',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                  background: '#FFFFFF',
+                  padding: '6px 6px 14px',
+                  borderRadius: '3px',
+                  boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
+                  transform: 'rotate(1.8deg)',
+                  transition: 'transform 0.3s ease'
                 }}>
-                  <img
-                    src="/images/testimonials/wedding_2.jpg"
-                    alt="Candid Meja Prasmanan"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    left: '8px',
-                    background: 'rgba(0, 0, 0, 0.65)',
-                    backdropFilter: 'blur(6px)',
-                    borderRadius: '6px',
-                    padding: '2px 6px',
-                    color: '#FFFFFF',
-                    fontSize: '9px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px'
-                  }}>
-                    <span>Meja 02</span>
+                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                    <img
+                      src="/images/testimonials/wedding_2.jpg"
+                      alt="Candid Meja 02"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   </div>
-                  <div className="font-mono-film" style={{
-                    position: 'absolute',
-                    bottom: '6px',
-                    right: '8px',
-                    color: '#FF9900',
-                    fontSize: '9.5px',
-                    fontWeight: 700,
-                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
-                    letterSpacing: '0.04em'
-                  }}>
-                    &apos;24 09 14
+                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>MEJA 02</span>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:38 WIB</span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div style={{ padding: '22px 24px 24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', gap: '3px', marginBottom: '12px' }}>
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={15} fill="#C27803" color="#C27803" />
-                  ))}
-                </div>
-                <p style={{ color: '#333336', fontSize: '13.5px', lineHeight: 1.65, fontStyle: 'italic', marginBottom: '18px' }}>
-                  &ldquo;Awalnya mikir kartu QR di meja bakal dianggurin. Taunya pas resepsi jalan, temen-temen meja kuliah sama sahabat cewek malah seru-seruan selfie flash pake kebaya dan foto candid temen cowok yang lagi kalap nyomot jajanan pasar. Pas malemnya kita cek web di kamar hotel, ketawa ngakak liat jepretan candid random yang fotografer resmi kita gak sempet tangkap. Berasa dapet harta karun!&rdquo;
+              {/* Story Narrative */}
+              <div style={{ marginTop: '16px' }}>
+                <h3 style={{ fontSize: '15.5px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.45, marginBottom: '10px' }}>
+                  &ldquo;Fotografer sibuk di pelaminan, roll tamu merekam hebohnya meja kawan lama.&rdquo;
+                </h3>
+                <p style={{ color: '#515154', fontSize: '13.5px', lineHeight: 1.7 }}>
+                  Awalnya deg-degan kartu barcode di meja cuma dianggurin. Ternyata pas resepsi jalan, meja kuliah malah heboh gantian jepret selfie kebaya dan foto candid temen cowok yang lagi kalap nyomot prasmanan. Pas malemnya kita buka roll bareng di hotel, ketawa ngakak dapet jepretan spontan yang fotografer resmi gak sempet tangkap.
                 </p>
               </div>
-
-              <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>Sarah & Dimas</strong>
-                  <span style={{ fontSize: '12px', color: '#86868B' }}>Plataran Cilandak, Jakarta Selatan</span>
-                </div>
-                <span style={{ fontSize: '11px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
-                  Host Terverifikasi
-                </span>
-              </div>
             </div>
-          </div>
 
-          {/* Testimonial 2: Birthday */}
-          <div className="glass-card" style={{
-            borderRadius: '24px',
-            overflow: 'hidden',
+            {/* Credits Footnote */}
+            <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>Sarah & Dimas</strong>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>Plataran Cilandak, Jakarta</span>
+              </div>
+              <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#515154', background: '#ECECE8', padding: '3px 9px', borderRadius: '6px' }}>
+                14 SEP 2024
+              </span>
+            </div>
+          </article>
+
+          {/* Editorial Folio 2: Sweet 17th Birthday */}
+          <article style={{
+            background: '#FAF9F5',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: '20px',
+            padding: '24px 20px 22px',
             display: 'flex',
             flexDirection: 'column',
-            background: 'rgba(255, 255, 255, 0.95)',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.05)'
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.03)'
           }}>
-            {/* Visual: 2 Vertical Candid Snaps from Guest Roll */}
-            <div style={{
-              padding: '16px 16px 12px',
-              background: '#F8F8F6',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '10px'
-              }}>
-                <span style={{
-                  background: 'rgba(194, 120, 3, 0.12)',
-                  color: '#C27803',
-                  borderRadius: '999px',
-                  padding: '3px 10px',
-                  fontSize: '10.5px',
-                  fontWeight: 700,
-                  fontFamily: 'var(--font-mono)',
-                  letterSpacing: '0.04em'
-                }}>
-                  • SWEET 17TH BIRTHDAY •
-                </span>
-                <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Camera size={10} color="#86868B" /> 2 FOTO ROLL TAMU
+            <div>
+              {/* Folio Metadata Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.08em', color: '#1D1D1F', textTransform: 'uppercase' }}>
+                    Sweet 17th Birthday
+                  </span>
+                </div>
+                <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#86868B' }}>
+                  Roll 36 Foto
                 </span>
               </div>
 
-              {/* 2 Vertical 3:4 Photos Side by Side */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {/* Photo 1: Teen Selfie */}
+              {/* Twin Photo Paper Prints (Matte white border, organic tilt, real paper shadow) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '6px 4px 12px' }}>
+                {/* Print 1: Left */}
                 <div style={{
-                  position: 'relative',
-                  aspectRatio: '3 / 4',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  background: '#1D1D1F',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                  background: '#FFFFFF',
+                  padding: '6px 6px 14px',
+                  borderRadius: '3px',
+                  boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
+                  transform: 'rotate(-1.8deg)',
+                  transition: 'transform 0.3s ease'
                 }}>
-                  <img
-                    src="/images/testimonials/birthday_1.jpg"
-                    alt="Selfie Teman SMA"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    left: '8px',
-                    background: 'rgba(0, 0, 0, 0.65)',
-                    backdropFilter: 'blur(6px)',
-                    borderRadius: '6px',
-                    padding: '2px 6px',
-                    color: '#FFFFFF',
-                    fontSize: '9px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px'
-                  }}>
-                    <span>Geng Meja 03</span>
+                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                    <img
+                      src="/images/testimonials/birthday_1.jpg"
+                      alt="Selfie Geng SMA"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   </div>
-                  <div className="font-mono-film" style={{
-                    position: 'absolute',
-                    bottom: '6px',
-                    right: '8px',
-                    color: '#FF9900',
-                    fontSize: '9.5px',
-                    fontWeight: 700,
-                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
-                    letterSpacing: '0.04em'
-                  }}>
-                    &apos;24 10 05
+                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>GENG 03</span>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>20:12 WIB</span>
                   </div>
                 </div>
 
-                {/* Photo 2: Candle Candid */}
+                {/* Print 2: Right */}
                 <div style={{
-                  position: 'relative',
-                  aspectRatio: '3 / 4',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  background: '#1D1D1F',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                  background: '#FFFFFF',
+                  padding: '6px 6px 14px',
+                  borderRadius: '3px',
+                  boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
+                  transform: 'rotate(1.5deg)',
+                  transition: 'transform 0.3s ease'
                 }}>
-                  <img
-                    src="/images/testimonials/birthday_2.jpg"
-                    alt="Momen Tiup Lilin"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    left: '8px',
-                    background: 'rgba(0, 0, 0, 0.65)',
-                    backdropFilter: 'blur(6px)',
-                    borderRadius: '6px',
-                    padding: '2px 6px',
-                    color: '#FFFFFF',
-                    fontSize: '9px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px'
-                  }}>
-                    <span>Tiup Lilin</span>
+                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                    <img
+                      src="/images/testimonials/birthday_2.jpg"
+                      alt="Candid Tiup Lilin"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   </div>
-                  <div className="font-mono-film" style={{
-                    position: 'absolute',
-                    bottom: '6px',
-                    right: '8px',
-                    color: '#FF9900',
-                    fontSize: '9.5px',
-                    fontWeight: 700,
-                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
-                    letterSpacing: '0.04em'
-                  }}>
-                    &apos;24 10 05
+                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>TIUP LILIN</span>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>20:45 WIB</span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div style={{ padding: '22px 24px 24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', gap: '3px', marginBottom: '12px' }}>
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={15} fill="#C27803" color="#C27803" />
-                  ))}
-                </div>
-                <p style={{ color: '#333336', fontSize: '13.5px', lineHeight: 1.65, fontStyle: 'italic', marginBottom: '18px' }}>
-                  &ldquo;Anak-anak sekelas paling males kalau disuruh foto kaku. Pas ada QR SudutBingkai di meja cafe, mereka langsung heboh jepret pake hape masing-masing. Hasil warnanya ada grain analog estetik sama flash khas disposable 90-an tanpa harus repot bawa roll film fisik. Momen tiup lilin juga ketangkep dari berbagai sudut meja temen!&rdquo;
+              {/* Story Narrative */}
+              <div style={{ marginTop: '16px' }}>
+                <h3 style={{ fontSize: '15.5px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.45, marginBottom: '10px' }}>
+                  &ldquo;Vibenya disposable camera 90-an, teman-teman sekelas langsung lepas tanpa jaim.&rdquo;
+                </h3>
+                <p style={{ color: '#515154', fontSize: '13.5px', lineHeight: 1.7 }}>
+                  Anak-anak SMA paling males disuruh foto kaku berjejer. Pas ada QR SudutBingkai di meja cafe, mereka langsung jepret candid dari berbagai sudut meja. Tone warnanya ada grain analog estetik tanpa perlu repot bawa kamera analog fisik. Momen pas tiup lilin juga ketangkep natural banget.
                 </p>
               </div>
-
-              <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>Clarissa & Geng SMA</strong>
-                  <span style={{ fontSize: '12px', color: '#86868B' }}>Cafe Gathering, Surabaya</span>
-                </div>
-                <span style={{ fontSize: '11px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
-                  Host Terverifikasi
-                </span>
-              </div>
             </div>
-          </div>
 
-          {/* Testimonial 3: Company Gathering */}
-          <div className="glass-card" style={{
-            borderRadius: '24px',
-            overflow: 'hidden',
+            {/* Credits Footnote */}
+            <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>Clarissa & Geng SMA</strong>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>Cafe Gathering, Surabaya</span>
+              </div>
+              <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#515154', background: '#ECECE8', padding: '3px 9px', borderRadius: '6px' }}>
+                05 OKT 2024
+              </span>
+            </div>
+          </article>
+
+          {/* Editorial Folio 3: Annual Company Dinner */}
+          <article style={{
+            background: '#FAF9F5',
+            border: '1px solid rgba(0, 0, 0, 0.06)',
+            borderRadius: '20px',
+            padding: '24px 20px 22px',
             display: 'flex',
             flexDirection: 'column',
-            background: 'rgba(255, 255, 255, 0.95)',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.05)'
+            justifyContent: 'space-between',
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.03)'
           }}>
-            {/* Visual: 2 Vertical Candid Snaps from Guest Roll */}
-            <div style={{
-              padding: '16px 16px 12px',
-              background: '#F8F8F6',
-              borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
-            }}>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '10px'
-              }}>
-                <span style={{
-                  background: 'rgba(194, 120, 3, 0.12)',
-                  color: '#C27803',
-                  borderRadius: '999px',
-                  padding: '3px 10px',
-                  fontSize: '10.5px',
-                  fontWeight: 700,
-                  fontFamily: 'var(--font-mono)',
-                  letterSpacing: '0.04em'
-                }}>
-                  • ANNUAL COMPANY DINNER •
-                </span>
-                <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <Camera size={10} color="#86868B" /> 2 FOTO ROLL TAMU
+            <div>
+              {/* Folio Metadata Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', paddingBottom: '12px', borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.08em', color: '#1D1D1F', textTransform: 'uppercase' }}>
+                    Annual Company Dinner
+                  </span>
+                </div>
+                <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#86868B' }}>
+                  Roll 72 Foto
                 </span>
               </div>
 
-              {/* 2 Vertical 3:4 Photos Side by Side */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                {/* Photo 1: Rooftop Selfie */}
+              {/* Twin Photo Paper Prints (Matte white border, organic tilt, real paper shadow) */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '6px 4px 12px' }}>
+                {/* Print 1: Left */}
                 <div style={{
-                  position: 'relative',
-                  aspectRatio: '3 / 4',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  background: '#1D1D1F',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                  background: '#FFFFFF',
+                  padding: '6px 6px 14px',
+                  borderRadius: '3px',
+                  boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
+                  transform: 'rotate(-1.5deg)',
+                  transition: 'transform 0.3s ease'
                 }}>
-                  <img
-                    src="/images/testimonials/gathering_1.jpg"
-                    alt="Rooftop Selfie Coworkers"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    left: '8px',
-                    background: 'rgba(0, 0, 0, 0.65)',
-                    backdropFilter: 'blur(6px)',
-                    borderRadius: '6px',
-                    padding: '2px 6px',
-                    color: '#FFFFFF',
-                    fontSize: '9px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px'
-                  }}>
-                    <span>Rooftop SCBD</span>
+                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                    <img
+                      src="/images/testimonials/gathering_1.jpg"
+                      alt="Selfie Rooftop SCBD"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   </div>
-                  <div className="font-mono-film" style={{
-                    position: 'absolute',
-                    bottom: '6px',
-                    right: '8px',
-                    color: '#FF9900',
-                    fontSize: '9.5px',
-                    fontWeight: 700,
-                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
-                    letterSpacing: '0.04em'
-                  }}>
-                    &apos;24 11 20
+                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>ROOFTOP</span>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:05 WIB</span>
                   </div>
                 </div>
 
-                {/* Photo 2: Table Toast */}
+                {/* Print 2: Right */}
                 <div style={{
-                  position: 'relative',
-                  aspectRatio: '3 / 4',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  background: '#1D1D1F',
-                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)'
+                  background: '#FFFFFF',
+                  padding: '6px 6px 14px',
+                  borderRadius: '3px',
+                  boxShadow: '0 8px 20px -3px rgba(0, 0, 0, 0.12), 0 2px 6px -1px rgba(0, 0, 0, 0.06)',
+                  transform: 'rotate(1.8deg)',
+                  transition: 'transform 0.3s ease'
                 }}>
-                  <img
-                    src="/images/testimonials/gathering_2.jpg"
-                    alt="Candid Meja Makan Kantor"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                  <div style={{
-                    position: 'absolute',
-                    top: '8px',
-                    left: '8px',
-                    background: 'rgba(0, 0, 0, 0.65)',
-                    backdropFilter: 'blur(6px)',
-                    borderRadius: '6px',
-                    padding: '2px 6px',
-                    color: '#FFFFFF',
-                    fontSize: '9px',
-                    fontWeight: 600,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px'
-                  }}>
-                    <span>Meja Tim Dev</span>
+                  <div style={{ position: 'relative', aspectRatio: '3 / 4', overflow: 'hidden', background: '#1D1D1F' }}>
+                    <img
+                      src="/images/testimonials/gathering_2.jpg"
+                      alt="Candid Meja Makan Tim"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   </div>
-                  <div className="font-mono-film" style={{
-                    position: 'absolute',
-                    bottom: '6px',
-                    right: '8px',
-                    color: '#FF9900',
-                    fontSize: '9.5px',
-                    fontWeight: 700,
-                    textShadow: '0 1px 3px rgba(0,0,0,0.85)',
-                    letterSpacing: '0.04em'
-                  }}>
-                    &apos;24 11 20
+                  <div style={{ marginTop: '7px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>CHEERS TIM</span>
+                    <span style={{ fontSize: '8.5px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:40 WIB</span>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div style={{ padding: '22px 24px 24px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', gap: '3px', marginBottom: '12px' }}>
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} size={15} fill="#C27803" color="#C27803" />
-                  ))}
-                </div>
-                <p style={{ color: '#333336', fontSize: '13.5px', lineHeight: 1.65, fontStyle: 'italic', marginBottom: '18px' }}>
-                  &ldquo;Dipakai buat 120 karyawan di rooftop gathering tahunan. Biasanya orang males upload foto kantor ke Google Drive bersama, tapi pake SudutBingkai semua meja langsung aktif jepret pas makan & cheers. Hasil candid-nya langsung auto-sync tayang di layar proyektor venue, seru dan cairin suasana banget.&rdquo;
+              {/* Story Narrative */}
+              <div style={{ marginTop: '16px' }}>
+                <h3 style={{ fontSize: '15.5px', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.45, marginBottom: '10px' }}>
+                  &ldquo;Biasanya mager upload foto kantor, ini malah seru-seruan jepret momen santai.&rdquo;
+                </h3>
+                <p style={{ color: '#515154', fontSize: '13.5px', lineHeight: 1.7 }}>
+                  Dipakai buat 120 karyawan di rooftop gathering. Kalau ngandelin Google Drive bersama pasti sepi peminat. Tapi pake SudutBingkai, semua meja langsung aktif jepret pas makan & cheers, dan fotonya langsung auto-sync tayang di proyektor venue. Suasana kantor jadi jauh lebih akrab dan hidup.
                 </p>
               </div>
-
-              <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div>
-                  <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>Rian Mahendra</strong>
-                  <span style={{ fontSize: '12px', color: '#86868B' }}>People Lead, Tech Studio SCBD</span>
-                </div>
-                <span style={{ fontSize: '11px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
-                  Host Terverifikasi
-                </span>
-              </div>
             </div>
-          </div>
+
+            {/* Credits Footnote */}
+            <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', marginTop: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>Rian Mahendra</strong>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>People Lead, SCBD Jakarta</span>
+              </div>
+              <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#515154', background: '#ECECE8', padding: '3px 9px', borderRadius: '6px' }}>
+                20 NOV 2024
+              </span>
+            </div>
+          </article>
         </div>
       </section>
 
