@@ -953,37 +953,14 @@ export default function GuestCameraPage() {
         gap: '12px',
         boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.5)'
       }}>
-        {/* Row 1: Secondary Controls Cluster (Cleanly on matte dark deck!) */}
+        {/* Row 1: Secondary Controls Cluster (Just 2 clean, high-value pills) */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          gap: '8px',
+          gap: '10px',
           width: '100%'
         }}>
-          {/* Aspect Ratio Switcher */}
-          <button
-            onClick={cycleAspectRatio}
-            style={{
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.16)',
-              padding: '6px 12px',
-              borderRadius: '999px',
-              color: '#FFFFFF',
-              fontSize: '11px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              transition: 'background 0.2s'
-            }}
-            title="Ganti Rasio Foto"
-          >
-            <Layers size={11} />
-            <span>{aspectRatio}</span>
-          </button>
-
           {/* Frame Toggle */}
           {event?.allowGuestFrameToggle !== false && (
             <button
@@ -992,22 +969,23 @@ export default function GuestCameraPage() {
                 setUseFrame(!useFrame);
               }}
               style={{
-                background: useFrame ? 'rgba(194, 120, 3, 0.85)' : 'rgba(255, 255, 255, 0.08)',
+                background: useFrame ? 'rgba(194, 120, 3, 0.9)' : 'rgba(255, 255, 255, 0.08)',
                 border: useFrame ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.16)',
-                padding: '6px 12px',
+                padding: '6px 14px',
                 borderRadius: '999px',
                 color: '#FFFFFF',
-                fontSize: '11px',
+                fontSize: '11.5px',
                 fontWeight: 600,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
-                transition: 'background 0.2s'
+                gap: '5px',
+                transition: 'all 0.2s ease',
+                boxShadow: useFrame ? '0 2px 8px rgba(194, 120, 3, 0.35)' : 'none'
               }}
               title="Pilih Pakai Bingkai atau Raw"
             >
-              <Sparkles size={11} color={useFrame ? '#FFF' : '#F59E0B'} />
+              <Sparkles size={12} color={useFrame ? '#FFF' : '#F59E0B'} />
               <span>{useFrame ? 'BINGKAI' : 'RAW'}</span>
             </button>
           )}
@@ -1019,39 +997,40 @@ export default function GuestCameraPage() {
               setShowWishModal(true);
             }}
             style={{
-              background: currentWish.trim() ? 'rgba(194, 120, 3, 0.85)' : 'rgba(255, 255, 255, 0.08)',
+              background: currentWish.trim() ? 'rgba(194, 120, 3, 0.9)' : 'rgba(255, 255, 255, 0.08)',
               border: currentWish.trim() ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.16)',
-              padding: '6px 12px',
+              padding: '6px 14px',
               borderRadius: '999px',
               color: '#FFFFFF',
-              fontSize: '11px',
+              fontSize: '11.5px',
               fontWeight: 600,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
-              maxWidth: '140px',
-              transition: 'background 0.2s'
+              gap: '6px',
+              maxWidth: '160px',
+              transition: 'all 0.2s ease',
+              boxShadow: currentWish.trim() ? '0 2px 8px rgba(194, 120, 3, 0.35)' : 'none'
             }}
             title="Tuliskan ucapan untuk pengantin"
           >
-            <Heart size={11} fill={currentWish.trim() ? 'currentColor' : 'none'} color={currentWish.trim() ? '#fff' : '#C27803'} />
+            <Heart size={12} fill={currentWish.trim() ? 'currentColor' : 'none'} color={currentWish.trim() ? '#fff' : '#C27803'} />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {currentWish.trim() ? 'Tersimpan' : '+ Ucapan'}
             </span>
           </button>
         </div>
 
-        {/* Row 2: Ergonomic 3-Pillar Shutter Deck */}
+        {/* Row 2: Pure Symmetrical 3-Pillar Shutter Deck */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           width: '100%',
-          maxWidth: '360px',
-          padding: '0 12px'
+          maxWidth: '340px',
+          padding: '0 8px'
         }}>
-          {/* Left Pillar: My Roll Preview (Slide Mount Style) */}
+          {/* Left Pillar: My Roll Preview (48x48px) */}
           <button
             onClick={() => {
               hapticLightTap();
@@ -1072,7 +1051,7 @@ export default function GuestCameraPage() {
               overflow: 'hidden',
               boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
             }}
-            title="Roll Foto Saya"
+            title="Buka Rol Foto Saya"
           >
             {lastShotThumb ? (
               <img src={lastShotThumb} alt="My Roll" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1102,7 +1081,7 @@ export default function GuestCameraPage() {
             )}
           </button>
 
-          {/* Center Pillar: Tactile Mechanical Shutter Ring */}
+          {/* Center Pillar: Tactile Mechanical Shutter Ring (74x74px) */}
           <button
             onClick={takePhoto}
             onPointerDown={() => {
@@ -1137,48 +1116,26 @@ export default function GuestCameraPage() {
             }} />
           </button>
 
-          {/* Right Pillar: Lens Flip & Gallery Action */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              onClick={() => galleryInputRef.current?.click()}
-              disabled={shotCount >= maxShots || isCapturing}
-              style={{
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.16)',
-                color: '#A1A1A6',
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: (shotCount >= maxShots || isCapturing) ? 'not-allowed' : 'pointer'
-              }}
-              title="Unggah dari Galeri HP"
-            >
-              <ImageIcon size={15} />
-            </button>
-
-            <button
-              onClick={flipCamera}
-              style={{
-                background: '#1A1815',
-                border: '1.5px solid rgba(255, 255, 255, 0.22)',
-                color: '#fff',
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
-              }}
-              title="Putar Kamera"
-            >
-              <RotateCcw size={19} />
-            </button>
-          </div>
+          {/* Right Pillar: Lens Flip Camera (48x48px - Identical to Left Pillar!) */}
+          <button
+            onClick={flipCamera}
+            style={{
+              background: '#1A1815',
+              border: '1.5px solid rgba(255, 255, 255, 0.22)',
+              color: '#FFFFFF',
+              width: '48px',
+              height: '48px',
+              borderRadius: '14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+            }}
+            title="Putar Kamera (Selfie / Belakang)"
+          >
+            <RotateCcw size={19} />
+          </button>
         </div>
 
         {/* Row 3: Footnote / Film Stamp (Safe clearance above Android Navbar) */}
@@ -1451,23 +1408,51 @@ export default function GuestCameraPage() {
               )}
 
               {/* Modal Bottom Actions */}
-              <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.08)', paddingTop: '16px', display: 'flex', gap: '10px' }}>
-                <button
-                  onClick={() => setShowRollModal(false)}
-                  className="btn-apple-black"
-                  style={{ flex: 1, padding: '12px', fontSize: '13px', borderRadius: '12px' }}
-                >
-                  <span>Kembali Motret ({remaining} Sisa)</span>
-                </button>
+              <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.08)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    onClick={() => setShowRollModal(false)}
+                    className="btn-apple-black"
+                    style={{ flex: 1, padding: '11px', fontSize: '13px', borderRadius: '12px' }}
+                  >
+                    <span>Kembali Motret ({remaining} Sisa)</span>
+                  </button>
 
-                <Link
-                  href={`/event/${eventId}`}
-                  className="glass-pill"
-                  style={{ padding: '12px 18px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Eye size={14} />
-                  <span>Lihat Galeri Bersama</span>
-                </Link>
+                  <Link
+                    href={`/event/${eventId}`}
+                    className="glass-pill"
+                    style={{ padding: '11px 16px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Eye size={14} />
+                    <span>Galeri Bersama</span>
+                  </Link>
+                </div>
+
+                {remaining > 0 && (
+                  <button
+                    onClick={() => {
+                      setShowRollModal(false);
+                      galleryInputRef.current?.click();
+                    }}
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.03)',
+                      border: '1px dashed rgba(0, 0, 0, 0.18)',
+                      borderRadius: '10px',
+                      padding: '8px 12px',
+                      color: '#6E6E73',
+                      fontSize: '11.5px',
+                      fontWeight: 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Upload size={13} color="#86868B" />
+                    <span>Atau unggah foto dari galeri HP ({remaining} slot tersisa)</span>
+                  </button>
+                )}
               </div>
             </motion.div>
           </motion.div>
