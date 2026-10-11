@@ -73,6 +73,7 @@ export default function BrideDashboardPage() {
   // Real ZIP state
   const [isZipping, setIsZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState('');
+  const [showCreatedBanner, setShowCreatedBanner] = useState(false);
 
   useEffect(() => {
     const current = getClientSession();
@@ -81,59 +82,100 @@ export default function BrideDashboardPage() {
       return;
     }
     setUser(current);
-    fetchData(current);
+
+    let requestedEventId: string | null = null;
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('created') === 'true') {
+        setShowCreatedBanner(true);
+      }
+      requestedEventId = urlParams.get('eventId');
+    }
+
+    fetchData(current, requestedEventId || undefined);
   }, []);
 
-  const fetchData = async (currentUser?: UserAccount) => {
+  const selectActiveEvent = async (selected: EventData) => {
+    setEvent(selected);
+    setShotsPerGuest(selected.shotsPerGuest || 20);
+    setRevealMode(selected.revealMode || 'instant');
+    setRevealTime(selected.revealTime || '');
+    setPreset(selected.preset || 'portra');
+    setAllowedPresets(selected.allowedPresets && selected.allowedPresets.length > 0 ? selected.allowedPresets : [selected.preset || 'portra']);
+    setAllowGuestPresetSwitch(selected.allowGuestPresetSwitch || false);
+    setPackageTier((selected.packageTier && PACKAGE_TIERS[selected.packageTier]) ? selected.packageTier : 'wedding');
+    setFrameId(selected.frameId || 'minimal-gold');
+    setCustomFrameUrl(selected.customFrameUrl || '');
+    setFrameText(selected.frameText || '');
+    setAllowGuestFrameToggle(selected.allowGuestFrameToggle !== false);
+    setAllowVoiceNote(selected.allowVoiceNote !== false);
+
+    // Fetch all photos including hidden for host moderation
+    try {
+      const resPhotos = await fetch(`/api/photos?eventId=${selected.id}&includeHidden=true`);
+      const dataPhotos = await resPhotos.json();
+      if (dataPhotos.success && dataPhotos.photos) {
+        setPhotos(dataPhotos.photos);
+      } else {
+        setPhotos([]);
+      }
+    } catch {
+      setPhotos([]);
+    }
+
+    // Fetch voice notes
+    try {
+      const resVoices = await fetch(`/api/voice-notes?eventId=${selected.id}`);
+      const dataVoices = await resVoices.json();
+      if (dataVoices.success && dataVoices.voiceNotes) {
+        setVoiceNotes(dataVoices.voiceNotes);
+      } else {
+        setVoiceNotes([]);
+      }
+    } catch (vErr) {
+      console.warn('Gagal memuat pesan suara:', vErr);
+      setVoiceNotes([]);
+    }
+  };
+
+  const fetchData = async (currentUser?: UserAccount, targetEventId?: string) => {
     try {
       setLoading(true);
       const email = currentUser?.email || user?.email || 'pengantin@sudutbingkai.id';
       const resEvents = await fetch(`/api/events?hostEmail=${encodeURIComponent(email)}`);
       const dataEvents = await resEvents.json();
       let selected: EventData | null = null;
+
       if (dataEvents.success && dataEvents.events && dataEvents.events.length > 0) {
-        selected = dataEvents.events[0];
+        setEvents(dataEvents.events);
+        if (targetEventId) {
+          selected = dataEvents.events.find((e: EventData) => e.id === targetEventId || e.slug === targetEventId) || dataEvents.events[0];
+        } else {
+          selected = dataEvents.events[0];
+        }
       } else {
-        const fallbackRes = await fetch('/api/events?id=wedding-sarah-dimas');
-        const fallbackData = await fallbackRes.json();
-        if (fallbackData.success && fallbackData.event) {
-          selected = fallbackData.event;
+        if (targetEventId) {
+          try {
+            const singleRes = await fetch(`/api/events?id=${encodeURIComponent(targetEventId)}`);
+            const singleData = await singleRes.json();
+            if (singleData.success && singleData.event) {
+              selected = singleData.event;
+              setEvents([singleData.event]);
+            }
+          } catch {}
+        }
+        if (!selected) {
+          const fallbackRes = await fetch('/api/events?id=wedding-sarah-dimas');
+          const fallbackData = await fallbackRes.json();
+          if (fallbackData.success && fallbackData.event) {
+            selected = fallbackData.event;
+            setEvents([fallbackData.event]);
+          }
         }
       }
 
       if (selected) {
-        setEvents([selected]);
-        setEvent(selected);
-        setShotsPerGuest(selected.shotsPerGuest || 20);
-        setRevealMode(selected.revealMode || 'instant');
-        setRevealTime(selected.revealTime || '');
-        setPreset(selected.preset || 'portra');
-        setAllowedPresets(selected.allowedPresets && selected.allowedPresets.length > 0 ? selected.allowedPresets : [selected.preset || 'portra']);
-        setAllowGuestPresetSwitch(selected.allowGuestPresetSwitch || false);
-        setPackageTier((selected.packageTier && PACKAGE_TIERS[selected.packageTier]) ? selected.packageTier : 'wedding');
-        setFrameId(selected.frameId || 'minimal-gold');
-        setCustomFrameUrl(selected.customFrameUrl || '');
-        setFrameText(selected.frameText || '');
-        setAllowGuestFrameToggle(selected.allowGuestFrameToggle !== false);
-        setAllowVoiceNote(selected.allowVoiceNote !== false);
-
-        // Fetch all photos including hidden for host moderation
-        const resPhotos = await fetch(`/api/photos?eventId=${selected.id}&includeHidden=true`);
-        const dataPhotos = await resPhotos.json();
-        if (dataPhotos.success) {
-          setPhotos(dataPhotos.photos);
-        }
-
-        // Fetch voice notes
-        try {
-          const resVoices = await fetch(`/api/voice-notes?eventId=${selected.id}`);
-          const dataVoices = await resVoices.json();
-          if (dataVoices.success && dataVoices.voiceNotes) {
-            setVoiceNotes(dataVoices.voiceNotes);
-          }
-        } catch (vErr) {
-          console.warn('Gagal memuat pesan suara:', vErr);
-        }
+        await selectActiveEvent(selected);
       }
     } catch (e) {
       console.error('Error fetching dashboard data:', e);
@@ -383,15 +425,94 @@ export default function BrideDashboardPage() {
 
       {/* Main Content */}
       <main className="dashboard-main">
+        {/* New Album Created Welcome Banner */}
+        {showCreatedBanner && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(194, 120, 3, 0.12), rgba(212, 175, 55, 0.08))',
+            border: '1px solid rgba(194, 120, 3, 0.3)',
+            borderRadius: '16px',
+            padding: '16px 20px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                background: '#C27803',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Check size={20} />
+              </div>
+              <div>
+                <strong style={{ fontSize: '15px', color: '#1D1D1F', display: 'block' }}>
+                  Selamat! Album digital Anda telah siap dan aktif.
+                </strong>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>
+                  Akun dashboard Anda telah terhubung. Anda dapat mencetak barcode meja tamu, menguji kamera, atau membagikan link ke para tamu sekarang.
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCreatedBanner(false)}
+              className="glass-pill"
+              style={{
+                fontSize: '12px',
+                padding: '6px 12px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <X size={14} /> Tutup
+            </button>
+          </div>
+        )}
+
         {/* Event Quick Overview Card */}
         <div className="glass-card form-section-card" style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                 <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2ECC71' }} />
                 <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
                   ACARA AKTIF
                 </span>
+                {events.length > 1 && (
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: '6px' }}>
+                    <span style={{ fontSize: '11px', color: '#86868B', fontFamily: 'var(--font-mono)' }}>GANTI:</span>
+                    <select
+                      value={event?.id}
+                      onChange={(e) => {
+                        const found = events.find(ev => ev.id === e.target.value);
+                        if (found) selectActiveEvent(found);
+                      }}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid rgba(194, 120, 3, 0.35)',
+                        background: '#FFFFFF',
+                        color: '#1D1D1F',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {events.map(ev => (
+                        <option key={ev.id} value={ev.id}>{ev.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
               <h1 className="font-display-serif" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.2rem)', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
                 {event?.title || 'Album Pernikahan'}
@@ -402,7 +523,7 @@ export default function BrideDashboardPage() {
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', width: '100%', maxWidth: '560px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', width: '100%', maxWidth: '640px' }}>
               <button
                 onClick={copyGuestLink}
                 className="glass-pill"
@@ -413,12 +534,21 @@ export default function BrideDashboardPage() {
               </button>
 
               <Link
+                href={`/event/${event?.slug || event?.id}`}
+                className="glass-pill"
+                style={{ padding: '9px 12px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                <Eye size={14} />
+                <span>Galeri Tamu</span>
+              </Link>
+
+              <Link
                 href={`/event/${event?.id}/print`}
                 className="glass-pill"
                 style={{ padding: '9px 12px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
                 <Printer size={14} />
-                <span>Cetak QR Meja Tamu</span>
+                <span>Cetak Barcode</span>
               </Link>
 
               <Link

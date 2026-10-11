@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ArrowLeft, ArrowRight, Check, Calendar, MapPin, Film, Camera,
-  Lock, Unlock, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye
+  Lock, Unlock, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye,
+  Mail, Key, UserCheck
 } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
-import { FilmPresetId, EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
+import { FilmPresetId, EventPackageTier, PACKAGE_TIERS, UserAccount } from '@/lib/types';
+import { getClientSession, setClientSession } from '@/lib/auth';
 import { FrameId } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
@@ -60,6 +62,20 @@ function CreateEventForm() {
   const [frameText, setFrameText] = useState<string>('');
   const [allowGuestFrameToggle, setAllowGuestFrameToggle] = useState<boolean>(true);
   const [allowVoiceNote, setAllowVoiceNote] = useState<boolean>(true);
+
+  // 5. Host Account & Dashboard Credentials
+  const [hostEmail, setHostEmail] = useState<string>('');
+  const [hostPin, setHostPin] = useState<string>('');
+  const [existingHost, setExistingHost] = useState<UserAccount | null>(null);
+
+  // Check existing host session on mount
+  useEffect(() => {
+    const session = getClientSession();
+    if (session && session.role === 'host' && session.email) {
+      setExistingHost(session);
+      setHostEmail(session.email);
+    }
+  }, []);
 
   // Auto-slug generator from host or title
   const generateCleanSlug = (text: string) => {
@@ -124,6 +140,12 @@ function CreateEventForm() {
   };
 
   const executeCreateEvent = async () => {
+    const cleanEmail = (hostEmail || '').trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      toast.error('Silakan isi email aktif untuk akses dashboard album Anda.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -150,12 +172,23 @@ function CreateEventForm() {
           frameText,
           allowGuestFrameToggle,
           allowVoiceNote,
+          hostEmail: cleanEmail,
         }),
       });
 
       const data = await res.json();
       if (data.success && data.event) {
-        router.push(`/event/${data.event.slug || data.event.id}`);
+        // Auto-login session for the host
+        const sessionUser: UserAccount = {
+          id: existingHost?.id || 'usr_' + Math.random().toString(36).substring(2, 9),
+          name: coupleOrHost || title || cleanEmail.split('@')[0],
+          email: cleanEmail,
+          role: 'host'
+        };
+        setClientSession(sessionUser);
+
+        toast.success('Album berhasil dibuat! Akun dashboard Anda sudah aktif.');
+        router.push(`/dashboard?created=true&eventId=${data.event.id}`);
       } else {
         toast.error('Gagal membuat acara: ' + (data.error || 'Terjadi kesalahan'));
       }
@@ -168,6 +201,12 @@ function CreateEventForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const cleanEmail = (hostEmail || '').trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
+      toast.error('Silakan isi email aktif untuk akses dashboard album Anda.');
+      return;
+    }
 
     // If starter (free), directly create event
     if (activeTier.isFree) {
@@ -1047,6 +1086,112 @@ function CreateEventForm() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* SECTION 5: AKUN PENYELENGGARA & AKSES DASHBOARD */}
+          <div className="glass-card form-section-card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
+              <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
+                05 • AKUN PENYELENGGARA & AKSES DASHBOARD
+              </span>
+              <span style={{ fontSize: '11.5px', color: '#2ECC71', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
+                <ShieldCheck size={14} /> Bebas Login Ribet
+              </span>
+            </div>
+            <h2 style={{ fontSize: '19px', fontWeight: 700, marginBottom: '6px', color: '#1D1D1F' }}>
+              Kredensial Kendali Acara
+            </h2>
+            <p style={{ fontSize: '13px', color: '#6E6E73', marginBottom: '20px', lineHeight: 1.5 }}>
+              Akun ini digunakan untuk membuka Dashboard, mengunduh seluruh foto tamu dalam arsip ZIP kualitas tinggi, memoderasi foto, serta mencetak kartu barcode meja.
+            </p>
+
+            {existingHost ? (
+              <div style={{
+                padding: '16px',
+                background: 'rgba(194, 120, 3, 0.08)',
+                border: '1px solid rgba(194, 120, 3, 0.25)',
+                borderRadius: '14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '50%',
+                    background: '#C27803',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <UserCheck size={18} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>
+                      Terhubung sebagai: {existingHost.name || 'Penyelenggara'} ({existingHost.email})
+                    </strong>
+                    <span style={{ fontSize: '12px', color: '#86868B' }}>
+                      Album baru ini akan langsung tersimpan & tampil di Dashboard Anda.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setExistingHost(null);
+                    setHostEmail('');
+                  }}
+                  className="glass-pill"
+                  style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}
+                >
+                  Gunakan Email Lain
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                    <Mail size={13} color="#C27803" />
+                    Email Anda (Host / Pengantin) *
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="contoh: pengantin@gmail.com"
+                    value={hostEmail}
+                    onChange={(e) => setHostEmail(e.target.value)}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14.5px' }}
+                  />
+                  <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '4px' }}>
+                    Dashboard Anda otomatis aktif & dapat diakses dengan email ini.
+                  </span>
+                </div>
+
+                <div>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                    <Key size={13} color="#C27803" />
+                    PIN / Kata Sandi Dashboard
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="Contoh: 123456 (opsional)"
+                    value={hostPin}
+                    onChange={(e) => setHostPin(e.target.value)}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14.5px' }}
+                  />
+                  <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '4px' }}>
+                    Untuk masuk kembali jika membuka dari HP pasangan atau laptop.
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* SUBMIT BUTTON */}

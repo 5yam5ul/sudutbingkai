@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { 
   Camera, Tv, Printer, Download, Share2, RefreshCw, ArrowLeft, 
   Image as ImageIcon, Users, Check, Lock, Unlock, Clock, Volume2, 
-  Mic, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Film, CheckCircle2 
+  Mic, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Film, CheckCircle2,
+  SlidersHorizontal
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { hapticLightTap, hapticDialClick } from '@/lib/haptics';
@@ -521,7 +522,12 @@ export default function EventDashboardPage() {
 
             <Link href={`/event/${eventId}/print`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Printer size={14} />
-              <span>Cetak QR Meja Tamu</span>
+              <span>Cetak Barcode</span>
+            </Link>
+
+            <Link href="/dashboard" className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <SlidersHorizontal size={14} />
+              <span>Dashboard</span>
             </Link>
 
             <Link href={`/cam/${eventId}`} className="btn-apple-black" style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
