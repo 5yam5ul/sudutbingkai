@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, AlertCircle, ChevronDown, Mic, Volume2, Sparkles, Layers, Lock, CheckCircle2, MessageSquare, X, Heart } from 'lucide-react';
+import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, CheckCircle2, MessageSquare, X, Heart } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
 import { getClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';

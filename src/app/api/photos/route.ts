@@ -5,10 +5,18 @@ import { PhotoRecord } from '@/lib/types';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const eventId = searchParams.get('eventId') || undefined;
+    const eventIdParam = searchParams.get('eventId') || undefined;
     const includeHidden = searchParams.get('includeHidden') === 'true';
 
-    const photos = await getAllPhotos(eventId, includeHidden);
+    let resolvedEventId = eventIdParam;
+    if (eventIdParam) {
+      const event = await getEventById(eventIdParam);
+      if (event) {
+        resolvedEventId = event.id;
+      }
+    }
+
+    const photos = await getAllPhotos(resolvedEventId, includeHidden);
     return NextResponse.json({ success: true, photos });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
@@ -23,20 +31,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Data foto tidak lengkap (eventId dan imageData wajib)' }, { status: 400 });
     }
 
-    // Validate that event exists
+    // Validate that event exists and resolve canonical ID
     const event = await getEventById(body.eventId);
     if (!event) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
     }
 
-    // Safety check on base64 payload size (max 15MB)
+    // Safety check on base64 payload size (max 20MB)
     if (typeof body.imageData === 'string' && body.imageData.length > 20 * 1024 * 1024) {
       return NextResponse.json({ success: false, error: 'Ukuran foto melebihi batas maksimal' }, { status: 413 });
     }
 
     const newPhoto: PhotoRecord = {
       id: 'photo-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
-      eventId: body.eventId,
+      eventId: event.id,
       guestName: (body.guestName || 'Tamu').trim(),
       sessionId: body.sessionId || 'session-' + Date.now(),
       shotNumber: Number(body.shotNumber) || 1,

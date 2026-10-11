@@ -47,9 +47,14 @@ export async function POST(request: Request) {
     }
 
     const id = body.id || 'sb-' + Math.random().toString(36).substring(2, 8);
+    const rawSlug = body.slug || body.title;
+    const cleanSlug = rawSlug
+      ? rawSlug.toString().trim().toLowerCase().replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+      : undefined;
 
     const newEvent: EventData = {
       id,
+      slug: cleanSlug,
       title: body.title.trim(),
       coupleOrHost: body.coupleOrHost.trim(),
       eventDate: body.eventDate || new Date().toISOString(),
@@ -57,8 +62,9 @@ export async function POST(request: Request) {
       preset: body.preset || 'portra',
       allowedPresets: body.allowedPresets || ['portra'],
       allowGuestPresetSwitch: body.allowGuestPresetSwitch !== false,
-      packageTier: body.packageTier || 'classic',
+      packageTier: body.packageTier || 'wedding',
       maxGuests: Number(body.maxGuests) || 150,
+      additionalPax: Number(body.additionalPax) || 0,
       shotsPerGuest: Number(body.shotsPerGuest) || 20,
       revealMode: body.revealMode || 'instant',
       revealTime: body.revealTime,
@@ -91,6 +97,11 @@ export async function PATCH(request: Request) {
     }
 
     const updates: Partial<EventData> = {};
+    if (body.slug !== undefined) {
+      updates.slug = body.slug
+        ? body.slug.toString().trim().toLowerCase().replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
+        : undefined;
+    }
     if (body.title) updates.title = body.title.trim();
     if (body.coupleOrHost) updates.coupleOrHost = body.coupleOrHost.trim();
     if (body.eventDate) updates.eventDate = body.eventDate;
@@ -100,6 +111,7 @@ export async function PATCH(request: Request) {
     if (body.allowGuestPresetSwitch !== undefined) updates.allowGuestPresetSwitch = body.allowGuestPresetSwitch;
     if (body.packageTier) updates.packageTier = body.packageTier;
     if (body.maxGuests) updates.maxGuests = Number(body.maxGuests);
+    if (body.additionalPax !== undefined) updates.additionalPax = Number(body.additionalPax);
     if (body.shotsPerGuest) updates.shotsPerGuest = Number(body.shotsPerGuest);
     if (body.revealMode) updates.revealMode = body.revealMode;
     if (body.revealTime !== undefined) updates.revealTime = body.revealTime;

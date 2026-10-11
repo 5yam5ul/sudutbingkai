@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   Camera, Tv, Printer, Download, Share2, RefreshCw, ArrowLeft, 
   Image as ImageIcon, Users, Check, Lock, Unlock, Clock, Volume2, 
-  Mic, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Film, Sparkles 
+  Mic, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Film, CheckCircle2 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { hapticLightTap, hapticDialClick } from '@/lib/haptics';
@@ -14,6 +14,7 @@ import { EventData, PhotoRecord } from '@/lib/types';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FRAME_TEMPLATES } from '@/lib/frames';
 import JSZip from 'jszip';
+import MayarPaymentModal from '@/components/MayarPaymentModal';
 
 interface VoiceNoteRecord {
   id: string;
@@ -77,15 +78,50 @@ export default function EventDashboardPage() {
     isExpired: false
   });
 
+  // Guest Filter State (Guest Chips)
+  const [selectedGuest, setSelectedGuest] = useState<string>('all');
+
+  // Top Up Pax Addon Modal State
+  const [showTopUpPaxModal, setShowTopUpPaxModal] = useState(false);
+  const [isUpdatingPax, setIsUpdatingPax] = useState(false);
+  const [isUpdatingPresetMode, setIsUpdatingPresetMode] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [pendingPaymentData, setPendingPaymentData] = useState<{
+    amount: number;
+    title: string;
+    description: string;
+    isSimulation: boolean;
+    paxAmount: number;
+  } | null>(null);
+
+  // Compute unique guest names and counts
+  const guestCounts = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    photos.forEach(p => {
+      const name = p.guestName?.trim() || 'Tamu Anonim';
+      counts[name] = (counts[name] || 0) + 1;
+    });
+    return counts;
+  }, [photos]);
+
+  const uniqueGuests = React.useMemo(() => {
+    return Object.keys(guestCounts).sort();
+  }, [guestCounts]);
+
+  const displayedPhotos = React.useMemo(() => {
+    if (selectedGuest === 'all') return photos;
+    return photos.filter(p => (p.guestName?.trim() || 'Tamu Anonim') === selectedGuest);
+  }, [photos, selectedGuest]);
+
   // Lightbox Photo Modal State
   const [activePhoto, setActivePhoto] = useState<PhotoRecord | null>(null);
   const [slideDirection, setSlideDirection] = useState<number>(0);
   const [isZoomed, setIsZoomed] = useState(false);
   const filmStripRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Unlocked photos available for preview
+  // Unlocked photos available for preview (now respects active guest filter!)
   const isRollLocked = event?.revealMode === 'delayed' && !countdown.isExpired;
-  const availablePhotos = isRollLocked ? [] : photos;
+  const availablePhotos = isRollLocked ? [] : displayedPhotos;
   const activeIndex = activePhoto ? availablePhotos.findIndex(p => p.id === activePhoto.id) : -1;
 
   const paginate = (newDirection: number) => {
@@ -243,28 +279,120 @@ export default function EventDashboardPage() {
   };
 
   const copyGuestLink = () => {
-    const url = `${window.location.origin}/cam/${eventId}`;
+    const slugOrId = event?.slug || eventId;
+    const url = `${window.location.origin}/cam/${slugOrId}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
 
-  const downloadAllPhotosAsZip = async () => {
-    if (photos.length === 0) {
-      alert('Belum ada foto yang diambil oleh tamu.');
+  const executeTopUpPax = async (additionalPaxAmount: number) => {
+    if (!event) return;
+    setIsUpdatingPax(true);
+    try {
+      const currentAdditional = event.additionalPax || 0;
+      const newAdditional = currentAdditional + additionalPaxAmount;
+      const res = await fetch('/api/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: event.id, additionalPax: newAdditional })
+      });
+      const data = await res.json();
+      if (data.success && data.event) {
+        setEvent(data.event);
+        setShowTopUpPaxModal(false);
+        alert(`Berhasil menambahkan +${additionalPaxAmount} kuota tamu! Total kapasitas sekarang: ${data.event.maxGuests + (data.event.additionalPax || 0)} pax.`);
+      } else {
+        alert('Gagal menambah kuota: ' + (data.error || 'Terjadi kesalahan'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setIsUpdatingPax(false);
+    }
+  };
+
+  const handleTopUpPax = async (additionalPaxAmount: number) => {
+    if (!event) return;
+
+    setIsUpdatingPax(true);
+    try {
+      const payRes = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: event.id,
+          isAddonPax: true,
+          paxAmount: additionalPaxAmount,
+          name: event.coupleOrHost || event.title,
+        })
+      });
+
+      const payData = await payRes.json();
+      if (payData.success) {
+        if (!payData.isSimulation && payData.paymentUrl && !payData.paymentUrl.startsWith('/')) {
+          window.location.href = payData.paymentUrl;
+          return;
+        }
+
+        setPendingPaymentData({
+          amount: payData.amount,
+          title: `Top Up +${additionalPaxAmount} Pax Tamu`,
+          description: `Penambahan kuota tamu untuk ${event.title}`,
+          isSimulation: payData.isSimulation ?? true,
+          paxAmount: additionalPaxAmount
+        });
+        setShowTopUpPaxModal(false);
+        setPaymentModalOpen(true);
+      } else {
+        executeTopUpPax(additionalPaxAmount);
+      }
+    } catch {
+      executeTopUpPax(additionalPaxAmount);
+    } finally {
+      setIsUpdatingPax(false);
+    }
+  };
+
+  const handleTogglePresetMode = async () => {
+    if (!event) return;
+    setIsUpdatingPresetMode(true);
+    try {
+      const nextSwitchState = !event.allowGuestPresetSwitch;
+      const res = await fetch('/api/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: event.id, allowGuestPresetSwitch: nextSwitchState })
+      });
+      const data = await res.json();
+      if (data.success && data.event) {
+        setEvent(data.event);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsUpdatingPresetMode(false);
+    }
+  };
+
+  const downloadAllPhotosAsZip = async (targetPhotos = displayedPhotos, customTag?: string) => {
+    if (targetPhotos.length === 0) {
+      alert('Belum ada foto yang dipilih untuk diunduh.');
       return;
     }
     setIsZipping(true);
-    setZipProgress(`Menyiapkan arsip ZIP (0/${photos.length})...`);
+    setZipProgress(`Menyiapkan arsip ZIP (0/${targetPhotos.length})...`);
+
+    const cleanTag = customTag || (selectedGuest === 'all' ? 'semua-foto' : `foto-${selectedGuest.replace(/[^a-zA-Z0-9_\-]/g, '_')}`);
 
     try {
       const zip = new JSZip();
-      const folderName = `sudutbingkai-${event?.id || 'album'}`;
+      const folderName = `sudutbingkai-${event?.slug || event?.id || 'album'}-${cleanTag}`;
       const folder = zip.folder(folderName);
 
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        setZipProgress(`Mengemas foto (${i + 1}/${photos.length})...`);
+      for (let i = 0; i < targetPhotos.length; i++) {
+        const photo = targetPhotos[i];
+        setZipProgress(`Mengemas foto (${i + 1}/${targetPhotos.length})...`);
         try {
           let blob: Blob;
           if (photo.imageData.startsWith('data:image')) {
@@ -282,7 +410,7 @@ export default function EventDashboardPage() {
             blob = await res.blob();
           }
 
-          const safeGuest = photo.guestName.replace(/[^a-zA-Z0-9_\-]/g, '_');
+          const safeGuest = (photo.guestName || 'tamu').replace(/[^a-zA-Z0-9_\-]/g, '_');
           folder?.file(`${i + 1}_${safeGuest}_jepretan${photo.shotNumber}.jpg`, blob);
         } catch (err) {
           console.warn('Gagal memproses foto:', photo.id, err);
@@ -294,7 +422,7 @@ export default function EventDashboardPage() {
       const downloadUrl = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `sudutbingkai-${event?.id || 'event'}-semua-foto.zip`;
+      a.download = `sudutbingkai-${event?.slug || event?.id || 'event'}-${cleanTag}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -402,14 +530,18 @@ export default function EventDashboardPage() {
             </div>
 
             <button 
-              onClick={downloadAllPhotosAsZip} 
-              disabled={isZipping || photos.length === 0}
+              onClick={() => downloadAllPhotosAsZip(displayedPhotos)} 
+              disabled={isZipping || displayedPhotos.length === 0}
               className="btn-apple-black" 
               style={{ padding: '10px 20px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: isZipping ? 'wait' : 'pointer' }}
             >
               {isZipping ? <RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={15} />}
-              <span className="desktop-only">{isZipping ? zipProgress : `Unduh Arsip ZIP (${photos.length} Foto)`}</span>
-              <span className="mobile-only">{isZipping ? zipProgress : `Unduh ZIP (${photos.length})`}</span>
+              <span className="desktop-only">
+                {isZipping ? zipProgress : selectedGuest === 'all' ? `Unduh Arsip ZIP (${photos.length} Foto)` : `Unduh ZIP ${selectedGuest} (${displayedPhotos.length} Foto)`}
+              </span>
+              <span className="mobile-only">
+                {isZipping ? zipProgress : `Unduh ZIP (${displayedPhotos.length})`}
+              </span>
             </button>
           </div>
 
@@ -421,8 +553,66 @@ export default function EventDashboardPage() {
             </div>
 
             <div>
+              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>KUOTA TAMU (PAX)</span>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                <strong style={{ fontSize: '20px', color: uniqueGuests.length >= ((event?.maxGuests || 150) + (event?.additionalPax || 0)) ? '#E11D48' : '#1D1D1F' }}>
+                  {uniqueGuests.length} / {(event?.maxGuests || 150) + (event?.additionalPax || 0)} Pax
+                </strong>
+                {event?.additionalPax ? (
+                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 700 }}>
+                    (+{event.additionalPax})
+                  </span>
+                ) : null}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowTopUpPaxModal(true)}
+                style={{
+                  marginTop: '5px',
+                  background: 'rgba(194, 120, 3, 0.1)',
+                  border: '1px solid rgba(194, 120, 3, 0.3)',
+                  color: '#C27803',
+                  padding: '3px 10px',
+                  borderRadius: '999px',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                <span>+ Tambah Pax</span>
+              </button>
+            </div>
+
+            <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>FILTER EMULASI</span>
-              <strong style={{ fontSize: '20px', color: '#C27803' }}>{presetInfo.name}</strong>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <strong style={{ fontSize: '20px', color: '#C27803' }}>{presetInfo.name}</strong>
+              </div>
+              <button
+                type="button"
+                onClick={handleTogglePresetMode}
+                disabled={isUpdatingPresetMode}
+                style={{
+                  marginTop: '5px',
+                  background: 'rgba(0, 0, 0, 0.04)',
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
+                  color: '#515154',
+                  padding: '3px 9px',
+                  borderRadius: '999px',
+                  fontSize: '10.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+                title="Ganti mode kurasi atau bebas filter untuk tamu"
+              >
+                <span>{event?.allowGuestPresetSwitch ? 'Bebas Pilih ⇄' : 'Terkunci 1 Warna 🔒'}</span>
+              </button>
             </div>
 
             <div>
@@ -507,15 +697,158 @@ export default function EventDashboardPage() {
 
         {/* Gallery Section */}
         <div style={{ marginBottom: '48px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-            <h2 className="font-display-serif" style={{ fontSize: '26px', fontWeight: 700, color: '#1D1D1F' }}>
-              Roll Foto Bersama <em>({photos.length})</em>
-            </h2>
-            <button onClick={fetchEventData} className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-              <RefreshCw size={12} />
-              <span>Perbarui</span>
-            </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <h2 className="font-display-serif" style={{ fontSize: '26px', fontWeight: 700, color: '#1D1D1F' }}>
+                Roll Foto Bersama <em>({displayedPhotos.length}{selectedGuest !== 'all' ? ` / ${photos.length}` : ''})</em>
+              </h2>
+              {selectedGuest !== 'all' && (
+                <span style={{ fontSize: '13px', color: '#C27803', fontWeight: 600 }}>
+                  Menampilkan foto oleh: {selectedGuest}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {selectedGuest !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticLightTap();
+                    setSelectedGuest('all');
+                  }}
+                  className="glass-pill"
+                  style={{ padding: '6px 14px', fontSize: '12px', color: '#C27803', cursor: 'pointer' }}
+                >
+                  ✕ Bersihkan Filter
+                </button>
+              )}
+              <button onClick={fetchEventData} className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <RefreshCw size={12} />
+                <span>Perbarui</span>
+              </button>
+            </div>
           </div>
+
+          {/* GUEST CHIPS HORIZONTAL CAROUSEL (Point 1: Filter Foto per Nama Tamu) */}
+          {uniqueGuests.length > 0 && (
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span className="font-mono-film" style={{ fontSize: '11px', color: '#86868B', letterSpacing: '0.04em' }}>
+                  FILTER SUDUT PANDANG TAMU ({uniqueGuests.length} TAMU)
+                </span>
+                <span style={{ fontSize: '11px', color: '#86868B' }}>
+                  Geser horizontal →
+                </span>
+              </div>
+
+              <div style={{
+                display: 'flex',
+                gap: '8px',
+                overflowX: 'auto',
+                paddingBottom: '10px',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                WebkitOverflowScrolling: 'touch'
+              }}>
+                {/* Chip: Semua Tamu */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    hapticLightTap();
+                    setSelectedGuest('all');
+                  }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    padding: '8px 16px',
+                    borderRadius: '999px',
+                    fontSize: '12.5px',
+                    fontWeight: selectedGuest === 'all' ? 700 : 500,
+                    background: selectedGuest === 'all' ? '#1D1D1F' : '#FFFFFF',
+                    color: selectedGuest === 'all' ? '#FFFFFF' : '#1D1D1F',
+                    border: selectedGuest === 'all' ? '1.5px solid #1D1D1F' : '1px solid rgba(0,0,0,0.1)',
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: selectedGuest === 'all' ? '0 4px 14px rgba(0,0,0,0.15)' : 'none',
+                    transition: 'all 0.2s ease',
+                    flexShrink: 0
+                  }}
+                >
+                  <Users size={14} />
+                  <span>Semua Tamu</span>
+                  <span style={{
+                    background: selectedGuest === 'all' ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.06)',
+                    padding: '2px 7px',
+                    borderRadius: '999px',
+                    fontSize: '11px',
+                    fontFamily: 'var(--font-mono)'
+                  }}>
+                    {photos.length}
+                  </span>
+                </button>
+
+                {/* Individual Guest Chips */}
+                {uniqueGuests.map(name => {
+                  const count = guestCounts[name] || 0;
+                  const isSelected = selectedGuest === name;
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => {
+                        hapticLightTap();
+                        setSelectedGuest(name);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '7px',
+                        padding: '8px 15px',
+                        borderRadius: '999px',
+                        fontSize: '12.5px',
+                        fontWeight: isSelected ? 700 : 500,
+                        background: isSelected ? '#C27803' : '#FFFFFF',
+                        color: isSelected ? '#FFFFFF' : '#1D1D1F',
+                        border: isSelected ? '1.5px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        boxShadow: isSelected ? '0 4px 14px rgba(194,120,3,0.3)' : 'none',
+                        transition: 'all 0.2s ease',
+                        flexShrink: 0
+                      }}
+                    >
+                      <span style={{
+                        width: '18px',
+                        height: '18px',
+                        borderRadius: '50%',
+                        background: isSelected ? 'rgba(255,255,255,0.25)' : 'rgba(194,120,3,0.12)',
+                        color: isSelected ? '#FFFFFF' : '#C27803',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '10px',
+                        fontWeight: 800
+                      }}>
+                        {name.charAt(0).toUpperCase()}
+                      </span>
+                      <span>{name}</span>
+                      <span style={{
+                        background: isSelected ? 'rgba(255,255,255,0.22)' : 'rgba(0,0,0,0.06)',
+                        padding: '2px 7px',
+                        borderRadius: '999px',
+                        fontSize: '11px',
+                        fontFamily: 'var(--font-mono)'
+                      }}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {photos.length === 0 ? (
             <div className="glass-card" style={{ padding: '64px 24px', textAlign: 'center', borderRadius: '24px' }}>
@@ -524,9 +857,23 @@ export default function EventDashboardPage() {
               <p style={{ color: '#6E6E73', fontSize: '14px', maxWidth: '420px', margin: '0 auto 24px' }}>
                 Bagikan tautan kamera atau buka kamera tamu untuk mengambil jepretan pertama Anda.
               </p>
-              <Link href={`/cam/${eventId}`} className="btn-apple-black" style={{ padding: '10px 22px', fontSize: '13.5px' }}>
+              <Link href={`/cam/${event?.slug || eventId}`} className="btn-apple-black" style={{ padding: '10px 22px', fontSize: '13.5px' }}>
                 Buka Kamera Tamu
               </Link>
+            </div>
+          ) : displayedPhotos.length === 0 ? (
+            <div className="glass-card" style={{ padding: '48px 20px', textAlign: 'center', borderRadius: '24px' }}>
+              <p style={{ color: '#6E6E73', fontSize: '14px', marginBottom: '14px' }}>
+                Belum ada foto yang diambil oleh <strong>{selectedGuest}</strong>.
+              </p>
+              <button
+                type="button"
+                onClick={() => setSelectedGuest('all')}
+                className="btn-apple-black"
+                style={{ padding: '8px 20px', fontSize: '12.5px' }}
+              >
+                Tampilkan Semua Foto ({photos.length})
+              </button>
             </div>
           ) : (
             <div className="mobile-photo-grid" style={{
@@ -534,7 +881,7 @@ export default function EventDashboardPage() {
               gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
               gap: '20px'
             }}>
-              {photos.map((photo) => {
+              {displayedPhotos.map((photo) => {
                 const isLocked = event?.revealMode === 'delayed' && !countdown.isExpired;
 
                 return (
@@ -1139,6 +1486,162 @@ export default function EventDashboardPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Top Up Pax Addon Modal */}
+      <AnimatePresence>
+        {showTopUpPaxModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0, 0, 0, 0.72)',
+              backdropFilter: 'blur(8px)',
+              zIndex: 100,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '16px'
+            }}
+            onClick={() => setShowTopUpPaxModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="glass-card"
+              style={{
+                maxWidth: '460px',
+                width: '100%',
+                background: '#FFFFFF',
+                borderRadius: '24px',
+                padding: '28px 24px',
+                boxShadow: '0 25px 60px -15px rgba(0,0,0,0.3)',
+                color: '#1D1D1F'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(194,120,3,0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users size={20} />
+                  </div>
+                  <div>
+                    <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#C27803' }}>
+                      ADD-ON KUOTA INSTAN
+                    </span>
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>
+                      Tambah Pax Kapan Saja
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowTopUpPaxModal(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#86868B', padding: '4px' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, marginBottom: '20px' }}>
+                Tamu di venue bertambah dari rencana awal? Tambah kuota seketika tanpa jeda acara. Tamu baru bisa langsung memindai QR code dan mengabadikan momen.
+              </p>
+
+              {/* Status Pax Saat Ini */}
+              <div style={{ padding: '12px 14px', borderRadius: '14px', background: 'rgba(0,0,0,0.03)', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Kapasitas Paket Saat Ini</span>
+                  <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>
+                    {(event?.maxGuests || 150) + (event?.additionalPax || 0)} Tamu
+                  </strong>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Tamu Sudah Motret</span>
+                  <strong style={{ fontSize: '15px', color: '#C27803' }}>
+                    {uniqueGuests.length} Tamu
+                  </strong>
+                </div>
+              </div>
+
+              {/* Tier Selection */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+                {[
+                  { pax: 25, price: 'Rp 49.000', perPax: 'Rp 1.960 / tamu', desc: 'Cocok jika rombongan kecil bertambah' },
+                  { pax: 50, price: 'Rp 89.000', perPax: 'Rp 1.780 / tamu', badge: 'PALING POPULER', desc: 'Ideal untuk tambahan 5-6 meja tamu' },
+                  { pax: 100, price: 'Rp 149.000', perPax: 'Rp 1.490 / tamu', desc: 'Untuk resepsi besar yang sangat ramai' },
+                  { pax: 250, price: 'Rp 249.000', perPax: 'Rp 996 / tamu', desc: 'Keluarga besar & rekan kantor membludak' }
+                ].map(opt => (
+                  <button
+                    key={opt.pax}
+                    type="button"
+                    disabled={isUpdatingPax}
+                    onClick={() => handleTopUpPax(opt.pax)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '14px 16px',
+                      borderRadius: '16px',
+                      border: opt.badge ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                      background: opt.badge ? 'rgba(194,120,3,0.04)' : '#FFFFFF',
+                      cursor: isUpdatingPax ? 'wait' : 'pointer',
+                      textAlign: 'left',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>+{opt.pax} Tamu</strong>
+                        {opt.badge && (
+                          <span style={{ fontSize: '9px', fontWeight: 800, background: '#C27803', color: '#FFF', padding: '2px 8px', borderRadius: '999px' }}>
+                            {opt.badge}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '2px' }}>
+                        {opt.desc} • {opt.perPax}
+                      </span>
+                    </div>
+
+                    <div style={{ textAlign: 'right' }}>
+                      <strong style={{ fontSize: '14.5px', color: '#C27803', display: 'block' }}>
+                        {opt.price}
+                      </strong>
+                      <span style={{ fontSize: '10.5px', color: '#27AE60', fontWeight: 600 }}>
+                        + Tambah Langsung
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#86868B', fontSize: '11.5px' }}>
+                <CheckCircle2 size={14} color="#C27803" />
+                <span>Kapasitas langsung bertambah seketika dan QR code langsung menerima tamu baru.</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mayar Payment Modal (Top Up Pax) */}
+      <MayarPaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        onSuccess={() => {
+          setPaymentModalOpen(false);
+          if (pendingPaymentData?.paxAmount) {
+            executeTopUpPax(pendingPaymentData.paxAmount);
+          }
+        }}
+        title={pendingPaymentData?.title || 'Top Up Kuota Tamu'}
+        description={pendingPaymentData?.description || ''}
+        amount={pendingPaymentData?.amount || 49000}
+        isSimulation={pendingPaymentData?.isSimulation}
+      />
     </div>
   );
 }

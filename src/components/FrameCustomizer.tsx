@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
-import { Sparkles, Upload, Image as ImageIcon, HelpCircle, Check, Sliders, Info, Download } from 'lucide-react';
+import { Upload, Image as ImageIcon, HelpCircle, Check, Sliders, Info, Download } from 'lucide-react';
 
 interface FrameCustomizerProps {
   initialFrameId?: FrameId;
@@ -224,7 +224,7 @@ export default function FrameCustomizer({
               {cat === 'wedding' && '💍 Wedding'}
               {cat === 'classic' && '📸 Polaroid'}
               {cat === 'retro' && '🎞️ Vintage'}
-              {cat === 'party' && '✨ Party'}
+              {cat === 'party' && '🎉 Party'}
             </button>
           ))}
         </div>

@@ -165,6 +165,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
 
 export interface EventData {
   id: string;
+  slug?: string;
   title: string;
   coupleOrHost: string;
   eventDate: string; // ISO date string
@@ -177,6 +178,7 @@ export interface EventData {
   customFrameUrl?: string;
   frameText?: string;
   maxGuests: number;
+  additionalPax?: number;
   shotsPerGuest: number;
   revealMode: 'instant' | 'delayed';
   revealTime?: string; // ISO date string

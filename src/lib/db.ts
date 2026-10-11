@@ -27,12 +27,15 @@ function ensureLocalDataFiles() {
     if (!fs.existsSync(EVENTS_FILE)) {
       const sampleEvent: EventData = {
         id: 'wedding-sarah-dimas',
+        slug: 'sarah-dimas',
         title: 'Pernikahan Sarah & Dimas',
         coupleOrHost: 'Sarah & Dimas',
         eventDate: '2026-11-20T09:00:00Z',
         location: 'Plataran Dharmawangsa, Jakarta',
         preset: 'portra',
+        allowGuestPresetSwitch: true,
         maxGuests: 150,
+        additionalPax: 0,
         shotsPerGuest: 20,
         revealMode: 'instant',
         createdAt: new Date().toISOString()
@@ -75,8 +78,10 @@ function saveImageToLocalFile(photoId: string, base64OrPath: string): string {
 // ---------------------------------------------------------------------------
 
 function rowToEvent(row: any): EventData {
+  const derivedSlug = row.slug || (row.id ? row.id.replace(/^wedding-|^event-|^sb-/, '') : undefined);
   return {
     id: row.id,
+    slug: derivedSlug,
     title: row.title,
     coupleOrHost: row.couple_or_host,
     eventDate: row.event_date,
@@ -86,6 +91,7 @@ function rowToEvent(row: any): EventData {
     allowGuestPresetSwitch: row.allow_guest_preset_switch,
     packageTier: row.package_tier,
     maxGuests: row.max_guests,
+    additionalPax: row.additional_pax || 0,
     shotsPerGuest: row.shots_per_guest,
     revealMode: row.reveal_mode,
     revealTime: row.reveal_time || undefined,
@@ -107,6 +113,7 @@ function rowToEvent(row: any): EventData {
 function eventToRow(event: EventData) {
   return {
     id: event.id,
+    slug: event.slug || null,
     title: event.title,
     couple_or_host: event.coupleOrHost,
     event_date: event.eventDate,
@@ -116,6 +123,7 @@ function eventToRow(event: EventData) {
     allow_guest_preset_switch: event.allowGuestPresetSwitch ?? true,
     package_tier: event.packageTier || 'wedding',
     max_guests: event.maxGuests,
+    additional_pax: event.additionalPax || 0,
     shots_per_guest: event.shotsPerGuest,
     reveal_mode: event.revealMode || 'instant',
     reveal_time: event.revealTime || null,
@@ -203,7 +211,11 @@ export async function getAllEvents(): Promise<EventData[]> {
 }
 
 export async function getEventById(id: string): Promise<EventData | null> {
-  const targetId = id === 'demo-nikahan' ? 'wedding-sarah-dimas' : id;
+  const cleanKey = (id || '').trim().toLowerCase();
+  const targetId = (cleanKey === 'demo-nikahan' || cleanKey === 'sarah-dimas' || cleanKey === 'wedding-sarah-dimas')
+    ? 'wedding-sarah-dimas'
+    : id;
+
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
@@ -215,17 +227,20 @@ export async function getEventById(id: string): Promise<EventData | null> {
       if (!error && data) {
         return rowToEvent(data);
       }
-      if (error) {
-        console.warn(`Supabase getEventById(${id}) error, falling back to local:`, error.message);
-      }
     } catch (err) {
       console.warn('Supabase getEventById exception:', err);
     }
   }
 
-  // Local JSON fallback
+  // Find across all events (including local and Supabase)
   const events = await getAllEvents();
-  return events.find(e => e.id === id || e.id === targetId) || null;
+  return events.find(e => 
+    e.id === id || 
+    e.id === targetId || 
+    (e.slug && e.slug.toLowerCase() === cleanKey) ||
+    e.id.toLowerCase() === cleanKey ||
+    e.id.toLowerCase().replace(/^wedding-|^event-|^sb-/, '') === cleanKey
+  ) || null;
 }
 
 export async function saveEvent(event: EventData): Promise<EventData> {
@@ -396,13 +411,35 @@ export async function getPhotoById(id: string): Promise<PhotoRecord | null> {
   return photos.find(p => p.id === id) || null;
 }
 
+import { uploadBufferToR2, isR2Configured, deleteFromR2 } from './r2';
+
 export async function savePhoto(photo: PhotoRecord): Promise<PhotoRecord> {
   let finalImageUrl = photo.imageData;
 
-  // If Supabase is configured, upload image to Supabase Storage bucket 'photos'
+  // 1. Cloudflare R2 Upload (Zero Egress, High Performance Object Storage)
+  if (isR2Configured && photo.imageData && photo.imageData.startsWith('data:image')) {
+    try {
+      const matches = photo.imageData.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+      const ext = matches && matches[1] === 'png' ? 'png' : 'jpg';
+      const base64Data = matches ? matches[2] : photo.imageData.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+      const storagePath = `events/${photo.eventId}/${photo.id}.${ext}`;
+
+      const r2Url = await uploadBufferToR2(buffer, storagePath, contentType);
+      if (r2Url) {
+        finalImageUrl = r2Url;
+      }
+    } catch (r2Err) {
+      console.warn('Cloudflare R2 photo upload error, falling back:', r2Err);
+    }
+  }
+
+  // 2. Supabase (Database Row Upsert & Fallback Storage)
   if (isSupabaseConfigured && supabase) {
     try {
-      if (photo.imageData && photo.imageData.startsWith('data:image')) {
+      // Fallback to Supabase Storage only if R2 wasn't used and image is still base64
+      if (finalImageUrl && finalImageUrl.startsWith('data:image')) {
         const matches = photo.imageData.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
         const ext = matches && matches[1] === 'png' ? 'png' : 'jpg';
         const base64Data = matches ? matches[2] : photo.imageData.replace(/^data:image\/\w+;base64,/, '');
@@ -427,7 +464,7 @@ export async function savePhoto(photo: PhotoRecord): Promise<PhotoRecord> {
         }
       }
 
-      // Save row to public.photos table
+      // Save row to public.photos table in Supabase PostgreSQL
       const row = photoToRow(photo, finalImageUrl);
       const { error: dbError } = await supabase
         .from('photos')
@@ -516,10 +553,19 @@ export async function deletePhoto(id: string): Promise<boolean> {
 
       if (!error) {
         // Try deleting from Supabase storage if it was stored there
-        if (target?.image_url && target.image_url.includes('/photos/')) {
-          const pathPart = target.image_url.split('/photos/')[1];
-          if (pathPart) {
-            await supabase.storage.from('photos').remove([pathPart]);
+        if (target?.image_url) {
+          if (target.image_url.includes('/photos/')) {
+            const pathPart = target.image_url.split('/photos/')[1];
+            if (pathPart) {
+              await supabase.storage.from('photos').remove([pathPart]);
+            }
+          }
+          if (isR2Configured && (target.image_url.includes('.r2.dev') || target.image_url.includes('r2.cloudflarestorage.com') || target.image_url.includes('/events/'))) {
+            try {
+              const urlObj = new URL(target.image_url);
+              const r2Key = urlObj.pathname.replace(/^\/+/, '');
+              await deleteFromR2(r2Key);
+            } catch {}
           }
         }
         return true;

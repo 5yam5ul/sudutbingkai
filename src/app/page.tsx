@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Play, Camera, Check, ChevronDown, ChevronRight, Tv, Shield, Download, QrCode, Menu, X } from 'lucide-react';
+import { ArrowRight, Play, Camera, Check, ChevronDown, ChevronRight, Tv, Shield, Download, QrCode, Menu, X, Mic } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FilmPresetId } from '@/lib/types';
 
@@ -240,74 +240,80 @@ export default function HomePage() {
         )}
       </nav>
 
-      {/* HERO SECTION (Responsive Apple / Leica Side-by-side) */}
-      <section style={{ position: 'relative', zIndex: 10, padding: '54px 20px 80px', maxWidth: '1160px', margin: '0 auto' }}>
+      {/* HERO SECTION (Konsep 1: The 35mm Film Strip & Table Card Studio) */}
+      <section style={{ position: 'relative', zIndex: 10, padding: '54px 20px 80px', maxWidth: '1160px', margin: '0 auto', overflow: 'hidden' }}>
         <div className="responsive-hero-grid">
-          {/* Left Column: Bold Typography & CTAs */}
+          {/* Left Column: Editorial Kinfolk Typography & CTAs */}
           <div>
             <div className="glass-pill" style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
-              padding: '6px 14px',
+              padding: '5px 14px',
               borderRadius: '999px',
-              marginBottom: '20px'
+              marginBottom: '18px'
             }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
-              <span className="font-mono-film" style={{ fontSize: '11px', color: '#C27803' }}>
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803', boxShadow: '0 0 8px rgba(194, 120, 3, 0.6)' }} />
+              <span className="font-mono-film desktop-only" style={{ fontSize: '10.5px', color: '#C27803', fontWeight: 600, letterSpacing: '0.14em' }}>
+                DIGITAL DISPOSABLE CAMERA • WEDDING & EVENT
+              </span>
+              <span className="font-mono-film mobile-only" style={{ fontSize: '9.5px', color: '#C27803', fontWeight: 600, letterSpacing: '0.12em' }}>
                 DIGITAL DISPOSABLE CAMERA
               </span>
             </div>
 
-            <h1 className="font-display-serif" style={{
-              fontSize: 'clamp(2.1rem, 5.5vw, 4.2rem)',
-              fontWeight: 700,
-              lineHeight: 1.08,
+            <h1 className="font-editorial-serif" style={{
+              fontSize: 'clamp(2rem, 3.6vw, 3.25rem)',
+              fontWeight: 600,
+              lineHeight: 1.15,
               marginBottom: '18px',
-              letterSpacing: '-0.025em',
-              color: '#1D1D1F'
+              letterSpacing: '-0.02em',
+              color: '#1D1D1F',
+              maxWidth: '520px'
             }}>
-              <span>Momen paling jujur</span>
-              <span style={{ display: 'block', fontStyle: 'italic', color: '#C27803' }}>
-                lahir dari sudut pandang para tamu.
+              <span>
+                Bukan sekadar foto kaku<br className="mobile-only" /> di pelaminan.
+              </span>
+              <span style={{ display: 'block', fontStyle: 'italic', color: '#C27803', fontWeight: 500, marginTop: '4px', fontSize: '0.94em' }}>
+                Momen paling jujur lahir<br className="mobile-only" /> dari tawa para tamu.
               </span>
             </h1>
 
-            {/* Event Versatility Badges */}
-            <div className="responsive-hero-badges" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
-              <div className="desktop-only" style={{ display: 'contents' }}>
-                <span style={{ fontSize: '11.5px', background: 'rgba(194, 120, 3, 0.12)', color: '#C27803', fontWeight: 700, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(194, 120, 3, 0.25)' }}>
-                  Pernikahan & Resepsi (Favorit)
+            {/* Event Versatility Badges - Sleek & Compact */}
+            <div style={{ marginBottom: '22px' }}>
+              <div className="desktop-only" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                <span style={{ fontSize: '11px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', fontWeight: 600, padding: '3px 11px', borderRadius: '999px', border: '1px solid rgba(194, 120, 3, 0.22)' }}>
+                  Pernikahan & Resepsi
                 </span>
-                <span style={{ fontSize: '11.5px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
-                  Ulang Tahun & Sweet 17
+                <span style={{ fontSize: '11px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '3px 11px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
+                  Ulang Tahun
                 </span>
-                <span style={{ fontSize: '11.5px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
-                  Gathering Kantor & Gala
+                <span style={{ fontSize: '11px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '3px 11px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
+                  Gathering Kantor
                 </span>
-                <span style={{ fontSize: '11.5px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
+                <span style={{ fontSize: '11px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '3px 11px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
                   Reuni & Festival
                 </span>
               </div>
-              <div className="mobile-only">
-                <span style={{ fontSize: '11.5px', background: 'rgba(194, 120, 3, 0.10)', color: '#C27803', fontWeight: 600, padding: '5px 14px', borderRadius: '999px', border: '1px solid rgba(194, 120, 3, 0.25)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+              <div className="mobile-only" style={{ display: 'flex', justifyContent: 'center' }}>
+                <span style={{ fontSize: '11px', background: 'rgba(194, 120, 3, 0.10)', color: '#C27803', fontWeight: 600, padding: '4px 14px', borderRadius: '999px', border: '1px solid rgba(194, 120, 3, 0.25)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <span>Pernikahan</span> • <span>Ulang Tahun</span> • <span>Gathering</span>
                 </span>
               </div>
             </div>
 
             <p className="responsive-hero-desc" style={{
-              fontSize: '15px',
+              fontSize: '15.5px',
               color: '#515154',
-              lineHeight: 1.65,
-              marginBottom: '28px',
-              maxWidth: '490px'
+              lineHeight: 1.68,
+              marginBottom: '30px',
+              maxWidth: '495px'
             }}>
               <span className="desktop-only">
-                Dari resepsi pernikahan yang intim hingga perayaan ulang tahun, pesta kantor, atau reuni akbar—kamera resmi hanya bisa menangkap panggung utama. SudutBingkai memberi kamera saku analog ke tangan setiap tamu, mengabadikan tawa lepas kawan lama dan keseruan spontan di setiap meja tanpa perlu repot unduh aplikasi.
+                Di setiap meja pesta, tersimpan tawa lepas kawan lama dan momen hangat yang tak tertangkap fotografer resmi. SudutBingkai menghadirkan kamera analog sekali pakai di tangan setiap tamu lewat kartu QR di meja—tanpa perlu repot unduh aplikasi.
               </span>
               <span className="mobile-only">
-                Kamera saku analog sekali pakai di genggaman setiap tamu. Abadikan tawa jujur dan kehangatan di setiap meja tanpa perlu download aplikasi.
+                Kamera analog sekali pakai di genggaman setiap tamu lewat kartu QR di meja makan. Abadikan tawa jujur dan kehangatan tanpa perlu download aplikasi.
               </span>
             </p>
 
@@ -345,85 +351,293 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Right Column: 3D Dual Phone Mockup (Adaptive Mobile Wrapper) */}
-          <div className="responsive-mockup-wrapper">
-            {/* Phone 1: Album Gallery Preview (Behind) */}
-            <div className="phone-floating-left" style={{
-              position: 'absolute',
-              left: '10px',
-              top: '20px',
-              width: '270px',
-              height: '480px',
-              borderRadius: '40px',
-              background: '#FFFFFF',
-              border: '4px solid #E1E1E6',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              zIndex: 1
-            }}>
-              <div style={{ padding: '16px 16px 10px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', background: '#F8F8F7' }}>
-                <span className="font-mono-film" style={{ fontSize: '9px', color: '#C27803' }}>ALBUM RESEPSI</span>
-                <h4 style={{ fontSize: '14px', fontWeight: 700, color: '#1D1D1F' }}>Sarah & Dimas</h4>
-                <p style={{ fontSize: '11px', color: '#86868B' }}>1.240 momen • 180 tamu</p>
+          {/* Right Column: Konsep 1 (Studio Still Life - 35mm Film Strip + Table Tent Card + Upright Camera Phone) */}
+          <div className="studio-hero-stage">
+            {/* 1. Authentic 35mm Negative Film Strip */}
+            <div className="film-strip-35mm" title="Roll Klise 35mm SudutBingkai">
+              {/* Left Sprocket Holes */}
+              <div className="film-sprockets-track left">
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <div key={i} className="film-hole" />
+                ))}
               </div>
-              <div style={{ flex: 1, padding: '10px', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px', overflow: 'hidden', background: '#FAFAF9' }}>
-                <div style={{ aspectRatio: '3/4', borderRadius: '8px', overflow: 'hidden' }}>
-                  <img src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80" alt="Wedding" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
+              {/* Right Sprocket Holes */}
+              <div className="film-sprockets-track right">
+                {Array.from({ length: 9 }).map((_, i) => (
+                  <div key={i} className="film-hole" />
+                ))}
+              </div>
+
+              {/* Film Strip Inner Content */}
+              <div className="film-strip-content">
+                <div className="film-edge-markings">
+                  <span>KODAK PORTRA 400</span>
+                  <span>EXP 24</span>
                 </div>
-                <div style={{ aspectRatio: '3/4', borderRadius: '8px', overflow: 'hidden' }}>
-                  <img src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=400&q=80" alt="Wedding" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
+                <div className="film-cells-list">
+                  <div className="film-cell-box">
+                    <img
+                      src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=400&q=80"
+                      alt="Candid Wedding Moment"
+                      className="film-portra"
+                    />
+                    <span className="film-cell-tag">▲ 24</span>
+                  </div>
+
+                  <div className="film-cell-box">
+                    <img
+                      src="https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=400&q=80"
+                      alt="Candid Guests Laughter"
+                      className="film-portra"
+                    />
+                    <span className="film-cell-tag">▲ 24A</span>
+                  </div>
+
+                  <div className="film-cell-box">
+                    <img
+                      src="https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=400&q=80"
+                      alt="Candid Celebration Cheers"
+                      className="film-portra"
+                    />
+                    <span className="film-cell-tag">▲ 25</span>
+                  </div>
                 </div>
-                <div style={{ aspectRatio: '3/4', borderRadius: '8px', overflow: 'hidden' }}>
-                  <img src="https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&w=400&q=80" alt="Wedding" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </div>
-                <div style={{ aspectRatio: '3/4', borderRadius: '8px', overflow: 'hidden' }}>
-                  <img src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=400&q=80" alt="Wedding" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+
+                <div className="film-edge-markings">
+                  <span>SAFETY FILM</span>
+                  <span>25A</span>
                 </div>
               </div>
             </div>
 
-            {/* Phone 2: Live Disposable Camera Viewfinder (In Front) */}
-            <div className="phone-floating-right" style={{
-              position: 'absolute',
-              right: '15px',
-              top: '45px',
-              width: '270px',
-              height: '490px',
-              borderRadius: '40px',
-              background: '#0B0A09',
-              border: '4px solid #2B2A27',
-              overflow: 'hidden',
-              display: 'flex',
-              flexDirection: 'column',
-              zIndex: 2
-            }}>
-              {/* Camera Header */}
-              <div style={{ padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '11px', color: '#E2A07A', fontWeight: 600 }}>⚡ FLASH</span>
-                <span className="font-mono-film" style={{ fontSize: '10px', background: 'rgba(255,255,255,0.1)', color: '#fff', padding: '2px 8px', borderRadius: '999px' }}>
+            {/* 2. Physical Acrylic / Matte Gold Wedding Table Tent Card */}
+            <div className="table-card-stand" title="Kartu Meja Fisik SudutBingkai">
+              <div className="table-card-inner-border">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '4px' }}>
+                  <Camera size={11} color="#C27803" />
+                  <span className="font-mono-film" style={{ fontSize: '8px', color: '#C27803', letterSpacing: '0.18em' }}>
+                    WEDDING CELEBRATION
+                  </span>
+                </div>
+
+                <div className="font-editorial-serif" style={{ fontSize: '13px', fontWeight: 700, color: '#1D1D1F', letterSpacing: '-0.01em', marginBottom: '2px' }}>
+                  Sarah & Dimas
+                </div>
+
+                <div style={{ display: 'inline-block', background: 'rgba(194, 120, 3, 0.12)', border: '1px solid rgba(194, 120, 3, 0.3)', borderRadius: '999px', padding: '2px 8px', marginBottom: '6px' }}>
+                  <span className="font-mono-film" style={{ fontSize: '8.5px', color: '#9A6305', fontWeight: 700 }}>
+                    MEJA 04
+                  </span>
+                </div>
+
+                {/* Scannable Table QR Code with SudutBingkai Camera Centerpiece */}
+                <div className="table-card-qr-box">
+                  <svg viewBox="0 0 100 100" width="100%" height="100%">
+                    {/* Position detection corners */}
+                    <rect x="6" y="6" width="26" height="26" rx="4" fill="none" stroke="#1D1D1F" strokeWidth="4.5" />
+                    <rect x="13" y="13" width="12" height="12" rx="2" fill="#1D1D1F" />
+
+                    <rect x="68" y="6" width="26" height="26" rx="4" fill="none" stroke="#1D1D1F" strokeWidth="4.5" />
+                    <rect x="75" y="13" width="12" height="12" rx="2" fill="#1D1D1F" />
+
+                    <rect x="6" y="68" width="26" height="26" rx="4" fill="none" stroke="#1D1D1F" strokeWidth="4.5" />
+                    <rect x="13" y="75" width="12" height="12" rx="2" fill="#1D1D1F" />
+
+                    {/* QR Matrix Dots */}
+                    <rect x="38" y="9" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="49" y="9" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="38" y="20" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="55" y="20" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="9" y="38" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="20" y="49" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="68" y="38" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="79" y="49" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="38" y="75" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="49" y="85" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="58" y="75" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="75" y="75" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+                    <rect x="85" y="85" width="6" height="6" rx="1.5" fill="#1D1D1F" />
+
+                    {/* Center Camera Brand Emblem */}
+                    <circle cx="50" cy="50" r="14" fill="#C27803" />
+                    <circle cx="50" cy="50" r="5" fill="#FFFFFF" />
+                    <circle cx="53" cy="46" r="1.5" fill="#FDE68A" />
+                  </svg>
+                </div>
+
+                <div style={{ fontSize: '9px', fontWeight: 600, color: '#1D1D1F', marginBottom: '1px' }}>
+                  Pindai dari Mejamu
+                </div>
+                <div style={{ fontSize: '8px', color: '#86868B' }}>
+                  Ambil foto kenangan • Tanpa unduh aplikasi
+                </div>
+              </div>
+              <div className="table-card-acrylic-base" />
+            </div>
+
+            {/* 3. Upright Sleek Smartphone (Live Disposable Viewfinder) */}
+            <div className="hero-camera-phone" title="Kamera Tamu SudutBingkai">
+              {/* Dynamic Island / Notch */}
+              <div style={{
+                position: 'absolute',
+                top: '10px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '74px',
+                height: '18px',
+                background: '#000000',
+                borderRadius: '12px',
+                zIndex: 20
+              }} />
+
+              {/* Viewfinder Header HUD */}
+              <div style={{
+                padding: '28px 14px 10px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                zIndex: 10,
+                background: 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, transparent 100%)'
+              }}>
+                <span style={{ fontSize: '10.5px', color: '#F59E0B', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
+                  ⚡ AUTO
+                </span>
+                <span className="font-mono-film" style={{ fontSize: '9px', background: 'rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(8px)', color: '#FFFFFF', padding: '2px 8px', borderRadius: '999px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
                   PORTRA 400
                 </span>
-                <span style={{ fontSize: '11px', color: '#fff', fontFamily: 'var(--font-mono)' }}>16 SISA</span>
+                <span className="font-mono-film" style={{ fontSize: '10px', color: '#FFFFFF', fontWeight: 600 }}>
+                  14 SISA
+                </span>
               </div>
 
-              {/* Viewfinder Image */}
-              <div style={{ flex: 1, margin: '0 10px', position: 'relative', borderRadius: '6px', overflow: 'hidden' }}>
+              {/* Viewfinder Viewport Image */}
+              <div style={{ flex: 1, margin: '0 8px', position: 'relative', borderRadius: '10px', overflow: 'hidden' }}>
                 <img
-                  src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=500&q=80"
-                  alt="Live Camera"
+                  src="https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=500&q=80"
+                  alt="Live Viewfinder Snapshot"
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   className="film-portra"
                 />
-                <span style={{ position: 'absolute', bottom: '8px', right: '10px', color: '#ff9900', fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 'bold' }}>
-                  '26 10 10
+
+                {/* Subtle Rule-of-Thirds Grid */}
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateRows: 'repeat(3, 1fr)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  pointerEvents: 'none'
+                }}>
+                  <div style={{ borderRight: '1px solid rgba(255, 255, 255, 0.12)', borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }} />
+                  <div style={{ borderRight: '1px solid rgba(255, 255, 255, 0.12)', borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }} />
+                  <div style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }} />
+                  <div style={{ borderRight: '1px solid rgba(255, 255, 255, 0.12)', borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }} />
+                  <div style={{ borderRight: '1px solid rgba(255, 255, 255, 0.12)', borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }} />
+                  <div style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }} />
+                </div>
+
+                {/* Iconic Vintage Amber Date Stamp */}
+                <span style={{
+                  position: 'absolute',
+                  bottom: '10px',
+                  right: '10px',
+                  color: '#FF9900',
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  letterSpacing: '0.08em',
+                  textShadow: '0 0 6px rgba(255, 153, 0, 0.7)'
+                }}>
+                  '26 10 11
                 </span>
               </div>
 
-              {/* Shutter Ring */}
-              <div style={{ padding: '16px', display: 'flex', justifyContent: 'center' }}>
-                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: '#fff', border: '3px solid #141312', outline: '2px solid rgba(255,255,255,0.6)' }} />
+              {/* Viewfinder Bottom Controls */}
+              <div style={{
+                padding: '14px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                background: '#0B0A09'
+              }}>
+                {/* Last photo thumbnail */}
+                <div style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  border: '1.5px solid rgba(255, 255, 255, 0.3)',
+                  position: 'relative'
+                }}>
+                  <img
+                    src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=120&q=80"
+                    alt="Last Photo"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+
+                {/* Tactile Shutter Button */}
+                <div style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(145deg, #FFFFFF, #E1E1E6)',
+                  border: '3px solid #1D1D20',
+                  outline: '2.5px solid rgba(255, 255, 255, 0.7)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5), inset 0 2px 3px #FFFFFF'
+                }} />
+
+                {/* Audio Recording / Mic Indicator */}
+                <div style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '50%',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(255, 255, 255, 0.2)'
+                }}>
+                  <Mic size={15} color="#F59E0B" />
+                </div>
               </div>
+            </div>
+
+            {/* 4. Floating Voice Note Badge */}
+            <div className="hero-voice-badge">
+              <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'rgba(194, 120, 3, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Mic size={13} color="#C27803" />
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1D1D1F' }}>
+                  Pesan Suara • Meja 4
+                </span>
+                <span style={{ fontSize: '10px', color: '#86868B' }}>
+                  &ldquo;Selamat ya Dimas & Sarah!&rdquo; (0:14s)
+                </span>
+              </div>
+              <div className="sound-wave-bars">
+                <span className="sound-bar" />
+                <span className="sound-bar" />
+                <span className="sound-bar" />
+                <span className="sound-bar" />
+                <span className="sound-bar" />
+              </div>
+            </div>
+
+            {/* 5. Floating Live Guest Activity Badge */}
+            <div className="hero-live-badge">
+              <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px rgba(16, 185, 129, 0.6)' }} />
+              <div style={{ display: 'flex', marginLeft: '2px' }}>
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=60&q=80" alt="Guest" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #FFFFFF', objectFit: 'cover' }} />
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=60&q=80" alt="Guest" style={{ width: '20px', height: '20px', borderRadius: '50%', border: '1.5px solid #FFFFFF', marginLeft: '-6px', objectFit: 'cover' }} />
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: 600, color: '#1D1D1F' }}>
+                <strong style={{ color: '#C27803' }}>18 momen</strong> baru diunggah
+              </span>
             </div>
           </div>
         </div>

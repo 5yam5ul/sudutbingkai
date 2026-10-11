@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   Zap, ZapOff, RotateCcw, ArrowLeft, ArrowRight, Camera, QrCode as QrIcon, 
   Check, Eye, Download, X, Heart, MessageSquare, CheckCircle2, Film,
-  Share2, Sparkles, Layers, Mic, MicOff, Play, Square, WifiOff,
+  Share2, Layers, Mic, MicOff, Play, Square, WifiOff,
   Image as ImageIcon, AlertTriangle, Upload, Trash2
 } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -1255,7 +1255,7 @@ export default function GuestCameraPage() {
               }}
               title="Pilih Pakai Bingkai atau Raw"
             >
-              <Sparkles size={12} color={useFrame ? '#FFF' : '#F59E0B'} />
+              <Layers size={12} color={useFrame ? '#FFF' : '#F59E0B'} />
               <span>{useFrame ? 'BINGKAI' : 'RAW'}</span>
             </button>
           )}

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getEventById } from '@/lib/db';
+import { uploadBufferToR2, isR2Configured } from '@/lib/r2';
 
 const VOICES_DIR = path.join(process.cwd(), 'public', 'uploads', 'voices');
 const VOICES_JSON = path.join(process.cwd(), 'data', 'voice_notes.json');
@@ -24,7 +26,15 @@ function ensureVoiceStorage() {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const eventId = searchParams.get('eventId');
+  const eventIdParam = searchParams.get('eventId');
+
+  let resolvedEventId = eventIdParam;
+  if (eventIdParam) {
+    const event = await getEventById(eventIdParam);
+    if (event) {
+      resolvedEventId = event.id;
+    }
+  }
 
   // 1. Supabase
   if (isSupabaseConfigured && supabase) {
@@ -34,8 +44,8 @@ export async function GET(request: Request) {
         .select('*')
         .order('timestamp', { ascending: false });
 
-      if (eventId) {
-        query = query.eq('event_id', eventId);
+      if (resolvedEventId) {
+        query = query.eq('event_id', resolvedEventId);
       }
 
       const { data, error } = await query;
@@ -61,8 +71,8 @@ export async function GET(request: Request) {
     if (fs.existsSync(VOICES_JSON)) {
       const raw = fs.readFileSync(VOICES_JSON, 'utf8');
       let notes = JSON.parse(raw);
-      if (eventId) {
-        notes = notes.filter((n: any) => n.eventId === eventId);
+      if (resolvedEventId) {
+        notes = notes.filter((n: any) => n.eventId === resolvedEventId);
       }
       return NextResponse.json({ success: true, voiceNotes: notes });
     }
@@ -78,9 +88,8 @@ export async function POST(request: Request) {
     const audioFile = formData.get('audio') as File;
     const duration = Number(formData.get('duration')) || 0;
 
-    if (!eventId || !audioFile) {
-      return NextResponse.json({ success: false, error: 'Data audio dan eventId wajib' }, { status: 400 });
-    }
+    const event = await getEventById(eventId);
+    const targetEventId = event ? event.id : eventId;
 
     const noteId = `voice-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const extension = audioFile.type.includes('mp4') ? 'm4a' : 'webm';
@@ -89,53 +98,67 @@ export async function POST(request: Request) {
 
     let audioUrl = '';
 
-    // 1. Supabase Storage + Table
+    // 1. Cloudflare R2 Upload (Zero-egress audio storage)
+    const storagePath = `voices/${targetEventId}/${fileName}`;
+    if (isR2Configured) {
+      try {
+        const r2Url = await uploadBufferToR2(buffer, storagePath, audioFile.type || 'audio/webm');
+        if (r2Url) {
+          audioUrl = r2Url;
+        }
+      } catch (r2Err) {
+        console.warn('R2 voice note upload failed, will fallback:', r2Err);
+      }
+    }
+
+    // 2. Supabase Storage (Fallback) + Table
     if (isSupabaseConfigured && supabase) {
       try {
-        const storagePath = `voices/${eventId}/${fileName}`;
-        const { error: uploadError } = await supabase.storage
-          .from('photos')
-          .upload(storagePath, buffer, {
-            contentType: audioFile.type || 'audio/webm',
-            upsert: true
-          });
-
-        if (!uploadError) {
-          const { data: publicUrlData } = supabase.storage
+        if (!audioUrl) {
+          const { error: uploadError } = await supabase.storage
             .from('photos')
-            .getPublicUrl(storagePath);
-          audioUrl = publicUrlData.publicUrl;
-
-          const record = {
-            id: noteId,
-            event_id: eventId,
-            guest_name: guestName,
-            audio_url: audioUrl,
-            duration,
-            timestamp: new Date().toISOString()
-          };
-
-          const { error: dbError } = await supabase
-            .from('voice_notes')
-            .insert(record);
-
-          if (!dbError) {
-            return NextResponse.json({
-              success: true,
-              voiceNote: {
-                id: noteId,
-                eventId,
-                guestName,
-                audioUrl,
-                duration,
-                timestamp: record.timestamp
-              }
+            .upload(storagePath, buffer, {
+              contentType: audioFile.type || 'audio/webm',
+              upsert: true
             });
+
+          if (!uploadError) {
+            const { data: publicUrlData } = supabase.storage
+              .from('photos')
+              .getPublicUrl(storagePath);
+            audioUrl = publicUrlData.publicUrl;
+          } else {
+            console.warn('Supabase voice storage upload error:', uploadError.message);
           }
-          console.warn('Supabase voice_notes DB insert error:', dbError.message);
-        } else {
-          console.warn('Supabase voice storage upload error:', uploadError.message);
         }
+
+        const record = {
+          id: noteId,
+          event_id: targetEventId,
+          guest_name: guestName,
+          audio_url: audioUrl,
+          duration,
+          timestamp: new Date().toISOString()
+        };
+
+        const { error: dbError } = await supabase
+          .from('voice_notes')
+          .insert(record);
+
+        if (!dbError) {
+          return NextResponse.json({
+            success: true,
+            voiceNote: {
+              id: noteId,
+              eventId,
+              guestName,
+              audioUrl,
+              duration,
+              timestamp: record.timestamp
+            }
+          });
+        }
+        console.warn('Supabase voice_notes DB insert error:', dbError.message);
       } catch (sbEx) {
         console.warn('Supabase voice error:', sbEx);
       }

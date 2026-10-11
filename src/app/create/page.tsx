@@ -4,13 +4,14 @@ import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  ArrowLeft, ArrowRight, Check, Calendar, MapPin, Film, 
-  Lock, Unlock, Sparkles, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye
+  ArrowLeft, ArrowRight, Check, Calendar, MapPin, Film, Camera,
+  Lock, Unlock, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye
 } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FilmPresetId, EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
 import { FrameId } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
+import MayarPaymentModal from '@/components/MayarPaymentModal';
 
 function CreateEventForm() {
   const router = useRouter();
@@ -19,11 +20,21 @@ function CreateEventForm() {
   const initialTierKey: EventPackageTier = PACKAGE_TIERS[packageQuery] ? packageQuery : 'wedding';
 
   const [loading, setLoading] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [pendingPaymentData, setPendingPaymentData] = useState<{
+    amount: number;
+    title: string;
+    description: string;
+    isSimulation: boolean;
+    paymentUrl?: string;
+  } | null>(null);
 
   // Form State
   const [eventType, setEventType] = useState<'wedding' | 'birthday' | 'corporate' | 'other'>('wedding');
   const [title, setTitle] = useState('');
   const [coupleOrHost, setCoupleOrHost] = useState('');
+  const [slug, setSlug] = useState('');
+  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
   const [eventDate, setEventDate] = useState('');
   const [location, setLocation] = useState('');
 
@@ -48,6 +59,29 @@ function CreateEventForm() {
   const [frameText, setFrameText] = useState<string>('');
   const [allowGuestFrameToggle, setAllowGuestFrameToggle] = useState<boolean>(true);
   const [allowVoiceNote, setAllowVoiceNote] = useState<boolean>(true);
+
+  // Auto-slug generator from host or title
+  const generateCleanSlug = (text: string) => {
+    return text
+      .toLowerCase()
+      .replace(/[^a-z0-9\-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  };
+
+  const handleTitleChange = (val: string) => {
+    setTitle(val);
+    if (!isSlugManuallyEdited && !coupleOrHost) {
+      setSlug(generateCleanSlug(val));
+    }
+  };
+
+  const handleHostChange = (val: string) => {
+    setCoupleOrHost(val);
+    if (!isSlugManuallyEdited) {
+      setSlug(generateCleanSlug(val));
+    }
+  };
 
   // Toggle filter checkbox
   const togglePresetAllowed = (presetId: FilmPresetId) => {
@@ -88,17 +122,18 @@ function CreateEventForm() {
     setRevealTime(target.toISOString());
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const executeCreateEvent = async () => {
     setLoading(true);
 
     try {
+      const cleanSlug = generateCleanSlug(slug || coupleOrHost || title);
       const res = await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title,
           coupleOrHost,
+          slug: cleanSlug || undefined,
           eventDate: eventDate || new Date().toISOString(),
           location,
           preset: primaryPreset,
@@ -119,12 +154,59 @@ function CreateEventForm() {
 
       const data = await res.json();
       if (data.success && data.event) {
-        router.push(`/event/${data.event.id}`);
+        router.push(`/event/${data.event.slug || data.event.id}`);
       } else {
         alert('Gagal membuat acara: ' + (data.error || 'Terjadi kesalahan'));
       }
     } catch (err: unknown) {
       alert('Error: ' + (err as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // If starter (free), directly create event
+    if (activeTier.isFree) {
+      return executeCreateEvent();
+    }
+
+    // For paid packages, initiate Mayar checkout
+    setLoading(true);
+    try {
+      const payRes = await fetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packageTier: selectedTier,
+          name: coupleOrHost || title,
+        })
+      });
+
+      const payData = await payRes.json();
+      if (payData.success) {
+        if (!payData.isSimulation && payData.paymentUrl && !payData.paymentUrl.startsWith('/')) {
+          // Live Mayar redirect
+          window.location.href = payData.paymentUrl;
+          return;
+        }
+
+        // Sandbox / Simulator Mode
+        setPendingPaymentData({
+          amount: payData.amount,
+          title: `Paket ${activeTier.name} (${activeTier.guestsLabel})`,
+          description: `Wadah Album Digital SudutBingkai untuk ${coupleOrHost || title}`,
+          isSimulation: payData.isSimulation ?? true,
+          paymentUrl: payData.paymentUrl
+        });
+        setPaymentModalOpen(true);
+      } else {
+        executeCreateEvent();
+      }
+    } catch {
+      executeCreateEvent();
     } finally {
       setLoading(false);
     }
@@ -241,7 +323,7 @@ function CreateEventForm() {
                       : 'Contoh: Sweet 17 Keisha Azzahra'
                   }
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => handleTitleChange(e.target.value)}
                   className="glass-input"
                   style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14.5px' }}
                 />
@@ -257,7 +339,7 @@ function CreateEventForm() {
                     required
                     placeholder="Contoh: Dimas & Sarah"
                     value={coupleOrHost}
-                    onChange={(e) => setCoupleOrHost(e.target.value)}
+                    onChange={(e) => handleHostChange(e.target.value)}
                     className="glass-input"
                     style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14.5px' }}
                   />
@@ -289,6 +371,61 @@ function CreateEventForm() {
                   className="glass-input"
                   style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14.5px' }}
                 />
+              </div>
+
+              {/* TAUTAN KUSTOM / CUSTOM SLUG (Point 2: Custom URL Ramah Ketik) */}
+              <div>
+                <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                  Tautan Kustom / Link Acara (Custom Slug) *
+                </label>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: '#FFFFFF',
+                  border: '1.5px solid rgba(0, 0, 0, 0.12)',
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                  transition: 'border-color 0.2s ease'
+                }}>
+                  <span style={{
+                    padding: '0 12px',
+                    fontSize: '13px',
+                    color: '#86868B',
+                    background: 'rgba(0,0,0,0.03)',
+                    borderRight: '1px solid rgba(0,0,0,0.08)',
+                    height: '46px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    fontFamily: 'var(--font-mono)',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    sudutbingkai.id/cam/
+                  </span>
+                  <input
+                    type="text"
+                    required
+                    placeholder="sarah-dimas"
+                    value={slug}
+                    onChange={(e) => {
+                      setIsSlugManuallyEdited(true);
+                      setSlug(generateCleanSlug(e.target.value));
+                    }}
+                    style={{
+                      border: 'none',
+                      outline: 'none',
+                      background: 'transparent',
+                      padding: '12px 14px',
+                      fontSize: '14px',
+                      fontFamily: 'var(--font-mono)',
+                      color: '#C27803',
+                      fontWeight: 600,
+                      width: '100%'
+                    }}
+                  />
+                </div>
+                <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '5px' }}>
+                  Tautan ramah ketik yang dicetak di kartu meja, proyektor, atau undangan fisik.
+                </span>
               </div>
 
               {/* STATUS PAKET PEMBELIAN AKTIF (OTOMATIS TERVERIFIKASI TANPA PILIH MANUAL) */}
@@ -458,7 +595,7 @@ function CreateEventForm() {
               gap: '10px'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={15} color="#C27803" />
+                <Camera size={15} color="#C27803" />
                 <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F' }}>
                   Lihat Preview Tone Pada Model Foto:
                 </span>
@@ -641,33 +778,75 @@ function CreateEventForm() {
               })}
             </div>
 
-            {/* Toggle: Izinkan Tamu Berganti Filter di Kamera */}
-            <div
-              style={{
-                marginTop: '20px',
-                padding: '16px 18px',
-                borderRadius: '16px',
-                background: 'rgba(0,0,0,0.03)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px'
-              }}
-            >
-              <div>
-                <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block', marginBottom: '2px' }}>
-                  Izinkan Tamu Mengganti Filter Film di Kamera
-                </strong>
-                <span style={{ fontSize: '12px', color: '#86868B' }}>
-                  Jika aktif, tamu dapat memilih dari {allowedPresets.length} filter aktif di atas saat memotret di ponsel mereka.
+            {/* STRATEGI GAYA FILTER DUA MODE (Point 2: Preset Terkunci vs Kebebasan Memilih Filter) */}
+            <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                <span className="font-mono-film" style={{ fontSize: '11px', color: '#C27803' }}>
+                  STRATEGI GAYA VISUAL ALBUM
+                </span>
+                <span style={{ fontSize: '10px', background: 'rgba(194,120,3,0.12)', color: '#C27803', padding: '1px 7px', borderRadius: '999px', fontWeight: 700 }}>
+                  KENDALI PENUH HOST
                 </span>
               </div>
-              <input
-                type="checkbox"
-                checked={allowGuestPresetSwitch}
-                onChange={(e) => setAllowGuestPresetSwitch(e.target.checked)}
-                style={{ width: '22px', height: '22px', accentColor: '#C27803', cursor: 'pointer' }}
-              />
+              <h3 style={{ fontSize: '16.5px', fontWeight: 700, color: '#1D1D1F', marginBottom: '12px' }}>
+                Pilih Mode Kamera Tamu di Acara Anda
+              </h3>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '12px' }}>
+                {/* Mode A: Kurasi Terkunci (Satu Suasana) */}
+                <div
+                  onClick={() => setAllowGuestPresetSwitch(false)}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '16px',
+                    border: !allowGuestPresetSwitch ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                    background: !allowGuestPresetSwitch ? 'rgba(194, 120, 3, 0.05)' : '#FFFFFF',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: !allowGuestPresetSwitch ? '0 4px 16px rgba(194,120,3,0.15)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: !allowGuestPresetSwitch ? '#C27803' : 'rgba(0,0,0,0.05)', color: !allowGuestPresetSwitch ? '#FFF' : '#86868B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Lock size={15} />
+                      </div>
+                      <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>Mode Kurasi Seragam</strong>
+                    </div>
+                    {!allowGuestPresetSwitch && <Check size={16} color="#C27803" />}
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#6E6E73', margin: 0, lineHeight: 1.45 }}>
+                    Kunci seluruh kamera tamu pada <strong>{FILM_PRESETS[primaryPreset]?.name || 'Filter Utama'}</strong>. Album foto pernikahan akan seragam dan estetik layaknya kurasi fotografer profesional.
+                  </p>
+                </div>
+
+                {/* Mode B: Bebas Berkreasi (Eksplorasi) */}
+                <div
+                  onClick={() => setAllowGuestPresetSwitch(true)}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '16px',
+                    border: allowGuestPresetSwitch ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                    background: allowGuestPresetSwitch ? 'rgba(194, 120, 3, 0.05)' : '#FFFFFF',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    boxShadow: allowGuestPresetSwitch ? '0 4px 16px rgba(194,120,3,0.15)' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: allowGuestPresetSwitch ? '#C27803' : 'rgba(0,0,0,0.05)', color: allowGuestPresetSwitch ? '#FFF' : '#86868B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Unlock size={15} />
+                      </div>
+                      <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>Mode Bebas Eksplorasi</strong>
+                    </div>
+                    {allowGuestPresetSwitch && <Check size={16} color="#C27803" />}
+                  </div>
+                  <p style={{ fontSize: '12px', color: '#6E6E73', margin: 0, lineHeight: 1.45 }}>
+                    Bebaskan tamu memutar dan mencoba {allowedPresets.length} filter analog aktif di ponsel mereka. Sangat seru dan interaktif untuk pesta dan momen kasual!
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -884,7 +1063,13 @@ function CreateEventForm() {
                 cursor: loading ? 'wait' : 'pointer'
               }}
             >
-              <span>{loading ? 'Menyiapkan Album Digital...' : 'Terbitkan Album & Unduh Barcode Meja'}</span>
+              <span>
+                {loading
+                  ? 'Menyiapkan Album Digital...'
+                  : activeTier.isFree
+                    ? 'Terbitkan Album & Unduh Barcode Meja (Gratis)'
+                    : `Lanjut ke Pembayaran Mayar (${activeTier.price})`}
+              </span>
               <ArrowRight size={18} />
             </button>
             <span style={{ fontSize: '12px', color: '#86868B' }}>
@@ -894,6 +1079,20 @@ function CreateEventForm() {
 
         </form>
       </main>
+
+      {/* Mayar Payment Modal (Sandbox Simulator or Live Checkout) */}
+      <MayarPaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        onSuccess={() => {
+          setPaymentModalOpen(false);
+          executeCreateEvent();
+        }}
+        title={pendingPaymentData?.title || `Paket ${activeTier.name}`}
+        description={pendingPaymentData?.description || ''}
+        amount={pendingPaymentData?.amount || 349000}
+        isSimulation={pendingPaymentData?.isSimulation}
+      />
     </div>
   );
 }
