@@ -309,7 +309,6 @@ export default function BrideDashboardPage() {
 
           {event && (
             <div className="desktop-only" style={{
-              display: 'inline-flex',
               alignItems: 'center',
               gap: '8px',
               background: 'rgba(194, 120, 3, 0.08)',
@@ -363,11 +362,11 @@ export default function BrideDashboardPage() {
             </div>
 
             {/* Action Buttons */}
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px', width: '100%', maxWidth: '560px' }}>
               <button
                 onClick={copyGuestLink}
                 className="glass-pill"
-                style={{ padding: '9px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                style={{ padding: '9px 12px', fontSize: '12.5px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
               >
                 {copied ? <Check size={14} color="#C27803" /> : <Share2 size={14} />}
                 <span>{copied ? 'Tersalin' : 'Salin Link'}</span>
@@ -376,7 +375,7 @@ export default function BrideDashboardPage() {
               <Link
                 href={`/event/${event?.id}/print`}
                 className="glass-pill"
-                style={{ padding: '9px 16px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ padding: '9px 12px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
                 <Printer size={14} />
                 <span>Kartu Meja</span>
@@ -385,10 +384,19 @@ export default function BrideDashboardPage() {
               <Link
                 href={`/cam/${event?.id}`}
                 className="btn-apple-black"
-                style={{ padding: '9px 18px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ padding: '9px 12px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
                 <Camera size={14} />
                 <span>Uji Kamera</span>
+              </Link>
+
+              <Link
+                href={`/event/${event?.id}/live`}
+                className="glass-pill"
+                style={{ padding: '9px 12px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                <Tv size={14} />
+                <span>Layar TV</span>
               </Link>
             </div>
           </div>

@@ -71,7 +71,7 @@ export default function LoginPage() {
             />
           </Link>
 
-          <div style={{ width: '60px' }} className="desktop-only" />
+          <div style={{ width: '80px', visibility: 'hidden' }} aria-hidden="true" />
         </div>
       </header>
 

@@ -56,6 +56,8 @@ html {
   scroll-behavior: smooth;
   text-size-adjust: 100%;
   -webkit-text-size-adjust: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 body {
@@ -325,6 +327,44 @@ h1, h2, h3, h4, h5, h6 {
 /* ==========================================================================
    MOBILE RESPONSIVE SYSTEM (Apple & Leica Aesthetics)
    ========================================================================== */
+
+/* Core Desktop / Mobile Visibility Utilities */
+.desktop-only {
+  display: inline !important;
+}
+
+div.desktop-only, section.desktop-only, header.desktop-only, p.desktop-only {
+  display: block !important;
+}
+
+.mobile-only {
+  display: none !important;
+}
+
+@media (max-width: 680px) {
+  .desktop-only,
+  div.desktop-only,
+  section.desktop-only,
+  header.desktop-only,
+  p.desktop-only,
+  span.desktop-only,
+  button.desktop-only,
+  a.desktop-only {
+    display: none !important;
+  }
+  
+  .mobile-only {
+    display: inline !important;
+  }
+
+  div.mobile-only, section.mobile-only, p.mobile-only {
+    display: block !important;
+  }
+
+  button.mobile-only, a.mobile-only {
+    display: inline-flex !important;
+  }
+}
 
 /* Navigation Responsive Visibility */
 .desktop-nav-links {

@@ -82,16 +82,20 @@ export default function HomePage() {
         background: 'rgba(255, 255, 255, 0.85)',
         borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
         backdropFilter: 'blur(16px)',
-        padding: '8px 16px',
+        padding: '8px 14px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         gap: '8px',
-        fontSize: '12px'
+        fontSize: '12px',
+        width: '100%',
+        maxWidth: '100vw',
+        overflow: 'hidden'
       }}>
         <Camera size={13} style={{ color: '#C27803', flexShrink: 0 }} />
-        <span style={{ color: '#515154', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          SudutBingkai • Kamera Sekali Pakai Digital untuk Segala Acara
+        <span style={{ color: '#515154', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0, flexShrink: 1 }}>
+          <span className="desktop-only">SudutBingkai • Kamera Sekali Pakai Digital untuk Segala Acara</span>
+          <span className="mobile-only">Kamera Tamu Sekali Pakai</span>
         </span>
         <span style={{ background: '#C27803', color: '#FFFFFF', fontSize: '10px', fontWeight: 700, padding: '1px 6px', borderRadius: '999px', flexShrink: 0 }}>
           BARU
@@ -143,7 +147,7 @@ export default function HomePage() {
             <Link href="/login" className="action-desktop-only" style={{ color: '#1D1D1F', textDecoration: 'none', fontSize: '13px', fontWeight: 500, padding: '7px 12px' }}>
               Masuk
             </Link>
-            <Link href="/cam/wedding-sarah-dimas" className="glass-pill" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
+            <Link href="/cam/wedding-sarah-dimas" className="glass-pill action-desktop-only" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
               Coba Kamera
             </Link>
             <Link href="/create" className="btn-apple-black action-desktop-only" style={{ padding: '8px 18px', fontSize: '13px' }}>
@@ -265,30 +269,42 @@ export default function HomePage() {
               </span>
             </h1>
 
-            {/* Event Versatility Badges (Wedding highlighted as top favorite) */}
+            {/* Event Versatility Badges */}
             <div className="responsive-hero-badges" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
-              <span style={{ fontSize: '11.5px', background: 'rgba(194, 120, 3, 0.12)', color: '#C27803', fontWeight: 700, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(194, 120, 3, 0.25)' }}>
-                Pernikahan & Resepsi (Favorit)
-              </span>
-              <span style={{ fontSize: '11.5px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
-                Ulang Tahun & Sweet 17
-              </span>
-              <span style={{ fontSize: '11.5px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
-                Gathering Kantor & Gala
-              </span>
-              <span style={{ fontSize: '11.5px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
-                Reuni & Festival
-              </span>
+              <div className="desktop-only" style={{ display: 'contents' }}>
+                <span style={{ fontSize: '11.5px', background: 'rgba(194, 120, 3, 0.12)', color: '#C27803', fontWeight: 700, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(194, 120, 3, 0.25)' }}>
+                  Pernikahan & Resepsi (Favorit)
+                </span>
+                <span style={{ fontSize: '11.5px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
+                  Ulang Tahun & Sweet 17
+                </span>
+                <span style={{ fontSize: '11.5px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
+                  Gathering Kantor & Gala
+                </span>
+                <span style={{ fontSize: '11.5px', background: 'rgba(0, 0, 0, 0.04)', color: '#515154', fontWeight: 500, padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(0, 0, 0, 0.06)' }}>
+                  Reuni & Festival
+                </span>
+              </div>
+              <div className="mobile-only">
+                <span style={{ fontSize: '11.5px', background: 'rgba(194, 120, 3, 0.10)', color: '#C27803', fontWeight: 600, padding: '5px 14px', borderRadius: '999px', border: '1px solid rgba(194, 120, 3, 0.25)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <span>Pernikahan</span> • <span>Ulang Tahun</span> • <span>Gathering</span>
+                </span>
+              </div>
             </div>
 
             <p className="responsive-hero-desc" style={{
-              fontSize: '15.5px',
+              fontSize: '15px',
               color: '#515154',
-              lineHeight: 1.7,
-              marginBottom: '32px',
+              lineHeight: 1.65,
+              marginBottom: '28px',
               maxWidth: '490px'
             }}>
-              Dari resepsi pernikahan yang intim hingga perayaan ulang tahun, pesta kantor, atau reuni akbar—kamera resmi hanya bisa menangkap panggung utama. SudutBingkai memberi kamera saku analog ke tangan setiap tamu, mengabadikan tawa lepas kawan lama dan keseruan spontan di setiap meja tanpa perlu repot unduh aplikasi.
+              <span className="desktop-only">
+                Dari resepsi pernikahan yang intim hingga perayaan ulang tahun, pesta kantor, atau reuni akbar—kamera resmi hanya bisa menangkap panggung utama. SudutBingkai memberi kamera saku analog ke tangan setiap tamu, mengabadikan tawa lepas kawan lama dan keseruan spontan di setiap meja tanpa perlu repot unduh aplikasi.
+              </span>
+              <span className="mobile-only">
+                Kamera saku analog sekali pakai di genggaman setiap tamu. Abadikan tawa jujur dan kehangatan di setiap meja tanpa perlu download aplikasi.
+              </span>
             </p>
 
             <div className="responsive-hero-cta" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', marginBottom: '32px' }}>

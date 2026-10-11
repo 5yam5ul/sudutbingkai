@@ -38,3 +38,10 @@ next-env.d.ts
 /data/*.json
 /public/uploads/*
 !/public/uploads/.gitkeep
+
+# temp & scratch
+/scratch/
+/screenshots/
+test.png
+public/test_width.html
+

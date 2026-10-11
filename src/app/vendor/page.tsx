@@ -289,13 +289,13 @@ export default function VendorPortalPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-              <Link href="/" target="_blank" className="glass-pill" style={{ padding: '10px 16px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', width: '100%', maxWidth: '440px' }}>
+              <Link href="/" target="_blank" className="glass-pill" style={{ padding: '10px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <ExternalLink size={14} />
                 <span>Lihat di Beranda</span>
               </Link>
 
-              <Link href="/create" className="btn-apple-black" style={{ padding: '10px 20px', fontSize: '13px' }}>
+              <Link href="/create" className="btn-apple-black" style={{ padding: '10px 16px', fontSize: '12.5px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
                 <Plus size={15} />
                 <span>Tambah Acara Klien</span>
               </Link>
@@ -345,7 +345,8 @@ export default function VendorPortalPage() {
             }}
           >
             <Calculator size={14} />
-            <span>Paket Grosir & Custom Calculator</span>
+            <span className="desktop-only">Paket Grosir & Custom Calculator</span>
+            <span className="mobile-only">Paket Grosir</span>
           </button>
 
           <button
@@ -365,7 +366,8 @@ export default function VendorPortalPage() {
             }}
           >
             <Upload size={14} />
-            <span>Upload Logo & Co-Branding</span>
+            <span className="desktop-only">Upload Logo & Co-Branding</span>
+            <span className="mobile-only">Co-Branding</span>
           </button>
 
           <button
@@ -385,7 +387,8 @@ export default function VendorPortalPage() {
             }}
           >
             <Users size={14} />
-            <span>Daftar Klien Pengantin ({clients.length})</span>
+            <span className="desktop-only">Daftar Klien Pengantin ({clients.length})</span>
+            <span className="mobile-only">Klien ({clients.length})</span>
           </button>
 
           <button
@@ -405,7 +408,8 @@ export default function VendorPortalPage() {
             }}
           >
             <FileText size={14} />
-            <span>Marketing Kit & Panduan MC</span>
+            <span className="desktop-only">Marketing Kit & Panduan MC</span>
+            <span className="mobile-only">Marketing Kit</span>
           </button>
         </div>
 

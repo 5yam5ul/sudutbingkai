@@ -767,37 +767,41 @@ export default function GuestCameraPage() {
         <AnimatePresence>
           {showToast && lastShotThumb && (
             <motion.div
-              initial={{ y: 60, opacity: 0, scale: 0.88, rotate: -4 }}
-              animate={{ y: 0, opacity: 1, scale: 1, rotate: 0 }}
-              exit={{ y: 30, opacity: 0, scale: 0.9 }}
-              transition={{ type: 'spring', damping: 22, stiffness: 350 }}
+              initial={{ y: -50, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -30, opacity: 0, scale: 0.9 }}
+              transition={{ type: 'spring', damping: 24, stiffness: 320 }}
               onClick={() => setShowRollModal(true)}
               style={{
                 position: 'absolute',
-                bottom: '140px',
-                left: '20px',
+                top: 'calc(70px + env(safe-area-inset-top, 0px))',
+                left: '16px',
+                right: '16px',
                 zIndex: 80,
-                background: '#FFFFFF',
+                background: 'rgba(255, 255, 255, 0.95)',
+                backdropFilter: 'blur(20px)',
                 color: '#1D1D1F',
-                padding: '6px 12px 8px',
-                borderRadius: '14px',
-                boxShadow: '0 16px 36px rgba(0,0,0,0.5)',
+                padding: '8px 14px',
+                borderRadius: '16px',
+                boxShadow: '0 16px 36px rgba(0,0,0,0.5), inset 0 1px 1px #fff',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px',
-                cursor: 'pointer'
+                gap: '12px',
+                cursor: 'pointer',
+                maxWidth: '360px',
+                margin: '0 auto'
               }}
             >
-              <div style={{ width: '40px', height: '52px', borderRadius: '4px', overflow: 'hidden', background: '#000', flexShrink: 0, border: '2px solid #F5F5F0' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '8px', overflow: 'hidden', background: '#000', flexShrink: 0, border: '1.5px solid rgba(0,0,0,0.1)' }}>
                 <img src={lastShotThumb} alt="Thumb" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
-              <div>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <CheckCircle2 size={13} color="#27AE60" />
                   <strong style={{ fontSize: '12px', color: '#1D1D1F' }}>Tersimpan ke Roll!</strong>
                 </div>
-                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block' }}>
-                  Ketuk untuk lihat roll foto ({myPhotos.length})
+                <span style={{ fontSize: '11px', color: '#6E6E73', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  Ketuk untuk lihat foto Anda ({myPhotos.length})
                 </span>
               </div>
             </motion.div>
@@ -815,8 +819,8 @@ export default function GuestCameraPage() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        padding: 'calc(12px + env(safe-area-inset-top, 0px)) 16px 10px',
-        background: 'linear-gradient(180deg, rgba(11, 10, 9, 0.85) 0%, rgba(11, 10, 9, 0.4) 65%, transparent 100%)',
+        padding: 'calc(max(18px, env(safe-area-inset-top, 0px))) 18px 12px',
+        background: 'linear-gradient(180deg, rgba(11, 10, 9, 0.88) 0%, rgba(11, 10, 9, 0.45) 70%, transparent 100%)',
         pointerEvents: 'auto'
       }}>
         {/* Flash Mode Minimal Button */}
@@ -925,7 +929,7 @@ export default function GuestCameraPage() {
       {/* Floating Quick Controls Cluster (Positioned above shutter) */}
       <div style={{
         position: 'absolute',
-        bottom: 'calc(116px + env(safe-area-inset-bottom, 0px))',
+        bottom: 'calc(132px + env(safe-area-inset-bottom, 0px))',
         left: 0,
         right: 0,
         zIndex: 25,
@@ -1027,7 +1031,7 @@ export default function GuestCameraPage() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '12px 20px calc(14px + env(safe-area-inset-bottom, 0px))',
+        padding: '12px 20px calc(22px + env(safe-area-inset-bottom, 0px))',
         background: 'linear-gradient(0deg, rgba(11, 10, 9, 0.96) 0%, rgba(11, 10, 9, 0.72) 65%, transparent 100%)',
         pointerEvents: 'auto'
       }}>
@@ -1590,31 +1594,72 @@ export default function GuestCameraPage() {
   const checkInScreen = (
     <div style={{
       width: '100%',
-      height: '100%',
-      minHeight: '100%',
+      minHeight: '100dvh',
       overflowY: 'auto',
       WebkitOverflowScrolling: 'touch',
       display: 'flex',
       flexDirection: 'column',
-      padding: 'calc(24px + env(safe-area-inset-top, 0px)) 24px calc(28px + env(safe-area-inset-bottom, 0px))',
-      background: '#FFFFFF',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 'calc(24px + env(safe-area-inset-top, 0px)) 16px calc(28px + env(safe-area-inset-bottom, 0px))',
+      background: 'linear-gradient(180deg, #FBFBFA 0%, #F4F4F1 100%)',
       color: '#1D1D1F',
       position: 'relative'
     }}>
-      <div style={{ maxWidth: '350px', margin: 'auto', width: '100%', padding: '12px 0' }}>
-        <p className="font-mono-film" style={{ color: '#C27803', marginBottom: '8px' }}>
-          {event?.coupleOrHost || 'Pernikahan Sarah & Dimas'}
-        </p>
+      {/* Background Ambient Radial Glow */}
+      <div style={{
+        position: 'absolute',
+        top: '15%',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        width: '320px',
+        height: '320px',
+        background: 'radial-gradient(circle, rgba(194, 120, 3, 0.08) 0%, rgba(251, 251, 250, 0) 70%)',
+        pointerEvents: 'none',
+        zIndex: 0
+      }} />
 
-        <h1 className="font-display-serif" style={{ fontSize: '30px', lineHeight: 1.15, marginBottom: '12px', color: '#1D1D1F' }}>
+      <div className="glass-card" style={{
+        maxWidth: '380px',
+        width: '100%',
+        padding: '32px 22px 28px',
+        borderRadius: '28px',
+        textAlign: 'center',
+        position: 'relative',
+        zIndex: 10,
+        boxShadow: '0 20px 48px -12px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.95)'
+      }}>
+        <img 
+          src="/sudut-bingkai-logo.png" 
+          alt="Sudut Bingkai" 
+          style={{ height: '32px', width: 'auto', objectFit: 'contain', margin: '0 auto 16px', display: 'block' }} 
+        />
+
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '6px',
+          background: 'rgba(194, 120, 3, 0.08)',
+          border: '1px solid rgba(194, 120, 3, 0.22)',
+          padding: '4px 14px',
+          borderRadius: '999px',
+          marginBottom: '14px'
+        }}>
+          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
+          <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', fontWeight: 600 }}>
+            {event?.coupleOrHost || 'Pernikahan Spesial'}
+          </span>
+        </div>
+
+        <h1 className="font-display-serif" style={{ fontSize: '26px', lineHeight: 1.2, marginBottom: '10px', color: '#1D1D1F' }}>
           Kamera Tamu <em>Digital</em>
         </h1>
 
-        <p style={{ color: '#515154', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '22px' }}>
-          Setiap momen yang kamu tangkap akan langsung tersimpan di album kenangan {event?.coupleOrHost || 'pengantin'}. Tersedia <strong>{maxShots} jepretan</strong> analog bernuansa {presetInfo.name}.
+        <p style={{ color: '#515154', fontSize: '13px', lineHeight: 1.6, marginBottom: '22px' }}>
+          Jepret momen seru dan hangat di meja Anda. Foto langsung tersimpan ke album {event?.coupleOrHost || 'pengantin'} tanpa unduh aplikasi.
         </p>
 
-        <form onSubmit={handleNameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+        <form onSubmit={handleNameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
           <div>
             <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
               Nama Anda *
@@ -1630,7 +1675,7 @@ export default function GuestCameraPage() {
               style={{
                 width: '100%',
                 padding: '12px 16px',
-                borderRadius: '12px',
+                borderRadius: '14px',
                 fontSize: '16px',
                 minHeight: '48px'
               }}
@@ -1640,16 +1685,16 @@ export default function GuestCameraPage() {
           <button
             type="submit"
             className="btn-apple-black"
-            style={{ width: '100%', padding: '14px', borderRadius: '12px', marginTop: '6px', minHeight: '48px', fontSize: '15px' }}
+            style={{ width: '100%', padding: '14px', borderRadius: '14px', marginTop: '4px', minHeight: '48px', fontSize: '15px' }}
           >
             <span>Buka Rana Kamera</span>
             <ArrowRight size={16} />
           </button>
         </form>
 
-        <div style={{ marginTop: '24px', paddingTop: '18px', borderTop: '1px solid rgba(0, 0, 0, 0.08)', display: 'flex', alignItems: 'center', gap: '8px', color: '#6E6E73', fontSize: '12px' }}>
+        <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#6E6E73', fontSize: '11.5px' }}>
           <Check size={14} color="#C27803" />
-          <span>Foto otomatis tersimpan ke album pengantin & roll Anda</span>
+          <span>Tersedia <strong>{maxShots} jepretan</strong> analog {presetInfo.name}</span>
         </div>
       </div>
     </div>

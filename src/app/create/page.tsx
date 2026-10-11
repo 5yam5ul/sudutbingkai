@@ -153,7 +153,7 @@ function CreateEventForm() {
         borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
       }}>
         <div style={{ maxWidth: '840px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', color: '#515154' }}>
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', color: '#515154', width: '70px' }}>
             <ArrowLeft size={16} />
             <span style={{ fontSize: '13.5px', fontWeight: 500 }}>Kembali</span>
           </Link>
@@ -162,7 +162,7 @@ function CreateEventForm() {
             Buat Album Acara
           </span>
 
-          <div style={{ width: '60px' }} />
+          <div style={{ width: '70px', visibility: 'hidden' }} aria-hidden="true" />
         </div>
       </header>
 
@@ -184,7 +184,7 @@ function CreateEventForm() {
           
           {/* SECTION 1: INFORMASI ACARA & STATUS PAKET PEMBELIAN TERVERIFIKASI */}
           <div className="glass-card form-section-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
               <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
                 01 • DETAIL ACARA & PAKET AKTIF
               </span>
