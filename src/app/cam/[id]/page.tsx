@@ -1448,7 +1448,25 @@ export default function GuestCameraPage() {
         }}>
           <span>SUDUTBINGKAI</span>
           <span>•</span>
-          <span>TAMU: <strong>{guestName || 'UNDANGAN'}</strong></span>
+          <span>
+            TAMU:{' '}
+            <button
+              onClick={() => setHasEnteredName(false)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '0 2px',
+                color: '#FFFFFF',
+                font: 'inherit',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+                textUnderlineOffset: '2px'
+              }}
+              title="Klik jika ingin ganti nama tamu"
+            >
+              <strong>{guestName || 'UNDANGAN'}</strong> ✎
+            </button>
+          </span>
           {tableNumber && <span>• MEJA {tableNumber}</span>}
         </div>
       </footer>

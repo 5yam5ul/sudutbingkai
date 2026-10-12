@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAllEvents, getEventById, saveEvent, updateEvent } from '@/lib/db';
+import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent } from '@/lib/db';
 import { EventData } from '@/lib/types';
 
 export async function GET(request: Request) {
@@ -132,3 +132,23 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 400 });
   }
 }
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Parameter id diperlukan' }, { status: 400 });
+    }
+
+    const success = await deleteEvent(id);
+    if (!success) {
+      return NextResponse.json({ success: false, error: 'Gagal menghapus acara' }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true, message: 'Acara berhasil dihapus' });
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
+  }
+}
+

@@ -303,13 +303,16 @@ export interface VideoTestimonialSubmission {
 export interface EventAddonItem {
   id: string;
   name: string;
-  category: 'physical_qr' | 'banner' | 'hardware_rental' | 'custom';
+  category: 'physical_qr' | 'banner' | 'hardware_rental' | 'custom' | string;
   description: string;
   price: number;
-  priceFormatted: string;
-  unit: string;
-  freeShippingJabodetabek: boolean;
+  priceFormatted?: string;
+  costPrice?: number;
+  unit?: string;
+  freeShippingJabodetabek?: boolean;
   imagePreviewUrl?: string;
   isPopular?: boolean;
+  isActive?: boolean;
+  createdAt?: string;
 }
 

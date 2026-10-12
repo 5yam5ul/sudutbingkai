@@ -7,10 +7,11 @@ import {
   Shield, DollarSign, Calendar, Camera, Users, FileText,
   Wallet, Video, Package, CheckCircle2, AlertCircle, Eye,
   EyeOff, Trash2, Download, ExternalLink, RefreshCw, Plus,
-  Sliders, Search, ArrowRight, LogOut, Check, X, Flame, Sparkles
+  Sliders, Search, ArrowRight, LogOut, Check, X, Flame, Sparkles,
+  Edit, Pencil, ArrowUpRight, ArrowDownRight, Layers, CreditCard
 } from 'lucide-react';
 import { getClientSession, clearClientSession } from '@/lib/auth';
-import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount } from '@/lib/types';
+import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier } from '@/lib/types';
 import { toast } from 'sonner';
 
 type AdminTab = 'overview' | 'events' | 'moderation' | 'vendors' | 'invoices' | 'payouts' | 'testimonials' | 'addons';
@@ -21,48 +22,126 @@ export default function SuperAdminDashboard() {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [loading, setLoading] = useState(true);
 
-  // Data states
+  // Data collections
   const [events, setEvents] = useState<EventData[]>([]);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [testimonials, setTestimonials] = useState<VideoTestimonialSubmission[]>([]);
   const [vendors, setVendors] = useState<any[]>([]);
+  const [addons, setAddons] = useState<EventAddonItem[]>([]);
 
-  // Search & Filter states
+  // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [photoFilterEvent, setPhotoFilterEvent] = useState('all');
 
-  // Verify Admin Session on mount
+  // -------------------------------------------------------------
+  // MODAL STATES
+  // -------------------------------------------------------------
+  // 1. Events Modal
+  const [editEventModalOpen, setEditEventModalOpen] = useState(false);
+  const [eventToEdit, setEventToEdit] = useState<EventData | null>(null);
+  const [createEventModalOpen, setCreateEventModalOpen] = useState(false);
+  const [newEventForm, setNewEventForm] = useState<Partial<EventData>>({
+    title: '',
+    coupleOrHost: '',
+    eventDate: new Date().toISOString().substring(0, 10),
+    location: '',
+    packageTier: 'wedding',
+    maxGuests: 150,
+    shotsPerGuest: 20,
+    preset: 'portra',
+    revealMode: 'instant'
+  });
+
+  // 2. Vendors Modal
+  const [editVendorModalOpen, setEditVendorModalOpen] = useState(false);
+  const [vendorToEdit, setVendorToEdit] = useState<any | null>(null);
+  const [createVendorModalOpen, setCreateVendorModalOpen] = useState(false);
+  const [newVendorForm, setNewVendorForm] = useState({
+    name: '',
+    companyName: '',
+    email: '',
+    phone: '',
+    instagram: '',
+    partnerTier: 'regular',
+    referralCode: '',
+    bankName: 'BCA',
+    accountNumber: '',
+    accountHolder: ''
+  });
+
+  // 3. Wallet Balance Adjustment Modal
+  const [adjustWalletModalOpen, setAdjustWalletModalOpen] = useState(false);
+  const [vendorToAdjust, setVendorToAdjust] = useState<any | null>(null);
+  const [walletAdjustType, setWalletAdjustType] = useState<'add' | 'deduct'>('add');
+  const [walletAdjustAmount, setWalletAdjustAmount] = useState<number>(100000);
+  const [walletAdjustNote, setWalletAdjustNote] = useState('');
+
+  // 4. Invoices Modal
+  const [editInvoiceModalOpen, setEditInvoiceModalOpen] = useState(false);
+  const [invoiceToEdit, setInvoiceToEdit] = useState<InvoiceRecord | null>(null);
+  const [createInvoiceModalOpen, setCreateInvoiceModalOpen] = useState(false);
+  const [newInvoiceForm, setNewInvoiceForm] = useState<Partial<InvoiceRecord>>({
+    buyerName: '',
+    buyerEmail: '',
+    buyerPhone: '',
+    tierId: 'wedding',
+    tierName: 'Wedding (300 Tamu)',
+    originalPrice: 499000,
+    discountAmount: 0,
+    finalAmount: 499000,
+    paymentMethod: 'qris',
+    status: 'paid'
+  });
+
+  // 5. Add-ons Modal
+  const [editAddonModalOpen, setEditAddonModalOpen] = useState(false);
+  const [addonToEdit, setAddonToEdit] = useState<EventAddonItem | null>(null);
+  const [createAddonModalOpen, setCreateAddonModalOpen] = useState(false);
+  const [newAddonForm, setNewAddonForm] = useState<Partial<EventAddonItem>>({
+    name: '',
+    category: 'physical_qr',
+    description: '',
+    price: 350000,
+    costPrice: 150000,
+    unit: '1 set',
+    freeShippingJabodetabek: true,
+    isPopular: false,
+    isActive: true
+  });
+
+  // 6. Photo Inspector Modal
+  const [inspectPhotoModalOpen, setInspectPhotoModalOpen] = useState(false);
+  const [photoToInspect, setPhotoToInspect] = useState<PhotoRecord | null>(null);
+
+  // Load Session and All Data on mount
   useEffect(() => {
     const session = getClientSession();
-    if (!session || session.role !== 'admin') {
-      // If not logged in as admin, keep user state null and let them switch role or login
-      setCurrentUser(session);
-    } else {
-      setCurrentUser(session);
-    }
+    setCurrentUser(session);
     loadAllAdminData();
   }, []);
 
   const loadAllAdminData = async () => {
     setLoading(true);
     try {
-      const [resE, resP, resI, resPay, resT, resV] = await Promise.allSettled([
+      const [resE, resP, resI, resPay, resT, resV, resAdd] = await Promise.allSettled([
         fetch('/api/events').then(r => r.json()),
         fetch('/api/photos?includeHidden=true').then(r => r.json()),
         fetch('/api/invoices').then(r => r.json()),
         fetch('/api/payouts').then(r => r.json()),
         fetch('/api/testimonials').then(r => r.json()),
-        fetch('/api/vendors').then(r => r.json())
+        fetch('/api/vendors').then(r => r.json()),
+        fetch('/api/addons').then(r => r.json())
       ]);
 
-      if (resE.status === 'fulfilled' && resE.value.success) setEvents(resE.value.events || []);
-      if (resP.status === 'fulfilled' && resP.value.success) setPhotos(resP.value.photos || []);
-      if (resI.status === 'fulfilled' && resI.value.success) setInvoices(resI.value.invoices || []);
-      if (resPay.status === 'fulfilled' && resPay.value.success) setPayouts(resPay.value.payouts || []);
-      if (resT.status === 'fulfilled' && resT.value.success) setTestimonials(resT.value.testimonials || []);
-      if (resV.status === 'fulfilled' && resV.value.success) setVendors(resV.value.vendors || []);
+      if (resE.status === 'fulfilled' && resE.value?.success) setEvents(resE.value.events || []);
+      if (resP.status === 'fulfilled' && resP.value?.success) setPhotos(resP.value.photos || []);
+      if (resI.status === 'fulfilled' && resI.value?.success) setInvoices(resI.value.invoices || []);
+      if (resPay.status === 'fulfilled' && resPay.value?.success) setPayouts(resPay.value.payouts || []);
+      if (resT.status === 'fulfilled' && resT.value?.success) setTestimonials(resT.value.testimonials || []);
+      if (resV.status === 'fulfilled' && resV.value?.success) setVendors(resV.value.vendors || []);
+      if (resAdd.status === 'fulfilled' && resAdd.value?.success) setAddons(resAdd.value.addons || []);
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -76,10 +155,86 @@ export default function SuperAdminDashboard() {
   };
 
   // -------------------------------------------------------------
-  // EVENT ACTIONS (OVERRIDE ENGINE)
+  // 1. EVENT CRUD ACTIONS
   // -------------------------------------------------------------
+  const handleSaveEditEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventToEdit) return;
+
+    try {
+      const res = await fetch('/api/events', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(eventToEdit)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Perubahan acara "${eventToEdit.title}" berhasil disimpan!`);
+        setEvents(prev => prev.map(item => item.id === eventToEdit.id ? data.event : item));
+        setEditEventModalOpen(false);
+      } else {
+        toast.error(data.error || 'Gagal menyimpan perubahan acara.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleCreateNewEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEventForm.title || !newEventForm.coupleOrHost) {
+      toast.error('Nama acara dan penyelenggara wajib diisi.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newEventForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Acara baru "${data.event.title}" berhasil dibuat!`);
+        setEvents(prev => [data.event, ...prev]);
+        setCreateEventModalOpen(false);
+        setNewEventForm({
+          title: '',
+          coupleOrHost: '',
+          eventDate: new Date().toISOString().substring(0, 10),
+          location: '',
+          packageTier: 'wedding',
+          maxGuests: 150,
+          shotsPerGuest: 20,
+          preset: 'portra',
+          revealMode: 'instant'
+        });
+      } else {
+        toast.error(data.error || 'Gagal membuat acara baru.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string, title: string) => {
+    if (!confirm(`PERINGATAN KERAS:\nHapus permanen acara "${title}" beserta seluruh arsip fotonya di server?\nTindakan ini tidak dapat dibatalkan.`)) return;
+    try {
+      const res = await fetch(`/api/events?id=${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Acara "${title}" berhasil dihapus.`);
+        setEvents(prev => prev.filter(e => e.id !== eventId));
+      } else {
+        toast.error(data.error || 'Gagal menghapus acara.');
+      }
+    } catch {
+      toast.error('Gagal menghapus acara.');
+    }
+  };
+
   const handleForceCuciRoll = async (eventId: string, title: string) => {
-    if (!confirm(`Paksa cuci roll & buka semua foto acara "${title}" sekarang juga?`)) return;
+    if (!confirm(`Paksa cuci roll & buka seluruh foto acara "${title}" sekarang juga?`)) return;
     try {
       const res = await fetch('/api/events', {
         method: 'PATCH',
@@ -123,22 +278,297 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleDeleteEvent = async (eventId: string, title: string) => {
-    if (!confirm(`PERINGATAN: Hapus permanen acara "${title}" beserta seluruh arsip fotonya? Tindakan ini tidak dapat dibatalkan.`)) return;
+  // -------------------------------------------------------------
+  // 2. VENDOR CRUD & WALLET ACTIONS
+  // -------------------------------------------------------------
+  const handleSaveEditVendor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendorToEdit) return;
+
     try {
-      const res = await fetch(`/api/events?id=${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+      const res = await fetch('/api/vendors', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(vendorToEdit)
+      });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Acara "${title}" berhasil dihapus.`);
-        setEvents(prev => prev.filter(e => e.id !== eventId));
+        toast.success(`Data mitra "${vendorToEdit.companyName || vendorToEdit.name}" berhasil diperbarui!`);
+        setVendors(prev => prev.map(v => v.id === vendorToEdit.id ? data.vendor : v));
+        setEditVendorModalOpen(false);
+      } else {
+        toast.error(data.error || 'Gagal menyimpan perubahan vendor.');
       }
     } catch {
-      toast.error('Gagal menghapus acara.');
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleCreateNewVendor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newVendorForm.name) {
+      toast.error('Nama PIC / Vendor wajib diisi.');
+      return;
+    }
+
+    try {
+      const payload = {
+        name: newVendorForm.name,
+        companyName: newVendorForm.companyName || newVendorForm.name,
+        email: newVendorForm.email,
+        phone: newVendorForm.phone,
+        instagram: newVendorForm.instagram,
+        partnerTier: newVendorForm.partnerTier,
+        referralCode: newVendorForm.referralCode,
+        bankDetails: {
+          bankName: newVendorForm.bankName,
+          accountNumber: newVendorForm.accountNumber,
+          accountHolder: newVendorForm.accountHolder || newVendorForm.name
+        }
+      };
+
+      const res = await fetch('/api/vendors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Mitra vendor "${data.vendor.companyName}" berhasil didaftarkan!`);
+        setVendors(prev => [data.vendor, ...prev]);
+        setCreateVendorModalOpen(false);
+        setNewVendorForm({
+          name: '',
+          companyName: '',
+          email: '',
+          phone: '',
+          instagram: '',
+          partnerTier: 'regular',
+          referralCode: '',
+          bankName: 'BCA',
+          accountNumber: '',
+          accountHolder: ''
+        });
+      } else {
+        toast.error(data.error || 'Gagal membuat vendor.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleSaveWalletAdjustment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vendorToAdjust) return;
+
+    const delta = walletAdjustType === 'add' ? walletAdjustAmount : -walletAdjustAmount;
+    try {
+      const res = await fetch('/api/vendors', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: vendorToAdjust.id,
+          adjustBalance: delta
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Saldo dompet ${vendorToAdjust.companyName} berhasil disesuaikan (${walletAdjustType === 'add' ? '+' : '-'}Rp ${walletAdjustAmount.toLocaleString('id-ID')})!`);
+        setVendors(prev => prev.map(v => v.id === vendorToAdjust.id ? data.vendor : v));
+        setAdjustWalletModalOpen(false);
+      } else {
+        toast.error(data.error || 'Gagal mengubah saldo.');
+      }
+    } catch {
+      toast.error('Gagal memproses penyesuaian saldo.');
+    }
+  };
+
+  const handleDeleteVendor = async (vendorId: string, name: string) => {
+    if (!confirm(`Hapus mitra vendor "${name}" dari sistem platform? Seluruh referral dan riwayatnya akan terhapus.`)) return;
+    try {
+      const res = await fetch(`/api/vendors?id=${encodeURIComponent(vendorId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Mitra "${name}" berhasil dihapus.`);
+        setVendors(prev => prev.filter(v => v.id !== vendorId));
+      } else {
+        toast.error(data.error || 'Gagal menghapus vendor.');
+      }
+    } catch {
+      toast.error('Gagal menghapus vendor.');
     }
   };
 
   // -------------------------------------------------------------
-  // PHOTO MODERATION
+  // 3. INVOICE CRUD ACTIONS
+  // -------------------------------------------------------------
+  const handleSaveEditInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!invoiceToEdit) return;
+
+    try {
+      const res = await fetch('/api/invoices', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(invoiceToEdit)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Invoice "${invoiceToEdit.invoiceNumber}" berhasil diperbarui!`);
+        setInvoices(prev => prev.map(inv => inv.id === invoiceToEdit.id ? data.invoice : inv));
+        setEditInvoiceModalOpen(false);
+      } else {
+        toast.error(data.error || 'Gagal menyimpan invoice.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleCreateNewInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newInvoiceForm.buyerName || !newInvoiceForm.buyerEmail) {
+      toast.error('Nama dan email pembeli wajib diisi.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newInvoiceForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Invoice baru "${data.invoice.invoiceNumber}" berhasil diterbitkan!`);
+        setInvoices(prev => [data.invoice, ...prev]);
+        setCreateInvoiceModalOpen(false);
+      } else {
+        toast.error(data.error || 'Gagal menerbitkan invoice.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleForcePaidInvoice = async (invoiceId: string, invoiceNum: string) => {
+    if (!confirm(`Konfirmasi pembayaran manual untuk Invoice ${invoiceNum}? Status akan langsung menjadi Lunas.`)) return;
+    try {
+      const res = await fetch('/api/invoices', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: invoiceId, status: 'paid', paidAt: new Date().toISOString() })
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Invoice ${invoiceNum} berhasil ditandai LUNAS!`);
+        setInvoices(prev => prev.map(i => i.id === invoiceId ? { ...i, status: 'paid', paidAt: new Date().toISOString() } : i));
+      } else {
+        toast.error(data.error || 'Gagal memperbarui status invoice.');
+      }
+    } catch {
+      toast.error('Gagal memperbarui status invoice.');
+    }
+  };
+
+  const handleDeleteInvoice = async (invoiceId: string, invoiceNum: string) => {
+    if (!confirm(`Hapus invoice ${invoiceNum} secara permanen?`)) return;
+    try {
+      const res = await fetch(`/api/invoices?id=${encodeURIComponent(invoiceId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Invoice ${invoiceNum} dihapus.`);
+        setInvoices(prev => prev.filter(i => i.id !== invoiceId));
+      } else {
+        toast.error(data.error || 'Gagal menghapus invoice.');
+      }
+    } catch {
+      toast.error('Gagal menghapus invoice.');
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 4. ADD-ON CRUD ACTIONS
+  // -------------------------------------------------------------
+  const handleSaveEditAddon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addonToEdit) return;
+
+    try {
+      const res = await fetch('/api/addons', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(addonToEdit)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Add-on "${addonToEdit.name}" berhasil diperbarui!`);
+        setAddons(prev => prev.map(a => a.id === addonToEdit.id ? data.addon : a));
+        setEditAddonModalOpen(false);
+      } else {
+        toast.error(data.error || 'Gagal menyimpan add-on.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleCreateNewAddon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newAddonForm.name || newAddonForm.price === undefined) {
+      toast.error('Nama dan harga add-on wajib diisi.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/addons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAddonForm)
+      });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Add-on baru "${data.addon.name}" berhasil ditambahkan ke katalog!`);
+        setAddons(prev => [...prev, data.addon]);
+        setCreateAddonModalOpen(false);
+        setNewAddonForm({
+          name: '',
+          category: 'physical_qr',
+          description: '',
+          price: 350000,
+          costPrice: 150000,
+          unit: '1 set',
+          freeShippingJabodetabek: true,
+          isPopular: false,
+          isActive: true
+        });
+      } else {
+        toast.error(data.error || 'Gagal menambahkan add-on.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleDeleteAddon = async (addonId: string, name: string) => {
+    if (!confirm(`Hapus add-on "${name}" dari katalog platform?`)) return;
+    try {
+      const res = await fetch(`/api/addons?id=${encodeURIComponent(addonId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Add-on "${name}" berhasil dihapus.`);
+        setAddons(prev => prev.filter(a => a.id !== addonId));
+      } else {
+        toast.error(data.error || 'Gagal menghapus add-on.');
+      }
+    } catch {
+      toast.error('Gagal menghapus add-on.');
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 5. PHOTO ACTIONS & INSPECT
   // -------------------------------------------------------------
   const handleToggleHidePhoto = async (photoId: string, currentHidden: boolean) => {
     const newStatus = !currentHidden;
@@ -152,6 +582,9 @@ export default function SuperAdminDashboard() {
       if (data.success) {
         toast.success(newStatus ? 'Foto berhasil disensor dari galeri tamu.' : 'Foto dipulihkan ke galeri tamu.');
         setPhotos(prev => prev.map(p => p.id === photoId ? { ...p, isHidden: newStatus } : p));
+        if (photoToInspect && photoToInspect.id === photoId) {
+          setPhotoToInspect({ ...photoToInspect, isHidden: newStatus });
+        }
       }
     } catch {
       toast.error('Gagal memoderasi foto.');
@@ -166,6 +599,9 @@ export default function SuperAdminDashboard() {
       if (data.success) {
         toast.success('Foto dihapus permanen.');
         setPhotos(prev => prev.filter(p => p.id !== photoId));
+        if (photoToInspect?.id === photoId) {
+          setInspectPhotoModalOpen(false);
+        }
       }
     } catch {
       toast.error('Gagal menghapus foto.');
@@ -173,28 +609,7 @@ export default function SuperAdminDashboard() {
   };
 
   // -------------------------------------------------------------
-  // INVOICE ACTIONS
-  // -------------------------------------------------------------
-  const handleForcePaidInvoice = async (invoiceId: string, invoiceNum: string) => {
-    if (!confirm(`Konfirmasi pembayaran manual untuk Invoice ${invoiceNum}? Acara akan langsung berstatus Lunas.`)) return;
-    try {
-      const res = await fetch('/api/invoices', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: invoiceId, status: 'paid' })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Invoice ${invoiceNum} berhasil ditandai LUNAS!`);
-        setInvoices(prev => prev.map(i => i.id === invoiceId ? { ...i, status: 'paid', paidAt: new Date().toISOString() } : i));
-      }
-    } catch {
-      toast.error('Gagal memperbarui status invoice.');
-    }
-  };
-
-  // -------------------------------------------------------------
-  // PAYOUT APPROVALS
+  // 6. PAYOUTS & TESTIMONIALS
   // -------------------------------------------------------------
   const handleApprovePayout = async (payoutId: string, vendorName: string, amount: number) => {
     if (!confirm(`Setujui pencairan komisi Rp ${amount.toLocaleString('id-ID')} untuk ${vendorName}? Pastikan Anda telah mentransfer dana ke rekening yang tertera.`)) return;
@@ -219,7 +634,7 @@ export default function SuperAdminDashboard() {
   };
 
   const handleRejectPayout = async (payoutId: string) => {
-    const reason = prompt('Masukkan alasan penolakan pencairan dana:', 'Nomor rekening bank tidak valid');
+    const reason = prompt('Masukkan alasan penolakan pencairan dana:', 'Nomor rekening bank tidak valid / nama tidak sesuai');
     if (!reason) return;
     try {
       const res = await fetch('/api/payouts', {
@@ -237,11 +652,8 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  // -------------------------------------------------------------
-  // TESTIMONIAL VIDEO CURATION
-  // -------------------------------------------------------------
-  const handleApproveTestimonial = async (testiId: string, vendorName: string) => {
-    if (!confirm(`Setujui video testimoni dari ${vendorName}? Bonus komisi Rp 50.000 akan otomatis dicairkan.`)) return;
+  const handleApproveTestimonial = async (testiId: string, submitterName: string) => {
+    if (!confirm(`Setujui video testimoni dari ${submitterName}? Bonus komisi Rp 50.000 akan otomatis dicairkan ke saldo mitra.`)) return;
     try {
       const res = await fetch('/api/testimonials', {
         method: 'PATCH',
@@ -249,7 +661,7 @@ export default function SuperAdminDashboard() {
         body: JSON.stringify({
           id: testiId,
           status: 'approved',
-          adminNotes: 'Video jernih, durasi memenuhi syarat >= 60 detik.'
+          adminNotes: 'Video jernih, durasi memenuhi syarat minimal 60 detik.'
         })
       });
       const data = await res.json();
@@ -282,15 +694,14 @@ export default function SuperAdminDashboard() {
   };
 
   // -------------------------------------------------------------
-  // FINANCIAL PULSE METRICS
+  // CALCULATIONS & METRICS
   // -------------------------------------------------------------
   const totalGMV = invoices.reduce((acc, curr) => curr.status === 'paid' ? acc + curr.finalAmount : acc, 0);
   const totalVendorPayouts = payouts.filter(p => p.status === 'approved').reduce((acc, curr) => acc + curr.amount, 0);
   const pendingPayoutsTotal = payouts.filter(p => p.status === 'pending').reduce((acc, curr) => acc + curr.amount, 0);
   const netPlatformProfit = totalGMV - totalVendorPayouts;
 
-  // Filtered views
-  const filteredEvents = events.filter(e => 
+  const filteredEvents = events.filter(e =>
     e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     e.coupleOrHost.toLowerCase().includes(searchTerm.toLowerCase()) ||
     e.id.toLowerCase().includes(searchTerm.toLowerCase())
@@ -302,7 +713,21 @@ export default function SuperAdminDashboard() {
     return p.guestName.toLowerCase().includes(searchTerm.toLowerCase()) || (p.caption && p.caption.toLowerCase().includes(searchTerm.toLowerCase()));
   });
 
-  // Guard view if not logged in as admin
+  const filteredVendors = vendors.filter(v =>
+    (v.name && v.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (v.companyName && v.companyName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (v.email && v.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (v.referralCode && v.referralCode.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const filteredInvoices = invoices.filter(inv =>
+    inv.invoiceNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    inv.buyerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    inv.buyerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (inv.eventId && inv.eventId.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  // Security guard for admin role
   if (currentUser?.role !== 'admin') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0F0E0C', color: '#FFFFFF', padding: '24px' }}>
@@ -348,7 +773,7 @@ export default function SuperAdminDashboard() {
             <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#1D1D1F', color: '#FFFFFF', padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.04em' }}>
               <Shield size={12} color="#F59E0B" />
-              <span>COMMAND CENTER</span>
+              <span>SUPER ADMIN COMMAND CENTER</span>
             </div>
           </div>
 
@@ -385,20 +810,23 @@ export default function SuperAdminDashboard() {
         <div className="horizontal-scroll-row" style={{ gap: '8px', marginBottom: '28px', paddingBottom: '6px' }}>
           {[
             { id: 'overview', label: 'Ringkasan & Finansial', icon: DollarSign, count: null },
-            { id: 'events', label: 'Kuasa Acara', icon: Calendar, count: events.length },
+            { id: 'events', label: 'Manajemen Acara', icon: Calendar, count: events.length },
             { id: 'moderation', label: 'Moderasi Foto', icon: Camera, count: photos.length },
             { id: 'vendors', label: 'Mitra Vendor (WO)', icon: Users, count: vendors.length },
             { id: 'invoices', label: 'Pusat Invoice', icon: FileText, count: invoices.length },
             { id: 'payouts', label: 'Pencairan Dana', icon: Wallet, count: payouts.filter(p => p.status === 'pending').length || null, alert: payouts.filter(p => p.status === 'pending').length > 0 },
             { id: 'testimonials', label: 'Kurasi Video (+50k)', icon: Video, count: testimonials.filter(t => t.status === 'pending').length || null, alert: testimonials.filter(t => t.status === 'pending').length > 0 },
-            { id: 'addons', label: 'Add-on Fisik', icon: Package, count: null }
+            { id: 'addons', label: 'Katalog Add-on Fisik', icon: Package, count: addons.length }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id as AdminTab)}
+                onClick={() => {
+                  setActiveTab(tab.id as AdminTab);
+                  setSearchTerm('');
+                }}
                 className="glass-pill"
                 style={{
                   background: isActive ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
@@ -439,7 +867,6 @@ export default function SuperAdminDashboard() {
         {/* ======================================================== */}
         {activeTab === 'overview' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
-            {/* 4 Metric Big Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
               <div className="glass-card" style={{ padding: '24px', borderRadius: '20px' }}>
                 <span className="font-mono-film" style={{ color: '#86868B', fontSize: '11px', display: 'block', marginBottom: '6px' }}>
@@ -461,13 +888,13 @@ export default function SuperAdminDashboard() {
                   Rp {netPlatformProfit.toLocaleString('id-ID')}
                 </strong>
                 <span style={{ fontSize: '12px', color: '#10B981', fontWeight: 600 }}>
-                  Margin bersih: ~78%
+                  Margin platform: ~78%
                 </span>
               </div>
 
               <div className="glass-card" style={{ padding: '24px', borderRadius: '20px' }}>
                 <span className="font-mono-film" style={{ color: '#86868B', fontSize: '11px', display: 'block', marginBottom: '6px' }}>
-                  KOMISI VENDOR TERCURAH
+                  KOMISI MITRA VENDOR
                 </span>
                 <strong style={{ fontSize: '28px', color: '#C27803', display: 'block', marginBottom: '6px' }}>
                   Rp {totalVendorPayouts.toLocaleString('id-ID')}
@@ -479,25 +906,24 @@ export default function SuperAdminDashboard() {
 
               <div className="glass-card" style={{ padding: '24px', borderRadius: '20px' }}>
                 <span className="font-mono-film" style={{ color: '#86868B', fontSize: '11px', display: 'block', marginBottom: '6px' }}>
-                  TOTAL ACARA & FOTO TERUNGGAH
+                  DATABASE PLATFORM
                 </span>
                 <strong style={{ fontSize: '28px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
                   {events.length} Acara • {photos.length} Foto
                 </strong>
                 <span style={{ fontSize: '12px', color: '#515154' }}>
-                  Storage Cloudflare R2: Terpasang
+                  {vendors.length} Vendor • {addons.length} Add-on Fisik
                 </span>
               </div>
             </div>
 
             {/* Quick Action Alerts */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-              {/* Payout Pending Card */}
               <div className="glass-card" style={{ padding: '26px', borderRadius: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>Antrean Pencairan Dana</h3>
                   <button onClick={() => setActiveTab('payouts')} className="glass-pill" style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
-                    Lihat Semua
+                    Buka Payouts
                   </button>
                 </div>
                 {payouts.filter(p => p.status === 'pending').length === 0 ? (
@@ -517,12 +943,11 @@ export default function SuperAdminDashboard() {
                 )}
               </div>
 
-              {/* Testimonials Pending Card */}
               <div className="glass-card" style={{ padding: '26px', borderRadius: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>Kurasi Video Testimoni (+50k)</h3>
                   <button onClick={() => setActiveTab('testimonials')} className="glass-pill" style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
-                    Lihat Semua
+                    Buka Kurasi
                   </button>
                 </div>
                 {testimonials.filter(t => t.status === 'pending').length === 0 ? (
@@ -552,25 +977,35 @@ export default function SuperAdminDashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* TAB 2: EVENTS MANAGEMENT & OVERRIDE */}
+        {/* TAB 2: EVENTS MANAGEMENT & FULL CRUD */}
         {/* ======================================================== */}
         {activeTab === 'events' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Seluruh Acara Terdaftar ({events.length})</h2>
-                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Admin memiliki hak override, cuci roll paksa, suntik pax, dan takedown</span>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Pusat Kelola Acara ({events.length})</h2>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Edit detail acara, ubah paket/kuota pax, cuci roll instan, dan kontrol penuh</span>
               </div>
-              <div style={{ position: 'relative', width: '280px' }}>
-                <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#86868B' }} />
-                <input
-                  type="text"
-                  placeholder="Cari nama acara / host..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="glass-input"
-                  style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '12px', fontSize: '13px' }}
-                />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ position: 'relative', width: '260px' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#86868B' }} />
+                  <input
+                    type="text"
+                    placeholder="Cari acara / host / ID..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '12px', fontSize: '13px' }}
+                  />
+                </div>
+                <button
+                  onClick={() => setCreateEventModalOpen(true)}
+                  className="btn-apple-black"
+                  style={{ padding: '9px 16px', fontSize: '13px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Plus size={15} />
+                  <span>Buat Acara Baru</span>
+                </button>
               </div>
             </div>
 
@@ -581,9 +1016,9 @@ export default function SuperAdminDashboard() {
                     <tr style={{ background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>ACARA & HOST</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>TANGGAL & VENUE</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>PAKET & PAX</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>PAKET & KUOTA</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>STATUS ROLL</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>AKSI ADMIN</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>AKSI ADMIN (CRUD)</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -591,7 +1026,7 @@ export default function SuperAdminDashboard() {
                       <tr key={e.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <td style={{ padding: '16px 18px' }}>
                           <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>{e.title}</strong>
-                          <span style={{ fontSize: '11px', color: '#86868B' }}>ID: {e.id} • WO: {e.vendorName || 'Mandiri'}</span>
+                          <span style={{ fontSize: '11px', color: '#86868B' }}>ID: <code>{e.id}</code> • Host: {e.coupleOrHost}</span>
                         </td>
                         <td style={{ padding: '16px 18px' }}>
                           <span style={{ display: 'block' }}>{new Date(e.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
@@ -599,7 +1034,9 @@ export default function SuperAdminDashboard() {
                         </td>
                         <td style={{ padding: '16px 18px' }}>
                           <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{e.packageTier || 'wedding'}</span>
-                          <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>{e.maxGuests} Tamu • {e.shotsPerGuest} Foto</span>
+                          <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>
+                            {e.maxGuests} Tamu • {e.shotsPerGuest} Rol • Preset: {e.preset}
+                          </span>
                         </td>
                         <td style={{ padding: '16px 18px' }}>
                           {e.revealMode === 'instant' ? (
@@ -617,7 +1054,29 @@ export default function SuperAdminDashboard() {
                           )}
                         </td>
                         <td style={{ padding: '16px 18px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <button
+                              onClick={() => {
+                                setEventToEdit({ ...e });
+                                setEditEventModalOpen(true);
+                              }}
+                              className="glass-pill"
+                              style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', color: '#000000', fontWeight: 600 }}
+                              title="Edit Data Acara Lengkap"
+                            >
+                              <Pencil size={12} style={{ marginRight: '4px' }} />
+                              Edit
+                            </button>
+
+                            <button
+                              onClick={() => handleAddPax(e.id, e.maxGuests, e.title)}
+                              className="glass-pill"
+                              style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', color: '#2563EB' }}
+                              title="Suntik kuota tamu gratis"
+                            >
+                              +Pax
+                            </button>
+
                             <Link
                               href={`/event/${e.slug || e.id}`}
                               target="_blank"
@@ -633,17 +1092,8 @@ export default function SuperAdminDashboard() {
                               className="glass-pill"
                               style={{ padding: '6px 10px', fontSize: '11.5px', textDecoration: 'none' }}
                             >
-                              Wall
+                              Live
                             </Link>
-
-                            <button
-                              onClick={() => handleAddPax(e.id, e.maxGuests, e.title)}
-                              className="glass-pill"
-                              style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', color: '#2563EB' }}
-                              title="Suntik kuota tamu gratis"
-                            >
-                              +Pax
-                            </button>
 
                             <button
                               onClick={() => handleDeleteEvent(e.id, e.title)}
@@ -672,7 +1122,7 @@ export default function SuperAdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Moderasi Foto & Sensor ({photos.length} Foto)</h2>
-                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Sensor foto yang tidak layak, spam, atau blur dari tayangan videotron</span>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Klik foto untuk melihat resolusi penuh, menyensor atau menghapus foto tidak layak</span>
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
@@ -699,10 +1149,16 @@ export default function SuperAdminDashboard() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
                 {filteredPhotos.map(p => (
                   <div key={p.id} className="glass-card" style={{ padding: '10px', borderRadius: '16px', position: 'relative', opacity: p.isHidden ? 0.6 : 1 }}>
-                    <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '12px', overflow: 'hidden', background: '#000', marginBottom: '8px', position: 'relative' }}>
+                    <div
+                      onClick={() => {
+                        setPhotoToInspect(p);
+                        setInspectPhotoModalOpen(true);
+                      }}
+                      style={{ width: '100%', aspectRatio: '3/4', borderRadius: '12px', overflow: 'hidden', background: '#000', marginBottom: '8px', position: 'relative', cursor: 'pointer' }}
+                    >
                       <img src={p.imageData} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       {p.isHidden && (
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(239, 68, 68, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 700, fontSize: '12px' }}>
+                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(239, 68, 68, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 700, fontSize: '12px' }}>
                           DISENSOR
                         </div>
                       )}
@@ -741,9 +1197,32 @@ export default function SuperAdminDashboard() {
         {/* ======================================================== */}
         {activeTab === 'vendors' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Mitra Vendor & Wedding Organizer ({vendors.length})</h2>
-              <span style={{ fontSize: '13px', color: '#6E6E73' }}>Kelola level komisi (Tiering 12%/15%/20%), kode referral, dan saldo grosir</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Mitra Vendor & Wedding Organizer ({vendors.length})</h2>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Atur tier komisi (12%/15%/20%), sesuaikan saldo dompet, kuota grosir, & rekening</span>
+              </div>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ position: 'relative', width: '240px' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#86868B' }} />
+                  <input
+                    type="text"
+                    placeholder="Cari agensi / referral..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '12px', fontSize: '13px' }}
+                  />
+                </div>
+                <button
+                  onClick={() => setCreateVendorModalOpen(true)}
+                  className="btn-apple-black"
+                  style={{ padding: '9px 16px', fontSize: '13px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Plus size={15} />
+                  <span>Tambah Vendor Baru</span>
+                </button>
+              </div>
             </div>
 
             <div className="glass-card" style={{ padding: '0', borderRadius: '20px', overflow: 'hidden' }}>
@@ -754,12 +1233,12 @@ export default function SuperAdminDashboard() {
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>NAMA AGENSI / WO</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>KONTAK & INSTAGRAM</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>TIER & REFERRAL</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>SALDO DOMPET</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>AKSI KONTROL</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>SALDO & GROSIR</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>AKSI ADMIN (CRUD)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {vendors.map(v => (
+                    {filteredVendors.map(v => (
                       <tr key={v.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <td style={{ padding: '16px 18px' }}>
                           <strong style={{ fontSize: '14px', display: 'block' }}>{v.companyName || v.name}</strong>
@@ -770,37 +1249,77 @@ export default function SuperAdminDashboard() {
                           <span style={{ fontSize: '11px', color: '#C27803', display: 'block' }}>{v.instagram || '-'}</span>
                         </td>
                         <td style={{ padding: '16px 18px' }}>
-                          <span style={{ background: 'rgba(194, 120, 3, 0.12)', color: '#C27803', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', marginRight: '6px' }}>
+                          <span style={{
+                            background: v.partnerTier === 'vip' ? 'rgba(234, 179, 8, 0.15)' : v.partnerTier === 'pro' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(0,0,0,0.06)',
+                            color: v.partnerTier === 'vip' ? '#B45309' : v.partnerTier === 'pro' ? '#1D4ED8' : '#374151',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '3px 8px',
+                            borderRadius: '999px',
+                            marginRight: '6px'
+                          }}>
                             {v.partnerTier === 'vip' ? 'VIP (20%)' : v.partnerTier === 'pro' ? 'Pro (15%)' : 'Regular (12%)'}
                           </span>
-                          <code style={{ fontSize: '12px', fontWeight: 700 }}>{v.referralCode || 'BELUM ADA'}</code>
+                          <code style={{ fontSize: '12px', fontWeight: 700 }}>{v.referralCode || 'NO-CODE'}</code>
                         </td>
                         <td style={{ padding: '16px 18px' }}>
                           <strong style={{ color: '#10B981', fontSize: '14px', display: 'block' }}>
-                            Rp {(v.walletBalance || 420000).toLocaleString('id-ID')}
+                            Rp {(v.walletBalance || 0).toLocaleString('id-ID')}
                           </strong>
                           <span style={{ fontSize: '11px', color: '#86868B' }}>
-                            Total Dihasilkan: Rp {(v.totalEarnings || 1260000).toLocaleString('id-ID')}
+                            Token: <strong>{v.wholesaleTokens || 0}</strong> • Total Dihasilkan: Rp {(v.totalEarnings || 0).toLocaleString('id-ID')}
                           </span>
                         </td>
                         <td style={{ padding: '16px 18px' }}>
-                          <div style={{ display: 'flex', gap: '6px' }}>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             <button
-                              onClick={() => toast.success(`Status akun ${v.companyName} terverifikasi!`)}
+                              onClick={() => {
+                                setVendorToEdit({ ...v });
+                                setEditVendorModalOpen(true);
+                              }}
                               className="glass-pill"
-                              style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', color: '#059669' }}
+                              style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', color: '#000000', fontWeight: 600 }}
+                              title="Edit Profil Mitra"
                             >
-                              ✓ Verifikasi
+                              <Pencil size={12} style={{ marginRight: '4px' }} />
+                              Edit
                             </button>
-                            <a
-                              href={`https://wa.me/${(v.phone || '').replace(/[^0-9]/g, '')}`}
-                              target="_blank"
-                              rel="noreferrer"
+
+                            <button
+                              onClick={() => {
+                                setVendorToAdjust(v);
+                                setWalletAdjustType('add');
+                                setWalletAdjustAmount(100000);
+                                setWalletAdjustNote('');
+                                setAdjustWalletModalOpen(true);
+                              }}
                               className="glass-pill"
-                              style={{ padding: '6px 10px', fontSize: '11.5px', textDecoration: 'none' }}
+                              style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', color: '#059669', borderColor: '#10B981', fontWeight: 600 }}
+                              title="Sesuaikan Saldo Dompet"
                             >
-                              WhatsApp
-                            </a>
+                              ± Saldo
+                            </button>
+
+                            {v.phone && (
+                              <a
+                                href={`https://wa.me/${(v.phone || '').replace(/[^0-9]/g, '')}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="glass-pill"
+                                style={{ padding: '6px 10px', fontSize: '11.5px', textDecoration: 'none', color: '#25D366' }}
+                              >
+                                WA
+                              </a>
+                            )}
+
+                            <button
+                              onClick={() => handleDeleteVendor(v.id, v.companyName || v.name)}
+                              className="glass-pill"
+                              style={{ padding: '6px 8px', fontSize: '11.5px', cursor: 'pointer', color: '#E11D48' }}
+                              title="Hapus Vendor"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -813,13 +1332,37 @@ export default function SuperAdminDashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* TAB 5: INVOICES & MANUAL RECONCILIATION */}
+        {/* TAB 5: INVOICES & RECONCILIATION */}
         {/* ======================================================== */}
         {activeTab === 'invoices' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Pusat Invoice & Tagihan ({invoices.length})</h2>
-              <span style={{ fontSize: '13px', color: '#6E6E73' }}>Rekonsiliasi transaksi, verifikasi transfer manual BCA/Mandiri, dan kirim ulang invoice</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Pusat Invoice & Tagihan ({invoices.length})</h2>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Rekonsiliasi pembayaran, edit status tagihan, ubah nominal, dan kelola invoice</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <div style={{ position: 'relative', width: '240px' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#86868B' }} />
+                  <input
+                    type="text"
+                    placeholder="Cari no. invoice / nama..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '12px', fontSize: '13px' }}
+                  />
+                </div>
+                <button
+                  onClick={() => setCreateInvoiceModalOpen(true)}
+                  className="btn-apple-black"
+                  style={{ padding: '9px 16px', fontSize: '13px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Plus size={15} />
+                  <span>Buat Invoice Manual</span>
+                </button>
+              </div>
             </div>
 
             <div className="glass-card" style={{ padding: '0', borderRadius: '20px', overflow: 'hidden' }}>
@@ -831,11 +1374,11 @@ export default function SuperAdminDashboard() {
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>PEMBELI / WO</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>PAKET & HARGA</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>STATUS</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>AKSI ADMIN</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>AKSI ADMIN (CRUD)</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {invoices.map(inv => (
+                    {filteredInvoices.map(inv => (
                       <tr key={inv.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <td style={{ padding: '16px 18px' }}>
                           <strong style={{ fontSize: '13.5px', fontFamily: 'var(--font-mono)' }}>{inv.invoiceNumber}</strong>
@@ -854,6 +1397,10 @@ export default function SuperAdminDashboard() {
                             <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
                               ✓ LUNAS
                             </span>
+                          ) : inv.status === 'cancelled' ? (
+                            <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
+                              ✕ BATAL
+                            </span>
                           ) : (
                             <span style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
                               ⏳ MENUNGGU
@@ -861,14 +1408,27 @@ export default function SuperAdminDashboard() {
                           )}
                         </td>
                         <td style={{ padding: '16px 18px' }}>
-                          <div style={{ display: 'flex', gap: '6px' }}>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            <button
+                              onClick={() => {
+                                setInvoiceToEdit({ ...inv });
+                                setEditInvoiceModalOpen(true);
+                              }}
+                              className="glass-pill"
+                              style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', color: '#000000', fontWeight: 600 }}
+                              title="Edit Data Invoice"
+                            >
+                              <Pencil size={12} style={{ marginRight: '4px' }} />
+                              Edit
+                            </button>
+
                             {inv.status !== 'paid' && (
                               <button
                                 onClick={() => handleForcePaidInvoice(inv.id, inv.invoiceNumber)}
                                 className="glass-pill"
                                 style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', color: '#059669', borderColor: '#10B981', fontWeight: 600 }}
                               >
-                                Tandai Lunas (BCA)
+                                Tandai Lunas
                               </button>
                             )}
 
@@ -880,6 +1440,15 @@ export default function SuperAdminDashboard() {
                             >
                               Buka PDF
                             </Link>
+
+                            <button
+                              onClick={() => handleDeleteInvoice(inv.id, inv.invoiceNumber)}
+                              className="glass-pill"
+                              style={{ padding: '6px 8px', fontSize: '11.5px', cursor: 'pointer', color: '#E11D48' }}
+                              title="Hapus Invoice"
+                            >
+                              <Trash2 size={13} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1059,43 +1628,1387 @@ export default function SuperAdminDashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* TAB 8: PHYSICAL ADDONS FULFILLMENT */}
+        {/* TAB 8: PHYSICAL ADDONS FULL CRUD */}
         {/* ======================================================== */}
         {activeTab === 'addons' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div>
-              <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Fulfillment Add-on Fisik (Akrilik, Banner, TV Rental)</h2>
-              <span style={{ fontSize: '13px', color: '#6E6E73' }}>Katalog add-on aktif dan manajemen order pengiriman perlengkapan resepsi Jabodetabek</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Katalog Add-on Fisik ({addons.length})</h2>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Kelola item akrilik meja, roll-up banner, dan rental hardware TV slideshow (CRUD Penuh)</span>
+              </div>
+
+              <button
+                onClick={() => setCreateAddonModalOpen(true)}
+                className="btn-apple-black"
+                style={{ padding: '9px 16px', fontSize: '13px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Plus size={15} />
+                <span>Tambah Add-on Baru</span>
+              </button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
-              {[
-                { title: 'Paket Standing Akrilik Meja (10 pcs)', cat: 'Akrilik Meja Tamu', price: 'Rp 499.000', cost: 'Modal Cetak ~Rp 250k', status: 'Katalog Aktif' },
-                { title: 'Paket Standing Akrilik Meja (20 pcs)', cat: 'Akrilik Meja Tamu', price: 'Rp 799.000', cost: 'Modal Cetak ~Rp 450k', status: 'Katalog Aktif' },
-                { title: 'Welcome Gate Roll-up Banner (60x160cm)', cat: 'Foyer Welcome Gate', price: 'Rp 249.000', cost: 'Modal Cetak ~Rp 75k', status: 'Katalog Aktif' },
-                { title: 'Sewa TV Vertikal Totem Kiosk 43"', cat: 'Live Slideshow Foyer', price: 'Rp 1.350.000', cost: 'Sub-kontrak Rental ~Rp 600k', status: 'Katalog Aktif' }
-              ].map((item, idx) => (
-                <div key={idx} className="glass-card" style={{ padding: '22px', borderRadius: '18px' }}>
-                  <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px', display: 'block', marginBottom: '4px' }}>
-                    {item.cat}
-                  </span>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>{item.title}</h3>
-                  <strong style={{ fontSize: '18px', color: '#10B981', display: 'block', marginBottom: '4px' }}>{item.price}</strong>
-                  <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginBottom: '14px' }}>{item.cost}</span>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '12px' }}>
-                    <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                      Gratis Ongkir Jabodetabek
-                    </span>
-                    <button onClick={() => toast.info('Katalog add-on ini siap ditampilkan di form pemesanan.')} className="glass-pill" style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer' }}>
-                      Atur Harga
-                    </button>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '18px' }}>
+              {addons.map(item => {
+                const profitMargin = item.costPrice ? item.price - item.costPrice : null;
+                return (
+                  <div key={item.id} className="glass-card" style={{ padding: '24px', borderRadius: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', textTransform: 'uppercase' }}>
+                          {item.category.replace('_', ' ')}
+                        </span>
+                        <span style={{
+                          background: item.isActive ? 'rgba(16, 185, 129, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                          color: item.isActive ? '#059669' : '#DC2626',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          padding: '3px 8px',
+                          borderRadius: '999px'
+                        }}>
+                          {item.isActive ? 'Aktif' : 'Non-aktif'}
+                        </span>
+                      </div>
+
+                      <h3 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '6px' }}>{item.name}</h3>
+                      <p style={{ fontSize: '12.5px', color: '#515154', lineHeight: 1.5, margin: '0 0 14px 0' }}>
+                        {item.description}
+                      </p>
+
+                      <div style={{ background: 'rgba(0,0,0,0.03)', padding: '12px 14px', borderRadius: '12px', marginBottom: '16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                          <span style={{ fontSize: '12px', color: '#86868B' }}>Harga Jual:</span>
+                          <strong style={{ fontSize: '15px', color: '#10B981' }}>{item.priceFormatted || `Rp ${item.price.toLocaleString('id-ID')}`}</strong>
+                        </div>
+                        {item.costPrice !== undefined && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#86868B' }}>
+                            <span>Modal Cetak/Vendor:</span>
+                            <span>Rp {item.costPrice.toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
+                        {profitMargin !== null && (
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11.5px', color: '#2563EB', fontWeight: 600, borderTop: '1px dashed rgba(0,0,0,0.08)', paddingTop: '4px', marginTop: '4px' }}>
+                            <span>Margin Keuntungan:</span>
+                            <span>+Rp {profitMargin.toLocaleString('id-ID')} ({Math.round((profitMargin / item.price) * 100)}%)</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '14px' }}>
+                      <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
+                        {item.freeShippingJabodetabek ? '✓ Gratis Ongkir Jabodetabek' : 'Ongkir Reguler'}
+                      </span>
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => {
+                            setAddonToEdit({ ...item });
+                            setEditAddonModalOpen(true);
+                          }}
+                          className="glass-pill"
+                          style={{ padding: '6px 12px', fontSize: '11.5px', cursor: 'pointer', fontWeight: 600 }}
+                        >
+                          <Pencil size={12} style={{ marginRight: '4px' }} />
+                          Edit
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteAddon(item.id, item.name)}
+                          className="glass-pill"
+                          style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
+                          title="Hapus Add-on"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
       </main>
+
+      {/* ======================================================== */}
+      {/* MODAL 1: EDIT EVENT */}
+      {/* ======================================================== */}
+      {editEventModalOpen && eventToEdit && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: '#FFFFFF', padding: '28px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Edit Detail Acara</h3>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>ID Acara: <code>{eventToEdit.id}</code></span>
+              </div>
+              <button onClick={() => setEditEventModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditEvent} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Acara</label>
+                  <input
+                    type="text"
+                    required
+                    value={eventToEdit.title}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, title: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Pengantin / Host</label>
+                  <input
+                    type="text"
+                    required
+                    value={eventToEdit.coupleOrHost}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, coupleOrHost: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Tanggal Acara</label>
+                  <input
+                    type="date"
+                    value={eventToEdit.eventDate ? eventToEdit.eventDate.substring(0, 10) : ''}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, eventDate: new Date(e.target.value).toISOString() })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Lokasi / Gedung</label>
+                  <input
+                    type="text"
+                    value={eventToEdit.location || ''}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, location: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Paket Tier</label>
+                  <select
+                    value={eventToEdit.packageTier || 'wedding'}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, packageTier: e.target.value as EventPackageTier })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="free">Free Test (2 Tamu)</option>
+                    <option value="party">Party (75 Tamu)</option>
+                    <option value="event">Event (150 Tamu)</option>
+                    <option value="wedding">Wedding (300 Tamu)</option>
+                    <option value="unlimited">Unlimited (2000 Tamu)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Maks Tamu (Pax)</label>
+                  <input
+                    type="number"
+                    value={eventToEdit.maxGuests}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, maxGuests: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Rol per Tamu</label>
+                  <input
+                    type="number"
+                    value={eventToEdit.shotsPerGuest}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, shotsPerGuest: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Preset Default</label>
+                  <select
+                    value={eventToEdit.preset || 'portra'}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, preset: e.target.value as FilmPresetId })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="portra">Kodak Portra 400 (Warm Classic)</option>
+                    <option value="funsaver">Kodak FunSaver (Disposable)</option>
+                    <option value="quicksnap">Fuji QuickSnap (Cool Green)</option>
+                    <option value="ektar">Kodak Ektar 100 (Vivid)</option>
+                    <option value="cinestill">CineStill 800T (Halation)</option>
+                    <option value="ilford">Ilford HP5 (B&W Classic)</option>
+                    <option value="agfa">Agfa Vista (Vintage Pop)</option>
+                    <option value="trix">Kodak Tri-X (Deep Grain)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Mode Buka Foto (Cuci Roll)</label>
+                  <select
+                    value={eventToEdit.revealMode}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, revealMode: e.target.value as any })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="instant">Instant (Langsung Muncul di Galeri)</option>
+                    <option value="delayed">Delayed (Tunggu Waktu Acara Selesai)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Custom Frame URL (PNG Transparan)</label>
+                <input
+                  type="text"
+                  placeholder="https://.../frame.png"
+                  value={eventToEdit.customFrameUrl || ''}
+                  onChange={(e) => setEventToEdit({ ...eventToEdit, customFrameUrl: e.target.value })}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditEventModalOpen(false)}
+                  className="glass-pill"
+                  style={{ padding: '10px 18px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-apple-black"
+                  style={{ padding: '10px 22px', fontSize: '13px', borderRadius: '12px' }}
+                >
+                  Simpan Perubahan Acara
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 2: CREATE EVENT (MANUAL ADMIN) */}
+      {/* ======================================================== */}
+      {createEventModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: '#FFFFFF', padding: '28px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Buat Acara Baru (Manual Admin)</h3>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>Daftarkan acara klien/pengantin langsung tanpa lewat form checkout</span>
+              </div>
+              <button onClick={() => setCreateEventModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewEvent} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Acara</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Pernikahan Kevin & Cindy"
+                    value={newEventForm.title}
+                    onChange={(e) => setNewEventForm({ ...newEventForm, title: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Penyelenggara / Pengantin</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Kevin & Cindy"
+                    value={newEventForm.coupleOrHost}
+                    onChange={(e) => setNewEventForm({ ...newEventForm, coupleOrHost: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Tanggal Acara</label>
+                  <input
+                    type="date"
+                    value={newEventForm.eventDate}
+                    onChange={(e) => setNewEventForm({ ...newEventForm, eventDate: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Lokasi / Gedung</label>
+                  <input
+                    type="text"
+                    placeholder="Grand Ballroom Kempinski, Jakarta"
+                    value={newEventForm.location}
+                    onChange={(e) => setNewEventForm({ ...newEventForm, location: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Paket</label>
+                  <select
+                    value={newEventForm.packageTier}
+                    onChange={(e) => setNewEventForm({ ...newEventForm, packageTier: e.target.value as any })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="party">Party (75 Tamu)</option>
+                    <option value="event">Event (150 Tamu)</option>
+                    <option value="wedding">Wedding (300 Tamu)</option>
+                    <option value="unlimited">Unlimited (2000 Tamu)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Maks Tamu (Pax)</label>
+                  <input
+                    type="number"
+                    value={newEventForm.maxGuests}
+                    onChange={(e) => setNewEventForm({ ...newEventForm, maxGuests: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Rol per Tamu</label>
+                  <input
+                    type="number"
+                    value={newEventForm.shotsPerGuest}
+                    onChange={(e) => setNewEventForm({ ...newEventForm, shotsPerGuest: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCreateEventModalOpen(false)}
+                  className="glass-pill"
+                  style={{ padding: '10px 18px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-apple-black"
+                  style={{ padding: '10px 22px', fontSize: '13px', borderRadius: '12px' }}
+                >
+                  Terbitkan Acara Baru
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 3: EDIT VENDOR */}
+      {/* ======================================================== */}
+      {editVendorModalOpen && vendorToEdit && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: '#FFFFFF', padding: '28px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Edit Mitra Vendor (WO)</h3>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>ID: <code>{vendorToEdit.id}</code></span>
+              </div>
+              <button onClick={() => setEditVendorModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditVendor} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Agensi / Perusahaan</label>
+                  <input
+                    type="text"
+                    required
+                    value={vendorToEdit.companyName || ''}
+                    onChange={(e) => setVendorToEdit({ ...vendorToEdit, companyName: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama PIC</label>
+                  <input
+                    type="text"
+                    required
+                    value={vendorToEdit.name || ''}
+                    onChange={(e) => setVendorToEdit({ ...vendorToEdit, name: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Email</label>
+                  <input
+                    type="email"
+                    required
+                    value={vendorToEdit.email || ''}
+                    onChange={(e) => setVendorToEdit({ ...vendorToEdit, email: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>No. WhatsApp / Telepon</label>
+                  <input
+                    type="text"
+                    value={vendorToEdit.phone || ''}
+                    onChange={(e) => setVendorToEdit({ ...vendorToEdit, phone: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Level Tier Kemitraan</label>
+                  <select
+                    value={vendorToEdit.partnerTier || 'regular'}
+                    onChange={(e) => {
+                      const newTier = e.target.value;
+                      const rate = newTier === 'vip' ? 0.20 : newTier === 'pro' ? 0.15 : 0.12;
+                      setVendorToEdit({ ...vendorToEdit, partnerTier: newTier, commissionRate: rate });
+                    }}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="regular">Regular Partner (12% Komisi)</option>
+                    <option value="pro">Pro Partner (15% Komisi)</option>
+                    <option value="vip">VIP Platinum (20% Komisi)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kode Referral (Kupon 10% Tamu)</label>
+                  <input
+                    type="text"
+                    value={vendorToEdit.referralCode || ''}
+                    onChange={(e) => setVendorToEdit({ ...vendorToEdit, referralCode: e.target.value.toUpperCase() })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', textTransform: 'uppercase', fontWeight: 700 }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kuota Token Grosir (Acara Gratis)</label>
+                  <input
+                    type="number"
+                    value={vendorToEdit.wholesaleTokens || 0}
+                    onChange={(e) => setVendorToEdit({ ...vendorToEdit, wholesaleTokens: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Instagram Agensi</label>
+                  <input
+                    type="text"
+                    value={vendorToEdit.instagram || ''}
+                    onChange={(e) => setVendorToEdit({ ...vendorToEdit, instagram: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              {/* Bank Details */}
+              <div style={{ background: 'rgba(0,0,0,0.02)', padding: '14px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '8px' }}>Rekening Bank Pencairan Komisi:</span>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder="Nama Bank (BCA/Mandiri)"
+                    value={vendorToEdit.bankDetails?.bankName || ''}
+                    onChange={(e) => setVendorToEdit({
+                      ...vendorToEdit,
+                      bankDetails: { ...vendorToEdit.bankDetails, bankName: e.target.value }
+                    })}
+                    className="glass-input"
+                    style={{ padding: '8px 10px', borderRadius: '8px', fontSize: '12px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="No. Rekening"
+                    value={vendorToEdit.bankDetails?.accountNumber || ''}
+                    onChange={(e) => setVendorToEdit({
+                      ...vendorToEdit,
+                      bankDetails: { ...vendorToEdit.bankDetails, accountNumber: e.target.value }
+                    })}
+                    className="glass-input"
+                    style={{ padding: '8px 10px', borderRadius: '8px', fontSize: '12px' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Nama Pemilik Rekening"
+                    value={vendorToEdit.bankDetails?.accountHolder || ''}
+                    onChange={(e) => setVendorToEdit({
+                      ...vendorToEdit,
+                      bankDetails: { ...vendorToEdit.bankDetails, accountHolder: e.target.value }
+                    })}
+                    className="glass-input"
+                    style={{ padding: '8px 10px', borderRadius: '8px', fontSize: '12px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditVendorModalOpen(false)}
+                  className="glass-pill"
+                  style={{ padding: '10px 18px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-apple-black"
+                  style={{ padding: '10px 22px', fontSize: '13px', borderRadius: '12px' }}
+                >
+                  Simpan Perubahan Mitra
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 4: CREATE VENDOR */}
+      {/* ======================================================== */}
+      {createVendorModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: '#FFFFFF', padding: '28px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Daftarkan Mitra Vendor Baru</h3>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>Daftarkan Wedding Organizer, Event Planner, atau Fotografer rekanan</span>
+              </div>
+              <button onClick={() => setCreateVendorModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewVendor} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Agensi / WO</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Kinasih Wedding Planner"
+                    value={newVendorForm.companyName}
+                    onChange={(e) => setNewVendorForm({ ...newVendorForm, companyName: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama PIC</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Contoh: Anisa Putri"
+                    value={newVendorForm.name}
+                    onChange={(e) => setNewVendorForm({ ...newVendorForm, name: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Email Resmi</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="info@kinasihwedding.com"
+                    value={newVendorForm.email}
+                    onChange={(e) => setNewVendorForm({ ...newVendorForm, email: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>No. WhatsApp</label>
+                  <input
+                    type="text"
+                    placeholder="08123456789"
+                    value={newVendorForm.phone}
+                    onChange={(e) => setNewVendorForm({ ...newVendorForm, phone: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Tier Kemitraan Awal</label>
+                  <select
+                    value={newVendorForm.partnerTier}
+                    onChange={(e) => setNewVendorForm({ ...newVendorForm, partnerTier: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="regular">Regular Partner (12%)</option>
+                    <option value="pro">Pro Partner (15%)</option>
+                    <option value="vip">VIP Platinum (20%)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kode Referral</label>
+                  <input
+                    type="text"
+                    placeholder="KINASIHWO"
+                    value={newVendorForm.referralCode}
+                    onChange={(e) => setNewVendorForm({ ...newVendorForm, referralCode: e.target.value.toUpperCase() })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', textTransform: 'uppercase' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCreateVendorModalOpen(false)}
+                  className="glass-pill"
+                  style={{ padding: '10px 18px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-apple-black"
+                  style={{ padding: '10px 22px', fontSize: '13px', borderRadius: '12px' }}
+                >
+                  Daftarkan Vendor
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 5: ADJUST VENDOR WALLET (TOP UP / DEDUCT) */}
+      {/* ======================================================== */}
+      {adjustWalletModalOpen && vendorToAdjust && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '440px', width: '100%', background: '#FFFFFF', padding: '28px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Wallet size={20} color="#10B981" />
+                <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>Sesuaikan Saldo Mitra</h3>
+              </div>
+              <button onClick={() => setAdjustWalletModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#515154', marginBottom: '16px' }}>
+              Mitra: <strong>{vendorToAdjust.companyName || vendorToAdjust.name}</strong><br />
+              Saldo Saat Ini: <strong style={{ color: '#10B981' }}>Rp {(vendorToAdjust.walletBalance || 0).toLocaleString('id-ID')}</strong>
+            </p>
+
+            <form onSubmit={handleSaveWalletAdjustment} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Jenis Penyesuaian</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setWalletAdjustType('add')}
+                    className="glass-pill"
+                    style={{
+                      padding: '8px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      background: walletAdjustType === 'add' ? '#10B981' : '#FFFFFF',
+                      color: walletAdjustType === 'add' ? '#FFFFFF' : '#1D1D1F',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    + Tambah (Kredit)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWalletAdjustType('deduct')}
+                    className="glass-pill"
+                    style={{
+                      padding: '8px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      background: walletAdjustType === 'deduct' ? '#EF4444' : '#FFFFFF',
+                      color: walletAdjustType === 'deduct' ? '#FFFFFF' : '#1D1D1F',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    - Kurangi (Debit)
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nominal (Rp)</label>
+                <input
+                  type="number"
+                  min="1000"
+                  step="1000"
+                  required
+                  value={walletAdjustAmount}
+                  onChange={(e) => setWalletAdjustAmount(Number(e.target.value))}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '15px', fontWeight: 700 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Catatan / Alasan Penyesuaian</label>
+                <input
+                  type="text"
+                  placeholder="Contoh: Reward bonus event akbar / koreksi transfer"
+                  value={walletAdjustNote}
+                  onChange={(e) => setWalletAdjustNote(e.target.value)}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '12.5px' }}
+                />
+              </div>
+
+              <div style={{ background: 'rgba(0,0,0,0.02)', padding: '10px 12px', borderRadius: '10px', fontSize: '12px' }}>
+                Estimasi Saldo Baru: <strong>
+                  Rp {Math.max(0, (vendorToAdjust.walletBalance || 0) + (walletAdjustType === 'add' ? walletAdjustAmount : -walletAdjustAmount)).toLocaleString('id-ID')}
+                </strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setAdjustWalletModalOpen(false)}
+                  className="glass-pill"
+                  style={{ padding: '8px 14px', fontSize: '12px', cursor: 'pointer' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-apple-black"
+                  style={{ padding: '8px 16px', fontSize: '12.5px', borderRadius: '10px' }}
+                >
+                  Konfirmasi Penyesuaian
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 6: EDIT INVOICE */}
+      {/* ======================================================== */}
+      {editInvoiceModalOpen && invoiceToEdit && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '540px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: '#FFFFFF', padding: '28px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Edit Tagihan / Invoice</h3>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>No: <code>{invoiceToEdit.invoiceNumber}</code></span>
+              </div>
+              <button onClick={() => setEditInvoiceModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditInvoice} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Status Pembayaran</label>
+                  <select
+                    value={invoiceToEdit.status}
+                    onChange={(e) => setInvoiceToEdit({ ...invoiceToEdit, status: e.target.value as any })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="paid">✓ Lunas (Paid)</option>
+                    <option value="pending">⏳ Menunggu (Pending)</option>
+                    <option value="cancelled">✕ Dibatalkan (Cancelled)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Metode Pembayaran</label>
+                  <select
+                    value={invoiceToEdit.paymentMethod || 'qris'}
+                    onChange={(e) => setInvoiceToEdit({ ...invoiceToEdit, paymentMethod: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="qris">QRIS Realtime</option>
+                    <option value="bca_va">BCA Virtual Account</option>
+                    <option value="mandiri_va">Mandiri Virtual Account</option>
+                    <option value="manual">Transfer Manual Bank</option>
+                    <option value="partner_token">Token Grosir Mitra</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Total Tagihan Akhir (Rp)</label>
+                  <input
+                    type="number"
+                    value={invoiceToEdit.finalAmount}
+                    onChange={(e) => setInvoiceToEdit({ ...invoiceToEdit, finalAmount: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '14px', fontWeight: 700 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Potongan Diskon (Rp)</label>
+                  <input
+                    type="number"
+                    value={invoiceToEdit.discountAmount || 0}
+                    onChange={(e) => setInvoiceToEdit({ ...invoiceToEdit, discountAmount: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '14px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Pembeli</label>
+                  <input
+                    type="text"
+                    value={invoiceToEdit.buyerName}
+                    onChange={(e) => setInvoiceToEdit({ ...invoiceToEdit, buyerName: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Email Pembeli</label>
+                  <input
+                    type="email"
+                    value={invoiceToEdit.buyerEmail}
+                    onChange={(e) => setInvoiceToEdit({ ...invoiceToEdit, buyerEmail: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditInvoiceModalOpen(false)}
+                  className="glass-pill"
+                  style={{ padding: '10px 18px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-apple-black"
+                  style={{ padding: '10px 22px', fontSize: '13px', borderRadius: '12px' }}
+                >
+                  Simpan Invoice
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 7: CREATE INVOICE MANUAL */}
+      {/* ======================================================== */}
+      {createInvoiceModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '540px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: '#FFFFFF', padding: '28px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Terbitkan Invoice Manual</h3>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>Untuk invoice B2B, transfer bank langsung, atau invoice pesanan khusus</span>
+              </div>
+              <button onClick={() => setCreateInvoiceModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewInvoice} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Pembeli / WO</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Nama Klien / Vendor"
+                    value={newInvoiceForm.buyerName}
+                    onChange={(e) => setNewInvoiceForm({ ...newInvoiceForm, buyerName: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Email</label>
+                  <input
+                    type="email"
+                    required
+                    placeholder="klien@gmail.com"
+                    value={newInvoiceForm.buyerEmail}
+                    onChange={(e) => setNewInvoiceForm({ ...newInvoiceForm, buyerEmail: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Paket</label>
+                  <select
+                    value={newInvoiceForm.tierId}
+                    onChange={(e) => {
+                      const tier = e.target.value as any;
+                      const price = tier === 'party' ? 179000 : tier === 'event' ? 269000 : tier === 'wedding' ? 499000 : 999000;
+                      setNewInvoiceForm({
+                        ...newInvoiceForm,
+                        tierId: tier,
+                        tierName: tier.toUpperCase(),
+                        originalPrice: price,
+                        finalAmount: price
+                      });
+                    }}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="party">Party (Rp 179.000)</option>
+                    <option value="event">Event (Rp 269.000)</option>
+                    <option value="wedding">Wedding (Rp 499.000)</option>
+                    <option value="unlimited">Unlimited (Rp 999.000)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nominal Final (Rp)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newInvoiceForm.finalAmount}
+                    onChange={(e) => setNewInvoiceForm({ ...newInvoiceForm, finalAmount: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '14px', fontWeight: 700 }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Status Awal</label>
+                  <select
+                    value={newInvoiceForm.status}
+                    onChange={(e) => setNewInvoiceForm({ ...newInvoiceForm, status: e.target.value as any })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="paid">Langsung Lunas</option>
+                    <option value="pending">Menunggu Pembayaran</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Metode</label>
+                  <select
+                    value={newInvoiceForm.paymentMethod}
+                    onChange={(e) => setNewInvoiceForm({ ...newInvoiceForm, paymentMethod: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="manual">Transfer Bank BCA Manual</option>
+                    <option value="qris">QRIS</option>
+                    <option value="partner_token">Token Grosir</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCreateInvoiceModalOpen(false)}
+                  className="glass-pill"
+                  style={{ padding: '10px 18px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-apple-black"
+                  style={{ padding: '10px 22px', fontSize: '13px', borderRadius: '12px' }}
+                >
+                  Terbitkan Invoice
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 8: EDIT ADDON */}
+      {/* ======================================================== */}
+      {editAddonModalOpen && addonToEdit && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '540px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: '#FFFFFF', padding: '28px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Edit Add-on Fisik</h3>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>ID: <code>{addonToEdit.id}</code></span>
+              </div>
+              <button onClick={() => setEditAddonModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditAddon} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Add-on</label>
+                <input
+                  type="text"
+                  required
+                  value={addonToEdit.name}
+                  onChange={(e) => setAddonToEdit({ ...addonToEdit, name: e.target.value })}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kategori</label>
+                  <select
+                    value={addonToEdit.category}
+                    onChange={(e) => setAddonToEdit({ ...addonToEdit, category: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="physical_qr">Akrilik Meja Tamu</option>
+                    <option value="banner">Banner Welcome Gate</option>
+                    <option value="hardware_rental">Hardware / Rental TV</option>
+                    <option value="custom">Paket Custom</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Satuan Unit</label>
+                  <input
+                    type="text"
+                    value={addonToEdit.unit || '1 set'}
+                    onChange={(e) => setAddonToEdit({ ...addonToEdit, unit: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Harga Jual Klien (Rp)</label>
+                  <input
+                    type="number"
+                    required
+                    value={addonToEdit.price}
+                    onChange={(e) => setAddonToEdit({ ...addonToEdit, price: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '14px', fontWeight: 700 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Biaya Modal / Produksi (Rp)</label>
+                  <input
+                    type="number"
+                    value={addonToEdit.costPrice || 0}
+                    onChange={(e) => setAddonToEdit({ ...addonToEdit, costPrice: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '14px' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Deskripsi Spesifikasi</label>
+                <textarea
+                  rows={3}
+                  value={addonToEdit.description}
+                  onChange={(e) => setAddonToEdit({ ...addonToEdit, description: e.target.value })}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '12.5px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={addonToEdit.freeShippingJabodetabek !== false}
+                    onChange={(e) => setAddonToEdit({ ...addonToEdit, freeShippingJabodetabek: e.target.checked })}
+                  />
+                  <span>Gratis Ongkir Jabodetabek</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={addonToEdit.isActive !== false}
+                    onChange={(e) => setAddonToEdit({ ...addonToEdit, isActive: e.target.checked })}
+                  />
+                  <span>Status Aktif di Katalog</span>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditAddonModalOpen(false)}
+                  className="glass-pill"
+                  style={{ padding: '10px 18px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-apple-black"
+                  style={{ padding: '10px 22px', fontSize: '13px', borderRadius: '12px' }}
+                >
+                  Simpan Perubahan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 9: CREATE ADDON */}
+      {/* ======================================================== */}
+      {createAddonModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '540px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: '#FFFFFF', padding: '28px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Tambah Add-on Baru</h3>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>Masukkan produk perlengkapan resepsi / hardware baru</span>
+              </div>
+              <button onClick={() => setCreateAddonModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewAddon} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Produk Add-on</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Contoh: Paket 15 Pcs Akrilik Meja A6 Gold Border"
+                  value={newAddonForm.name}
+                  onChange={(e) => setNewAddonForm({ ...newAddonForm, name: e.target.value })}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kategori</label>
+                  <select
+                    value={newAddonForm.category}
+                    onChange={(e) => setNewAddonForm({ ...newAddonForm, category: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="physical_qr">Akrilik Meja Tamu</option>
+                    <option value="banner">Banner Welcome Gate</option>
+                    <option value="hardware_rental">Hardware / Rental TV</option>
+                    <option value="custom">Paket Custom</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Satuan</label>
+                  <input
+                    type="text"
+                    placeholder="15 pcs"
+                    value={newAddonForm.unit}
+                    onChange={(e) => setNewAddonForm({ ...newAddonForm, unit: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Harga Jual Klien (Rp)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newAddonForm.price}
+                    onChange={(e) => setNewAddonForm({ ...newAddonForm, price: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '14px', fontWeight: 700 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Biaya Modal Cetak (Rp)</label>
+                  <input
+                    type="number"
+                    value={newAddonForm.costPrice}
+                    onChange={(e) => setNewAddonForm({ ...newAddonForm, costPrice: Number(e.target.value) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '14px' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Deskripsi Spesifikasi Produk</label>
+                <textarea
+                  rows={3}
+                  placeholder="Bahan akrilik tebal 2mm, cetak laser UV tahan air dan anti gores..."
+                  value={newAddonForm.description}
+                  onChange={(e) => setNewAddonForm({ ...newAddonForm, description: e.target.value })}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '12.5px' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={newAddonForm.freeShippingJabodetabek !== false}
+                    onChange={(e) => setNewAddonForm({ ...newAddonForm, freeShippingJabodetabek: e.target.checked })}
+                  />
+                  <span>Gratis Ongkir Jabodetabek</span>
+                </label>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCreateAddonModalOpen(false)}
+                  className="glass-pill"
+                  style={{ padding: '10px 18px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="btn-apple-black"
+                  style={{ padding: '10px 22px', fontSize: '13px', borderRadius: '12px' }}
+                >
+                  Tambahkan ke Katalog
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 10: PHOTO INSPECTOR */}
+      {/* ======================================================== */}
+      {inspectPhotoModalOpen && photoToInspect && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+          <div className="glass-card" style={{ maxWidth: '480px', width: '100%', background: '#FFFFFF', padding: '24px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.3)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>Inspeksi Foto Tamu</h3>
+                <span style={{ fontSize: '11px', color: '#86868B' }}>Oleh: <strong>{photoToInspect.guestName}</strong> • {new Date(photoToInspect.timestamp).toLocaleString('id-ID')}</span>
+              </div>
+              <button onClick={() => setInspectPhotoModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '16px', overflow: 'hidden', background: '#000', marginBottom: '16px', position: 'relative' }}>
+              <img src={photoToInspect.imageData} alt={photoToInspect.guestName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              {photoToInspect.isHidden && (
+                <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#EF4444', color: '#FFF', padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700 }}>
+                  SEDANG DISENSOR
+                </div>
+              )}
+            </div>
+
+            {photoToInspect.caption && (
+              <p style={{ fontSize: '13px', fontStyle: 'italic', background: 'rgba(0,0,0,0.03)', padding: '10px 12px', borderRadius: '10px', margin: '0 0 16px 0' }}>
+                &ldquo;{photoToInspect.caption}&rdquo;
+              </p>
+            )}
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <a
+                href={photoToInspect.imageData}
+                download={`foto-${photoToInspect.guestName}-${photoToInspect.id}.jpg`}
+                className="btn-apple-black"
+                style={{ flex: 1, padding: '10px', fontSize: '12.5px', borderRadius: '10px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                <Download size={14} />
+                <span>Unduh File Asli</span>
+              </a>
+
+              <button
+                onClick={() => handleToggleHidePhoto(photoToInspect.id, !!photoToInspect.isHidden)}
+                className="glass-pill"
+                style={{ padding: '10px 14px', fontSize: '12.5px', cursor: 'pointer', fontWeight: 600 }}
+              >
+                {photoToInspect.isHidden ? 'Pulihkan' : 'Sensor'}
+              </button>
+
+              <button
+                onClick={() => handleDeletePhoto(photoToInspect.id)}
+                className="glass-pill"
+                style={{ padding: '10px 12px', color: '#E11D48', cursor: 'pointer' }}
+                title="Hapus Permanen"
+              >
+                <Trash2 size={15} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

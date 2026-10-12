@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission } from './types';
+import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem } from './types';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -10,6 +10,7 @@ const INVOICES_FILE = path.join(DATA_DIR, 'invoices.json');
 const PAYOUTS_FILE = path.join(DATA_DIR, 'payouts.json');
 const VENDORS_FILE = path.join(DATA_DIR, 'vendors.json');
 const TESTIMONIALS_FILE = path.join(DATA_DIR, 'testimonials.json');
+const ADDONS_FILE = path.join(DATA_DIR, 'addons.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 
 // Safe file system helpers for local mode / fallback
@@ -383,6 +384,40 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
     return events[existingIdx];
   } catch {
     return null;
+  }
+}
+
+export async function deleteEvent(id: string): Promise<boolean> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('photos').delete().eq('event_id', id);
+      const { error } = await supabase.from('events').delete().eq('id', id);
+      if (!error) return true;
+      console.warn(`Supabase deleteEvent(${id}) error:`, error.message);
+    } catch (err) {
+      console.warn('Supabase deleteEvent exception:', err);
+    }
+  }
+
+  // Local fallback
+  ensureLocalDataFiles();
+  try {
+    if (fs.existsSync(EVENTS_FILE)) {
+      const raw = fs.readFileSync(EVENTS_FILE, 'utf8');
+      let events: EventData[] = JSON.parse(raw);
+      events = events.filter(e => e.id !== id);
+      fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf8');
+    }
+    if (fs.existsSync(PHOTOS_FILE)) {
+      const rawPhotos = fs.readFileSync(PHOTOS_FILE, 'utf8');
+      let photos: PhotoRecord[] = JSON.parse(rawPhotos);
+      photos = photos.filter(p => p.eventId !== id);
+      fs.writeFileSync(PHOTOS_FILE, JSON.stringify(photos, null, 2), 'utf8');
+    }
+    return true;
+  } catch (err) {
+    console.error('Local deleteEvent error:', err);
+    return false;
   }
 }
 
@@ -871,6 +906,115 @@ export async function updateInvoiceStatus(idOrNumber: string, status: 'pending' 
   }
 }
 
+export async function getAllInvoices(): Promise<InvoiceRecord[]> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data.map(row => ({
+          id: row.id,
+          invoiceNumber: row.invoice_number,
+          eventId: row.event_id || undefined,
+          orderId: row.order_id,
+          buyerType: row.buyer_type,
+          buyerName: row.buyer_name,
+          buyerEmail: row.buyer_email,
+          buyerPhone: row.buyer_phone || undefined,
+          companyName: row.company_name || undefined,
+          tierId: row.tier_id,
+          tierName: row.tier_name,
+          originalPrice: Number(row.original_price),
+          discountAmount: Number(row.discount_amount || 0),
+          discountCode: row.discount_code || undefined,
+          finalAmount: Number(row.final_amount),
+          paymentMethod: row.payment_method || 'qris',
+          status: row.status,
+          paidAt: row.paid_at || undefined,
+          createdAt: row.created_at
+        }));
+      }
+    } catch (e) {
+      console.warn('Supabase getAllInvoices fallback:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export async function updateInvoice(id: string, updates: Partial<InvoiceRecord>): Promise<InvoiceRecord | null> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const dbUpdates: Record<string, any> = {};
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.finalAmount !== undefined) dbUpdates.final_amount = updates.finalAmount;
+      if (updates.originalPrice !== undefined) dbUpdates.original_price = updates.originalPrice;
+      if (updates.discountAmount !== undefined) dbUpdates.discount_amount = updates.discountAmount;
+      if (updates.discountCode !== undefined) dbUpdates.discount_code = updates.discountCode;
+      if (updates.buyerName !== undefined) dbUpdates.buyer_name = updates.buyerName;
+      if (updates.buyerEmail !== undefined) dbUpdates.buyer_email = updates.buyerEmail;
+      if (updates.buyerPhone !== undefined) dbUpdates.buyer_phone = updates.buyerPhone;
+      if (updates.paymentMethod !== undefined) dbUpdates.payment_method = updates.paymentMethod;
+      if (updates.paidAt !== undefined) dbUpdates.paid_at = updates.paidAt;
+
+      await supabase
+        .from('invoices')
+        .update(dbUpdates)
+        .eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateInvoice exception:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
+    const invoices: InvoiceRecord[] = JSON.parse(raw);
+    const idx = invoices.findIndex(i => i.id === id || i.invoiceNumber === id);
+    if (idx < 0) return null;
+
+    invoices[idx] = { ...invoices[idx], ...updates };
+    fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
+    return invoices[idx];
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteInvoice(id: string): Promise<boolean> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('invoices').delete().eq('id', id);
+    } catch (e) {}
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
+    let invoices: InvoiceRecord[] = JSON.parse(raw);
+    invoices = invoices.filter(i => i.id !== id && i.invoiceNumber !== id);
+    fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ==========================================
 // VENDOR PARTNERS & PAYOUTS ENGINE
 // ==========================================
@@ -1165,5 +1309,338 @@ export async function updateTestimonialStatus(
     return null;
   }
 }
+
+// ==========================================
+// VENDORS PARTNER MANAGEMENT ENGINE
+// ==========================================
+
+export async function getAllVendors(): Promise<any[]> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data.map(v => ({
+          id: v.id,
+          name: v.name,
+          companyName: v.company_name || v.name,
+          email: v.email,
+          phone: v.phone || '',
+          instagram: v.instagram || '',
+          logoUrl: v.logo_url || '',
+          tier: v.tier || 'pro',
+          partnerTier: v.partner_tier || 'regular',
+          referralCode: v.referral_code || '',
+          commissionRate: Number(v.commission_rate ?? 0.12),
+          walletBalance: Number(v.wallet_balance ?? 0),
+          totalEarnings: Number(v.total_earnings ?? 0),
+          wholesaleTokens: Number(v.wholesale_tokens ?? 0),
+          bankDetails: {
+            bankName: v.bank_name || 'BCA',
+            accountNumber: v.bank_account_number || '',
+            accountHolder: v.bank_account_holder || v.name
+          },
+          clientCount: Number(v.client_count ?? 0),
+          city: v.city || '',
+          createdAt: v.created_at
+        }));
+      }
+    } catch (e) {
+      console.warn('Supabase getAllVendors fallback:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(VENDORS_FILE) ? fs.readFileSync(VENDORS_FILE, 'utf8') : '[]';
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export async function saveVendor(vendorData: any): Promise<any> {
+  const newVendor = {
+    ...vendorData,
+    id: vendorData.id || `vendor_${Date.now()}`,
+    createdAt: vendorData.createdAt || new Date().toISOString()
+  };
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const record = {
+        id: newVendor.id,
+        name: newVendor.name,
+        company_name: newVendor.companyName || newVendor.name,
+        email: newVendor.email,
+        phone: newVendor.phone || null,
+        instagram: newVendor.instagram || null,
+        logo_url: newVendor.logoUrl || null,
+        tier: newVendor.tier || 'pro',
+        partner_tier: newVendor.partnerTier || 'regular',
+        referral_code: newVendor.referralCode || null,
+        commission_rate: newVendor.commissionRate || 0.12,
+        wallet_balance: newVendor.walletBalance || 0,
+        total_earnings: newVendor.totalEarnings || 0,
+        wholesale_tokens: newVendor.wholesaleTokens || 0,
+        bank_name: newVendor.bankDetails?.bankName || null,
+        bank_account_number: newVendor.bankDetails?.accountNumber || null,
+        bank_account_holder: newVendor.bankDetails?.accountHolder || null,
+        city: newVendor.city || null
+      };
+
+      await supabase.from('vendors').upsert(record);
+    } catch (e) {
+      console.warn('Supabase saveVendor fallback:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(VENDORS_FILE) ? fs.readFileSync(VENDORS_FILE, 'utf8') : '[]';
+    const vendors: any[] = JSON.parse(raw);
+    const existingIdx = vendors.findIndex(v => v.id === newVendor.id);
+    if (existingIdx >= 0) {
+      vendors[existingIdx] = { ...vendors[existingIdx], ...newVendor };
+    } else {
+      vendors.unshift(newVendor);
+    }
+    fs.writeFileSync(VENDORS_FILE, JSON.stringify(vendors, null, 2), 'utf8');
+  } catch (e) {
+    console.warn('Local saveVendor write skipped:', e);
+  }
+
+  return newVendor;
+}
+
+export async function updateVendor(id: string, updates: any): Promise<any | null> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const dbUpdates: Record<string, any> = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.companyName !== undefined) dbUpdates.company_name = updates.companyName;
+      if (updates.email !== undefined) dbUpdates.email = updates.email;
+      if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
+      if (updates.instagram !== undefined) dbUpdates.instagram = updates.instagram;
+      if (updates.logoUrl !== undefined) dbUpdates.logo_url = updates.logoUrl;
+      if (updates.tier !== undefined) dbUpdates.tier = updates.tier;
+      if (updates.partnerTier !== undefined) dbUpdates.partner_tier = updates.partnerTier;
+      if (updates.referralCode !== undefined) dbUpdates.referral_code = updates.referralCode;
+      if (updates.commissionRate !== undefined) dbUpdates.commission_rate = updates.commissionRate;
+      if (updates.walletBalance !== undefined) dbUpdates.wallet_balance = updates.walletBalance;
+      if (updates.totalEarnings !== undefined) dbUpdates.total_earnings = updates.totalEarnings;
+      if (updates.wholesaleTokens !== undefined) dbUpdates.wholesale_tokens = updates.wholesaleTokens;
+      if (updates.bankDetails) {
+        if (updates.bankDetails.bankName) dbUpdates.bank_name = updates.bankDetails.bankName;
+        if (updates.bankDetails.accountNumber) dbUpdates.bank_account_number = updates.bankDetails.accountNumber;
+        if (updates.bankDetails.accountHolder) dbUpdates.bank_account_holder = updates.bankDetails.accountHolder;
+      }
+
+      await supabase.from('vendors').update(dbUpdates).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateVendor exception:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(VENDORS_FILE) ? fs.readFileSync(VENDORS_FILE, 'utf8') : '[]';
+    const vendors: any[] = JSON.parse(raw);
+    const idx = vendors.findIndex(v => v.id === id);
+    if (idx < 0) return null;
+
+    vendors[idx] = { ...vendors[idx], ...updates, updatedAt: new Date().toISOString() };
+    fs.writeFileSync(VENDORS_FILE, JSON.stringify(vendors, null, 2), 'utf8');
+    return vendors[idx];
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteVendor(id: string): Promise<boolean> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('vendors').delete().eq('id', id);
+    } catch (e) {}
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(VENDORS_FILE) ? fs.readFileSync(VENDORS_FILE, 'utf8') : '[]';
+    let vendors: any[] = JSON.parse(raw);
+    vendors = vendors.filter(v => v.id !== id);
+    fs.writeFileSync(VENDORS_FILE, JSON.stringify(vendors, null, 2), 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ==========================================
+// PHYSICAL ADDONS MANAGEMENT ENGINE
+// ==========================================
+
+export async function getAllAddons(): Promise<EventAddonItem[]> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('addons')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        return data.map(row => ({
+          id: row.id,
+          name: row.name,
+          category: row.category,
+          description: row.description || '',
+          price: Number(row.price),
+          priceFormatted: `Rp ${Number(row.price).toLocaleString('id-ID')}`,
+          costPrice: row.cost_price ? Number(row.cost_price) : undefined,
+          imagePreviewUrl: row.image_url || undefined,
+          isActive: row.is_active !== false,
+          freeShippingJabodetabek: row.free_shipping_jabodetabek !== false,
+          unit: row.unit || '1 set',
+          isPopular: row.is_popular || false,
+          createdAt: row.created_at
+        }));
+      }
+    } catch (e) {
+      console.warn('Supabase getAllAddons fallback:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(ADDONS_FILE) ? fs.readFileSync(ADDONS_FILE, 'utf8') : '[]';
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> {
+  const newAddon: EventAddonItem = {
+    ...addon,
+    id: addon.id || `addon_${Date.now()}`,
+    priceFormatted: `Rp ${Number(addon.price).toLocaleString('id-ID')}`,
+    createdAt: addon.createdAt || new Date().toISOString()
+  };
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const record = {
+        id: newAddon.id,
+        name: newAddon.name,
+        category: newAddon.category,
+        description: newAddon.description || null,
+        price: newAddon.price,
+        cost_price: newAddon.costPrice || null,
+        image_url: newAddon.imagePreviewUrl || null,
+        is_active: newAddon.isActive !== false,
+        free_shipping_jabodetabek: newAddon.freeShippingJabodetabek !== false,
+        unit: newAddon.unit || '1 set',
+        is_popular: newAddon.isPopular || false
+      };
+
+      await supabase.from('addons').upsert(record);
+    } catch (e) {
+      console.warn('Supabase saveAddon exception:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(ADDONS_FILE) ? fs.readFileSync(ADDONS_FILE, 'utf8') : '[]';
+    const list: EventAddonItem[] = JSON.parse(raw);
+    const existingIdx = list.findIndex(a => a.id === newAddon.id);
+    if (existingIdx >= 0) {
+      list[existingIdx] = { ...list[existingIdx], ...newAddon };
+    } else {
+      list.push(newAddon);
+    }
+    fs.writeFileSync(ADDONS_FILE, JSON.stringify(list, null, 2), 'utf8');
+  } catch (e) {}
+
+  return newAddon;
+}
+
+export async function updateAddon(id: string, updates: Partial<EventAddonItem>): Promise<EventAddonItem | null> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const dbUpdates: Record<string, any> = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.category !== undefined) dbUpdates.category = updates.category;
+      if (updates.description !== undefined) dbUpdates.description = updates.description;
+      if (updates.price !== undefined) dbUpdates.price = updates.price;
+      if (updates.costPrice !== undefined) dbUpdates.cost_price = updates.costPrice;
+      if (updates.imagePreviewUrl !== undefined) dbUpdates.image_url = updates.imagePreviewUrl;
+      if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+      if (updates.freeShippingJabodetabek !== undefined) dbUpdates.free_shipping_jabodetabek = updates.freeShippingJabodetabek;
+      if (updates.unit !== undefined) dbUpdates.unit = updates.unit;
+      if (updates.isPopular !== undefined) dbUpdates.is_popular = updates.isPopular;
+
+      await supabase.from('addons').update(dbUpdates).eq('id', id);
+    } catch (e) {
+      console.warn('Supabase updateAddon exception:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(ADDONS_FILE) ? fs.readFileSync(ADDONS_FILE, 'utf8') : '[]';
+    const list: EventAddonItem[] = JSON.parse(raw);
+    const idx = list.findIndex(a => a.id === id);
+    if (idx < 0) return null;
+
+    if (updates.price !== undefined) {
+      updates.priceFormatted = `Rp ${Number(updates.price).toLocaleString('id-ID')}`;
+    }
+    list[idx] = { ...list[idx], ...updates };
+    fs.writeFileSync(ADDONS_FILE, JSON.stringify(list, null, 2), 'utf8');
+    return list[idx];
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteAddon(id: string): Promise<boolean> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('addons').delete().eq('id', id);
+    } catch (e) {}
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(ADDONS_FILE) ? fs.readFileSync(ADDONS_FILE, 'utf8') : '[]';
+    let list: EventAddonItem[] = JSON.parse(raw);
+    list = list.filter(a => a.id !== id);
+    fs.writeFileSync(ADDONS_FILE, JSON.stringify(list, null, 2), 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 
 
