@@ -681,6 +681,36 @@ export async function createInvoice(data: Omit<InvoiceRecord, 'id' | 'createdAt'
     createdAt
   };
 
+  // 1. Try Supabase insert
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('invoices').insert({
+        id: newInvoice.id,
+        invoice_number: newInvoice.invoiceNumber,
+        event_id: newInvoice.eventId || null,
+        order_id: newInvoice.orderId,
+        buyer_type: newInvoice.buyerType,
+        buyer_name: newInvoice.buyerName,
+        buyer_email: newInvoice.buyerEmail,
+        buyer_phone: newInvoice.buyerPhone || null,
+        company_name: newInvoice.companyName || null,
+        tier_id: newInvoice.tierId,
+        tier_name: newInvoice.tierName,
+        original_price: newInvoice.originalPrice,
+        discount_amount: newInvoice.discountAmount || 0,
+        discount_code: newInvoice.discountCode || null,
+        final_amount: newInvoice.finalAmount,
+        payment_method: newInvoice.paymentMethod || 'qris',
+        status: newInvoice.status,
+        paid_at: newInvoice.paidAt || null,
+        created_at: newInvoice.createdAt
+      });
+    } catch (e) {
+      console.warn('Supabase invoice insert skipped/fallback:', e);
+    }
+  }
+
+  // 2. Local fallback
   invoices.unshift(newInvoice);
   try {
     fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
@@ -692,16 +722,57 @@ export async function createInvoice(data: Omit<InvoiceRecord, 'id' | 'createdAt'
 }
 
 export async function getInvoice(idOrNumber: string): Promise<InvoiceRecord | null> {
+  const cleanQuery = idOrNumber.trim();
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .or(`id.eq.${cleanQuery},invoice_number.eq.${cleanQuery},event_id.eq.${cleanQuery},order_id.eq.${cleanQuery}`)
+        .limit(1);
+
+      if (!error && data && data.length > 0) {
+        const row = data[0];
+        return {
+          id: row.id,
+          invoiceNumber: row.invoice_number,
+          eventId: row.event_id || undefined,
+          orderId: row.order_id,
+          buyerType: row.buyer_type,
+          buyerName: row.buyer_name,
+          buyerEmail: row.buyer_email,
+          buyerPhone: row.buyer_phone || undefined,
+          companyName: row.company_name || undefined,
+          tierId: row.tier_id,
+          tierName: row.tier_name,
+          originalPrice: Number(row.original_price),
+          discountAmount: Number(row.discount_amount || 0),
+          discountCode: row.discount_code || undefined,
+          finalAmount: Number(row.final_amount),
+          paymentMethod: row.payment_method,
+          status: row.status,
+          paidAt: row.paid_at || undefined,
+          createdAt: row.created_at
+        };
+      }
+    } catch (e) {
+      // Fallback to local
+    }
+  }
+
+  // 2. Local fallback
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
     const invoices: InvoiceRecord[] = JSON.parse(raw);
-    const cleanQuery = idOrNumber.trim().toLowerCase();
+    const lower = cleanQuery.toLowerCase();
     return invoices.find(inv => 
-      inv.id.toLowerCase() === cleanQuery ||
-      inv.invoiceNumber.toLowerCase() === cleanQuery ||
-      (inv.eventId && inv.eventId.toLowerCase() === cleanQuery) ||
-      inv.orderId.toLowerCase() === cleanQuery
+      inv.id.toLowerCase() === lower ||
+      inv.invoiceNumber.toLowerCase() === lower ||
+      (inv.eventId && inv.eventId.toLowerCase() === lower) ||
+      inv.orderId.toLowerCase() === lower
     ) || null;
   } catch {
     return null;
@@ -709,34 +780,89 @@ export async function getInvoice(idOrNumber: string): Promise<InvoiceRecord | nu
 }
 
 export async function getInvoicesByEmail(email: string): Promise<InvoiceRecord[]> {
+  const cleanEmail = email.trim();
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('*')
+        .eq('buyer_email', cleanEmail)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        return data.map(row => ({
+          id: row.id,
+          invoiceNumber: row.invoice_number,
+          eventId: row.event_id || undefined,
+          orderId: row.order_id,
+          buyerType: row.buyer_type,
+          buyerName: row.buyer_name,
+          buyerEmail: row.buyer_email,
+          buyerPhone: row.buyer_phone || undefined,
+          companyName: row.company_name || undefined,
+          tierId: row.tier_id,
+          tierName: row.tier_name,
+          originalPrice: Number(row.original_price),
+          discountAmount: Number(row.discount_amount || 0),
+          discountCode: row.discount_code || undefined,
+          finalAmount: Number(row.final_amount),
+          paymentMethod: row.payment_method,
+          status: row.status,
+          paidAt: row.paid_at || undefined,
+          createdAt: row.created_at
+        }));
+      }
+    } catch (e) {
+      // Fallback
+    }
+  }
+
+  // 2. Local fallback
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
     const invoices: InvoiceRecord[] = JSON.parse(raw);
-    const cleanEmail = email.trim().toLowerCase();
-    return invoices.filter(inv => inv.buyerEmail.toLowerCase() === cleanEmail);
+    const lower = cleanEmail.toLowerCase();
+    return invoices.filter(inv => inv.buyerEmail.toLowerCase() === lower);
   } catch {
     return [];
   }
 }
 
 export async function updateInvoiceStatus(idOrNumber: string, status: 'pending' | 'paid' | 'cancelled', paidAt?: string): Promise<InvoiceRecord | null> {
+  const cleanQuery = idOrNumber.trim();
+  const effectivePaidAt = paidAt || (status === 'paid' ? new Date().toISOString() : undefined);
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase
+        .from('invoices')
+        .update({ status, paid_at: effectivePaidAt || null })
+        .or(`id.eq.${cleanQuery},invoice_number.eq.${cleanQuery},order_id.eq.${cleanQuery}`);
+    } catch (e) {
+      // Fallback
+    }
+  }
+
+  // 2. Local fallback
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
     const invoices: InvoiceRecord[] = JSON.parse(raw);
-    const cleanQuery = idOrNumber.trim().toLowerCase();
+    const lower = cleanQuery.toLowerCase();
     const idx = invoices.findIndex(inv => 
-      inv.id.toLowerCase() === cleanQuery ||
-      inv.invoiceNumber.toLowerCase() === cleanQuery ||
-      (inv.eventId && inv.eventId.toLowerCase() === cleanQuery) ||
-      inv.orderId.toLowerCase() === cleanQuery
+      inv.id.toLowerCase() === lower ||
+      inv.invoiceNumber.toLowerCase() === lower ||
+      (inv.eventId && inv.eventId.toLowerCase() === lower) ||
+      inv.orderId.toLowerCase() === lower
     );
 
     if (idx < 0) return null;
     invoices[idx].status = status;
-    if (paidAt) invoices[idx].paidAt = paidAt;
-    else if (status === 'paid' && !invoices[idx].paidAt) invoices[idx].paidAt = new Date().toISOString();
+    if (effectivePaidAt) invoices[idx].paidAt = effectivePaidAt;
 
     fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
     return invoices[idx];
@@ -751,6 +877,36 @@ export async function updateInvoiceStatus(idOrNumber: string, status: 'pending' 
 
 export async function createPayoutRequest(data: Omit<PayoutRequest, 'id' | 'requestedAt' | 'status'>): Promise<PayoutRequest> {
   ensureLocalDataFiles();
+  const newPayout: PayoutRequest = {
+    ...data,
+    id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    status: 'pending',
+    requestedAt: new Date().toISOString()
+  };
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('payout_requests').insert({
+        id: newPayout.id,
+        vendor_id: newPayout.vendorId,
+        vendor_email: newPayout.vendorEmail,
+        vendor_name: newPayout.vendorName,
+        company_name: newPayout.companyName || null,
+        amount: newPayout.amount,
+        bank_details: newPayout.bankDetails,
+        status: newPayout.status,
+        proof_url: newPayout.proofUrl || null,
+        notes: newPayout.notes || null,
+        requested_at: newPayout.requestedAt,
+        processed_at: newPayout.processedAt || null
+      });
+    } catch (e) {
+      console.warn('Supabase payout insert skipped/fallback:', e);
+    }
+  }
+
+  // 2. Local fallback
   let payouts: PayoutRequest[] = [];
   try {
     const raw = fs.existsSync(PAYOUTS_FILE) ? fs.readFileSync(PAYOUTS_FILE, 'utf8') : '[]';
@@ -758,13 +914,6 @@ export async function createPayoutRequest(data: Omit<PayoutRequest, 'id' | 'requ
   } catch {
     payouts = [];
   }
-
-  const newPayout: PayoutRequest = {
-    ...data,
-    id: `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    status: 'pending',
-    requestedAt: new Date().toISOString()
-  };
 
   payouts.unshift(newPayout);
   try {
@@ -777,6 +926,36 @@ export async function createPayoutRequest(data: Omit<PayoutRequest, 'id' | 'requ
 }
 
 export async function getPayoutRequests(vendorId?: string): Promise<PayoutRequest[]> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      let query = supabase.from('payout_requests').select('*').order('requested_at', { ascending: false });
+      if (vendorId) {
+        query = query.or(`vendor_id.eq.${vendorId},vendor_email.eq.${vendorId}`);
+      }
+      const { data, error } = await query;
+      if (!error && data) {
+        return data.map(row => ({
+          id: row.id,
+          vendorId: row.vendor_id,
+          vendorEmail: row.vendor_email,
+          vendorName: row.vendor_name,
+          companyName: row.company_name || undefined,
+          amount: Number(row.amount),
+          bankDetails: row.bank_details || { bankName: 'BCA', accountNumber: '', accountHolder: '' },
+          status: row.status,
+          proofUrl: row.proof_url || undefined,
+          notes: row.notes || undefined,
+          requestedAt: row.requested_at,
+          processedAt: row.processed_at || undefined
+        }));
+      }
+    } catch (e) {
+      // Fallback
+    }
+  }
+
+  // 2. Local fallback
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(PAYOUTS_FILE) ? fs.readFileSync(PAYOUTS_FILE, 'utf8') : '[]';
@@ -793,6 +972,40 @@ export async function getPayoutRequests(vendorId?: string): Promise<PayoutReques
 // ---------------------------------------------------------------------------
 
 export async function createTestimonialSubmission(data: Omit<VideoTestimonialSubmission, 'id' | 'submittedAt' | 'status'>): Promise<VideoTestimonialSubmission> {
+  const newSub: VideoTestimonialSubmission = {
+    ...data,
+    id: `testi_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+    status: 'pending',
+    submittedAt: new Date().toISOString()
+  };
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('testimonials').insert({
+        id: newSub.id,
+        event_id: newSub.eventId,
+        event_title: newSub.eventTitle,
+        submitter_type: newSub.submitterType,
+        submitter_id: newSub.submitterId,
+        submitter_name: newSub.submitterName,
+        submitter_email: newSub.submitterEmail || null,
+        video_type: newSub.videoType,
+        video_url: newSub.videoUrl,
+        duration_seconds: newSub.durationSeconds,
+        caption: newSub.caption || null,
+        reward_amount: newSub.rewardAmount,
+        status: newSub.status,
+        admin_notes: newSub.adminNotes || null,
+        reward_paid_at: newSub.rewardPaidAt || null,
+        submitted_at: newSub.submittedAt
+      });
+    } catch (e) {
+      console.warn('Supabase testimonial insert fallback:', e);
+    }
+  }
+
+  // 2. Local fallback
   ensureLocalDataFiles();
   let submissions: VideoTestimonialSubmission[] = [];
   try {
@@ -801,13 +1014,6 @@ export async function createTestimonialSubmission(data: Omit<VideoTestimonialSub
   } catch {
     submissions = [];
   }
-
-  const newSub: VideoTestimonialSubmission = {
-    ...data,
-    id: `testi_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    status: 'pending',
-    submittedAt: new Date().toISOString()
-  };
 
   submissions.unshift(newSub);
   try {
@@ -820,6 +1026,40 @@ export async function createTestimonialSubmission(data: Omit<VideoTestimonialSub
 }
 
 export async function getAllTestimonials(): Promise<VideoTestimonialSubmission[]> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('testimonials')
+        .select('*')
+        .order('submitted_at', { ascending: false });
+
+      if (!error && data) {
+        return data.map(row => ({
+          id: row.id,
+          eventId: row.event_id,
+          eventTitle: row.event_title,
+          submitterType: row.submitter_type,
+          submitterId: row.submitter_id,
+          submitterName: row.submitter_name,
+          submitterEmail: row.submitter_email || undefined,
+          videoType: row.video_type || 'link',
+          videoUrl: row.video_url,
+          durationSeconds: Number(row.duration_seconds),
+          caption: row.caption || undefined,
+          rewardAmount: Number(row.reward_amount || 50000),
+          status: row.status,
+          adminNotes: row.admin_notes || undefined,
+          rewardPaidAt: row.reward_paid_at || undefined,
+          submittedAt: row.submitted_at
+        }));
+      }
+    } catch (e) {
+      // Fallback
+    }
+  }
+
+  // 2. Local fallback
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(TESTIMONIALS_FILE) ? fs.readFileSync(TESTIMONIALS_FILE, 'utf8') : '[]';
@@ -844,6 +1084,25 @@ export async function updateTestimonialStatus(
   status: 'approved' | 'rejected',
   adminNotes?: string
 ): Promise<VideoTestimonialSubmission | null> {
+  const rewardPaidAt = status === 'approved' ? new Date().toISOString() : undefined;
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase
+        .from('testimonials')
+        .update({
+          status,
+          admin_notes: adminNotes || null,
+          reward_paid_at: rewardPaidAt || null
+        })
+        .eq('id', id);
+    } catch (e) {
+      // Fallback
+    }
+  }
+
+  // 2. Local fallback
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(TESTIMONIALS_FILE) ? fs.readFileSync(TESTIMONIALS_FILE, 'utf8') : '[]';
@@ -853,9 +1112,7 @@ export async function updateTestimonialStatus(
 
     list[index].status = status;
     if (adminNotes) list[index].adminNotes = adminNotes;
-    if (status === 'approved') {
-      list[index].rewardPaidAt = new Date().toISOString();
-    }
+    if (rewardPaidAt) list[index].rewardPaidAt = rewardPaidAt;
 
     fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(list, null, 2), 'utf8');
     return list[index];
@@ -863,4 +1120,5 @@ export async function updateTestimonialStatus(
     return null;
   }
 }
+
 
