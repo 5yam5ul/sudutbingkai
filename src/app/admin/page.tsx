@@ -862,17 +862,23 @@ export default function SuperAdminDashboard() {
 
       {/* Main Container */}
       <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px 20px 80px' }}>
-        {/* Navigation Tabs */}
-        <div className="horizontal-scroll-row" style={{ gap: '8px', marginBottom: '28px', paddingBottom: '6px' }}>
+        {/* Navigation Tabs (Responsive Flex-Wrap, No Cutoff) */}
+        <div style={{ 
+          display: 'flex', 
+          flexWrap: 'wrap', 
+          alignItems: 'center', 
+          gap: '8px', 
+          marginBottom: '28px' 
+        }}>
           {[
             { id: 'overview', label: 'Ringkasan & Finansial', icon: DollarSign, count: null },
             { id: 'events', label: 'Manajemen Acara', icon: Calendar, count: events.length },
-            { id: 'moderation', label: 'Moderasi Media Tamu', icon: Camera, count: photos.length + videoWishes.length + voiceNotes.length },
-            { id: 'vendors', label: 'Mitra Vendor (WO)', icon: Users, count: vendors.length },
+            { id: 'moderation', label: 'Moderasi Media', icon: Camera, count: photos.length + videoWishes.length + voiceNotes.length },
+            { id: 'vendors', label: 'Mitra Vendor', icon: Users, count: vendors.length },
             { id: 'invoices', label: 'Pusat Invoice', icon: FileText, count: invoices.length },
             { id: 'payouts', label: 'Pencairan Dana', icon: Wallet, count: payouts.filter(p => p.status === 'pending').length || null, alert: payouts.filter(p => p.status === 'pending').length > 0 },
             { id: 'testimonials', label: 'Kurasi Video (+50k)', icon: Video, count: testimonials.filter(t => t.status === 'pending').length || null, alert: testimonials.filter(t => t.status === 'pending').length > 0 },
-            { id: 'addons', label: 'Katalog Add-on Fisik', icon: Package, count: addons.length }
+            { id: 'addons', label: 'Katalog Add-on', icon: Package, count: addons.length }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -887,13 +893,13 @@ export default function SuperAdminDashboard() {
                 style={{
                   background: isActive ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
                   color: isActive ? '#FFFFFF' : '#1D1D1F',
-                  padding: '10px 16px',
+                  padding: '8px 14px',
                   fontSize: '12.5px',
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '7px',
                   whiteSpace: 'nowrap',
                   boxShadow: isActive ? '0 4px 14px rgba(0,0,0,0.12)' : 'none',
                   border: tab.alert ? '1.5px solid #F59E0B' : '1px solid rgba(0,0,0,0.08)'
