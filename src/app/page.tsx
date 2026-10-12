@@ -130,13 +130,13 @@ export default function HomePage() {
   };
 
   const pricingTiers = [
-    { name: 'Starter', price: 'Gratis', originalPrice: null, discountBadge: null, guests: 'Hingga 5 tamu', desc: 'Cocok untuk uji coba privat bersama keluarga dekat.', retention: '3 Hari', storage: '500 MB', shotsPerGuest: '10 foto / tamu', popular: false, isFree: true },
-    { name: 'Mini', price: 'Rp 54.000', originalPrice: 'Rp 69.000', discountBadge: 'HEMAT 20%', guests: 'Hingga 15 tamu', desc: 'Untuk pesta kecil, intimate dinner, atau bridal shower.', retention: '7 Hari (1 Minggu)', storage: '1 GB', shotsPerGuest: '15 foto / tamu', popular: false },
-    { name: 'Small', price: 'Rp 89.000', originalPrice: 'Rp 119.000', discountBadge: 'HEMAT 25%', guests: 'Hingga 35 tamu', desc: 'Cocok untuk gathering teman satu geng atau engagement.', retention: '14 Hari (2 Minggu)', storage: '2 GB', shotsPerGuest: '20 foto / tamu', popular: false },
-    { name: 'Party', price: 'Rp 179.000', originalPrice: 'Rp 219.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 75 tamu', desc: 'Ulang tahun, intimate wedding, atau acara kantor.', retention: '30 Hari (1 Bulan)', storage: '5 GB', shotsPerGuest: '25 foto / tamu', popular: false },
-    { name: 'Event', price: 'Rp 269.000', originalPrice: 'Rp 329.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 150 tamu', desc: 'Resepsi pernikahan sedang atau reuni akbar.', retention: '45 Hari (1.5 Bulan)', storage: '10 GB', shotsPerGuest: '30 foto / tamu', popular: false },
-    { name: 'Wedding', price: 'Rp 499.000', originalPrice: 'Rp 599.000', discountBadge: 'HEMAT 17%', guests: 'Hingga 300 tamu', desc: 'Pilihan paling populer untuk pesta pernikahan lengkap.', retention: '60 Hari (2 Bulan)', storage: '20 GB Cloud Storage', shotsPerGuest: '36 foto / tamu (1 Roll Film)', popular: true },
-    { name: 'Unlimited', price: 'Rp 999.000', originalPrice: 'Rp 1.199.000', discountBadge: 'HEMAT 17%', guests: 'Tamu tanpa batas', desc: 'Festival, konser, atau wedding akbar ribuan tamu.', retention: '90 Hari (3 Bulan)', storage: '40 GB Cloud Storage', shotsPerGuest: '99 foto / tamu (Tanpa Batas)', popular: false }
+    { name: 'Starter', price: 'Gratis', originalPrice: null, discountBadge: null, guests: 'Hingga 5 tamu', desc: 'Cocok untuk uji coba privat bersama keluarga dekat.', retention: '3 Hari', storage: '500 MB', shotsPerGuest: '10 foto / tamu', wishFeature: 'Pesan Suara 15s', popular: false, isFree: true },
+    { name: 'Mini', price: 'Rp 54.000', originalPrice: 'Rp 69.000', discountBadge: 'HEMAT 20%', guests: 'Hingga 15 tamu', desc: 'Untuk pesta kecil, intimate dinner, atau bridal shower.', retention: '7 Hari (1 Minggu)', storage: '1 GB', shotsPerGuest: '15 foto / tamu', wishFeature: 'Pesan Suara 15s', popular: false },
+    { name: 'Small', price: 'Rp 89.000', originalPrice: 'Rp 119.000', discountBadge: 'HEMAT 25%', guests: 'Hingga 35 tamu', desc: 'Cocok untuk gathering teman satu geng atau engagement.', retention: '14 Hari (2 Minggu)', storage: '2 GB', shotsPerGuest: '20 foto / tamu', wishFeature: 'Pesan Suara 15s', popular: false },
+    { name: 'Party', price: 'Rp 179.000', originalPrice: 'Rp 219.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 75 tamu', desc: 'Ulang tahun, intimate wedding, atau acara kantor.', retention: '30 Hari (1 Bulan)', storage: '5 GB', shotsPerGuest: '25 foto / tamu', wishFeature: 'Pesan Suara 15s', popular: false },
+    { name: 'Event', price: 'Rp 269.000', originalPrice: 'Rp 329.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 150 tamu', desc: 'Resepsi pernikahan sedang atau reuni akbar.', retention: '45 Hari (1.5 Bulan)', storage: '10 GB', shotsPerGuest: '30 foto / tamu', wishFeature: 'Pesan Suara 15s', popular: false },
+    { name: 'Wedding', price: 'Rp 499.000', originalPrice: 'Rp 599.000', discountBadge: 'HEMAT 17%', guests: 'Hingga 300 tamu', desc: 'Pilihan paling populer untuk pesta pernikahan lengkap.', retention: '60 Hari (2 Bulan)', storage: '20 GB Cloud Storage', shotsPerGuest: '36 foto / tamu (1 Roll Film)', wishFeature: '🎬 Video Ucapan 15s (Reels VHS)', isExclusiveWish: true, popular: true },
+    { name: 'Unlimited', price: 'Rp 999.000', originalPrice: 'Rp 1.199.000', discountBadge: 'HEMAT 17%', guests: 'Tamu tanpa batas', desc: 'Festival, konser, atau wedding akbar ribuan tamu.', retention: '90 Hari (3 Bulan)', storage: '40 GB Cloud Storage', shotsPerGuest: '99 foto / tamu (Tanpa Batas)', wishFeature: '🎬 Video Ucapan 15s (Reels VHS)', isExclusiveWish: true, popular: false }
   ];
 
   const faqs = [
@@ -1281,6 +1281,12 @@ export default function HomePage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={14} color="#C27803" />
                     <span>Preset film analog</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Check size={14} color={tier.isExclusiveWish ? "#FF0055" : "#C27803"} />
+                    <span style={{ fontWeight: tier.isExclusiveWish ? 700 : 400, color: tier.isExclusiveWish ? "#1D1D1F" : undefined }}>
+                      {tier.wishFeature}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={14} color="#C27803" />

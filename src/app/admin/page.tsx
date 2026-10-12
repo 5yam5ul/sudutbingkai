@@ -1867,16 +1867,31 @@ export default function SuperAdminDashboard() {
                 </div>
               </div>
 
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Custom Frame URL (PNG Transparan)</label>
-                <input
-                  type="text"
-                  placeholder="https://.../frame.png"
-                  value={eventToEdit.customFrameUrl || ''}
-                  onChange={(e) => setEventToEdit({ ...eventToEdit, customFrameUrl: e.target.value })}
-                  className="glass-input"
-                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
-                />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Fitur Ucapan Penutup Rol Tamu</label>
+                  <select
+                    value={eventToEdit.closingWishType || (eventToEdit.packageTier === 'wedding' || eventToEdit.packageTier === 'unlimited' ? 'video' : 'voice')}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, closingWishType: e.target.value as any })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="video">🎬 Video Ucapan 15 Detik (Eksklusif)</option>
+                    <option value="voice">🎙️ Rekaman Pesan Suara 15 Detik</option>
+                    <option value="none">🚫 Nonaktifkan (Tanpa Ucapan)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Custom Frame URL (PNG Transparan)</label>
+                  <input
+                    type="text"
+                    placeholder="https://.../frame.png"
+                    value={eventToEdit.customFrameUrl || ''}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, customFrameUrl: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                  />
+                </div>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
@@ -2004,6 +2019,20 @@ export default function SuperAdminDashboard() {
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Fitur Ucapan Penutup Rol Tamu</label>
+                <select
+                  value={newEventForm.closingWishType || (newEventForm.packageTier === 'wedding' || newEventForm.packageTier === 'unlimited' ? 'video' : 'voice')}
+                  onChange={(e) => setNewEventForm({ ...newEventForm, closingWishType: e.target.value as any })}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                >
+                  <option value="video">🎬 Video Ucapan 15 Detik (Eksklusif Wedding/VIP)</option>
+                  <option value="voice">🎙️ Rekaman Pesan Suara 15 Detik (Default Party/Event)</option>
+                  <option value="none">🚫 Nonaktifkan (Tanpa Ucapan)</option>
+                </select>
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>

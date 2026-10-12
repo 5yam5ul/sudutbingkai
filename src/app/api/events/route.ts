@@ -74,6 +74,7 @@ export async function POST(request: Request) {
       frameText: body.frameText,
       allowVoiceNote: body.allowVoiceNote !== false,
       allowGuestFrameToggle: body.allowGuestFrameToggle !== false,
+      closingWishType: body.closingWishType || (body.packageTier === 'wedding' || body.packageTier === 'unlimited' ? 'video' : 'voice'),
       createdAt: new Date().toISOString(),
       hostEmail: body.hostEmail,
       vendorId: body.vendorId,
@@ -120,6 +121,7 @@ export async function PATCH(request: Request) {
     if (body.frameText !== undefined) updates.frameText = body.frameText;
     if (body.allowVoiceNote !== undefined) updates.allowVoiceNote = body.allowVoiceNote;
     if (body.allowGuestFrameToggle !== undefined) updates.allowGuestFrameToggle = body.allowGuestFrameToggle;
+    if (body.closingWishType !== undefined) updates.closingWishType = body.closingWishType;
     if (body.coverUrl !== undefined) updates.coverUrl = body.coverUrl;
 
     const updated = await updateEvent(body.id, updates);

@@ -183,6 +183,7 @@ export interface EventData {
   revealMode: 'instant' | 'delayed';
   revealTime?: string; // ISO date string
   allowVoiceNote?: boolean;
+  closingWishType?: 'voice' | 'video' | 'none';
   allowGuestFrameToggle?: boolean;
   coverUrl?: string;
   createdAt: string;
@@ -200,6 +201,18 @@ export interface EventData {
     showLogoOnGallery?: boolean;
     showLogoOnFrame?: boolean;
   };
+}
+
+export interface VideoWishRecord {
+  id: string;
+  eventId: string;
+  guestName: string;
+  tableNumber?: string;
+  videoUrl: string;
+  thumbnailUrl?: string;
+  durationSeconds: number;
+  aspectRatio: '9:16' | '3:4';
+  timestamp: string;
 }
 
 export interface PhotoRecord {

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem } from './types';
+import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem, VideoWishRecord } from './types';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -11,7 +11,9 @@ const PAYOUTS_FILE = path.join(DATA_DIR, 'payouts.json');
 const VENDORS_FILE = path.join(DATA_DIR, 'vendors.json');
 const TESTIMONIALS_FILE = path.join(DATA_DIR, 'testimonials.json');
 const ADDONS_FILE = path.join(DATA_DIR, 'addons.json');
+const VIDEO_WISHES_FILE = path.join(DATA_DIR, 'video_wishes.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
+const VIDEOS_DIR = path.join(UPLOADS_DIR, 'videos');
 
 // Safe file system helpers for local mode / fallback
 function safeEnsureDir(dirPath: string) {
@@ -153,6 +155,7 @@ function rowToEvent(row: any): EventData {
     customFrameUrl: row.custom_frame_url || undefined,
     frameText: row.frame_text || undefined,
     allowVoiceNote: row.allow_voice_note,
+    closingWishType: row.closing_wish_type || (row.package_tier === 'wedding' || row.package_tier === 'unlimited' ? 'video' : 'voice'),
     allowGuestFrameToggle: row.allow_guest_frame_toggle,
     coverUrl: row.cover_url || undefined,
     createdAt: row.created_at,
@@ -185,6 +188,7 @@ function eventToRow(event: EventData) {
     custom_frame_url: event.customFrameUrl || null,
     frame_text: event.frameText || null,
     allow_voice_note: event.allowVoiceNote ?? true,
+    closing_wish_type: event.closingWishType || (event.packageTier === 'wedding' || event.packageTier === 'unlimited' ? 'video' : 'voice'),
     allow_guest_frame_toggle: event.allowGuestFrameToggle ?? true,
     cover_url: event.coverUrl || null,
     host_email: event.hostEmail || null,
@@ -352,6 +356,7 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
       if (updates.customFrameUrl !== undefined) dbUpdates.custom_frame_url = updates.customFrameUrl;
       if (updates.frameText !== undefined) dbUpdates.frame_text = updates.frameText;
       if (updates.allowVoiceNote !== undefined) dbUpdates.allow_voice_note = updates.allowVoiceNote;
+      if (updates.closingWishType !== undefined) dbUpdates.closing_wish_type = updates.closingWishType;
       if (updates.allowGuestFrameToggle !== undefined) dbUpdates.allow_guest_frame_toggle = updates.allowGuestFrameToggle;
       if (updates.coverUrl !== undefined) dbUpdates.cover_url = updates.coverUrl;
 
@@ -1641,6 +1646,111 @@ export async function deleteAddon(id: string): Promise<boolean> {
     return false;
   }
 }
+
+// ==========================================
+// VIDEO WISHES (15-SECOND VIDEO GUESTBOOK) ENGINE
+// ==========================================
+
+export async function saveVideoWish(wish: VideoWishRecord): Promise<VideoWishRecord> {
+  const newWish: VideoWishRecord = {
+    ...wish,
+    id: wish.id || `vw_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    timestamp: wish.timestamp || new Date().toISOString()
+  };
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('video_wishes').insert({
+        id: newWish.id,
+        event_id: newWish.eventId,
+        guest_name: newWish.guestName,
+        table_number: newWish.tableNumber || null,
+        video_url: newWish.videoUrl,
+        thumbnail_url: newWish.thumbnailUrl || null,
+        duration: newWish.durationSeconds || 15,
+        aspect_ratio: newWish.aspectRatio || '9:16',
+        timestamp: newWish.timestamp
+      });
+    } catch (e) {
+      console.warn('Supabase saveVideoWish fallback:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(VIDEO_WISHES_FILE) ? fs.readFileSync(VIDEO_WISHES_FILE, 'utf8') : '[]';
+    const list: VideoWishRecord[] = JSON.parse(raw);
+    list.unshift(newWish);
+    fs.writeFileSync(VIDEO_WISHES_FILE, JSON.stringify(list, null, 2), 'utf8');
+  } catch (e) {}
+
+  return newWish;
+}
+
+export async function getVideoWishes(eventId?: string): Promise<VideoWishRecord[]> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      let query = supabase.from('video_wishes').select('*').order('timestamp', { ascending: false });
+      if (eventId) {
+        query = query.eq('event_id', eventId);
+      }
+      const { data, error } = await query;
+      if (!error && data && data.length > 0) {
+        return data.map(row => ({
+          id: row.id,
+          eventId: row.event_id,
+          guestName: row.guest_name,
+          tableNumber: row.table_number || undefined,
+          videoUrl: row.video_url,
+          thumbnailUrl: row.thumbnail_url || undefined,
+          durationSeconds: Number(row.duration || 15),
+          aspectRatio: row.aspect_ratio || '9:16',
+          timestamp: row.timestamp
+        }));
+      }
+    } catch (e) {
+      console.warn('Supabase getVideoWishes fallback:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(VIDEO_WISHES_FILE) ? fs.readFileSync(VIDEO_WISHES_FILE, 'utf8') : '[]';
+    let list: VideoWishRecord[] = JSON.parse(raw);
+    if (eventId) {
+      list = list.filter(w => w.eventId === eventId);
+    }
+    return list;
+  } catch {
+    return [];
+  }
+}
+
+export async function deleteVideoWish(id: string): Promise<boolean> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('video_wishes').delete().eq('id', id);
+    } catch (e) {}
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(VIDEO_WISHES_FILE) ? fs.readFileSync(VIDEO_WISHES_FILE, 'utf8') : '[]';
+    let list: VideoWishRecord[] = JSON.parse(raw);
+    list = list.filter(w => w.id !== id);
+    fs.writeFileSync(VIDEO_WISHES_FILE, JSON.stringify(list, null, 2), 'utf8');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 
 
 

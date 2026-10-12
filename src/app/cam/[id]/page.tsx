@@ -26,6 +26,7 @@ import {
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
 import { addPhotoToOfflineQueue, flushOfflineQueue, getOfflinePhotosQueue } from '@/lib/offlineQueue';
 import ConfirmModal from '@/components/ConfirmModal';
+import VideoWishRecorder from '@/components/VideoWishRecorder';
 
 interface GuestPhoto {
   id: string;
@@ -150,6 +151,7 @@ export default function GuestCameraPage() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [hasSentVoice, setHasSentVoice] = useState(false);
+  const [hasSentVideoWish, setHasSentVideoWish] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -2142,97 +2144,136 @@ export default function GuestCameraPage() {
             Anda telah menghabiskan seluruh jepretan ({maxShots} foto). Semua foto telah aman tersimpan di roll pernikahan {event?.coupleOrHost || 'pengantin'}.
           </p>
 
-          {/* Point 6: Voice Note Penutup for Host */}
-          {event?.allowVoiceNote !== false && !hasSentVoice && (
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.15)',
-              borderRadius: '20px',
-              padding: '18px 20px',
-              maxWidth: '320px',
-              width: '100%',
-              marginBottom: '20px'
-            }}>
-              <span className="font-mono-film" style={{ color: '#D97706', fontSize: '10.5px', display: 'block', marginBottom: '4px' }}>
-                PESAN PENUTUP SPESIAL
-              </span>
-              <strong style={{ fontSize: '13px', color: '#FFFFFF', display: 'block', marginBottom: '8px' }}>
-                Tinggalkan Ucapan Suara untuk Pengantin
-              </strong>
+          {/* Conditional Outro Wish: Video Wish (Wedding / Unlimited) vs Voice Note (Party / Event) */}
+          {(() => {
+            const isVideoWishTier = event?.closingWishType === 'video' || event?.packageTier === 'wedding' || event?.packageTier === 'unlimited';
 
-              {!audioBlob ? (
-                <div>
-                  <button
-                    onClick={isRecording ? stopRecordingVoice : startRecordingVoice}
-                    style={{
-                      background: isRecording ? '#E11D48' : '#C27803',
-                      color: '#FFFFFF',
-                      border: 'none',
-                      borderRadius: '999px',
-                      padding: '10px 20px',
-                      fontSize: '12.5px',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      marginTop: '6px'
-                    }}
-                  >
-                    {isRecording ? <Square size={14} /> : <Mic size={14} />}
-                    <span>{isRecording ? `Merekam (${recordDuration}s / 15s) - Stop` : 'Tekan & Rekam Ucapan (15s)'}</span>
-                  </button>
-                  {isRecording && (
-                    <span style={{ fontSize: '11px', color: '#F87171', display: 'block', marginTop: '6px', animation: 'pulse 1s infinite' }}>
-                      ● Sedang merekam suara Anda...
+            if (isVideoWishTier) {
+              if (hasSentVideoWish) {
+                return (
+                  <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22C55E', borderRadius: '16px', padding: '14px 18px', maxWidth: '320px', width: '100%', marginBottom: '20px' }}>
+                    <span style={{ fontSize: '13px', color: '#86EFAC', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                      ✓ Video Ucapan 15 Detik Tersimpan!
                     </span>
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)' }}>
+                      Video kenangan Anda telah terkirim untuk dinikmati pengantin di galeri aftermovie spesial.
+                    </span>
+                  </div>
+                );
+              }
+
+              return (
+                <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                  <VideoWishRecorder
+                    eventId={eventId}
+                    guestName={guestName}
+                    tableNumber={tableNumber}
+                    coupleOrHost={event?.coupleOrHost || event?.title || 'Pengantin'}
+                    onSuccess={() => setHasSentVideoWish(true)}
+                    onSkipTextWish={() => setHasSentVideoWish(true)}
+                  />
+                </div>
+              );
+            }
+
+            // Fallback for Standard Voice Note Tier (Party / Event)
+            if (event?.allowVoiceNote !== false && !hasSentVoice) {
+              return (
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  borderRadius: '20px',
+                  padding: '18px 20px',
+                  maxWidth: '320px',
+                  width: '100%',
+                  marginBottom: '20px'
+                }}>
+                  <span className="font-mono-film" style={{ color: '#D97706', fontSize: '10.5px', display: 'block', marginBottom: '4px' }}>
+                    PESAN PENUTUP SPESIAL
+                  </span>
+                  <strong style={{ fontSize: '13px', color: '#FFFFFF', display: 'block', marginBottom: '8px' }}>
+                    Tinggalkan Ucapan Suara untuk Pengantin
+                  </strong>
+
+                  {!audioBlob ? (
+                    <div>
+                      <button
+                        onClick={isRecording ? stopRecordingVoice : startRecordingVoice}
+                        style={{
+                          background: isRecording ? '#E11D48' : '#C27803',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '999px',
+                          padding: '10px 20px',
+                          fontSize: '12.5px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          marginTop: '6px'
+                        }}
+                      >
+                        {isRecording ? <Square size={14} /> : <Mic size={14} />}
+                        <span>{isRecording ? `Merekam (${recordDuration}s / 15s) - Stop` : 'Tekan & Rekam Ucapan (15s)'}</span>
+                      </button>
+                      {isRecording && (
+                        <span style={{ fontSize: '11px', color: '#F87171', display: 'block', marginTop: '6px', animation: 'pulse 1s infinite' }}>
+                          ● Sedang merekam suara Anda...
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                      <span style={{ fontSize: '12px', color: '#4ADE80' }}>✓ Rekaman suara siap dikirim ({recordDuration}s)</span>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={submitVoiceNote}
+                          disabled={isUploadingAudio}
+                          style={{
+                            background: '#C27803',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '10px',
+                            padding: '8px 16px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {isUploadingAudio ? 'Mengirim...' : 'Kirim Pesan Suara'}
+                        </button>
+                        <button
+                          onClick={() => setAudioBlob(null)}
+                          style={{
+                            background: 'rgba(255, 255, 255, 0.15)',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            borderRadius: '10px',
+                            padding: '8px 12px',
+                            fontSize: '12px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Ulangi
+                        </button>
+                      </div>
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                  <span style={{ fontSize: '12px', color: '#4ADE80' }}>✓ Rekaman suara siap dikirim ({recordDuration}s)</span>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button
-                      onClick={submitVoiceNote}
-                      disabled={isUploadingAudio}
-                      style={{
-                        background: '#C27803',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '10px',
-                        padding: '8px 16px',
-                        fontSize: '12px',
-                        fontWeight: 600,
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {isUploadingAudio ? 'Mengirim...' : 'Kirim Pesan Suara'}
-                    </button>
-                    <button
-                      onClick={() => setAudioBlob(null)}
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.15)',
-                        color: '#FFFFFF',
-                        border: 'none',
-                        borderRadius: '10px',
-                        padding: '8px 12px',
-                        fontSize: '12px',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      Ulangi
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+              );
+            }
 
-          {hasSentVoice && (
-            <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22C55E', borderRadius: '14px', padding: '10px 16px', maxWidth: '320px', width: '100%', marginBottom: '20px' }}>
-              <span style={{ fontSize: '12px', color: '#86EFAC' }}>✓ Pesan suara Anda telah berhasil disimpan untuk pengantin!</span>
-            </div>
-          )}
+            if (hasSentVoice) {
+              return (
+                <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22C55E', borderRadius: '14px', padding: '10px 16px', maxWidth: '320px', width: '100%', marginBottom: '20px' }}>
+                  <span style={{ fontSize: '12px', color: '#86EFAC' }}>✓ Pesan suara Anda telah berhasil disimpan untuk pengantin!</span>
+                </div>
+              );
+            }
+
+            return null;
+          })()}
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', maxWidth: '280px' }}>
             <button

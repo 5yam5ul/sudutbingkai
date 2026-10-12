@@ -172,6 +172,7 @@ function CreateEventForm() {
           frameText,
           allowGuestFrameToggle,
           allowVoiceNote,
+          closingWishType: (selectedTier === 'wedding' || selectedTier === 'unlimited') ? 'video' : (allowVoiceNote ? 'voice' : 'none'),
           hostEmail: cleanEmail,
         }),
       });
@@ -1058,31 +1059,43 @@ function CreateEventForm() {
                 </div>
               )}
 
-              {/* Voice Note Toggle */}
+              {/* Closing Wish Toggle (Video Wish for Wedding/Unlimited, Voice Note for Party/Event) */}
               <div
                 style={{
-                  padding: '16px',
+                  padding: '16px 18px',
                   borderRadius: '16px',
-                  background: 'rgba(0,0,0,0.03)',
+                  background: (selectedTier === 'wedding' || selectedTier === 'unlimited') ? 'linear-gradient(135deg, rgba(194, 120, 3, 0.08), rgba(255, 0, 85, 0.05))' : 'rgba(0,0,0,0.03)',
+                  border: (selectedTier === 'wedding' || selectedTier === 'unlimited') ? '1px solid rgba(194, 120, 3, 0.3)' : '1px solid rgba(0,0,0,0.06)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  gap: '12px'
+                  gap: '14px'
                 }}
               >
                 <div>
-                  <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block', marginBottom: '2px' }}>
-                    Pesan Suara & Doa Tamu (Voice Note 15 Detik)
-                  </strong>
-                  <span style={{ fontSize: '12px', color: '#86868B' }}>
-                    Saat jatah foto tamu habis, izinkan mereka merekam ucapan selamat & pesan suara penutup untuk Anda.
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>
+                      {(selectedTier === 'wedding' || selectedTier === 'unlimited')
+                        ? '🎬 Video Ucapan Tamu 15 Detik (Otomatis Aktif)'
+                        : '🎙️ Pesan Suara & Doa Tamu (Voice Note 15 Detik)'}
+                    </strong>
+                    {(selectedTier === 'wedding' || selectedTier === 'unlimited') && (
+                      <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #FF0055, #7928CA)', color: '#FFF', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                        ★ EKSKLUSIF {activeTier.name.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  <span style={{ fontSize: '12px', color: '#6E6E73', lineHeight: 1.45, display: 'block' }}>
+                    {(selectedTier === 'wedding' || selectedTier === 'unlimited')
+                      ? 'Saat jatah rol foto tamu habis, kamera langsung beralih ke Camcorder VHS 15 detik untuk merekam pesan video live (menggantikan voice note biasa) yang otomatis tampil sebagai Reels video di album.'
+                      : 'Saat jatah foto tamu habis, izinkan mereka merekam ucapan selamat & pesan suara penutup 15 detik untuk Anda. (Fitur Video Ucapan tersedia di paket Wedding/Unlimited).'}
                   </span>
                 </div>
                 <input
                   type="checkbox"
                   checked={allowVoiceNote}
                   onChange={(e) => setAllowVoiceNote(e.target.checked)}
-                  style={{ width: '22px', height: '22px', accentColor: '#C27803', cursor: 'pointer' }}
+                  style={{ width: '22px', height: '22px', accentColor: '#C27803', cursor: 'pointer', flexShrink: 0 }}
                 />
               </div>
             </div>

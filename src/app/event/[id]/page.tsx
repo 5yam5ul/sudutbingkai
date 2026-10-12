@@ -7,17 +7,18 @@ import {
   Camera, Tv, Printer, Download, Share2, RefreshCw, ArrowLeft, 
   Image as ImageIcon, Users, Check, Lock, Unlock, Clock, Volume2, 
   Mic, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Film, CheckCircle2,
-  SlidersHorizontal
+  SlidersHorizontal, Play
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { hapticLightTap, hapticDialClick } from '@/lib/haptics';
-import { EventData, PhotoRecord } from '@/lib/types';
+import { EventData, PhotoRecord, VideoWishRecord } from '@/lib/types';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FRAME_TEMPLATES } from '@/lib/frames';
 import JSZip from 'jszip';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import SkeletonLoader from '@/components/SkeletonLoader';
+import VideoWishStoriesPlayer from '@/components/VideoWishStoriesPlayer';
 import { toast } from 'sonner';
 import { getClientSession } from '@/lib/auth';
 
@@ -70,6 +71,9 @@ export default function EventDashboardPage() {
   const [event, setEvent] = useState<EventData | null>(null);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [voiceNotes, setVoiceNotes] = useState<VoiceNoteRecord[]>([]);
+  const [videoWishes, setVideoWishes] = useState<VideoWishRecord[]>([]);
+  const [showStoriesPlayer, setShowStoriesPlayer] = useState(false);
+  const [activeStoryIndex, setActiveStoryIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
@@ -221,6 +225,17 @@ export default function EventDashboardPage() {
         }
       } catch (vErr) {
         console.warn('Voice notes not loaded:', vErr);
+      }
+
+      // Fetch video wishes (Premium Tiers)
+      try {
+        const resVideos = await fetch(`/api/video-wishes?eventId=${eventId}`);
+        const dataVideos = await resVideos.json();
+        if (dataVideos.success && dataVideos.videoWishes) {
+          setVideoWishes(dataVideos.videoWishes);
+        }
+      } catch (vidErr) {
+        console.warn('Video wishes not loaded:', vidErr);
       }
     } catch (err) {
       console.error(err);
@@ -920,6 +935,34 @@ export default function EventDashboardPage() {
                   <span>{isZipping ? zipProgress : 'Unduh ZIP Foto'}</span>
                 </button>
               )}
+
+              {videoWishes.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveStoryIndex(0);
+                    setShowStoriesPlayer(true);
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 22px',
+                    borderRadius: '999px',
+                    background: 'linear-gradient(135deg, #FF0055 0%, #7928CA 100%)',
+                    color: '#FFFFFF',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    boxShadow: '0 8px 24px rgba(255, 0, 85, 0.4)',
+                    border: 'none',
+                    transition: 'transform 0.2s ease'
+                  }}
+                >
+                  <Film size={16} />
+                  <span>🎬 Tonton Video Ucapan ({videoWishes.length})</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -1309,6 +1352,150 @@ export default function EventDashboardPage() {
             </div>
           )}
         </div>
+
+        {/* Guest Video Wishes Section (Premium Tiers) */}
+        {videoWishes.length > 0 && (
+          <div className="glass-card" style={{ padding: '32px', borderRadius: '28px', marginBottom: '32px', background: 'linear-gradient(145deg, #1C1917, #0F0E0D)', border: '1px solid rgba(229, 192, 123, 0.3)', color: '#FFFFFF' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #FF0055 0%, #7928CA 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 16px rgba(255, 0, 85, 0.4)' }}>
+                  <Film size={22} color="#FFFFFF" />
+                </div>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '10px', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#E5C07B', fontWeight: 700, background: 'rgba(229, 192, 123, 0.15)', padding: '2px 8px', borderRadius: '999px', border: '1px solid rgba(229, 192, 123, 0.3)' }}>
+                      Reels Tamu • Eksklusif
+                    </span>
+                  </div>
+                  <h3 className="font-display-serif" style={{ fontSize: '24px', fontWeight: 700, color: '#FFFFFF', margin: 0 }}>
+                    Video Ucapan 15 Detik <em>({videoWishes.length})</em>
+                  </h3>
+                  <p style={{ color: '#A8A29E', fontSize: '13px', marginTop: '4px', margin: 0 }}>
+                    Momen ucapan langsung penuh tawa dan haru dari sahabat & kerabat.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveStoryIndex(0);
+                  setShowStoriesPlayer(true);
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 22px',
+                  borderRadius: '999px',
+                  background: 'linear-gradient(135deg, #E5C07B 0%, #C27803 100%)',
+                  color: '#161412',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 18px rgba(194, 120, 3, 0.35)'
+                }}
+              >
+                <Play size={14} fill="#161412" />
+                <span>Putar Semua Reels</span>
+              </button>
+            </div>
+
+            {/* Video Cards Grid */}
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+              gap: '16px'
+            }}>
+              {videoWishes.map((wish, index) => (
+                <div
+                  key={wish.id}
+                  onClick={() => {
+                    setActiveStoryIndex(index);
+                    setShowStoriesPlayer(true);
+                  }}
+                  style={{
+                    position: 'relative',
+                    aspectRatio: '9/16',
+                    borderRadius: '20px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    backgroundColor: '#000000',
+                    transition: 'transform 0.2s ease, box-shadow 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-4px)';
+                    e.currentTarget.style.boxShadow = '0 12px 28px rgba(0,0,0,0.5)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  {/* Thumbnail or Video Poster */}
+                  {wish.thumbnailUrl ? (
+                    <img
+                      src={wish.thumbnailUrl}
+                      alt={wish.guestName}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <video
+                      src={wish.videoUrl}
+                      muted
+                      playsInline
+                      preload="metadata"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.8 }}
+                    />
+                  )}
+
+                  {/* Gradient Shadow Overlay */}
+                  <div style={{
+                    position: 'absolute',
+                    inset: 0,
+                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.1) 50%, rgba(0,0,0,0.4) 100%)'
+                  }} />
+
+                  {/* Top Badge: Duration */}
+                  <div style={{ position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', padding: '3px 8px', borderRadius: '999px', fontSize: '11px', color: '#FFF', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span>{wish.durationSeconds ? `${wish.durationSeconds}s` : '15s'}</span>
+                  </div>
+
+                  {/* Play Button Icon Center */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)',
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.25)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255, 255, 255, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <Play size={18} fill="#FFFFFF" color="#FFFFFF" style={{ marginLeft: '2px' }} />
+                  </div>
+
+                  {/* Bottom Info: Guest Name & Time */}
+                  <div style={{ position: 'absolute', bottom: '12px', left: '12px', right: '12px' }}>
+                    <strong style={{ fontSize: '13.5px', color: '#FFFFFF', display: 'block', textShadow: '0 2px 4px rgba(0,0,0,0.8)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {wish.guestName}
+                    </strong>
+                    <span style={{ fontSize: '11px', color: '#E5C07B', opacity: 0.9 }}>
+                      {new Date(wish.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Guest Voice Notes Section */}
         {voiceNotes.length > 0 && (
@@ -1965,6 +2152,16 @@ export default function EventDashboardPage() {
         onConfirm={confirmModal.onConfirm}
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Video Wish Stories Reels Viewer */}
+      {showStoriesPlayer && videoWishes.length > 0 && (
+        <VideoWishStoriesPlayer
+          wishes={videoWishes}
+          initialIndex={activeStoryIndex}
+          coupleOrHost={event?.coupleOrHost || event?.title || 'Pengantin'}
+          onClose={() => setShowStoriesPlayer(false)}
+        />
+      )}
     </div>
   );
 }
