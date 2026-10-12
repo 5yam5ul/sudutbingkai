@@ -266,6 +266,7 @@ export interface UserAccount {
   role: 'host' | 'vendor' | 'admin';
   companyName?: string;
   phone?: string;
+  city?: string;
   instagram?: string;
   logoUrl?: string;
   tier?: 'starter' | 'pro' | 'agency';

@@ -134,6 +134,7 @@ export default function GuestCameraPage() {
 
   const [shotCount, setShotCount] = useState(0);
   const [maxShots, setMaxShots] = useState(20);
+  const remaining = Math.max(0, maxShots - shotCount);
   const [isCapturing, setIsCapturing] = useState(false);
   const [flashTrigger, setFlashTrigger] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
@@ -268,7 +269,8 @@ export default function GuestCameraPage() {
             }
 
             // Sync authentic shot count and photos directly from backend database
-            const guestIdentifier = canonicalName || savedName || '';
+            const urlSavedName = typeof window !== 'undefined' ? (localStorage.getItem(`sb_guest_${eventId}`) || localStorage.getItem('sb_guest_session')) : null;
+            const guestIdentifier = canonicalName || urlSavedName || '';
             const queryParams = new URLSearchParams({
               eventId: canonicalId,
               sessionId: activeSession
@@ -1094,7 +1096,6 @@ export default function GuestCameraPage() {
         : [event?.preset || 'portra'])
     : [event?.preset || 'portra'];
   const presetInfo = FILM_PRESETS[selectedPreset] || (event ? FILM_PRESETS[event.preset] : FILM_PRESETS.portra) || FILM_PRESETS.portra;
-  const remaining = Math.max(0, maxShots - shotCount);
   const activeFrameTemplate = event?.frameId ? FRAME_TEMPLATES[event.frameId] : FRAME_TEMPLATES['minimal-gold'];
 
   // Viewfinder inner component (Dedicated 3-Tier Analog Camera Chassis)

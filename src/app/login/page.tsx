@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   ArrowLeft, ArrowRight, UserPlus, LogIn, 
   AlertCircle, Loader2, Sparkles, Heart, Briefcase,
-  Building2, Phone, Instagram, MapPin, ShieldCheck, LogOut, CheckCircle2
+  Building2, Phone, MapPin, ShieldCheck, LogOut, CheckCircle2
 } from 'lucide-react';
 import { authenticateUser, setClientSession, getClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';

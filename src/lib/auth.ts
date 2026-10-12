@@ -88,7 +88,7 @@ export function authenticateUser(email: string, pass: string, role?: 'host' | 'v
   }
 
   // Allow custom host / vendor login if user enters their own valid email and password
-  if (cleanEmail && cleanPass.length >= 4 && role !== 'admin') {
+  if (cleanEmail && cleanPass.length >= 4 && (role as string) !== 'admin') {
     return {
       id: 'usr_' + Math.random().toString(36).substring(2, 9),
       name: cleanEmail.split('@')[0].toUpperCase(),
