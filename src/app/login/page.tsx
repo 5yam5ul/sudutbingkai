@@ -188,25 +188,6 @@ function LoginFormContent() {
     }
   };
 
-  // Quick 1-Click Demo Login for Vendor Testing
-  const handleQuickDemoVendor = () => {
-    setEmail('vendor@sudutbingkai.id');
-    setPassword('vendor123');
-    setErrorMsg('');
-    setLoading(true);
-
-    setTimeout(() => {
-      const vendorUser = authenticateUser('vendor@sudutbingkai.id', 'vendor123', 'vendor');
-      if (vendorUser) {
-        setClientSession(vendorUser);
-        toast.success('Masuk sebagai Mitra Resmi (Vows & Co. Wedding Planner)');
-        router.push('/vendor');
-      } else {
-        setErrorMsg('Gagal memuat akun mitra demo.');
-      }
-      setLoading(false);
-    }, 300);
-  };
 
   // Handle Form Submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -621,33 +602,6 @@ function LoginFormContent() {
             </button>
           </div>
 
-          {/* Quick Demo Shortcut for Vendor (Tester Friendly) */}
-          {portalRole === 'vendor' && authMode === 'login' && (
-            <div style={{ marginBottom: '16px' }}>
-              <button
-                type="button"
-                onClick={handleQuickDemoVendor}
-                style={{
-                  width: '100%',
-                  padding: '9px 14px',
-                  borderRadius: '10px',
-                  background: 'rgba(194, 120, 3, 0.08)',
-                  border: '1px dashed rgba(194, 120, 3, 0.4)',
-                  color: '#C27803',
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-              >
-                <Sparkles size={14} />
-                <span>⚡ Coba Akun Demo Mitra (Vows & Co. Wedding Planner)</span>
-              </button>
-            </div>
-          )}
 
           {/* GOOGLE SIGN-IN BUTTON (Host Only) */}
           {portalRole === 'host' && (
