@@ -64,6 +64,21 @@ const slideVariants = {
   })
 };
 
+const formatIndonesianDate = (dateStr?: string) => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
+    });
+  } catch {
+    return dateStr;
+  }
+};
+
 export default function EventDashboardPage() {
   const params = useParams();
   const eventId = params.id as string;
@@ -647,18 +662,18 @@ export default function EventDashboardPage() {
         padding: 'calc(12px + env(safe-area-inset-top, 0px)) 20px 12px',
         borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
       }}>
-        <div style={{ maxWidth: '1160px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <Link href="/" style={{ textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ maxWidth: '1160px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <Link href="/" style={{ textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px' }}>
               <ArrowLeft size={16} />
               <img 
                 src="/sudut-bingkai-logo.png" 
                 alt="Sudut Bingkai" 
-                style={{ height: '30px', width: 'auto', objectFit: 'contain', display: 'block' }} 
+                style={{ height: '26px', width: 'auto', objectFit: 'contain', display: 'block' }} 
               />
             </Link>
-            <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
-            <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
+            <span className="desktop-only" style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
+            <span className="desktop-only font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
               GALERI BERSAMA TAMU
             </span>
           </div>
@@ -853,7 +868,7 @@ export default function EventDashboardPage() {
               {event?.eventDate && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                   <span>📅</span>
-                  <strong style={{ color: '#FFFFFF' }}>{event.eventDate}</strong>
+                  <strong style={{ color: '#FFFFFF' }}>{formatIndonesianDate(event.eventDate)}</strong>
                 </span>
               )}
               {event?.location && (

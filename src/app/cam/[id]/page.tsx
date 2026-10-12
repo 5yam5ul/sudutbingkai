@@ -132,8 +132,24 @@ export default function GuestCameraPage() {
   // Point 5: Offline queue status
   const [offlineCount, setOfflineCount] = useState(0);
 
-  const [shotCount, setShotCount] = useState(0);
-  const [maxShots, setMaxShots] = useState(20);
+  const [shotCount, setShotCount] = useState<number>(() => {
+    if (typeof window === 'undefined') return 0;
+    try {
+      const c = localStorage.getItem(`sb_shot_count_${eventId}`) || localStorage.getItem('sb_shot_count_global');
+      return c ? parseInt(c, 10) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  });
+  const [maxShots, setMaxShots] = useState<number>(() => {
+    if (typeof window === 'undefined') return 20;
+    try {
+      const m = localStorage.getItem(`sb_max_shots_${eventId}`);
+      return m ? parseInt(m, 10) || 20 : 20;
+    } catch {
+      return 20;
+    }
+  });
   const remaining = Math.max(0, maxShots - shotCount);
   const [isCapturing, setIsCapturing] = useState(false);
   const [flashTrigger, setFlashTrigger] = useState(false);
@@ -332,7 +348,7 @@ export default function GuestCameraPage() {
                       localStorage.setItem(`sb_shot_count_${canonicalId}`, String(verifiedCount));
                       localStorage.setItem(`sb_shot_count_${eventId}`, String(verifiedCount));
                       localStorage.setItem('sb_shot_count_global', String(verifiedCount));
-                      const persistentShots = serverPhotos.slice(-6);
+                      const persistentShots = serverPhotos.slice(-50);
                       localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
                       if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(persistentShots));
                     } catch {}
@@ -419,12 +435,36 @@ export default function GuestCameraPage() {
     }
   };
 
-  const startCamera = async () => {
-    setCameraError(null);
+  const stopCameraHardware = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
+      try {
+        const track = streamRef.current.getVideoTracks()[0];
+        // @ts-ignore
+        track?.applyConstraints?.({ advanced: [{ torch: false }] }).catch(() => {});
+      } catch {}
+      streamRef.current.getTracks().forEach(t => {
+        try { t.stop(); } catch {}
+      });
       streamRef.current = null;
     }
+    if (videoRef.current && videoRef.current.srcObject) {
+      try {
+        const s = videoRef.current.srcObject as MediaStream;
+        s.getTracks().forEach(t => {
+          try { t.stop(); } catch {}
+        });
+        videoRef.current.srcObject = null;
+      } catch {}
+    }
+  };
+
+  const startCamera = async () => {
+    if (remaining === 0) {
+      stopCameraHardware();
+      return;
+    }
+    setCameraError(null);
+    stopCameraHardware();
 
     try {
       const constraints: MediaStreamConstraints = {
@@ -437,6 +477,12 @@ export default function GuestCameraPage() {
       };
 
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      if (remaining === 0) {
+        stream.getTracks().forEach(t => {
+          try { t.stop(); } catch {}
+        });
+        return;
+      }
       streamRef.current = stream;
       attachStreamToVideo(videoRef.current, stream);
 
@@ -462,6 +508,12 @@ export default function GuestCameraPage() {
     } catch (err) {
       try {
         const fallback = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        if (remaining === 0) {
+          fallback.getTracks().forEach(t => {
+            try { t.stop(); } catch {}
+          });
+          return;
+        }
         streamRef.current = fallback;
         attachStreamToVideo(videoRef.current, fallback);
       } catch (fErr) {
@@ -473,19 +525,11 @@ export default function GuestCameraPage() {
   useEffect(() => {
     if (hasEnteredName && remaining > 0) {
       startCamera();
-    } else if (remaining === 0 && streamRef.current) {
-      streamRef.current.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
+    } else {
+      stopCameraHardware();
     }
     return () => {
-      if (streamRef.current) {
-        try {
-          const track = streamRef.current.getVideoTracks()[0];
-          // @ts-ignore
-          track?.applyConstraints?.({ advanced: [{ torch: false }] }).catch(() => {});
-        } catch {}
-        streamRef.current.getTracks().forEach(t => t.stop());
-      }
+      stopCameraHardware();
     };
   }, [hasEnteredName, facingMode, remaining]);
 
@@ -690,6 +734,9 @@ export default function GuestCameraPage() {
       const highResDataUrl = canvas.toDataURL('image/jpeg', 0.92);
       const newShotNum = shotCount + 1;
       setShotCount(newShotNum);
+      if (newShotNum >= maxShots) {
+        stopCameraHardware();
+      }
 
       // Lightweight persistence that NEVER overflows 5MB quota
       const canonicalId = event?.id || eventId;
@@ -699,10 +746,10 @@ export default function GuestCameraPage() {
         localStorage.setItem('sb_shot_count_global', String(newShotNum));
       } catch {}
 
-      // Create a sharp, balanced storage version (960px width, 0.84 quality, ~80KB)
+      // Create a sharp, balanced storage version (720px width, 0.80 quality, ~45KB)
       // This guarantees safe localStorage persistence across page reloads without running out of quota!
       const storageCanvas = document.createElement('canvas');
-      const storageWidth = aspectRatio === '9:16' ? 720 : 960;
+      const storageWidth = aspectRatio === '9:16' ? 540 : 720;
       storageCanvas.width = storageWidth;
       storageCanvas.height = Math.round(storageWidth / targetAspect);
       const sCtx = storageCanvas.getContext('2d');
@@ -711,7 +758,7 @@ export default function GuestCameraPage() {
         sCtx.imageSmoothingQuality = 'high';
         sCtx.drawImage(canvas, 0, 0, storageCanvas.width, storageCanvas.height);
       }
-      const storageBase64 = storageCanvas.toDataURL('image/jpeg', 0.84);
+      const storageBase64 = storageCanvas.toDataURL('image/jpeg', 0.80);
       setLastShotThumb(storageBase64);
 
       // Save photo locally to guest personal roll with the FULL high-res image
@@ -730,7 +777,7 @@ export default function GuestCameraPage() {
 
       // Store sharp storageBase64 in localStorage so reloads don't blow up 5MB quota
       try {
-        const persistentShots = updatedShots.slice(-6).map(p => ({
+        const persistentShots = updatedShots.slice(-50).map(p => ({
           ...p,
           imageData: p.id === newGuestPhoto.id ? storageBase64 : (p.imageData && p.imageData.length < 150000 ? p.imageData : storageBase64)
         }));
@@ -868,8 +915,8 @@ export default function GuestCameraPage() {
           localStorage.setItem(`sb_shot_count_${canonicalId}`, String(updated.length));
           localStorage.setItem(`sb_shot_count_${eventId}`, String(updated.length));
           localStorage.setItem('sb_shot_count_global', String(updated.length));
-          localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updated.slice(-6)));
-          if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(updated.slice(-6)));
+          localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updated.slice(-50)));
+          if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(updated.slice(-50)));
         } catch (e) {
           console.error(e);
         }
@@ -1968,6 +2015,8 @@ export default function GuestCameraPage() {
                   gridTemplateColumns: 'repeat(auto-fill, minmax(135px, 1fr))',
                   gap: '12px',
                   overflowY: 'auto',
+                  flex: 1,
+                  minHeight: 0,
                   paddingBottom: '20px'
                 }}>
                   {myPhotos.map((photo) => (
@@ -1981,13 +2030,25 @@ export default function GuestCameraPage() {
                         border: '1px solid rgba(0,0,0,0.08)',
                         display: 'flex',
                         flexDirection: 'column',
+                        minHeight: 'fit-content',
                         cursor: 'pointer',
                         boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
                         position: 'relative'
                       }}
                     >
-                      <div style={{ position: 'relative', width: '100%', aspectRatio: photo.aspectRatio === '1:1' ? '1/1' : photo.aspectRatio === '9:16' ? '9/16' : '3/4', background: '#000' }}>
-                        <img src={photo.imageData} alt={`Jepretan #${photo.shotNumber}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <div style={{
+                        position: 'relative',
+                        width: '100%',
+                        aspectRatio: photo.aspectRatio === '1:1' ? '1 / 1' : photo.aspectRatio === '9:16' ? '9 / 16' : '3 / 4',
+                        flexShrink: 0,
+                        background: '#141311',
+                        overflow: 'hidden'
+                      }}>
+                        <img
+                          src={photo.imageData}
+                          alt={`Jepretan #${photo.shotNumber}`}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        />
                         <div style={{
                           position: 'absolute',
                           bottom: '6px',
@@ -2109,7 +2170,7 @@ export default function GuestCameraPage() {
                     className="btn-apple-black"
                     style={{ flex: 1, padding: '11px', fontSize: '13px', borderRadius: '12px' }}
                   >
-                    <span>Kembali Motret ({remaining} Sisa)</span>
+                    <span>{remaining > 0 ? `Lanjut Motret (${remaining} Sisa)` : 'Tutup Rol'}</span>
                   </button>
 
                   <Link
@@ -2118,7 +2179,7 @@ export default function GuestCameraPage() {
                     style={{ padding: '11px 16px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <Eye size={14} />
-                    <span>Galeri Bersama</span>
+                    <span>Jelajahi Galeri</span>
                   </Link>
                 </div>
 
@@ -2452,14 +2513,14 @@ export default function GuestCameraPage() {
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'flex-start',
+          justifyContent: 'center',
           padding: 'calc(max(20px, env(safe-area-inset-top, 0px)) + 12px) 20px calc(max(20px, env(safe-area-inset-bottom, 0px)) + 16px)',
           textAlign: 'center',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
           color: '#FFFFFF'
         }}>
-          <div style={{ width: '100%', maxWidth: '360px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div style={{ width: '100%', maxWidth: '360px', margin: 'auto 0', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {/* Top Brand & Quota Badge (Clean unified pill, clearly visible) */}
             <div style={{
               display: 'inline-flex',
@@ -2497,7 +2558,7 @@ export default function GuestCameraPage() {
             </h1>
 
             <p style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '13px', lineHeight: 1.5, maxWidth: '320px', margin: '0 auto 14px' }}>
-              {shotCount} fotomu kini tersimpan abadi di album kenangan <strong>{event?.coupleOrHost || event?.title || 'tuan rumah'}</strong>.
+              {Math.max(shotCount, myPhotos.length)} fotomu kini tersimpan abadi di album kenangan <strong>{event?.coupleOrHost || event?.title || 'tuan rumah'}</strong>.
             </p>
 
             {/* Subtle Voice/Video Status or Recorder */}
@@ -2731,7 +2792,7 @@ export default function GuestCameraPage() {
                 }}
               >
                 <Eye size={16} />
-                <span>Buka & Simpan Foto Saya ({myPhotos.length})</span>
+                <span>Buka & Simpan Foto Saya ({Math.max(shotCount, myPhotos.length)})</span>
               </button>
 
               <Link
