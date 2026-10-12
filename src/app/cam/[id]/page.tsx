@@ -267,28 +267,29 @@ export default function GuestCameraPage() {
               .then(res => res.json())
               .then(pData => {
                 if (pData.success && Array.isArray(pData.photos)) {
-                  const verifiedCount = pData.photos.length;
+                  const serverPhotos: GuestPhoto[] = pData.photos.map((p: any, idx: number) => ({
+                    id: p.id,
+                    shotNumber: p.shotNumber || (idx + 1),
+                    imageData: p.imageData,
+                    timestamp: new Date(p.timestamp || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                    caption: p.caption || '',
+                    aspectRatio: p.aspectRatio || '3:4',
+                    frameId: p.frameId || 'none'
+                  }));
+
+                  const verifiedCount = serverPhotos.length;
                   if (verifiedCount > 0) {
                     setShotCount(verifiedCount);
+                    setMyPhotos(serverPhotos);
+                    setLastShotThumb(serverPhotos[serverPhotos.length - 1].imageData);
                     try {
                       localStorage.setItem(`sb_shot_count_${canonicalId}`, String(verifiedCount));
                       localStorage.setItem(`sb_shot_count_${eventId}`, String(verifiedCount));
                       localStorage.setItem('sb_shot_count_global', String(verifiedCount));
+                      const persistentShots = serverPhotos.slice(-6);
+                      localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
+                      if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(persistentShots));
                     } catch {}
-
-                    const serverPhotos: GuestPhoto[] = pData.photos.map((p: any, idx: number) => ({
-                      id: p.id,
-                      shotNumber: p.shotNumber || (idx + 1),
-                      imageData: p.imageData,
-                      timestamp: new Date(p.timestamp || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-                      caption: p.caption || '',
-                      aspectRatio: p.aspectRatio || '3:4',
-                      frameId: p.frameId || 'none'
-                    }));
-                    setMyPhotos(serverPhotos);
-                    if (serverPhotos.length > 0) {
-                      setLastShotThumb(serverPhotos[serverPhotos.length - 1].imageData);
-                    }
                   }
                 }
               })
@@ -705,10 +706,36 @@ export default function GuestCameraPage() {
         })
         .then(res => res.json())
         .then(data => {
-          if (data.success && data.photo?.imageData) {
-            setMyPhotos(prev => prev.map(p => p.id === newGuestPhoto.id ? { ...p, imageData: data.photo.imageData } : p));
+          if (data.success && data.photo) {
+            const confirmedUrl = data.photo.imageData || highResDataUrl;
+            const confirmedId = data.photo.id || newGuestPhoto.id;
+            setMyPhotos(prev => prev.map(p => p.id === newGuestPhoto.id ? { ...p, id: confirmedId, imageData: confirmedUrl } : p));
+            // Update local storage representation
+            try {
+              const currentLocal = JSON.parse(localStorage.getItem(`sb_my_shots_${eventId}`) || '[]');
+              const updatedLocal = currentLocal.map((p: any) => p.id === newGuestPhoto.id ? { ...p, id: confirmedId, imageData: storageBase64 } : p);
+              localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updatedLocal));
+              if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(updatedLocal));
+            } catch {}
           } else if (!data.success && data.error) {
             toast.error(data.error);
+            // Revert state so UI doesn't falsely indicate photo was kept when server denied it
+            setShotCount(prev => Math.max(0, prev - 1));
+            setMyPhotos(prev => {
+              const reverted = prev.filter(p => p.id !== newGuestPhoto.id);
+              if (reverted.length > 0) {
+                setLastShotThumb(reverted[reverted.length - 1].imageData);
+              } else {
+                setLastShotThumb(null);
+              }
+              try {
+                localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(reverted));
+                if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(reverted));
+                localStorage.setItem(`sb_shot_count_${eventId}`, String(reverted.length));
+                if (event?.id) localStorage.setItem(`sb_shot_count_${canonicalId}`, String(reverted.length));
+              } catch {}
+              return reverted;
+            });
           }
         })
         .catch(async () => {
@@ -765,6 +792,9 @@ export default function GuestCameraPage() {
           if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(updated.slice(-6)));
         } catch (e) {
           console.error(e);
+        }
+        if (!isDemo && photoId) {
+          fetch(`/api/photos?id=${photoId}`, { method: 'DELETE' }).catch(err => console.warn('Delete server photo err:', err));
         }
         setPreviewPhoto(null);
         toast.success('Foto berhasil dihapus dari Rol Film Anda.');

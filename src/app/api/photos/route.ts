@@ -24,9 +24,12 @@ export async function GET(request: Request) {
     if (sessionId || (guestName && guestName.trim() !== 'Tamu')) {
       photos = photos.filter(p => 
         (sessionId && p.sessionId === sessionId) ||
-        (guestName && guestName.trim() !== 'Tamu' && p.guestName.toLowerCase() === guestName.trim().toLowerCase())
+        (guestName && guestName.trim() !== 'Tamu' && p.guestName && p.guestName.toLowerCase() === guestName.trim().toLowerCase())
       );
     }
+
+    // Chronological ascending order so the personal roll displays photos correctly in sequence
+    photos.sort((a, b) => (a.shotNumber || 0) - (b.shotNumber || 0) || new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
     return NextResponse.json({ success: true, photos, count: photos.length });
   } catch (err: unknown) {
@@ -66,11 +69,17 @@ export async function POST(request: Request) {
     // 2. Query existing photos in database for this event
     const existingPhotos = await getAllPhotos(event.id, true);
 
-    // Count shots previously taken by this session/guest
-    const guestExistingShots = existingPhotos.filter(p => 
-      (body.sessionId && p.sessionId === body.sessionId) || 
-      (body.guestName && body.guestName !== 'Tamu' && p.guestName.toLowerCase() === body.guestName.trim().toLowerCase())
-    );
+    // Count shots previously taken by this session or guest name
+    const guestExistingShots = existingPhotos.filter(p => {
+      const matchSession = body.sessionId && p.sessionId === body.sessionId;
+      const matchName = body.guestName && 
+        body.guestName.trim().toLowerCase() !== 'tamu' && 
+        body.guestName.trim().toLowerCase() !== 'tamu undangan' &&
+        p.guestName && 
+        p.guestName.trim().toLowerCase() === body.guestName.trim().toLowerCase();
+      return matchSession || matchName;
+    });
+
     if (guestExistingShots.length >= allowedShotsPerGuest) {
       return NextResponse.json({
         success: false,
@@ -80,9 +89,44 @@ export async function POST(request: Request) {
 
     // 3. Strict total event capacity check (maxGuests + additionalPax)
     const maxCapacity = (event.maxGuests || 5) + (event.additionalPax || 0);
-    const uniqueGuests = new Set(existingPhotos.map(p => p.sessionId || p.guestName));
-    const isNewGuest = !uniqueGuests.has(body.sessionId || body.guestName);
-    if (isNewGuest && uniqueGuests.size >= maxCapacity) {
+    const maxTotalPhotos = maxCapacity * allowedShotsPerGuest;
+    if (existingPhotos.length >= maxTotalPhotos) {
+      return NextResponse.json({
+        success: false,
+        error: `Total kuota foto untuk acara ini telah penuh (${maxTotalPhotos} foto). Silakan hubungi penyelenggara acara.`
+      }, { status: 403 });
+    }
+
+    // Deduplicate guest identities properly
+    const uniqueGuestKeys = new Set<string>();
+    let legacyAnonymousCount = 0;
+
+    for (const p of existingPhotos) {
+      const pName = (p.guestName || '').trim().toLowerCase();
+      const isNamed = pName && pName !== 'tamu' && pName !== 'tamu undangan';
+      if (isNamed) {
+        uniqueGuestKeys.add(`name:${pName}`);
+      } else if (p.sessionId && !p.sessionId.startsWith('session-')) {
+        // Modern persistent guest session
+        uniqueGuestKeys.add(`sess:${p.sessionId}`);
+      } else {
+        // Legacy timestamp random session
+        legacyAnonymousCount++;
+      }
+    }
+
+    // Group any legacy random sessions together as at most 1 test session
+    const effectiveGuestCount = uniqueGuestKeys.size + (legacyAnonymousCount > 0 ? 1 : 0);
+
+    const reqName = (body.guestName || '').trim().toLowerCase();
+    const isReqNamed = reqName && reqName !== 'tamu' && reqName !== 'tamu undangan';
+    const isKnownGuest = Boolean(
+      (isReqNamed && uniqueGuestKeys.has(`name:${reqName}`)) ||
+      (body.sessionId && uniqueGuestKeys.has(`sess:${body.sessionId}`)) ||
+      (legacyAnonymousCount > 0 && effectiveGuestCount <= 1)
+    );
+
+    if (!isKnownGuest && effectiveGuestCount >= maxCapacity) {
       return NextResponse.json({
         success: false,
         error: `Kapasitas tamu untuk acara ini telah penuh (${maxCapacity} tamu). Silakan hubungi penyelenggara acara.`
