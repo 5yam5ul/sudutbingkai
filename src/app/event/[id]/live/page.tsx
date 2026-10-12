@@ -76,6 +76,16 @@ export default function LiveProjectorWallPage() {
     return () => clearInterval(slideTimer);
   }, [photos.length, cycleSpeed]);
 
+  // Auto-scroll active photo card into view in Mosaic Mode
+  useEffect(() => {
+    if (displayMode === 'mosaic' && photos.length > 0) {
+      const el = document.getElementById(`mosaic-card-${currentIndex}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+      }
+    }
+  }, [currentIndex, displayMode, photos.length]);
+
   // Generate Corner QR Code
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -138,11 +148,12 @@ export default function LiveProjectorWallPage() {
       display: 'flex',
       flexDirection: 'column',
       position: 'relative',
-      overflow: 'hidden'
+      overflowX: 'hidden',
+      overflowY: displayMode === 'mosaic' ? 'auto' : 'hidden'
     }}>
       {/* Top Bar for Venue Operator (Hover to see) */}
       <header style={{
-        position: 'absolute',
+        position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
@@ -150,7 +161,8 @@ export default function LiveProjectorWallPage() {
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        background: 'linear-gradient(to bottom, rgba(0,0,0,0.85), transparent)',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 70%, transparent 100%)',
+        backdropFilter: 'blur(8px)',
         zIndex: 50,
         gap: '12px',
         flexWrap: 'wrap'
@@ -264,7 +276,17 @@ export default function LiveProjectorWallPage() {
       </header>
 
       {/* Main Slideshow Stage */}
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '70px 20px 40px', position: 'relative' }}>
+      <main style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: displayMode === 'mosaic' ? 'flex-start' : 'center',
+        padding: '85px 24px 80px',
+        position: 'relative',
+        width: '100%',
+        boxSizing: 'border-box'
+      }}>
         {isDelayedAndLocked ? (
           /* RETRO AMBIENT COUNTDOWN CURTAIN (ANTI-LEAK SHIELD) */
           <div style={{
@@ -607,22 +629,25 @@ export default function LiveProjectorWallPage() {
           /* MODE 4: MOSAIC WALL (Multi-photo Masonry Grid) */
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
             gap: '20px',
-            maxWidth: '1200px',
-            width: '100%'
+            maxWidth: '1440px',
+            width: '100%',
+            paddingBottom: '90px'
           }}>
-            {photos.slice(0, 6).map((p, idx) => (
+            {photos.map((p, idx) => (
               <div
-                key={p.id}
+                key={p.id || idx}
+                id={`mosaic-card-${idx}`}
                 style={{
                   background: '#FAF8F5',
-                  padding: '12px 12px 24px',
+                  padding: '12px 12px 20px',
                   borderRadius: '18px',
-                  boxShadow: '0 16px 36px rgba(0,0,0,0.6)',
-                  border: idx === currentIndex % 6 ? '2px solid #C27803' : '1px solid rgba(255,255,255,0.1)',
-                  transform: idx === currentIndex % 6 ? 'scale(1.03)' : 'scale(1)',
-                  transition: 'all 0.4s ease'
+                  boxShadow: idx === currentIndex ? '0 20px 45px rgba(194, 120, 3, 0.45)' : '0 16px 36px rgba(0,0,0,0.6)',
+                  border: idx === currentIndex ? '3px solid #C27803' : '1px solid rgba(255,255,255,0.1)',
+                  transform: idx === currentIndex ? 'scale(1.04)' : 'scale(1)',
+                  transition: 'all 0.35s ease',
+                  scrollMarginTop: '100px'
                 }}
               >
                 <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '12px', overflow: 'hidden', background: '#12100B' }}>
@@ -645,7 +670,7 @@ export default function LiveProjectorWallPage() {
       {/* Floating Corner QR Code (For Guests in Audience - Hidden in Split mode since already large) */}
       {displayMode !== 'split' && (
         <div style={{
-          position: 'absolute',
+          position: 'fixed',
           bottom: '24px',
           right: '24px',
           background: 'rgba(20, 18, 15, 0.94)',
