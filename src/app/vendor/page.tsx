@@ -11,7 +11,7 @@ import {
   CreditCard, Sparkles, Wallet, Share2, Video, Film, PlayCircle,
   Printer, Tv, Eye
 } from 'lucide-react';
-import { UserAccount, VideoTestimonialSubmission, PayoutRequest } from '@/lib/types';
+import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
 import ConfirmModal from '@/components/ConfirmModal';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
@@ -356,23 +356,28 @@ export default function VendorPortalPage() {
         .then(res => res.json())
         .then(data => {
           if (data.success && data.events) {
-            const realClients = data.events.map((ev: any) => ({
-              id: ev.id,
-              slug: ev.slug,
-              title: ev.title,
-              coupleOrHost: ev.coupleOrHost,
-              hostEmail: ev.hostEmail,
-              date: new Date(ev.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-              venue: ev.location || 'Lokasi Acara',
-              guestCount: ev.maxGuests || 150,
-              photoCount: 0,
-              preset: ev.preset,
-              packageTier: ev.packageTier || 'wedding',
-              shotsPerGuest: ev.shotsPerGuest || 36,
-              commissionAmount: ev.commissionAmount || 0,
-              commissionStatus: ev.commissionStatus || 'available',
-              status: new Date(ev.eventDate) < new Date() ? 'Selesai' : 'Aktif'
-            }));
+            const realClients = data.events.map((ev: any) => {
+              const retInfo = getEventRetentionInfo(ev.eventDate, ev.packageTier || 'wedding');
+              return {
+                id: ev.id,
+                slug: ev.slug,
+                title: ev.title,
+                coupleOrHost: ev.coupleOrHost,
+                hostEmail: ev.hostEmail,
+                date: new Date(ev.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                rawEventDate: ev.eventDate,
+                venue: ev.location || 'Lokasi Acara',
+                guestCount: ev.maxGuests || 150,
+                photoCount: 0,
+                preset: ev.preset,
+                packageTier: ev.packageTier || 'wedding',
+                shotsPerGuest: ev.shotsPerGuest || 36,
+                commissionAmount: ev.commissionAmount || 0,
+                commissionStatus: ev.commissionStatus || 'available',
+                retentionInfo: retInfo,
+                status: retInfo.label
+              };
+            });
             setClients(realClients);
           }
         })
@@ -2165,14 +2170,15 @@ export default function VendorPortalPage() {
 
                       {/* Status Badge */}
                       <span style={{
-                        padding: '2px 8px',
+                        padding: '3px 9px',
                         borderRadius: '6px',
-                        fontSize: '10.5px',
+                        fontSize: '11px',
                         fontWeight: 600,
-                        background: c.status === 'Aktif' ? 'rgba(46, 204, 113, 0.12)' : 'rgba(0,0,0,0.06)',
-                        color: c.status === 'Aktif' ? '#27AE60' : '#86868B'
+                        background: c.retentionInfo?.badgeBg || (c.status === 'Aktif' ? 'rgba(46, 204, 113, 0.12)' : 'rgba(0,0,0,0.06)'),
+                        color: c.retentionInfo?.badgeColor || (c.status === 'Aktif' ? '#27AE60' : '#86868B'),
+                        border: `1px solid ${c.retentionInfo?.badgeColor || '#86868B'}33`
                       }}>
-                        {c.status}
+                        {c.retentionInfo?.label || c.status}
                       </span>
                     </div>
 

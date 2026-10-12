@@ -732,9 +732,14 @@ function CreateEventForm() {
                   </div>
 
                   <div style={{ background: '#FFFFFF', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
-                    <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '2px' }}>MASA SIMPAN AWAN</span>
+                    <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '2px' }}>MASA SIMPAN ARSIP</span>
                     <strong style={{ fontSize: '14px', color: '#27AE60' }}>{activeTier.retentionLabel}</strong>
                   </div>
+                </div>
+
+                <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '7px', fontSize: '11px', color: '#515154', background: 'rgba(39, 174, 96, 0.06)', padding: '8px 12px', borderRadius: '10px', border: '1px solid rgba(39, 174, 96, 0.18)' }}>
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#27AE60', flexShrink: 0 }} />
+                  <span>Masa simpan {activeTier.retentionDays} hari baru mulai dihitung mundur <strong>setelah tanggal hari-H acara selesai</strong>. Anda bebas mempersiapkan album & cetak kartu QR meja dari sekarang tanpa takut masa aktif berkurang.</span>
                 </div>
 
                 {/* Quick Switch Dropdown */}

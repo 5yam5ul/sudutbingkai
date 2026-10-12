@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play } from 'lucide-react';
-import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord } from '@/lib/types';
+import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
 import { getClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FrameId, FRAME_TEMPLATES } from '@/lib/frames';
@@ -751,10 +751,22 @@ export default function BrideDashboardPage() {
             </div>
 
             <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>MASA SIMPAN DATA</span>
-              <strong style={{ fontSize: '20px', color: '#27AE60' }}>
-                {PACKAGE_TIERS[packageTier]?.retentionLabel || '60 Hari (2 Bulan)'}
-              </strong>
+              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>MASA SIMPAN ARSIP</span>
+              {(() => {
+                const ret = getEventRetentionInfo(event?.eventDate, packageTier);
+                return (
+                  <div>
+                    <strong style={{ fontSize: '18px', color: ret.badgeColor, display: 'block', lineHeight: 1.2 }}>
+                      {ret.label}
+                    </strong>
+                    <span style={{ fontSize: '11px', color: '#86868B', display: 'block', marginTop: '3px' }}>
+                      {ret.status === 'upcoming' 
+                        ? 'Timer 30 hari aktif pasca hari-H' 
+                        : 'Akses unduh full ZIP aktif'}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -1561,7 +1573,7 @@ export default function BrideDashboardPage() {
                       Paket {PACKAGE_TIERS[packageTier]?.name || 'Wedding'}
                     </strong>
                     <span style={{ fontSize: '10.5px', color: '#86868B' }}>
-                      {PACKAGE_TIERS[packageTier]?.guestsLabel || 'Hingga 300 Tamu'} • {PACKAGE_TIERS[packageTier]?.shotsPerGuest || 25} Foto/Tamu • {PACKAGE_TIERS[packageTier]?.retentionLabel || '60 Hari'} • {PACKAGE_TIERS[packageTier]?.storageCapacity || '20 GB'}
+                      {PACKAGE_TIERS[packageTier]?.guestsLabel || 'Hingga 300 Tamu'} • {PACKAGE_TIERS[packageTier]?.shotsPerGuest || 25} Foto/Tamu • {PACKAGE_TIERS[packageTier]?.retentionLabel || '30 Hari Pasca Acara'} • Unduh Resolusi Asli Penuh
                     </span>
                   </div>
                 </div>

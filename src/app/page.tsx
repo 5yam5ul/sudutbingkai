@@ -164,8 +164,7 @@ export default function HomePage() {
       discountBadge: null, 
       guests: 'Hingga 5 tamu', 
       desc: 'Ideal untuk acara privat & kumpul keluarga inti.', 
-      retention: '3 Hari', 
-      storage: '500 MB', 
+      retention: '3 Hari Pasca Acara', 
       shotsPerGuest: '10 foto / tamu', 
       presets: '1 Filter (Portra)',
       wishFeature: 'Pesan Suara 15s', 
@@ -180,8 +179,7 @@ export default function HomePage() {
       discountBadge: 'HEMAT 24%', 
       guests: 'Hingga 50 tamu', 
       desc: 'Ulang tahun, bridal shower, tunangan, arisan, atau gathering intimate.', 
-      retention: '14 Hari (2 Minggu)', 
-      storage: '2 GB Cloud', 
+      retention: '14 Hari Pasca Acara', 
       shotsPerGuest: '20 foto / tamu', 
       presets: '3 Karakter Film Analog',
       wishFeature: 'Pesan Suara 15s', 
@@ -195,8 +193,7 @@ export default function HomePage() {
       discountBadge: 'HEMAT 17%', 
       guests: 'Hingga 300 tamu', 
       desc: 'Pilihan utama paling populer untuk pesta pernikahan lengkap.', 
-      retention: '60 Hari (2 Bulan)', 
-      storage: '20 GB Cloud Storage', 
+      retention: '30 Hari Pasca Acara (1 Bulan)', 
       shotsPerGuest: '36 foto / tamu (1 Roll Film)', 
       presets: 'Semua 8 Karakter Film Lengkap',
       wishFeature: '🎬 Video Ucapan 15s (Reels VHS)', 
@@ -211,8 +208,7 @@ export default function HomePage() {
       discountBadge: 'HEMAT 17%', 
       guests: 'Tamu tanpa batas', 
       desc: 'Festival, konser, atau wedding akbar ribuan tamu.', 
-      retention: '90 Hari (3 Bulan)', 
-      storage: '40 GB Cloud Storage', 
+      retention: '30 Hari Pasca Acara (1 Bulan)', 
       shotsPerGuest: '99 foto / tamu (Tanpa Batas)', 
       presets: 'Semua 8 Karakter Film Lengkap',
       wishFeature: '🎬 Video Ucapan 15s (Reels VHS)', 
@@ -223,8 +219,8 @@ export default function HomePage() {
 
   const faqs = [
     {
-      q: 'Berapa lama foto disimpan di web dan apa batasan penyimpanannya?',
-      a: 'Masa simpan dirancang efisien dan pas agar server tetap cepat: 3 Hari (Starter Gratis), 14 Hari (Intimate Party), 60 Hari / 2 Bulan (Paket Wedding), hingga 90 Hari untuk Paket Grand Unlimited. Selama masa aktif tersebut, penyelenggara acara dan keluarga dapat mengunduh seluruh arsip foto resolusi tinggi asli (ZIP), video ucapan, serta pesan suara ke laptop atau Google Drive mereka secara gratis.'
+      q: 'Kapan masa simpan foto mulai dihitung dan bagaimana penyimpanannya?',
+      a: 'Masa simpan baru MULAI BERJALAN setelah tanggal acara (hari-H) berlangsung, BUKAN dari tanggal Anda membeli paket. Anda bebas membuat album dan mencetak kartu QR meja jauh-jauh hari (misal H-30 atau H-60) tanpa takut masa aktif berkurang. Setelah acara selesai, album aktif selama 30 Hari (1 Bulan Penuh untuk Paket Wedding & Unlimited), di mana pengantin dan keluarga dapat mengunduh seluruh arsip foto resolusi asli (ZIP), video ucapan, serta pesan suara ke laptop atau Google Drive secara bebas dan gratis.'
     },
     {
       q: 'Apakah SudutBingkai hanya untuk acara pernikahan?',
@@ -1363,10 +1359,6 @@ export default function HomePage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={14} color="#C27803" />
-                    <span>Penyimpanan: <strong>{tier.storage}</strong></span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={14} color="#C27803" />
                     <span>Preset: <strong>{tier.presets}</strong></span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1385,7 +1377,7 @@ export default function HomePage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={14} color="#C27803" />
-                    <span>Unduh resolusi tinggi (ZIP)</span>
+                    <span>Unduh Resolusi Asli Penuh (ZIP)</span>
                   </div>
                 </div>
               </div>

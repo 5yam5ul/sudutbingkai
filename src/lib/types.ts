@@ -31,7 +31,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
   desc: string;
   retentionLabel: string;
   retentionDays: number;
-  storageCapacity: string;
+  storageCapacity?: string;
   maxFileSize: string;
   maxVoiceDuration: string;
   popular?: boolean;
@@ -47,9 +47,9 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxPresets: 1,
     badge: 'GRATIS • 5 TAMU',
     desc: 'Ideal untuk acara privat & kumpul keluarga inti.',
-    retentionLabel: 'Penyimpanan 3 Hari',
+    retentionLabel: '3 Hari (Uji Coba)',
     retentionDays: 3,
-    storageCapacity: '500 MB Cloud',
+    storageCapacity: 'Resolusi Asli Penuh',
     maxFileSize: '10 MB / foto',
     maxVoiceDuration: '15 detik / pesan suara',
     isFree: true
@@ -66,9 +66,9 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxPresets: 3,
     badge: 'HEMAT 24% • 50 TAMU',
     desc: 'Ulang tahun, bridal shower, tunangan, arisan, atau gathering intimate.',
-    retentionLabel: 'Penyimpanan 14 Hari (2 Minggu)',
+    retentionLabel: '14 Hari Pasca Acara (2 Minggu)',
     retentionDays: 14,
-    storageCapacity: '2 GB Cloud Storage',
+    storageCapacity: 'Resolusi Asli Penuh',
     maxFileSize: '10 MB / foto',
     maxVoiceDuration: '15 detik / pesan suara'
   },
@@ -84,9 +84,9 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxPresets: 2,
     badge: 'HEMAT 20% • 15 TAMU',
     desc: 'Untuk pesta kecil, intimate dinner, atau bridal shower.',
-    retentionLabel: 'Penyimpanan 7 Hari (1 Minggu)',
+    retentionLabel: '7 Hari Pasca Acara',
     retentionDays: 7,
-    storageCapacity: '1 GB Cloud',
+    storageCapacity: 'Resolusi Asli Penuh',
     maxFileSize: '10 MB / foto',
     maxVoiceDuration: '15 detik / pesan suara'
   },
@@ -102,9 +102,9 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxPresets: 3,
     badge: 'HEMAT 25% • 35 TAMU',
     desc: 'Cocok untuk gathering teman satu geng atau engagement.',
-    retentionLabel: 'Penyimpanan 14 Hari (2 Minggu)',
+    retentionLabel: '14 Hari Pasca Acara',
     retentionDays: 14,
-    storageCapacity: '2 GB Cloud',
+    storageCapacity: 'Resolusi Asli Penuh',
     maxFileSize: '10 MB / foto',
     maxVoiceDuration: '15 detik / pesan suara'
   },
@@ -120,9 +120,9 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxPresets: 4,
     badge: 'HEMAT 18% • 75 TAMU',
     desc: 'Ulang tahun, intimate wedding, atau acara kantor.',
-    retentionLabel: 'Penyimpanan 30 Hari (1 Bulan)',
+    retentionLabel: '30 Hari Pasca Acara (1 Bulan)',
     retentionDays: 30,
-    storageCapacity: '5 GB Cloud',
+    storageCapacity: 'Resolusi Asli Penuh',
     maxFileSize: '10 MB / foto',
     maxVoiceDuration: '15 detik / pesan suara'
   },
@@ -138,9 +138,9 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxPresets: 5,
     badge: 'HEMAT 18% • 150 TAMU',
     desc: 'Resepsi pernikahan sedang atau reuni akbar.',
-    retentionLabel: 'Penyimpanan 45 Hari (1.5 Bulan)',
-    retentionDays: 45,
-    storageCapacity: '10 GB Cloud',
+    retentionLabel: '30 Hari Pasca Acara (1 Bulan)',
+    retentionDays: 30,
+    storageCapacity: 'Resolusi Asli Penuh',
     maxFileSize: '10 MB / foto',
     maxVoiceDuration: '15 detik / pesan suara'
   },
@@ -156,9 +156,9 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxPresets: 8,
     badge: 'PALING POPULER • 300 TAMU',
     desc: 'Pilihan paling populer untuk pesta pernikahan lengkap.',
-    retentionLabel: 'Penyimpanan 60 Hari (2 Bulan)',
-    retentionDays: 60,
-    storageCapacity: '20 GB Cloud Storage',
+    retentionLabel: '30 Hari Pasca Acara (1 Bulan Penuh)',
+    retentionDays: 30,
+    storageCapacity: 'Resolusi Asli Penuh',
     maxFileSize: '10 MB / foto',
     maxVoiceDuration: '15 detik / video ucapan (Reels VHS)',
     popular: true
@@ -175,13 +175,91 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxPresets: 8,
     badge: 'HEMAT 17% • TANPA BATAS',
     desc: 'Festival, konser, atau wedding akbar ribuan tamu.',
-    retentionLabel: 'Penyimpanan 90 Hari (3 Bulan)',
-    retentionDays: 90,
-    storageCapacity: '40 GB Cloud Storage',
+    retentionLabel: '30 Hari Pasca Acara (1 Bulan Penuh)',
+    retentionDays: 30,
+    storageCapacity: 'Resolusi Asli Penuh',
     maxFileSize: '10 MB / foto',
     maxVoiceDuration: '15 detik / video ucapan (Reels VHS)'
   }
 };
+
+export interface EventRetentionInfo {
+  status: 'upcoming' | 'active' | 'grace' | 'expired';
+  label: string;
+  daysRemaining: number;
+  badgeColor: string;
+  badgeBg: string;
+  description: string;
+}
+
+export function getEventRetentionInfo(eventDateStr?: string, tierKey: EventPackageTier = 'wedding'): EventRetentionInfo {
+  const tier = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.wedding;
+  const retentionDays = tier.retentionDays || 30;
+
+  if (!eventDateStr) {
+    return {
+      status: 'active',
+      label: `Aktif (${retentionDays} Hari)`,
+      daysRemaining: retentionDays,
+      badgeColor: '#27AE60',
+      badgeBg: 'rgba(39, 174, 96, 0.12)',
+      description: `Masa simpan ${retentionDays} hari pasca acara.`
+    };
+  }
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const eventDateObj = new Date(eventDateStr);
+  const eventDate = new Date(eventDateObj.getFullYear(), eventDateObj.getMonth(), eventDateObj.getDate());
+
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const diffDaysFromEvent = Math.floor((today.getTime() - eventDate.getTime()) / msPerDay);
+
+  if (diffDaysFromEvent < 0) {
+    // Acara belum berlangsung (Masa Persiapan)
+    const daysUntilEvent = Math.abs(diffDaysFromEvent);
+    return {
+      status: 'upcoming',
+      label: `Persiapan (H-${daysUntilEvent})`,
+      daysRemaining: retentionDays,
+      badgeColor: '#C27803',
+      badgeBg: 'rgba(194, 120, 3, 0.12)',
+      description: `Acara dalam ${daysUntilEvent} hari. Timer ${retentionDays} hari masa simpan baru mulai berjalan setelah hari-H.`
+    };
+  } else if (diffDaysFromEvent <= retentionDays) {
+    // Acara sedang berlangsung atau dalam masa simpan 30 hari
+    const daysLeft = retentionDays - diffDaysFromEvent;
+    return {
+      status: 'active',
+      label: daysLeft === 0 ? 'Hari Terakhir Simpan' : `Sisa ${daysLeft} Hari Simpan`,
+      daysRemaining: daysLeft,
+      badgeColor: daysLeft <= 3 ? '#E74C3C' : '#27AE60',
+      badgeBg: daysLeft <= 3 ? 'rgba(231, 76, 60, 0.12)' : 'rgba(39, 174, 96, 0.12)',
+      description: `Arsip foto aktif dan dapat diunduh bebas selama ${daysLeft} hari ke depan.`
+    };
+  } else if (diffDaysFromEvent <= retentionDays + 14) {
+    // Grace period (lewat masa simpan hingga +14 hari)
+    const graceLeft = (retentionDays + 14) - diffDaysFromEvent;
+    return {
+      status: 'grace',
+      label: `Masa Tenggang (${graceLeft} Hari)`,
+      daysRemaining: graceLeft,
+      badgeColor: '#E67E22',
+      badgeBg: 'rgba(230, 126, 34, 0.12)',
+      description: 'Masa aktif publik telah selesai. Segera unduh cadangan ZIP sebelum arsip dibersihkan.'
+    };
+  } else {
+    // Lewat grace period
+    return {
+      status: 'expired',
+      label: 'Masa Aktif Selesai',
+      daysRemaining: 0,
+      badgeColor: '#86868B',
+      badgeBg: 'rgba(0, 0, 0, 0.08)',
+      description: 'Masa aktif album telah selesai.'
+    };
+  }
+}
 
 export interface EventData {
   id: string;

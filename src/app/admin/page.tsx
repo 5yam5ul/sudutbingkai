@@ -12,7 +12,7 @@ import {
   Mic, Volume2, Film, Play
 } from 'lucide-react';
 import { getClientSession, clearClientSession } from '@/lib/auth';
-import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord } from '@/lib/types';
+import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
 import { toast } from 'sonner';
 
 type AdminTab = 'overview' | 'events' | 'moderation' | 'vendors' | 'invoices' | 'payouts' | 'testimonials' | 'addons';
@@ -1094,8 +1094,24 @@ export default function SuperAdminDashboard() {
                           <span style={{ fontSize: '11px', color: '#86868B' }}>ID: <code>{e.id}</code> • Host: {e.coupleOrHost}</span>
                         </td>
                         <td style={{ padding: '16px 18px' }}>
-                          <span style={{ display: 'block' }}>{new Date(e.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-                          <span style={{ fontSize: '11px', color: '#86868B' }}>{e.location || 'Lokasi Belum Diatur'}</span>
+                          <span style={{ display: 'block', fontWeight: 500 }}>{new Date(e.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                          <span style={{ fontSize: '11px', color: '#86868B', display: 'block', marginBottom: '4px' }}>{e.location || 'Lokasi Belum Diatur'}</span>
+                          {(() => {
+                            const ret = getEventRetentionInfo(e.eventDate, e.packageTier);
+                            return (
+                              <span style={{
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                padding: '2px 7px',
+                                borderRadius: '4px',
+                                background: ret.badgeBg,
+                                color: ret.badgeColor,
+                                border: `1px solid ${ret.badgeColor}33`
+                              }}>
+                                {ret.label}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td style={{ padding: '16px 18px' }}>
                           <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{e.packageTier || 'wedding'}</span>
