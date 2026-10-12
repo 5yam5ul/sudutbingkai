@@ -228,8 +228,8 @@ export default function VendorPortalPage() {
   // Load existing vendor data, payouts & events if exists
   useEffect(() => {
     const session = getClientSession();
-    if (!session || session.role !== 'vendor') {
-      router.push('/login');
+    if (!session || (session.role !== 'vendor' && session.role !== 'admin')) {
+      router.push('/login?role=vendor');
       return;
     }
 
