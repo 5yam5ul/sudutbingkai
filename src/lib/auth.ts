@@ -15,7 +15,7 @@ export const SYSTEM_USERS: Record<string, AuthAccount> = {
   },
   'vendor': {
     id: 'vendor_vows_co',
-    name: 'Arya Pratama',
+    name: 'Sarah Pramono',
     email: 'vendor@sudutbingkai.id',
     password: 'vendor123',
     role: 'vendor',
@@ -30,7 +30,7 @@ export const SYSTEM_USERS: Record<string, AuthAccount> = {
     bankAccount: {
       bankName: 'BCA',
       accountNumber: '8730129841',
-      accountHolder: 'Arya Pratama'
+      accountHolder: 'Sarah Pramono'
     },
     eventQuotaTokens: {
       wedding: 2,

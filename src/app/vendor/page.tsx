@@ -270,7 +270,7 @@ export default function VendorPortalPage() {
       setTotalEarnings(1260000);
       setReferralCode('VOWSANDCO');
       setAccountNumber('8730129841');
-      setAccountHolder('Arya Pratama');
+      setAccountHolder('Sarah Pramono');
       setPayoutAmount(420000);
       setReferralHistory([
         {

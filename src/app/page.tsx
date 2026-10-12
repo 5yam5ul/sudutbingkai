@@ -47,9 +47,18 @@ const CURATED_PARTNERS = [
   }
 ];
 
-const renderVendorLogo = (v: any) => {
-  const logoSrc = v.logoUrl || v.logo;
-  if (logoSrc) {
+function VendorLogoItem({ vendor }: { vendor: any }) {
+  const [imgError, setImgError] = useState(false);
+  const logoSrc = vendor.logoUrl || vendor.logo;
+  const displayName = vendor.name || vendor.companyName || 'WO';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w: string) => w[0]?.toUpperCase())
+    .join('') || 'WO';
+
+  if (logoSrc && !imgError) {
     return (
       <div style={{
         width: '42px',
@@ -63,11 +72,12 @@ const renderVendorLogo = (v: any) => {
       }}>
         <img
           src={logoSrc}
-          alt={v.name}
+          alt={displayName}
           width={42}
           height={42}
           loading="lazy"
           decoding="async"
+          onError={() => setImgError(true)}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
       </div>
@@ -88,12 +98,13 @@ const renderVendorLogo = (v: any) => {
       color: '#E5C483',
       fontFamily: "'Playfair Display', Georgia, serif",
       fontSize: '13px',
-      fontWeight: 700
+      fontWeight: 700,
+      letterSpacing: '0.05em'
     }}>
-      {v.name ? v.name.slice(0, 2).toUpperCase() : 'WO'}
+      {initials}
     </div>
   );
-};
+}
 
 
 export default function HomePage() {
@@ -1046,52 +1057,53 @@ export default function HomePage() {
 
           <div className="vendor-marquee-container">
             <div className="vendor-marquee-track">
-              {/* Double loop of curated + dynamic partners for infinite continuous smooth scroll */}
-              {[
-                ...CURATED_PARTNERS,
-                ...(vendors || []).map((v: any) => ({
-                  name: v.name,
-                  city: v.city || 'Indonesia',
-                  instagram: v.instagram || '@vendor',
-                  logoUrl: v.logoUrl,
-                  badgeBg: '#181715',
-                  badgeColor: '#D4AF37',
-                  iconType: 'monogram'
-                })),
-                ...CURATED_PARTNERS,
-                ...(vendors || []).map((v: any) => ({
-                  name: v.name,
-                  city: v.city || 'Indonesia',
-                  instagram: v.instagram || '@vendor',
-                  logoUrl: v.logoUrl,
-                  badgeBg: '#181715',
-                  badgeColor: '#D4AF37',
-                  iconType: 'monogram'
-                }))
-              ].map((v: any, idx: number) => (
-                <div
-                  key={`${v.name}-${idx}`}
-                  className="glass-card"
-                  style={{
-                    borderRadius: '16px',
-                    padding: '10px 18px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    background: 'rgba(255, 255, 255, 0.94)',
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
-                    border: '1px solid rgba(0,0,0,0.06)',
-                    flexShrink: 0,
-                    minWidth: '260px'
-                  }}
-                >
-                  {renderVendorLogo(v)}
-                  <div style={{ textAlign: 'left' }}>
-                    <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', whiteSpace: 'nowrap' }}>{v.name}</strong>
-                    <span style={{ fontSize: '11px', color: '#86868B', whiteSpace: 'nowrap' }}>{v.city} • {v.instagram}</span>
+              {(() => {
+                const curatedNames = new Set(CURATED_PARTNERS.map(p => p.name.toLowerCase()));
+                const cleanDynamic = (vendors || [])
+                  .filter((v: any) => {
+                    const cleanEmail = (v.email || '').toLowerCase();
+                    const cleanName = (v.name || '').toLowerCase();
+                    const cleanCompany = (v.companyName || '').toLowerCase();
+                    if (v.role === 'admin' || v.id === 'admin_sudutbingkai') return false;
+                    if (cleanEmail.includes('admin') || cleanName.includes('admin') || cleanCompany.includes('admin')) return false;
+                    if (cleanName === 'mitra organizer' || cleanCompany === 'mitra organizer') return false;
+                    return true;
+                  })
+                  .map((v: any) => ({
+                    name: v.companyName || v.name,
+                    city: v.city || 'Indonesia',
+                    instagram: v.instagram || '@mitrawedding',
+                    logoUrl: v.logoUrl && !v.logoUrl.includes('sample-logos') ? v.logoUrl : undefined
+                  }))
+                  .filter((v: any) => !curatedNames.has(v.name.toLowerCase()));
+
+                const allPartners = [...CURATED_PARTNERS, ...cleanDynamic];
+                // Double loop for infinite smooth marquee scroll
+                return [...allPartners, ...allPartners].map((v: any, idx: number) => (
+                  <div
+                    key={`${v.name}-${idx}`}
+                    className="glass-card"
+                    style={{
+                      borderRadius: '16px',
+                      padding: '10px 18px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      background: 'rgba(255, 255, 255, 0.94)',
+                      boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                      border: '1px solid rgba(0,0,0,0.06)',
+                      flexShrink: 0,
+                      minWidth: '260px'
+                    }}
+                  >
+                    <VendorLogoItem vendor={v} />
+                    <div style={{ textAlign: 'left' }}>
+                      <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', whiteSpace: 'nowrap' }}>{v.name}</strong>
+                      <span style={{ fontSize: '11px', color: '#86868B', whiteSpace: 'nowrap' }}>{v.city} • {v.instagram}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
         </div>

@@ -4,7 +4,8 @@ import { getAllVendors, saveVendor, updateVendor, deleteVendor } from '@/lib/db'
 export async function GET() {
   try {
     const vendors = await getAllVendors();
-    return NextResponse.json({ success: true, vendors });
+    const cleanVendors = vendors.filter(v => v.id !== 'admin_sudutbingkai' && !v.email?.toLowerCase().includes('admin'));
+    return NextResponse.json({ success: true, vendors: cleanVendors });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -21,6 +22,10 @@ export async function POST(req: Request) {
 
     const vendorId = body.id || `vendor_${Date.now()}`;
     const vendorEmail = email ? email.trim().toLowerCase() : `vendor_${Date.now()}@sudutbingkai.id`;
+
+    if (vendorId === 'admin_sudutbingkai' || vendorEmail.includes('admin@sudutbingkai.id')) {
+      return NextResponse.json({ success: false, error: 'Akun Super Admin tidak dapat didaftarkan sebagai vendor' }, { status: 400 });
+    }
 
     const newVendor = {
       id: vendorId,
