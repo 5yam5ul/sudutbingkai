@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   ArrowLeft, ArrowRight, Check, Calendar, MapPin, Film, Camera,
   Lock, Unlock, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye,
-  Mail, Key, UserCheck, Tag, Percent, Sparkles
+  Mail, Key, UserCheck, Tag, Percent, Sparkles, Briefcase, Loader2
 } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FilmPresetId, EventPackageTier, PACKAGE_TIERS, PRIMARY_PACKAGE_TIER_KEYS, UserAccount } from '@/lib/types';
@@ -23,6 +23,8 @@ function CreateEventForm() {
   const initialTierKey: EventPackageTier = PACKAGE_TIERS[packageQuery] ? packageQuery : 'wedding';
 
   const [loading, setLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [createdDraftEventId, setCreatedDraftEventId] = useState<string | null>(null);
   const [pendingPaymentData, setPendingPaymentData] = useState<{
@@ -61,6 +63,12 @@ function CreateEventForm() {
   const [showPackageUpgradeModal, setShowPackageUpgradeModal] = useState(false);
   const activeTier = PACKAGE_TIERS[selectedTier] || PACKAGE_TIERS.wedding;
 
+  // Vendor Commission Calculations
+  const isVendor = currentUser?.role === 'vendor';
+  const vendorCommissionRate = currentUser?.partnerTier === 'vip' ? 0.20 : currentUser?.partnerTier === 'pro' ? 0.15 : 0.15;
+  const basePackagePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 0;
+  const vendorCommissionAmount = Math.round(basePackagePrice * vendorCommissionRate);
+
   // 2. Film Filter States
   const [primaryPreset, setPrimaryPreset] = useState<FilmPresetId>('portra');
   const [allowedPresets, setAllowedPresets] = useState<FilmPresetId[]>(['portra', 'funsaver', 'quicksnap', 'ilford']);
@@ -83,22 +91,34 @@ function CreateEventForm() {
   const [hostPin, setHostPin] = useState<string>('');
   const [existingHost, setExistingHost] = useState<UserAccount | null>(null);
 
-  // Check existing host session and referral code on mount
+  // Check mandatory session & referral code on mount
   useEffect(() => {
     const session = getClientSession();
-    if (session && session.role === 'host' && session.email) {
+    if (!session) {
+      const redirectUrl = `/create?package=${selectedTier}`;
+      router.replace(`/login?redirect=${encodeURIComponent(redirectUrl)}&package=${selectedTier}`);
+      return;
+    }
+
+    setCurrentUser(session);
+    setIsAuthChecking(false);
+
+    if (session.role === 'host' && session.email) {
       setExistingHost(session);
       setHostEmail(session.email);
+      if (session.name) {
+        setCoupleOrHost(prev => prev || session.name);
+      }
     }
 
     // Check URL searchParams or localStorage for partner referral
     const paramRef = searchParams.get('ref');
     const storedRef = typeof window !== 'undefined' ? localStorage.getItem('sb_client_ref') : null;
     const initialRef = (paramRef || storedRef || '').trim();
-    if (initialRef) {
+    if (initialRef && session.role !== 'vendor') {
       setReferralCode(initialRef.toUpperCase());
     }
-  }, [searchParams]);
+  }, [searchParams, router, selectedTier]);
 
   // Auto-slug generator from host or title
   const generateCleanSlug = (text: string) => {
@@ -205,49 +225,64 @@ function CreateEventForm() {
     const cleanEmail = (hostEmail || '').trim().toLowerCase();
     const cleanSlug = generateCleanSlug(slug || coupleOrHost || title);
 
+    const eventPayload: any = {
+      title,
+      coupleOrHost,
+      slug: cleanSlug || undefined,
+      eventDate: eventDate || new Date().toISOString(),
+      location,
+      preset: primaryPreset,
+      allowedPresets,
+      allowGuestPresetSwitch,
+      packageTier: selectedTier,
+      maxGuests: activeTier.maxGuests,
+      shotsPerGuest: activeTier.shotsPerGuest,
+      revealMode,
+      revealTime: revealMode === 'delayed' ? revealTime : undefined,
+      frameId,
+      customFrameUrl: customFrameUrl || undefined,
+      frameText,
+      allowGuestFrameToggle,
+      allowVoiceNote,
+      closingWishType: (selectedTier === 'wedding' || selectedTier === 'unlimited') ? 'video' : (allowVoiceNote ? 'voice' : 'none'),
+      hostEmail: cleanEmail,
+      paymentStatus,
+    };
+
+    if (isVendor && currentUser) {
+      eventPayload.vendorId = currentUser.id;
+      eventPayload.vendorName = currentUser.companyName || currentUser.name;
+      eventPayload.vendorLogo = currentUser.logoUrl;
+      eventPayload.vendorInstagram = currentUser.instagram;
+      eventPayload.referralCodeUsed = currentUser.referralCode;
+      eventPayload.commissionAmount = vendorCommissionAmount;
+      eventPayload.commissionStatus = paymentStatus === 'paid' ? 'available' : 'pending';
+    } else {
+      eventPayload.referralCodeUsed = referralDiscount?.valid ? referralCode.toUpperCase().trim() : undefined;
+      eventPayload.vendorId = referralDiscount?.vendorId;
+      eventPayload.vendorName = referralDiscount?.vendorName;
+      eventPayload.commissionAmount = referralDiscount?.commissionAmount;
+    }
+
     const res = await fetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        title,
-        coupleOrHost,
-        slug: cleanSlug || undefined,
-        eventDate: eventDate || new Date().toISOString(),
-        location,
-        preset: primaryPreset,
-        allowedPresets,
-        allowGuestPresetSwitch,
-        packageTier: selectedTier,
-        maxGuests: activeTier.maxGuests,
-        shotsPerGuest: activeTier.shotsPerGuest,
-        revealMode,
-        revealTime: revealMode === 'delayed' ? revealTime : undefined,
-        frameId,
-        customFrameUrl: customFrameUrl || undefined,
-        frameText,
-        allowGuestFrameToggle,
-        allowVoiceNote,
-        closingWishType: (selectedTier === 'wedding' || selectedTier === 'unlimited') ? 'video' : (allowVoiceNote ? 'voice' : 'none'),
-        hostEmail: cleanEmail,
-        paymentStatus,
-        referralCodeUsed: referralDiscount?.valid ? referralCode.toUpperCase().trim() : undefined,
-        vendorId: referralDiscount?.vendorId,
-        vendorName: referralDiscount?.vendorName,
-        commissionAmount: referralDiscount?.commissionAmount
-      }),
+      body: JSON.stringify(eventPayload),
     });
 
     const data = await res.json();
     if (data.success && data.event) {
       setCreatedDraftEventId(data.event.id);
-      // Auto-login session for the host
-      const sessionUser: UserAccount = {
-        id: existingHost?.id || 'usr_' + Math.random().toString(36).substring(2, 9),
-        name: coupleOrHost || title || cleanEmail.split('@')[0],
-        email: cleanEmail,
-        role: 'host'
-      };
-      setClientSession(sessionUser);
+      if (!isVendor) {
+        // Auto-login session for the host
+        const sessionUser: UserAccount = {
+          id: existingHost?.id || currentUser?.id || 'usr_' + Math.random().toString(36).substring(2, 9),
+          name: coupleOrHost || title || cleanEmail.split('@')[0],
+          email: cleanEmail,
+          role: 'host'
+        };
+        setClientSession(sessionUser);
+      }
       return data.event.id;
     } else {
       throw new Error(data.error || 'Gagal menyimpan draft acara');
@@ -270,8 +305,13 @@ function CreateEventForm() {
       if (activeTier.isFree) {
         const eventId = await createDraftOrActiveEvent('paid');
         if (eventId) {
-          toast.success('Album gratis Anda berhasil diterbitkan!');
-          router.push(`/dashboard?created=true&eventId=${eventId}`);
+          if (isVendor && currentUser) {
+            toast.success(`Klien "${coupleOrHost || title}" berhasil ditambahkan ke portofolio Anda!`);
+            router.push(`/vendor?tab=clients&newClient=${eventId}`);
+          } else {
+            toast.success('Album gratis Anda berhasil diterbitkan!');
+            router.push(`/dashboard?created=true&eventId=${eventId}&paid=true`);
+          }
         }
         return;
       }
@@ -286,6 +326,9 @@ function CreateEventForm() {
       const hostUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.vercel.app';
       const basePackagePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 499000;
       const finalChargedAmount = referralDiscount?.valid ? referralDiscount.finalPrice : basePackagePrice;
+      const redirectSuccessUrl = isVendor
+        ? `${hostUrl}/vendor?tab=clients&newClient=${eventId}&paid=true`
+        : `${hostUrl}/dashboard?eventId=${eventId}&paid=true`;
 
       const payRes = await fetch('/api/payment/create', {
         method: 'POST',
@@ -296,7 +339,7 @@ function CreateEventForm() {
           email: cleanEmail,
           eventId,
           amount: finalChargedAmount,
-          redirectUrl: `${hostUrl}/dashboard?eventId=${eventId}&paid=true`
+          redirectUrl: redirectSuccessUrl
         })
       });
 
@@ -327,6 +370,17 @@ function CreateEventForm() {
     }
   };
 
+  if (isAuthChecking) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#FBFBFA', gap: '12px' }}>
+        <Loader2 className="animate-spin" size={32} color="#C27803" />
+        <span style={{ fontSize: '13.5px', color: '#6E6E73', fontWeight: 500 }}>
+          Memeriksa status akun Anda...
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FBFBFA', color: '#1D1D1F', position: 'relative' }}>
       {/* Background Radial Glow */}
@@ -350,13 +404,15 @@ function CreateEventForm() {
         borderBottom: '1px solid rgba(0, 0, 0, 0.06)'
       }}>
         <div style={{ maxWidth: '840px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', color: '#515154', width: '70px' }}>
+          <Link href={isVendor ? "/vendor?tab=clients" : "/"} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px', color: '#515154' }}>
             <ArrowLeft size={16} />
-            <span style={{ fontSize: '13.5px', fontWeight: 500 }}>Kembali</span>
+            <span style={{ fontSize: '13.5px', fontWeight: 500 }}>
+              {isVendor ? 'Kembali ke Portal Mitra' : 'Kembali'}
+            </span>
           </Link>
 
           <span style={{ fontSize: '15px', fontWeight: 700, fontFamily: 'var(--font-serif)', color: '#1D1D1F' }}>
-            Buat Album Acara
+            {isVendor ? 'Tambah Klien Baru (Vendor)' : 'Buat Album Acara'}
           </span>
 
           <div style={{ width: '70px', visibility: 'hidden' }} aria-hidden="true" />
@@ -365,6 +421,57 @@ function CreateEventForm() {
 
       {/* Main Content */}
       <main style={{ position: 'relative', zIndex: 10, padding: '28px 16px 80px', maxWidth: '780px', margin: '0 auto' }}>
+        
+        {/* VENDOR MODE BANNER */}
+        {isVendor && currentUser && (
+          <div style={{
+            marginBottom: '28px',
+            padding: '20px 24px',
+            borderRadius: '20px',
+            background: 'linear-gradient(135deg, rgba(194, 120, 3, 0.12) 0%, rgba(255, 255, 255, 0.98) 100%)',
+            border: '1.5px solid rgba(194, 120, 3, 0.4)',
+            boxShadow: '0 8px 24px -4px rgba(194, 120, 3, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '14px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <div style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '12px',
+                background: '#C27803',
+                color: '#FFFFFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                boxShadow: '0 4px 14px rgba(194, 120, 3, 0.35)'
+              }}>
+                <Briefcase size={22} />
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '3px' }}>
+                  <span className="font-mono-film" style={{ fontSize: '11px', color: '#C27803', fontWeight: 700 }}>
+                    MODE MITRA VENDOR / WO
+                  </span>
+                  <span style={{ fontSize: '10.5px', background: '#27AE60', color: '#FFFFFF', fontWeight: 700, padding: '2px 8px', borderRadius: '999px' }}>
+                    KOMISI {(vendorCommissionRate * 100)}% AKTIF
+                  </span>
+                </div>
+                <h3 style={{ fontSize: '16.5px', fontWeight: 800, color: '#1D1D1F', margin: 0 }}>
+                  {currentUser.companyName || currentUser.name} — Menambahkan Klien Baru
+                </h3>
+                <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: '3px 0 0' }}>
+                  Anda bebas memilih paket untuk klien ini dengan harga normal. Setiap transaksi klien akan otomatis mencairkan komisi ke saldo dompet Anda.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px' }}>
             SETUP ALBUM DIGITAL
@@ -676,8 +783,36 @@ function CreateEventForm() {
                   </div>
                 )}
 
+                {/* VENDOR COMMISSION EARNINGS PREVIEW */}
+                {isVendor && !activeTier.isFree && (
+                  <div style={{
+                    marginTop: '14px',
+                    padding: '12px 16px',
+                    borderRadius: '12px',
+                    background: 'rgba(39, 174, 96, 0.08)',
+                    border: '1.5px solid rgba(39, 174, 96, 0.3)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Sparkles size={16} color="#27AE60" />
+                      <span style={{ fontSize: '13px', color: '#1D1D1F' }}>
+                        <strong>Komisi Mitra WO ({(vendorCommissionRate * 100)}%):</strong>
+                      </span>
+                    </div>
+                    <strong style={{ fontSize: '14.5px', color: '#27AE60' }}>
+                      +Rp {vendorCommissionAmount.toLocaleString('id-ID')} (Masuk ke Dompet)
+                    </strong>
+                  </div>
+                )}
+
                 <span style={{ fontSize: '11px', color: '#6E6E73', display: 'block', marginTop: '10px', fontStyle: 'italic' }}>
-                  * Jatah foto dan kapasitas tamu di atas telah otomatis terkunci sesuai paket yang Anda beli.
+                  {isVendor 
+                    ? `* Paket klien ini ditagihkan dengan harga normal (${activeTier.price}). Komisi mitra akan otomatis masuk ke dompet Anda.`
+                    : '* Jatah foto dan kapasitas tamu di atas telah otomatis terkunci sesuai paket yang Anda beli.'}
                 </span>
               </div>
             </div>
@@ -1198,20 +1333,78 @@ function CreateEventForm() {
           <div className="glass-card form-section-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
               <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
-                05 • AKUN PENYELENGGARA & AKSES DASHBOARD
+                05 • {isVendor ? 'DATA KLIEN & AKSES PENGANTIN' : 'AKUN PENYELENGGARA & AKSES DASHBOARD'}
               </span>
               <span style={{ fontSize: '11.5px', color: '#2ECC71', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
-                <ShieldCheck size={14} /> Bebas Login Ribet
+                <ShieldCheck size={14} /> {isVendor ? 'Akses Mitra Terverifikasi' : 'Bebas Login Ribet'}
               </span>
             </div>
             <h2 style={{ fontSize: '19px', fontWeight: 700, marginBottom: '6px', color: '#1D1D1F' }}>
-              Kredensial Kendali Acara
+              {isVendor ? 'Data Klien & Akses Pengantin' : 'Kredensial Kendali Acara'}
             </h2>
             <p style={{ fontSize: '13px', color: '#6E6E73', marginBottom: '20px', lineHeight: 1.5 }}>
-              Akun ini digunakan untuk membuka Dashboard, mengunduh seluruh foto tamu dalam arsip ZIP kualitas tinggi, memoderasi foto, serta mencetak kartu QR tamu.
+              {isVendor 
+                ? 'Masukkan email pengantin agar mereka dapat melihat galeri foto dan mengunduh foto kenangan. Sebagai mitra vendor, Anda tetap dapat mengatur & memoderasi album ini kapan saja melalui Dashboard Mitra.'
+                : 'Akun ini digunakan untuk membuka Dashboard, mengunduh seluruh foto tamu dalam arsip ZIP kualitas tinggi, memoderasi foto, serta mencetak kartu QR tamu.'}
             </p>
 
-            {existingHost ? (
+            {isVendor ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div style={{
+                  padding: '14px 16px',
+                  background: 'rgba(194, 120, 3, 0.08)',
+                  border: '1px solid rgba(194, 120, 3, 0.25)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px'
+                }}>
+                  <Briefcase size={18} color="#C27803" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: '12.5px', color: '#1D1D1F' }}>
+                    Mitra WO Penanggung Jawab: <strong>{currentUser?.companyName || currentUser?.name}</strong> ({currentUser?.email})
+                  </span>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      <Mail size={13} color="#C27803" />
+                      Email Klien / Pengantin *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="contoh: pengantin@gmail.com"
+                      value={hostEmail}
+                      onChange={(e) => setHostEmail(e.target.value)}
+                      className="glass-input"
+                      style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14.5px' }}
+                    />
+                    <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '4px' }}>
+                      Pengantin dapat mengakses galeri & album mereka dengan email ini.
+                    </span>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      <Key size={13} color="#C27803" />
+                      PIN Akses Klien (Opsional)
+                    </label>
+                    <input
+                      type="password"
+                      placeholder="Contoh: 123456 (opsional)"
+                      value={hostPin}
+                      onChange={(e) => setHostPin(e.target.value)}
+                      className="glass-input"
+                      style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14.5px' }}
+                    />
+                    <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '4px' }}>
+                      PIN pengaman untuk pengantin saat membuka dashboard pribadi.
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : existingHost ? (
               <div style={{
                 padding: '16px',
                 background: 'rgba(194, 120, 3, 0.08)',
@@ -1302,83 +1495,113 @@ function CreateEventForm() {
 
           {/* REFERRAL / PROMO VOUCHER CARD */}
           {!activeTier.isFree && (
-            <div style={{
-              background: '#FFFFFF',
-              borderRadius: '16px',
-              padding: '16px 20px',
-              border: referralDiscount?.valid ? '1px solid #10B981' : '1px solid rgba(0,0,0,0.08)',
-              boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '12px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Tag size={16} color={referralDiscount?.valid ? '#10B981' : '#C27803'} />
-                  <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#1D1D1F' }}>
-                    Punya Kode Voucher Kemitraan / Promo WO?
-                  </span>
+            isVendor ? (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(39, 174, 96, 0.08) 0%, rgba(255, 255, 255, 0.98) 100%)',
+                borderRadius: '16px',
+                padding: '18px 22px',
+                border: '1.5px solid rgba(39, 174, 96, 0.35)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '12px',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <Sparkles size={20} color="#27AE60" style={{ flexShrink: 0 }} />
+                  <div>
+                    <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>
+                      Status Kemitraan WO: {currentUser?.companyName || currentUser?.name}
+                    </strong>
+                    <span style={{ fontSize: '12.5px', color: '#27AE60', fontWeight: 600 }}>
+                      Komisi Mitra {(vendorCommissionRate * 100)}% (+Rp {vendorCommissionAmount.toLocaleString('id-ID')}) otomatis masuk ke dompet Anda saat pembayaran selesai.
+                    </span>
+                  </div>
                 </div>
+                <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#FFFFFF', background: '#27AE60', padding: '4px 12px', borderRadius: '999px' }}>
+                  KOMISI OTOMATIS
+                </span>
+              </div>
+            ) : (
+              <div style={{
+                background: '#FFFFFF',
+                borderRadius: '16px',
+                padding: '16px 20px',
+                border: referralDiscount?.valid ? '1px solid #10B981' : '1px solid rgba(0,0,0,0.08)',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Tag size={16} color={referralDiscount?.valid ? '#10B981' : '#C27803'} />
+                    <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#1D1D1F' }}>
+                      Punya Kode Voucher Kemitraan / Promo WO?
+                    </span>
+                  </div>
+                  {referralDiscount?.valid && (
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857', background: 'rgba(16,185,129,0.12)', padding: '3px 8px', borderRadius: '12px' }}>
+                      HEMAT 10%
+                    </span>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    type="text"
+                    placeholder="Masukkan kode promo (misal: VOWSANDCO)"
+                    value={referralCode}
+                    onChange={(e) => {
+                      setReferralCode(e.target.value.toUpperCase());
+                      if (referralDiscount) setReferralDiscount(null);
+                    }}
+                    className="glass-input"
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', fontSize: '13.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => validateReferralCode()}
+                    disabled={isValidatingReferral || !referralCode.trim()}
+                    className="glass-pill"
+                    style={{
+                      padding: '10px 16px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      cursor: (isValidatingReferral || !referralCode.trim()) ? 'not-allowed' : 'pointer',
+                      background: referralDiscount?.valid ? '#10B981' : '#1D1D1F',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '10px'
+                    }}
+                  >
+                    {isValidatingReferral ? 'Mengecek...' : referralDiscount?.valid ? 'Terpasang' : 'Terapkan'}
+                  </button>
+                </div>
+
                 {referralDiscount?.valid && (
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857', background: 'rgba(16,185,129,0.12)', padding: '3px 8px', borderRadius: '12px' }}>
-                    HEMAT 10%
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16,185,129,0.06)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(16,185,129,0.2)' }}>
+                    <div>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#047857', display: 'block' }}>
+                        Voucher Kemitraan: {referralDiscount.vendorName}
+                      </span>
+                      <span style={{ fontSize: '11px', color: '#065F46' }}>
+                        Hemat Rp {referralDiscount.discountAmount.toLocaleString('id-ID')} ({referralDiscount.discountPercent}%)
+                      </span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ fontSize: '11px', color: '#86868B', textDecoration: 'line-through', display: 'block' }}>
+                        {activeTier.price}
+                      </span>
+                      <strong style={{ fontSize: '14px', color: '#047857' }}>
+                        Rp {referralDiscount.finalPrice.toLocaleString('id-ID')}
+                      </strong>
+                    </div>
+                  </div>
                 )}
               </div>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input
-                  type="text"
-                  placeholder="Masukkan kode promo (misal: VOWSANDCO)"
-                  value={referralCode}
-                  onChange={(e) => {
-                    setReferralCode(e.target.value.toUpperCase());
-                    if (referralDiscount) setReferralDiscount(null);
-                  }}
-                  className="glass-input"
-                  style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', fontSize: '13.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => validateReferralCode()}
-                  disabled={isValidatingReferral || !referralCode.trim()}
-                  className="glass-pill"
-                  style={{
-                    padding: '10px 16px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: (isValidatingReferral || !referralCode.trim()) ? 'not-allowed' : 'pointer',
-                    background: referralDiscount?.valid ? '#10B981' : '#1D1D1F',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '10px'
-                  }}
-                >
-                  {isValidatingReferral ? 'Mengecek...' : referralDiscount?.valid ? 'Terpasang' : 'Terapkan'}
-                </button>
-              </div>
-
-              {referralDiscount?.valid && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16,185,129,0.06)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(16,185,129,0.2)' }}>
-                  <div>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#047857', display: 'block' }}>
-                      Voucher Kemitraan: {referralDiscount.vendorName}
-                    </span>
-                    <span style={{ fontSize: '11px', color: '#065F46' }}>
-                      Hemat Rp {referralDiscount.discountAmount.toLocaleString('id-ID')} ({referralDiscount.discountPercent}%)
-                    </span>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span style={{ fontSize: '11px', color: '#86868B', textDecoration: 'line-through', display: 'block' }}>
-                      {activeTier.price}
-                    </span>
-                    <strong style={{ fontSize: '14px', color: '#047857' }}>
-                      Rp {referralDiscount.finalPrice.toLocaleString('id-ID')}
-                    </strong>
-                  </div>
-                </div>
-              )}
-            </div>
+            )
           )}
 
           {/* SUBMIT BUTTON */}
@@ -1399,16 +1622,22 @@ function CreateEventForm() {
               <span>
                 {loading
                   ? 'Menyiapkan Album Digital...'
-                  : activeTier.isFree
-                    ? 'Terbitkan Album & Unduh Kartu QR Tamu (Gratis)'
-                    : referralDiscount?.valid
-                      ? `Lanjut ke Pembayaran Mayar (Rp ${referralDiscount.finalPrice.toLocaleString('id-ID')})`
-                      : `Lanjut ke Pembayaran Mayar (${activeTier.price})`}
+                  : isVendor
+                    ? (activeTier.isFree
+                        ? 'Tambahkan Klien & Terbitkan Album (Gratis)'
+                        : `Lanjut ke Pembayaran Mayar (${activeTier.price} • Komisi +Rp ${vendorCommissionAmount.toLocaleString('id-ID')})`)
+                    : activeTier.isFree
+                      ? 'Terbitkan Album & Unduh Kartu QR Tamu (Gratis)'
+                      : referralDiscount?.valid
+                        ? `Lanjut ke Pembayaran Mayar (Rp ${referralDiscount.finalPrice.toLocaleString('id-ID')})`
+                        : `Lanjut ke Pembayaran Mayar (${activeTier.price})`}
               </span>
               <ArrowRight size={18} />
             </button>
             <span style={{ fontSize: '12px', color: '#86868B' }}>
-              Album Anda akan langsung aktif dan kartu QR tamu siap dicetak seketika.
+              {isVendor 
+                ? 'Album klien akan langsung aktif dan terhubung ke daftar klien dashboard vendor Anda.'
+                : 'Album Anda akan langsung aktif dan kartu QR tamu siap dicetak seketika.'}
             </span>
           </div>
 
@@ -1419,13 +1648,44 @@ function CreateEventForm() {
       <MayarPaymentModal
         isOpen={paymentModalOpen}
         onClose={() => setPaymentModalOpen(false)}
-        onSuccess={() => {
+        onSuccess={async () => {
           setPaymentModalOpen(false);
-          toast.success('Pembayaran Terkonfirmasi! Mengalihkan ke Dashboard...');
-          if (createdDraftEventId) {
-            router.push(`/dashboard?created=true&eventId=${createdDraftEventId}&paid=true`);
+          toast.success('Pembayaran Terkonfirmasi!');
+
+          if (isVendor && currentUser) {
+            const newBal = (currentUser.walletBalance || 0) + vendorCommissionAmount;
+            const newEarnings = (currentUser.totalEarnings || 0) + vendorCommissionAmount;
+            const updatedUser: UserAccount = {
+              ...currentUser,
+              walletBalance: newBal,
+              totalEarnings: newEarnings,
+              clientCount: (currentUser.clientCount || 0) + 1
+            };
+            setClientSession(updatedUser);
+            setCurrentUser(updatedUser);
+
+            try {
+              await fetch('/api/vendors', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: currentUser.id,
+                  adjustBalance: vendorCommissionAmount,
+                  totalEarnings: newEarnings
+                })
+              });
+            } catch (vErr) {
+              console.warn('Failed to update vendor balance in DB:', vErr);
+            }
+
+            toast.success(`Komisi sebesar Rp ${vendorCommissionAmount.toLocaleString('id-ID')} berhasil masuk ke saldo dompet Anda!`);
+            router.push(`/vendor?tab=clients&newClient=${createdDraftEventId || ''}&paid=true`);
           } else {
-            router.push('/dashboard?paid=true');
+            if (createdDraftEventId) {
+              router.push(`/dashboard?created=true&eventId=${createdDraftEventId}&paid=true`);
+            } else {
+              router.push('/dashboard?paid=true');
+            }
           }
         }}
         title={pendingPaymentData?.title || `Paket ${activeTier.name}`}

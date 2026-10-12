@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play } from 'lucide-react';
+import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord } from '@/lib/types';
 import { getClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
@@ -83,7 +83,7 @@ export default function BrideDashboardPage() {
 
   useEffect(() => {
     const current = getClientSession();
-    if (!current || current.role !== 'host') {
+    if (!current || (current.role !== 'host' && current.role !== 'vendor' && current.role !== 'admin')) {
       router.push('/login');
       return;
     }
@@ -182,8 +182,15 @@ export default function BrideDashboardPage() {
   const fetchData = async (currentUser?: UserAccount, targetEventId?: string) => {
     try {
       setLoading(true);
+      const activeRole = currentUser?.role || user?.role || 'host';
       const email = currentUser?.email || user?.email || 'pengantin@sudutbingkai.id';
-      const resEvents = await fetch(`/api/events?hostEmail=${encodeURIComponent(email)}`);
+      const vendorId = currentUser?.id || user?.id || '';
+
+      const queryUrl = activeRole === 'vendor' && vendorId
+        ? `/api/events?vendorId=${encodeURIComponent(vendorId)}`
+        : `/api/events?hostEmail=${encodeURIComponent(email)}`;
+
+      const resEvents = await fetch(queryUrl);
       const dataEvents = await resEvents.json();
       let selected: EventData | null = null;
 
@@ -472,7 +479,7 @@ export default function BrideDashboardPage() {
             </Link>
             <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
             <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
-              DASHBOARD TUAN RUMAH (HOST)
+              {user?.role === 'vendor' ? 'SETTING ALBUM KLIEN (VENDOR)' : 'DASHBOARD TUAN RUMAH (HOST)'}
             </span>
           </div>
 
@@ -493,11 +500,33 @@ export default function BrideDashboardPage() {
             </div>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {user?.role === 'vendor' && (
+              <Link
+                href="/vendor?tab=clients"
+                className="glass-pill"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  fontSize: '12px',
+                  color: '#C27803',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                  border: '1px solid rgba(194, 120, 3, 0.3)'
+                }}
+              >
+                <ArrowLeft size={13} />
+                <span>Portal Mitra</span>
+              </Link>
+            )}
+
             <div style={{ textAlign: 'right' }} className="desktop-only">
               <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>{user?.name}</strong>
               <span style={{ fontSize: '11.5px', color: '#86868B' }}>{user?.email}</span>
             </div>
+
             <button
               onClick={handleLogout}
               className="glass-pill"

@@ -77,6 +77,23 @@ function LoginFormContent() {
     else if (modeParam === 'login') setAuthMode('login');
   }, [searchParams]);
 
+  const resolveRedirectDestination = (defaultRoute: string, userRole: 'host' | 'vendor' | 'admin') => {
+    if (userRole === 'admin') return '/admin';
+
+    const redirectParam = searchParams.get('redirect');
+    const packageParam = searchParams.get('package');
+
+    if (redirectParam) {
+      let dest = redirectParam;
+      if (packageParam && !dest.includes('package=')) {
+        dest += (dest.includes('?') ? '&' : '?') + `package=${encodeURIComponent(packageParam)}`;
+      }
+      return dest;
+    }
+
+    return defaultRoute;
+  };
+
   // Inspect existing session safely without aggressive redirect loop
   useEffect(() => {
     const session = getClientSession();
@@ -91,9 +108,9 @@ function LoginFormContent() {
         if (session.role === 'admin') {
           router.push('/admin');
         } else if (session.role === 'vendor') {
-          router.push('/vendor');
+          router.push(resolveRedirectDestination('/vendor', 'vendor'));
         } else {
-          router.push('/dashboard');
+          router.push(resolveRedirectDestination('/dashboard', 'host'));
         }
       }
     }
@@ -188,7 +205,7 @@ function LoginFormContent() {
         };
         setClientSession(sessionUser);
         toast.success(`Selamat datang kembali di Portal Mitra, ${sessionUser.companyName || fullName}!`);
-        router.push('/vendor');
+        router.push(resolveRedirectDestination('/vendor', 'vendor'));
         return;
       } else {
         // 2. Auto-register new vendor using Google account metadata
@@ -225,7 +242,7 @@ function LoginFormContent() {
           };
           setClientSession(sessionUser);
           toast.success(`Selamat datang di Kemitraan SudutBingkai, ${sessionUser.companyName}! Anda dapat melengkapi profil brand di menu Pengaturan.`);
-          router.push('/vendor');
+          router.push(resolveRedirectDestination('/vendor', 'vendor'));
           return;
         } catch (err) {
           console.warn('Auto vendor creation fallback:', err);
@@ -239,7 +256,7 @@ function LoginFormContent() {
           };
           setClientSession(fallbackUser);
           toast.success(`Selamat datang di Portal Mitra, ${fullName}!`);
-          router.push('/vendor');
+          router.push(resolveRedirectDestination('/vendor', 'vendor'));
           return;
         }
       }
@@ -255,7 +272,7 @@ function LoginFormContent() {
 
     setClientSession(sessionUser);
     toast.success(`Selamat datang, ${fullName}!`);
-    router.push('/dashboard');
+    router.push(resolveRedirectDestination('/dashboard', 'host'));
   };
 
   // Google OAuth Sign-In
@@ -274,9 +291,18 @@ function LoginFormContent() {
         localStorage.setItem('sb_auth_role', portalRole);
       }
 
-      const redirectUrl = typeof window !== 'undefined' 
+      const redirectParam = searchParams.get('redirect');
+      const packageParam = searchParams.get('package');
+      let redirectUrl = typeof window !== 'undefined' 
         ? `${window.location.origin}/login?role=${portalRole}` 
         : undefined;
+
+      if (redirectUrl && redirectParam) {
+        redirectUrl += `&redirect=${encodeURIComponent(redirectParam)}`;
+      }
+      if (redirectUrl && packageParam) {
+        redirectUrl += `&package=${encodeURIComponent(packageParam)}`;
+      }
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -384,7 +410,7 @@ function LoginFormContent() {
 
           setClientSession(newVendorSession);
           toast.success(`Selamat datang, ${vendorCompanyName.trim()}! Kemitraan Anda telah aktif.`);
-          router.push('/vendor');
+          router.push(resolveRedirectDestination('/vendor', 'vendor'));
         } catch (err: any) {
           console.error('Vendor Registration Error:', err);
           setErrorMsg(err.message || 'Gagal mendaftarkan agensi WO. Silakan coba kembali.');
@@ -399,7 +425,7 @@ function LoginFormContent() {
           if (vendorUser) {
             setClientSession(vendorUser);
             toast.success(`Selamat datang di Portal Mitra, ${vendorUser.companyName || vendorUser.name}`);
-            router.push('/vendor');
+            router.push(resolveRedirectDestination('/vendor', 'vendor'));
           } else {
             setErrorMsg('Email atau kata sandi tidak cocok. Silakan periksa kembali atau daftarkan agensi baru.');
           }
@@ -443,7 +469,7 @@ function LoginFormContent() {
 
         setClientSession(newUser);
         toast.success(`Akun berhasil dibuat! Selamat datang, ${name.trim()}.`);
-        router.push('/dashboard');
+        router.push(resolveRedirectDestination('/dashboard', 'host'));
       } catch (err: any) {
         console.error('Registration Error:', err);
         setErrorMsg(err.message || 'Gagal mendaftarkan akun. Silakan coba kembali.');
@@ -459,7 +485,7 @@ function LoginFormContent() {
           if (vendorUser) {
             setClientSession(vendorUser);
             toast.success(`Selamat datang di Portal Mitra, ${vendorUser.name}`);
-            router.push('/vendor');
+            router.push(resolveRedirectDestination('/vendor', 'vendor'));
             setLoading(false);
             return;
           }
@@ -469,7 +495,7 @@ function LoginFormContent() {
         if (user) {
           setClientSession(user);
           toast.success(`Berhasil masuk sebagai ${user.name}`);
-          router.push('/dashboard');
+          router.push(resolveRedirectDestination('/dashboard', 'host'));
         } else {
           setErrorMsg('Email atau kata sandi tidak cocok. Silakan periksa kembali atau gunakan Masuk dengan Google.');
         }
@@ -569,6 +595,32 @@ function LoginFormContent() {
               >
                 Ganti Akun
               </button>
+            </div>
+          )}
+
+          {/* Redirect Information Banner */}
+          {searchParams.get('redirect') && (
+            <div style={{
+              marginBottom: '18px',
+              padding: '12px 14px',
+              background: 'linear-gradient(135deg, rgba(194, 120, 3, 0.1) 0%, rgba(255, 255, 255, 0.95) 100%)',
+              border: '1.5px solid rgba(194, 120, 3, 0.35)',
+              borderRadius: '14px',
+              fontSize: '12.5px',
+              color: '#1D1D1F',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px'
+            }}>
+              <Sparkles size={16} color="#C27803" style={{ flexShrink: 0 }} />
+              <div>
+                <strong style={{ display: 'block', color: '#C27803', fontSize: '12px' }}>
+                  Langkah 1: Masuk atau Buat Akun
+                </strong>
+                <span>
+                  Silakan masuk atau buat akun baru untuk melanjutkan setup dan pembelian album acara Anda.
+                </span>
+              </div>
             </div>
           )}
 
@@ -969,15 +1021,6 @@ function LoginFormContent() {
               </>
             )}
           </div>
-
-          {portalRole === 'host' && (
-            <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '12px', color: '#86868B' }}>
-              Mau buat album langsung tanpa daftar?{' '}
-              <Link href="/create" style={{ color: '#1D1D1F', fontWeight: 600, textDecoration: 'underline' }}>
-                Buat Album Acara (Gratis)
-              </Link>
-            </div>
-          )}
 
           {/* Footer Area: Admin Link */}
           <div style={{ marginTop: '22px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', textAlign: 'center' }}>

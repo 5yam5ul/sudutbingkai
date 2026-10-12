@@ -8,7 +8,8 @@ import {
   ExternalLink, ArrowRight, Check, Sliders, LogOut, 
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
-  CreditCard, Sparkles, Wallet, Share2, Video, Film, PlayCircle
+  CreditCard, Sparkles, Wallet, Share2, Video, Film, PlayCircle,
+  Printer, Tv, Eye
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
@@ -319,6 +320,17 @@ export default function VendorPortalPage() {
       }
     }
 
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam === 'clients') {
+        setActiveTab('clients');
+      }
+      if (urlParams.get('paid') === 'true') {
+        toast.success('Pembayaran klien baru berhasil terkonfirmasi dan komisi telah masuk ke dompet Anda!');
+      }
+    }
+
     fetch('/api/vendors')
       .then(res => res.json())
       .then(data => {
@@ -349,11 +361,16 @@ export default function VendorPortalPage() {
               slug: ev.slug,
               title: ev.title,
               coupleOrHost: ev.coupleOrHost,
+              hostEmail: ev.hostEmail,
               date: new Date(ev.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
               venue: ev.location || 'Lokasi Acara',
               guestCount: ev.maxGuests || 150,
               photoCount: 0,
               preset: ev.preset,
+              packageTier: ev.packageTier || 'wedding',
+              shotsPerGuest: ev.shotsPerGuest || 36,
+              commissionAmount: ev.commissionAmount || 0,
+              commissionStatus: ev.commissionStatus || 'available',
               status: new Date(ev.eventDate) < new Date() ? 'Selesai' : 'Aktif'
             }));
             setClients(realClients);
@@ -2113,13 +2130,44 @@ export default function VendorPortalPage() {
                     gap: '20px'
                   }}
                 >
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>{c.title}</h3>
+                  <div style={{ flex: '1 1 320px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>{c.title}</h3>
+                      
+                      {/* Package Tier Badge */}
                       <span style={{
-                        padding: '3px 8px',
+                        padding: '2px 8px',
                         borderRadius: '6px',
-                        fontSize: '11px',
+                        fontSize: '10.5px',
+                        fontWeight: 700,
+                        background: '#C27803',
+                        color: '#FFFFFF',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em'
+                      }}>
+                        {c.packageTier || 'WEDDING'}
+                      </span>
+
+                      {/* Commission Badge if applicable */}
+                      {c.commissionAmount > 0 && (
+                        <span style={{
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          background: 'rgba(39, 174, 96, 0.12)',
+                          color: '#27AE60',
+                          border: '1px solid rgba(39, 174, 96, 0.25)'
+                        }}>
+                          +Rp {c.commissionAmount.toLocaleString('id-ID')} Komisi
+                        </span>
+                      )}
+
+                      {/* Status Badge */}
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        fontSize: '10.5px',
                         fontWeight: 600,
                         background: c.status === 'Aktif' ? 'rgba(46, 204, 113, 0.12)' : 'rgba(0,0,0,0.06)',
                         color: c.status === 'Aktif' ? '#27AE60' : '#86868B'
@@ -2128,54 +2176,175 @@ export default function VendorPortalPage() {
                       </span>
                     </div>
 
-                    <p style={{ fontSize: '13.5px', color: '#6E6E73' }}>
+                    <p style={{ fontSize: '13px', color: '#6E6E73', margin: '0 0 6px' }}>
                       📅 {c.date} • 📍 {c.venue}
+                      {c.hostEmail && <span> • ✉️ {c.hostEmail}</span>}
                     </p>
 
-                    <div style={{ display: 'flex', gap: '16px', marginTop: '10px', fontSize: '12.5px', color: '#515154' }}>
+                    <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#515154', flexWrap: 'wrap' }}>
                       <span>🎞️ Preset: <strong>{c.preset}</strong></span>
-                      <span>👥 Tamu: <strong>{c.guestCount} Undangan</strong></span>
-                      <span>📸 Foto: <strong>{c.photoCount} Jepretan</strong></span>
+                      <span>👥 Kapasitas: <strong>{c.guestCount} Undangan</strong></span>
+                      <span>📸 Jatah: <strong>{c.shotsPerGuest || 36} Foto/Tamu</strong></span>
                     </div>
                   </div>
 
+                  {/* ACTION BUTTONS */}
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                    <Link href={`/invoice/${c.id}`} target="_blank" className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                      <FileText size={13} />
-                      <span>Invoice Resmi</span>
+                    {/* Setting Album Host Dashboard */}
+                    <Link
+                      href={`/dashboard?eventId=${c.id}`}
+                      className="glass-pill"
+                      style={{
+                        padding: '8px 14px',
+                        fontSize: '12.5px',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        color: '#1D1D1F',
+                        fontWeight: 600
+                      }}
+                      title="Atur watermark, bingkai, waktu cuci roll, dan musik album ini"
+                    >
+                      <Sliders size={13} color="#C27803" />
+                      <span>Setting Album</span>
                     </Link>
 
-                    <Link href={`/event/${c.id}`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
-                      Galeri Album
+                    {/* Cetak Barcode Meja */}
+                    <Link
+                      href={`/event/${c.id}/print`}
+                      target="_blank"
+                      className="glass-pill"
+                      style={{
+                        padding: '8px 14px',
+                        fontSize: '12.5px',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <Printer size={13} />
+                      <span>Cetak QR Meja</span>
                     </Link>
 
-                    <Link href={`/event/${c.id}/print`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
-                      Cetak Kartu QR Tamu
+                    {/* Live Proyektor Videotron */}
+                    <Link
+                      href={`/event/${c.id}/live`}
+                      target="_blank"
+                      className="glass-pill"
+                      style={{
+                        padding: '8px 14px',
+                        fontSize: '12.5px',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <Tv size={13} />
+                      <span>Live Proyektor</span>
                     </Link>
 
-                    <Link href={`/cam/${c.id}`} className="btn-apple-black" style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none' }}>
-                      Kamera Tamu
+                    {/* Galeri Tamu */}
+                    <Link
+                      href={`/event/${c.id}`}
+                      target="_blank"
+                      className="glass-pill"
+                      style={{
+                        padding: '8px 14px',
+                        fontSize: '12.5px',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <Eye size={13} />
+                      <span>Galeri Tamu</span>
                     </Link>
 
+                    {/* Bagi Link ke Pengantin */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/event/${c.id}` : `https://sudutbingkai.id/event/${c.id}`;
+                        navigator.clipboard.writeText(shareUrl);
+                        toast.success(`Tautan galeri acara "${c.title}" berhasil disalin! Bagikan ke pengantin.`);
+                      }}
+                      className="glass-pill"
+                      style={{
+                        padding: '8px 14px',
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        color: '#C27803',
+                        border: '1px solid rgba(194, 120, 3, 0.3)'
+                      }}
+                      title="Salin tautan album untuk dibagikan ke pasangan pengantin"
+                    >
+                      <Share2 size={13} />
+                      <span>Bagi ke Pengantin</span>
+                    </button>
+
+                    {/* Tes Kamera */}
+                    <Link
+                      href={`/cam/${c.id}`}
+                      target="_blank"
+                      className="btn-apple-black"
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '12.5px',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      <Camera size={13} />
+                      <span>Kamera Tamu</span>
+                    </Link>
+
+                    {/* Invoice */}
+                    <Link
+                      href={`/invoice/${c.id}`}
+                      target="_blank"
+                      className="glass-pill"
+                      style={{
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                      title="Unduh invoice resmi"
+                    >
+                      <FileText size={12} />
+                      <span>Invoice</span>
+                    </Link>
+
+                    {/* Hapus Klien */}
                     <button
                       type="button"
                       onClick={() => handleDeleteClient(c.id, c.title)}
                       className="glass-pill"
                       style={{
-                        padding: '8px 12px',
-                        fontSize: '12.5px',
+                        padding: '8px 10px',
+                        fontSize: '12px',
                         color: '#EF4444',
                         border: '1px solid rgba(239, 68, 68, 0.25)',
                         background: 'rgba(239, 68, 68, 0.05)',
                         cursor: 'pointer',
-                        display: 'flex',
+                        display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '5px'
+                        gap: '4px'
                       }}
                       title="Hapus Klien Acara"
                     >
-                      <Trash2 size={13} />
-                      <span>Hapus</span>
+                      <Trash2 size={12} />
                     </button>
                   </div>
                 </div>
