@@ -1514,21 +1514,52 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      const record = {
+      const record: Record<string, any> = {
         id: newAddon.id,
         name: newAddon.name,
         category: newAddon.category,
         description: newAddon.description || null,
         price: newAddon.price,
-        cost_price: newAddon.costPrice || null,
-        image_url: newAddon.imagePreviewUrl || null,
-        is_active: newAddon.isActive !== false,
+        image_preview_url: newAddon.imagePreviewUrl || null,
         free_shipping_jabodetabek: newAddon.freeShippingJabodetabek !== false,
         unit: newAddon.unit || '1 set',
         is_popular: newAddon.isPopular || false
       };
 
-      await supabase.from('addons').upsert(record);
+      const { data, error } = await supabase.from('addons').upsert(record).select().maybeSingle();
+      if (!error && data) {
+        const savedItem: EventAddonItem = {
+          id: data.id,
+          name: data.name,
+          category: data.category,
+          description: data.description || '',
+          price: Number(data.price),
+          priceFormatted: `Rp ${Number(data.price).toLocaleString('id-ID')}`,
+          costPrice: newAddon.costPrice,
+          imagePreviewUrl: data.image_preview_url || undefined,
+          isActive: newAddon.isActive !== false,
+          freeShippingJabodetabek: data.free_shipping_jabodetabek !== false,
+          unit: data.unit || '1 set',
+          isPopular: data.is_popular || false,
+          createdAt: data.created_at
+        };
+
+        // Also sync local cache safely
+        try {
+          ensureLocalDataFiles();
+          const raw = fs.existsSync(ADDONS_FILE) ? fs.readFileSync(ADDONS_FILE, 'utf8') : '[]';
+          const list: EventAddonItem[] = JSON.parse(raw);
+          const existingIdx = list.findIndex(a => a.id === data.id);
+          if (existingIdx >= 0) list[existingIdx] = savedItem;
+          else list.push(savedItem);
+          fs.writeFileSync(ADDONS_FILE, JSON.stringify(list, null, 2), 'utf8');
+        } catch {}
+
+        return savedItem;
+      }
+      if (error) {
+        console.warn('Supabase saveAddon error, falling back to local:', error.message);
+      }
     } catch (e) {
       console.warn('Supabase saveAddon exception:', e);
     }
@@ -1560,14 +1591,48 @@ export async function updateAddon(id: string, updates: Partial<EventAddonItem>):
       if (updates.category !== undefined) dbUpdates.category = updates.category;
       if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.price !== undefined) dbUpdates.price = updates.price;
-      if (updates.costPrice !== undefined) dbUpdates.cost_price = updates.costPrice;
-      if (updates.imagePreviewUrl !== undefined) dbUpdates.image_url = updates.imagePreviewUrl;
-      if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+      if (updates.imagePreviewUrl !== undefined) dbUpdates.image_preview_url = updates.imagePreviewUrl;
       if (updates.freeShippingJabodetabek !== undefined) dbUpdates.free_shipping_jabodetabek = updates.freeShippingJabodetabek;
       if (updates.unit !== undefined) dbUpdates.unit = updates.unit;
       if (updates.isPopular !== undefined) dbUpdates.is_popular = updates.isPopular;
 
-      await supabase.from('addons').update(dbUpdates).eq('id', id);
+      const { data, error } = await supabase.from('addons').update(dbUpdates).eq('id', id).select().maybeSingle();
+      if (!error && data) {
+        const updated: EventAddonItem = {
+          id: data.id,
+          name: data.name,
+          category: data.category,
+          description: data.description || '',
+          price: Number(data.price),
+          priceFormatted: `Rp ${Number(data.price).toLocaleString('id-ID')}`,
+          costPrice: updates.costPrice,
+          imagePreviewUrl: data.image_preview_url || undefined,
+          isActive: updates.isActive !== undefined ? updates.isActive : true,
+          freeShippingJabodetabek: data.free_shipping_jabodetabek !== false,
+          unit: data.unit || '1 set',
+          isPopular: data.is_popular || false,
+          createdAt: data.created_at
+        };
+
+        // Also sync local cache safely
+        try {
+          ensureLocalDataFiles();
+          const raw = fs.existsSync(ADDONS_FILE) ? fs.readFileSync(ADDONS_FILE, 'utf8') : '[]';
+          const list: EventAddonItem[] = JSON.parse(raw);
+          const idx = list.findIndex(a => a.id === id);
+          if (idx >= 0) {
+            list[idx] = updated;
+          } else {
+            list.push(updated);
+          }
+          fs.writeFileSync(ADDONS_FILE, JSON.stringify(list, null, 2), 'utf8');
+        } catch {}
+
+        return updated;
+      }
+      if (error) {
+        console.warn('Supabase updateAddon error, falling back to local:', error.message);
+      }
     } catch (e) {
       console.warn('Supabase updateAddon exception:', e);
     }
@@ -1596,8 +1661,21 @@ export async function deleteAddon(id: string): Promise<boolean> {
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('addons').delete().eq('id', id);
-    } catch (e) {}
+      const { error } = await supabase.from('addons').delete().eq('id', id);
+      if (!error) {
+        // Also sync local cache safely
+        try {
+          ensureLocalDataFiles();
+          const raw = fs.existsSync(ADDONS_FILE) ? fs.readFileSync(ADDONS_FILE, 'utf8') : '[]';
+          let list: EventAddonItem[] = JSON.parse(raw);
+          list = list.filter(a => a.id !== id);
+          fs.writeFileSync(ADDONS_FILE, JSON.stringify(list, null, 2), 'utf8');
+        } catch {}
+        return true;
+      }
+    } catch (e) {
+      console.warn('Supabase deleteAddon error:', e);
+    }
   }
 
   // 2. Local fallback
