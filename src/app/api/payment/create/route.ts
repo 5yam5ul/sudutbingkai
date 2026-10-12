@@ -43,15 +43,15 @@ export async function POST(request: Request) {
 
     if (isWholesale) {
       amount = Number(body.amount) || 1120000;
-      description = `Paket Grosir WO ${wholesaleTitle} (${eventsCount} Acara) - SudutBingkai`;
+      description = `Paket Grosir WO ${wholesaleTitle} (${eventsCount} Acara) - SudutBingkai (${body.vendorId || 'vendor'})`;
     } else if (isAddonPax) {
       amount = ADDON_PAX_PRICES[paxAmount] || (paxAmount * 2000);
       description = `Top Up Kuota Tamu +${paxAmount} Pax - SudutBingkai (${eventId || 'Acara'})`;
     } else {
       const tierKey = packageTier as EventPackageTier;
-      amount = TIER_PRICES[tierKey] ?? 349000;
+      amount = Number(body.amount) > 0 ? Number(body.amount) : (TIER_PRICES[tierKey] ?? 349000);
       const tierInfo = PACKAGE_TIERS[tierKey];
-      description = `Paket ${tierInfo?.name || 'Wedding'} (${tierInfo?.guestsLabel || '300 Tamu'}) - SudutBingkai`;
+      description = `Paket ${tierInfo?.name || 'Wedding'} (${tierInfo?.guestsLabel || '300 Tamu'}) - SudutBingkai (${eventId || 'event'})`;
     }
 
     // Free starter tier doesn't need payment

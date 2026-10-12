@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { SYSTEM_USERS } from '@/lib/auth';
+import { getAllVendors } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
@@ -11,23 +12,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Kode voucher referral wajib diisi' }, { status: 400 });
     }
 
-    // Check system vendors
+    // 1. Check system static vendors
     let matchedVendor = Object.values(SYSTEM_USERS).find(
       u => u.role === 'vendor' && (u.referralCode || '').toUpperCase() === code
     );
 
-    // If not found in static list, check common default patterns or vendor codes
-    if (!matchedVendor && (code.includes('WO') || code.includes('WEDDING') || code.length >= 4)) {
-      // Allow dynamic vendor codes for testing/partners
-      matchedVendor = {
-        id: `vendor_${code.toLowerCase()}`,
-        name: `Mitra ${code}`,
-        email: `${code.toLowerCase()}@partner.sudutbingkai.id`,
-        role: 'vendor',
-        companyName: `${code} Wedding Partner`,
-        referralCode: code,
-        partnerTier: 'pro'
-      };
+    // 2. Check registered vendors from database (Supabase + Local)
+    if (!matchedVendor) {
+      try {
+        const dbVendors = await getAllVendors();
+        const found = dbVendors.find(
+          v => (v.referralCode && v.referralCode.toUpperCase() === code) ||
+               (v.id && v.id.toUpperCase() === code)
+        );
+        if (found) {
+          matchedVendor = {
+            id: found.id,
+            name: found.name,
+            email: found.email,
+            role: 'vendor',
+            companyName: found.companyName || found.name,
+            referralCode: found.referralCode || code,
+            partnerTier: found.partnerTier || 'pro'
+          };
+        }
+      } catch (err) {
+        console.warn('Error reading vendors in referral validate:', err);
+      }
     }
 
     if (!matchedVendor) {

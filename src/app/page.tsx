@@ -109,6 +109,15 @@ export default function HomePage() {
       setCurrentUser(session);
     }
 
+    // Persist partner referral code from URL into localStorage for seamless checkout
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const refParam = urlParams.get('ref');
+      if (refParam) {
+        localStorage.setItem('sb_client_ref', refParam.toUpperCase().trim());
+      }
+    }
+
     fetch('/api/vendors')
       .then(res => res.json())
       .then(data => {

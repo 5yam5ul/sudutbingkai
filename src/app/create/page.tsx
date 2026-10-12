@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   ArrowLeft, ArrowRight, Check, Calendar, MapPin, Film, Camera,
   Lock, Unlock, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye,
-  Mail, Key, UserCheck
+  Mail, Key, UserCheck, Tag, Percent, Sparkles
 } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FilmPresetId, EventPackageTier, PACKAGE_TIERS, PRIMARY_PACKAGE_TIER_KEYS, UserAccount } from '@/lib/types';
@@ -24,6 +24,7 @@ function CreateEventForm() {
 
   const [loading, setLoading] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [createdDraftEventId, setCreatedDraftEventId] = useState<string | null>(null);
   const [pendingPaymentData, setPendingPaymentData] = useState<{
     amount: number;
     title: string;
@@ -31,6 +32,20 @@ function CreateEventForm() {
     isSimulation: boolean;
     paymentUrl?: string;
   } | null>(null);
+
+  // Referral / Promo Code State
+  const [referralCode, setReferralCode] = useState<string>('');
+  const [referralDiscount, setReferralDiscount] = useState<{
+    valid: boolean;
+    discountPercent: number;
+    discountAmount: number;
+    finalPrice: number;
+    commissionAmount?: number;
+    vendorId?: string;
+    vendorName?: string;
+    message?: string;
+  } | null>(null);
+  const [isValidatingReferral, setIsValidatingReferral] = useState(false);
 
   // Form State
   const [eventType, setEventType] = useState<'wedding' | 'birthday' | 'corporate' | 'other'>('wedding');
@@ -68,14 +83,22 @@ function CreateEventForm() {
   const [hostPin, setHostPin] = useState<string>('');
   const [existingHost, setExistingHost] = useState<UserAccount | null>(null);
 
-  // Check existing host session on mount
+  // Check existing host session and referral code on mount
   useEffect(() => {
     const session = getClientSession();
     if (session && session.role === 'host' && session.email) {
       setExistingHost(session);
       setHostEmail(session.email);
     }
-  }, []);
+
+    // Check URL searchParams or localStorage for partner referral
+    const paramRef = searchParams.get('ref');
+    const storedRef = typeof window !== 'undefined' ? localStorage.getItem('sb_client_ref') : null;
+    const initialRef = (paramRef || storedRef || '').trim();
+    if (initialRef) {
+      setReferralCode(initialRef.toUpperCase());
+    }
+  }, [searchParams]);
 
   // Auto-slug generator from host or title
   const generateCleanSlug = (text: string) => {
@@ -139,64 +162,95 @@ function CreateEventForm() {
     setRevealTime(target.toISOString());
   };
 
-  const executeCreateEvent = async () => {
-    const cleanEmail = (hostEmail || '').trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes('@') || !cleanEmail.includes('.')) {
-      toast.error('Silakan isi email aktif untuk akses dashboard album Anda.');
+  const validateReferralCode = async (codeToTest?: string) => {
+    const code = (codeToTest || referralCode || '').trim().toUpperCase();
+    if (!code) {
+      setReferralDiscount(null);
       return;
     }
-
-    setLoading(true);
-
+    setIsValidatingReferral(true);
     try {
-      const cleanSlug = generateCleanSlug(slug || coupleOrHost || title);
-      const res = await fetch('/api/events', {
+      const basePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 0;
+      const res = await fetch('/api/referral/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title,
-          coupleOrHost,
-          slug: cleanSlug || undefined,
-          eventDate: eventDate || new Date().toISOString(),
-          location,
-          preset: primaryPreset,
-          allowedPresets,
-          allowGuestPresetSwitch,
-          packageTier: selectedTier,
-          maxGuests: activeTier.maxGuests,
-          shotsPerGuest: activeTier.shotsPerGuest,
-          revealMode,
-          revealTime: revealMode === 'delayed' ? revealTime : undefined,
-          frameId,
-          customFrameUrl: customFrameUrl || undefined,
-          frameText,
-          allowGuestFrameToggle,
-          allowVoiceNote,
-          closingWishType: (selectedTier === 'wedding' || selectedTier === 'unlimited') ? 'video' : (allowVoiceNote ? 'voice' : 'none'),
-          hostEmail: cleanEmail,
-        }),
+        body: JSON.stringify({ code, price: basePrice })
       });
-
       const data = await res.json();
-      if (data.success && data.event) {
-        // Auto-login session for the host
-        const sessionUser: UserAccount = {
-          id: existingHost?.id || 'usr_' + Math.random().toString(36).substring(2, 9),
-          name: coupleOrHost || title || cleanEmail.split('@')[0],
-          email: cleanEmail,
-          role: 'host'
-        };
-        setClientSession(sessionUser);
-
-        toast.success('Album berhasil dibuat! Akun dashboard Anda sudah aktif.');
-        router.push(`/dashboard?created=true&eventId=${data.event.id}`);
+      if (data.success && data.valid) {
+        setReferralDiscount({
+          valid: true,
+          discountPercent: data.discountPercent,
+          discountAmount: data.discountAmount,
+          finalPrice: data.finalPrice,
+          commissionAmount: data.commissionAmount,
+          vendorId: data.vendorId,
+          vendorName: data.vendorName,
+          message: data.message
+        });
+        toast.success(`Kode voucher ${code} aktif! Diskon 10% berhasil dipasang.`);
       } else {
-        toast.error('Gagal membuat acara: ' + (data.error || 'Terjadi kesalahan'));
+        setReferralDiscount(null);
+        toast.error(data.error || 'Kode voucher tidak valid');
       }
-    } catch (err: unknown) {
-      toast.error('Error: ' + (err as Error).message);
+    } catch {
+      setReferralDiscount(null);
+      toast.error('Gagal memvalidasi kode promo.');
     } finally {
-      setLoading(false);
+      setIsValidatingReferral(false);
+    }
+  };
+
+  const createDraftOrActiveEvent = async (paymentStatus: 'pending' | 'paid'): Promise<string | null> => {
+    const cleanEmail = (hostEmail || '').trim().toLowerCase();
+    const cleanSlug = generateCleanSlug(slug || coupleOrHost || title);
+
+    const res = await fetch('/api/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title,
+        coupleOrHost,
+        slug: cleanSlug || undefined,
+        eventDate: eventDate || new Date().toISOString(),
+        location,
+        preset: primaryPreset,
+        allowedPresets,
+        allowGuestPresetSwitch,
+        packageTier: selectedTier,
+        maxGuests: activeTier.maxGuests,
+        shotsPerGuest: activeTier.shotsPerGuest,
+        revealMode,
+        revealTime: revealMode === 'delayed' ? revealTime : undefined,
+        frameId,
+        customFrameUrl: customFrameUrl || undefined,
+        frameText,
+        allowGuestFrameToggle,
+        allowVoiceNote,
+        closingWishType: (selectedTier === 'wedding' || selectedTier === 'unlimited') ? 'video' : (allowVoiceNote ? 'voice' : 'none'),
+        hostEmail: cleanEmail,
+        paymentStatus,
+        referralCodeUsed: referralDiscount?.valid ? referralCode.toUpperCase().trim() : undefined,
+        vendorId: referralDiscount?.vendorId,
+        vendorName: referralDiscount?.vendorName,
+        commissionAmount: referralDiscount?.commissionAmount
+      }),
+    });
+
+    const data = await res.json();
+    if (data.success && data.event) {
+      setCreatedDraftEventId(data.event.id);
+      // Auto-login session for the host
+      const sessionUser: UserAccount = {
+        id: existingHost?.id || 'usr_' + Math.random().toString(36).substring(2, 9),
+        name: coupleOrHost || title || cleanEmail.split('@')[0],
+        email: cleanEmail,
+        role: 'host'
+      };
+      setClientSession(sessionUser);
+      return data.event.id;
+    } else {
+      throw new Error(data.error || 'Gagal menyimpan draft acara');
     }
   };
 
@@ -209,34 +263,54 @@ function CreateEventForm() {
       return;
     }
 
-    // If starter (free), directly create event
-    if (activeTier.isFree) {
-      return executeCreateEvent();
-    }
-
-    // For paid packages, initiate Mayar checkout
     setLoading(true);
+
     try {
+      // 1. If starter (free), directly create event
+      if (activeTier.isFree) {
+        const eventId = await createDraftOrActiveEvent('paid');
+        if (eventId) {
+          toast.success('Album gratis Anda berhasil diterbitkan!');
+          router.push(`/dashboard?created=true&eventId=${eventId}`);
+        }
+        return;
+      }
+
+      // 2. For paid packages, ALWAYS save draft event first so data is never lost
+      const eventId = await createDraftOrActiveEvent('pending');
+      if (!eventId) {
+        throw new Error('Gagal mencatat rincian album sebelum pembayaran.');
+      }
+
+      // 3. Initiate Mayar Checkout with accurate canonical eventId & final price
+      const hostUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.vercel.app';
+      const basePackagePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 499000;
+      const finalChargedAmount = referralDiscount?.valid ? referralDiscount.finalPrice : basePackagePrice;
+
       const payRes = await fetch('/api/payment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           packageTier: selectedTier,
           name: coupleOrHost || title,
+          email: cleanEmail,
+          eventId,
+          amount: finalChargedAmount,
+          redirectUrl: `${hostUrl}/dashboard?eventId=${eventId}&paid=true`
         })
       });
 
       const payData = await payRes.json();
       if (payData.success) {
         if (!payData.isSimulation && payData.paymentUrl && !payData.paymentUrl.startsWith('/')) {
-          // Live Mayar redirect
+          // Live Mayar redirect - draft album is already safely in database!
           window.location.href = payData.paymentUrl;
           return;
         }
 
         // Sandbox / Simulator Mode
         setPendingPaymentData({
-          amount: payData.amount,
+          amount: payData.amount || finalChargedAmount,
           title: `Paket ${activeTier.name} (${activeTier.guestsLabel})`,
           description: `Wadah Album Digital SudutBingkai untuk ${coupleOrHost || title}`,
           isSimulation: payData.isSimulation ?? true,
@@ -244,10 +318,10 @@ function CreateEventForm() {
         });
         setPaymentModalOpen(true);
       } else {
-        executeCreateEvent();
+        toast.error('Gagal menginisiasi pembayaran Mayar: ' + (payData.error || 'Terjadi kesalahan'));
       }
-    } catch {
-      executeCreateEvent();
+    } catch (err: unknown) {
+      toast.error('Error: ' + (err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -1208,6 +1282,87 @@ function CreateEventForm() {
             )}
           </div>
 
+          {/* REFERRAL / PROMO VOUCHER CARD */}
+          {!activeTier.isFree && (
+            <div style={{
+              background: '#FFFFFF',
+              borderRadius: '16px',
+              padding: '16px 20px',
+              border: referralDiscount?.valid ? '1px solid #10B981' : '1px solid rgba(0,0,0,0.08)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.03)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Tag size={16} color={referralDiscount?.valid ? '#10B981' : '#C27803'} />
+                  <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#1D1D1F' }}>
+                    Punya Kode Voucher Kemitraan / Promo WO?
+                  </span>
+                </div>
+                {referralDiscount?.valid && (
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#047857', background: 'rgba(16,185,129,0.12)', padding: '3px 8px', borderRadius: '12px' }}>
+                    HEMAT 10%
+                  </span>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="Masukkan kode promo (misal: VOWSANDCO)"
+                  value={referralCode}
+                  onChange={(e) => {
+                    setReferralCode(e.target.value.toUpperCase());
+                    if (referralDiscount) setReferralDiscount(null);
+                  }}
+                  className="glass-input"
+                  style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', fontSize: '13.5px', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => validateReferralCode()}
+                  disabled={isValidatingReferral || !referralCode.trim()}
+                  className="glass-pill"
+                  style={{
+                    padding: '10px 16px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    cursor: (isValidatingReferral || !referralCode.trim()) ? 'not-allowed' : 'pointer',
+                    background: referralDiscount?.valid ? '#10B981' : '#1D1D1F',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '10px'
+                  }}
+                >
+                  {isValidatingReferral ? 'Mengecek...' : referralDiscount?.valid ? 'Terpasang' : 'Terapkan'}
+                </button>
+              </div>
+
+              {referralDiscount?.valid && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16,185,129,0.06)', padding: '10px 14px', borderRadius: '10px', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <div>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#047857', display: 'block' }}>
+                      Voucher Kemitraan: {referralDiscount.vendorName}
+                    </span>
+                    <span style={{ fontSize: '11px', color: '#065F46' }}>
+                      Hemat Rp {referralDiscount.discountAmount.toLocaleString('id-ID')} ({referralDiscount.discountPercent}%)
+                    </span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontSize: '11px', color: '#86868B', textDecoration: 'line-through', display: 'block' }}>
+                      {activeTier.price}
+                    </span>
+                    <strong style={{ fontSize: '14px', color: '#047857' }}>
+                      Rp {referralDiscount.finalPrice.toLocaleString('id-ID')}
+                    </strong>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* SUBMIT BUTTON */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center' }}>
             <button
@@ -1228,7 +1383,9 @@ function CreateEventForm() {
                   ? 'Menyiapkan Album Digital...'
                   : activeTier.isFree
                     ? 'Terbitkan Album & Unduh Kartu QR Tamu (Gratis)'
-                    : `Lanjut ke Pembayaran Mayar (${activeTier.price})`}
+                    : referralDiscount?.valid
+                      ? `Lanjut ke Pembayaran Mayar (Rp ${referralDiscount.finalPrice.toLocaleString('id-ID')})`
+                      : `Lanjut ke Pembayaran Mayar (${activeTier.price})`}
               </span>
               <ArrowRight size={18} />
             </button>
@@ -1246,7 +1403,12 @@ function CreateEventForm() {
         onClose={() => setPaymentModalOpen(false)}
         onSuccess={() => {
           setPaymentModalOpen(false);
-          executeCreateEvent();
+          toast.success('Pembayaran Terkonfirmasi! Mengalihkan ke Dashboard...');
+          if (createdDraftEventId) {
+            router.push(`/dashboard?created=true&eventId=${createdDraftEventId}&paid=true`);
+          } else {
+            router.push('/dashboard?paid=true');
+          }
         }}
         title={pendingPaymentData?.title || `Paket ${activeTier.name}`}
         description={pendingPaymentData?.description || ''}

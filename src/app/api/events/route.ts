@@ -77,6 +77,10 @@ export async function POST(request: Request) {
       closingWishType: body.closingWishType || (body.packageTier === 'wedding' || body.packageTier === 'unlimited' ? 'video' : 'voice'),
       createdAt: new Date().toISOString(),
       hostEmail: body.hostEmail,
+      paymentStatus: body.paymentStatus || 'paid',
+      referralCodeUsed: body.referralCodeUsed,
+      commissionAmount: body.commissionAmount,
+      commissionStatus: body.commissionStatus || (body.commissionAmount ? 'pending' : undefined),
       vendorId: body.vendorId,
       vendorName: body.vendorName,
       vendorLogo: body.vendorLogo,
@@ -123,6 +127,10 @@ export async function PATCH(request: Request) {
     if (body.allowGuestFrameToggle !== undefined) updates.allowGuestFrameToggle = body.allowGuestFrameToggle;
     if (body.closingWishType !== undefined) updates.closingWishType = body.closingWishType;
     if (body.coverUrl !== undefined) updates.coverUrl = body.coverUrl;
+    if (body.paymentStatus !== undefined) updates.paymentStatus = body.paymentStatus;
+    if (body.referralCodeUsed !== undefined) updates.referralCodeUsed = body.referralCodeUsed;
+    if (body.commissionAmount !== undefined) updates.commissionAmount = body.commissionAmount;
+    if (body.commissionStatus !== undefined) updates.commissionStatus = body.commissionStatus;
 
     const updated = await updateEvent(body.id, updates);
     if (!updated) {

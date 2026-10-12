@@ -208,6 +208,7 @@ export interface EventData {
   coverUrl?: string;
   createdAt: string;
   hostEmail?: string;
+  paymentStatus?: 'pending' | 'paid';
   vendorId?: string;
   vendorName?: string;
   vendorLogo?: string;

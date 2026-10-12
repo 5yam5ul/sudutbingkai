@@ -25,7 +25,9 @@ export async function GET(request: Request) {
       if (event) {
         const tierKey = (event.packageTier || 'wedding') as EventPackageTier;
         const tierInfo = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.wedding;
-        const rawPrice = parseInt(tierInfo.price.replace(/[^0-9]/g, ''), 10) || 499000;
+        const rawPrice = tierInfo.isFree || tierKey === 'starter' 
+          ? 0 
+          : (parseInt(tierInfo.price.replace(/[^0-9]/g, ''), 10) || 0);
         const discount = event.referralCodeUsed ? Math.round(rawPrice * 0.1) : 0;
         const finalAmount = rawPrice - discount;
 

@@ -160,6 +160,10 @@ function rowToEvent(row: any): EventData {
     coverUrl: row.cover_url || undefined,
     createdAt: row.created_at,
     hostEmail: row.host_email || undefined,
+    paymentStatus: row.payment_status || 'paid',
+    referralCodeUsed: row.referral_code_used || undefined,
+    commissionAmount: row.commission_amount ? Number(row.commission_amount) : undefined,
+    commissionStatus: row.commission_status || undefined,
     vendorId: row.vendor_id || undefined,
     vendorName: row.vendor_name || undefined,
     vendorLogo: row.vendor_logo || undefined,
@@ -192,6 +196,10 @@ function eventToRow(event: EventData) {
     allow_guest_frame_toggle: event.allowGuestFrameToggle ?? true,
     cover_url: event.coverUrl || null,
     host_email: event.hostEmail || null,
+    payment_status: event.paymentStatus || 'paid',
+    referral_code_used: event.referralCodeUsed || null,
+    commission_amount: event.commissionAmount || null,
+    commission_status: event.commissionStatus || null,
     vendor_id: event.vendorId || null,
     vendor_name: event.vendorName || null,
     vendor_logo: event.vendorLogo || null,
@@ -279,7 +287,7 @@ export async function getEventById(id: string): Promise<EventData | null> {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .or(`id.eq.${id},id.eq.${targetId}`)
+        .or(`id.eq.${id},id.eq.${targetId},slug.eq.${cleanKey}`)
         .maybeSingle();
 
       if (!error && data) {
@@ -1309,6 +1317,27 @@ export async function updateTestimonialStatus(
     if (rewardPaidAt) list[index].rewardPaidAt = rewardPaidAt;
 
     fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(list, null, 2), 'utf8');
+
+    // 3. If approved and submitter is a vendor, disburse the reward to vendor wallet
+    if (status === 'approved') {
+      try {
+        const currentTesti = list[index];
+        if (currentTesti && currentTesti.submitterType === 'vendor' && currentTesti.submitterId) {
+          const vendors = await getAllVendors();
+          const matchedVendor = vendors.find(v => v.id === currentTesti.submitterId || (currentTesti.submitterEmail && v.email === currentTesti.submitterEmail));
+          if (matchedVendor) {
+            const reward = currentTesti.rewardAmount || 50000;
+            await updateVendor(matchedVendor.id, {
+              walletBalance: (matchedVendor.walletBalance || 0) + reward,
+              totalEarnings: (matchedVendor.totalEarnings || 0) + reward
+            });
+          }
+        }
+      } catch (rewardErr) {
+        console.warn('Failed to auto-disburse testimonial reward to vendor wallet:', rewardErr);
+      }
+    }
+
     return list[index];
   } catch {
     return null;
@@ -1443,6 +1472,7 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       if (updates.walletBalance !== undefined) dbUpdates.wallet_balance = updates.walletBalance;
       if (updates.totalEarnings !== undefined) dbUpdates.total_earnings = updates.totalEarnings;
       if (updates.wholesaleTokens !== undefined) dbUpdates.wholesale_tokens = updates.wholesaleTokens;
+      if (updates.clientCount !== undefined) dbUpdates.client_count = updates.clientCount;
       if (updates.bankDetails) {
         if (updates.bankDetails.bankName) dbUpdates.bank_name = updates.bankDetails.bankName;
         if (updates.bankDetails.accountNumber) dbUpdates.bank_account_number = updates.bankDetails.accountNumber;

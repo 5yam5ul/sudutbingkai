@@ -56,13 +56,17 @@ export function authenticateUser(email: string, pass: string, role?: 'host' | 'v
   const cleanEmail = email.trim().toLowerCase();
   const cleanPass = pass.trim();
 
-  // Check Super Admin
-  if (
-    (!role || role === 'admin') &&
-    (cleanEmail === 'admin@sudutbingkai.id' || cleanEmail === 'superadmin@sudutbingkai.id') &&
-    (cleanPass === 'admin123' || cleanPass === 'adminpass2026' || cleanPass === 'sudutbingkai2026')
-  ) {
-    return SYSTEM_USERS['admin'];
+  // Check Super Admin - STRICT SECURITY: Admin role MUST match authorized credentials
+  const isAdminEmail = cleanEmail === 'admin@sudutbingkai.id' || cleanEmail === 'superadmin@sudutbingkai.id';
+  if (role === 'admin' || isAdminEmail) {
+    if (
+      isAdminEmail &&
+      (cleanPass === 'admin123' || cleanPass === 'adminpass2026' || cleanPass === 'sudutbingkai2026')
+    ) {
+      return SYSTEM_USERS['admin'];
+    }
+    // Deny immediately if password doesn't match master admin password
+    return null;
   }
 
   // Check Pengantin / Host
@@ -83,13 +87,13 @@ export function authenticateUser(email: string, pass: string, role?: 'host' | 'v
     return SYSTEM_USERS['vendor'];
   }
 
-  // Allow custom test login if user enters their own valid email and password
-  if (cleanEmail && cleanPass.length >= 4) {
+  // Allow custom host / vendor login if user enters their own valid email and password
+  if (cleanEmail && cleanPass.length >= 4 && role !== 'admin') {
     return {
       id: 'usr_' + Math.random().toString(36).substring(2, 9),
       name: cleanEmail.split('@')[0].toUpperCase(),
       email: cleanEmail,
-      role: role || 'host',
+      role: role === 'vendor' ? 'vendor' : 'host',
       companyName: role === 'vendor' ? 'Mitra Organizer' : undefined
     };
   }

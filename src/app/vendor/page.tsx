@@ -240,6 +240,30 @@ export default function VendorPortalPage() {
     if (session.instagram) setInstagram(session.instagram);
     if (session.phone) setPhone(session.phone);
 
+    // Check payment return from Mayar wholesale checkout
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('paid') === 'true') {
+        toast.success('Pembayaran Paket Grosir Berhasil! Kuota voucher acara Anda telah aktif.');
+      }
+    }
+
+    // Refresh live vendor quota & balance from database
+    fetch('/api/vendors')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.vendors) {
+          const fresh = data.vendors.find((v: any) => v.id === session.id || (session.email && v.email === session.email));
+          if (fresh) {
+            const count = fresh.wholesaleTokens || fresh.clientCount || 0;
+            if (count > 0) setVoucherQuota(count);
+            if (fresh.walletBalance !== undefined) setWalletBalance(fresh.walletBalance);
+            if (fresh.totalEarnings !== undefined) setTotalEarnings(fresh.totalEarnings);
+          }
+        }
+      })
+      .catch(() => {});
+
     // If demo tester vendor account, populate sample mock stats
     if (session.id === 'vendor_vows_co' || session.email === 'vendor@sudutbingkai.id') {
       setWalletBalance(420000);
