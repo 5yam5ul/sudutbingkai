@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ArrowLeft, ArrowRight, UserPlus, LogIn, 
-  AlertCircle, Loader2, Sparkles, Heart, Briefcase,
+  AlertCircle, Loader2, Heart, Briefcase,
   Building2, Phone, MapPin, ShieldCheck, LogOut, CheckCircle2
 } from 'lucide-react';
 import { authenticateUser, setClientSession, getClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
@@ -612,7 +612,7 @@ function LoginFormContent() {
               alignItems: 'center',
               gap: '10px'
             }}>
-              <Sparkles size={16} color="#C27803" style={{ flexShrink: 0 }} />
+              <ArrowRight size={16} color="#C27803" style={{ flexShrink: 0 }} />
               <div>
                 <strong style={{ display: 'block', color: '#C27803', fontSize: '12px' }}>
                   Langkah 1: Masuk atau Buat Akun

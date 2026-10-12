@@ -1483,7 +1483,7 @@ export default function BrideDashboardPage() {
                   {[
                     { label: '👰 Potret Pengantin', url: '/samples/dummy-couple.jpg' },
                     { label: '🥂 Suasana Tamu & Pesta', url: '/samples/dummy-guests.jpg' },
-                    { label: '✨ Romantic Warmth (Unsplash)', url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80' },
+                    { label: '🕯️ Romantic Warmth (Unsplash)', url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80' },
                     { label: '🌅 Sunset Silhouette (Unsplash)', url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1600&q=80' },
                   ].map((p, idx) => (
                     <button

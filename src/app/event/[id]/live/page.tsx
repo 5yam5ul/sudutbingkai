@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
-import { Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw, Layout, Film, Grid, SplitSquareVertical, Clock, Sparkles, Disc, Layers, Copy, Shuffle } from 'lucide-react';
+import { Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw, Layout, Film, Grid, SplitSquareVertical, Clock, Building, Disc, Layers, Copy, Shuffle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventData, PhotoRecord } from '@/lib/types';
 
@@ -366,7 +366,7 @@ export default function LiveProjectorWallPage() {
               letterSpacing: '0.05em',
               textTransform: 'uppercase'
             }}>
-              <Sparkles size={14} />
+              <Film size={14} />
               <span>Mode Cuci Roll Analog Aktif</span>
             </div>
 
@@ -1126,7 +1126,7 @@ export default function LiveProjectorWallPage() {
           {event.vendorLogo ? (
             <img src={event.vendorLogo} alt={event.vendorName} style={{ height: '22px', maxWidth: '80px', objectFit: 'contain' }} />
           ) : (
-            <span style={{ fontSize: '14px' }}>✨</span>
+            <Building size={14} color="#86868B" />
           )}
           <div style={{ textAlign: 'left' }}>
             <span style={{ fontSize: '9px', fontWeight: 600, color: '#86868B', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' }}>

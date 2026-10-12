@@ -8,7 +8,7 @@ import {
   ExternalLink, ArrowRight, Check, Sliders, LogOut, 
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
-  CreditCard, Sparkles, Wallet, Share2, Video, Film, PlayCircle,
+  CreditCard, Wallet, Share2, Video, Film, PlayCircle,
   Printer, Tv, Eye
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo } from '@/lib/types';
@@ -1663,7 +1663,7 @@ export default function VendorPortalPage() {
                   letterSpacing: '0.06em',
                   marginBottom: '12px'
                 }}>
-                  <Sparkles size={13} />
+                  <Flame size={13} />
                   <span>Program Reward Video Kreator & WO</span>
                 </div>
 

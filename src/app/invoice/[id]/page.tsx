@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   Printer, ArrowLeft, CheckCircle2, Share2, 
   Calendar, Building2, User, Mail, Phone, ShieldCheck, 
-  Download, ExternalLink, Sparkles 
+  Download, ExternalLink
 } from 'lucide-react';
 import { InvoiceRecord } from '@/lib/types';
 import SkeletonLoader from '@/components/SkeletonLoader';

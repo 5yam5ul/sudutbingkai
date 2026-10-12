@@ -7,7 +7,7 @@ import {
   Camera, Tv, Printer, Download, Share2, RefreshCw, ArrowLeft, 
   Image as ImageIcon, Users, Check, Lock, Unlock, Clock, Volume2, 
   Mic, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Film, CheckCircle2,
-  SlidersHorizontal, Play
+  SlidersHorizontal, Play, Briefcase
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { hapticLightTap, hapticDialClick } from '@/lib/haptics';
@@ -934,7 +934,7 @@ export default function EventDashboardPage() {
                       style={{ width: '20px', height: '20px', borderRadius: '50%', objectFit: 'contain', background: '#FFFFFF' }}
                     />
                   ) : (
-                    <span>✨</span>
+                    <Briefcase size={12} color="#FCD34D" />
                   )}
                   <span>WO: <strong style={{ color: '#FCD34D' }}>{event.vendorName}</strong></span>
                 </div>

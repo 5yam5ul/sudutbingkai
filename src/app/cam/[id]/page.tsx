@@ -7,7 +7,7 @@ import {
   Zap, ZapOff, RotateCcw, ArrowLeft, ArrowRight, Camera, QrCode as QrIcon, 
   Check, Eye, Download, X, Heart, MessageSquare, CheckCircle2, Film,
   Share2, Layers, Mic, MicOff, Play, Square, WifiOff,
-  Image as ImageIcon, AlertTriangle, Upload, Trash2, Sparkles
+  Image as ImageIcon, AlertTriangle, Upload, Trash2
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
@@ -2815,7 +2815,7 @@ export default function GuestCameraPage() {
               </Link>
             </div>
 
-            {/* Tasteful Product-Led Growth (Natural & Understated, No AI Sparkles) */}
+            {/* Tasteful Product-Led Growth (Natural & Understated) */}
             <div style={{
               marginTop: '20px',
               width: '100%',

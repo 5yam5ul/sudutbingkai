@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Video, Square, RefreshCw, Send, CheckCircle2, X, Sparkles, Volume2, Camera, MessageSquare } from 'lucide-react';
+import { Video, Square, RefreshCw, Send, CheckCircle2, X, Volume2, Camera, MessageSquare } from 'lucide-react';
 import { getSupportedVideoMimeType, playCountdownBeep, generateVideoThumbnail } from '@/lib/videoRecorder';
 import { toast } from 'sonner';
 

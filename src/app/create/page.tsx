@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   ArrowLeft, ArrowRight, Check, Calendar, MapPin, Film, Camera,
   Lock, Unlock, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye,
-  Mail, Key, UserCheck, Tag, Percent, Sparkles, Briefcase, Loader2
+  Mail, Key, UserCheck, Tag, Percent, Wallet, Briefcase, Loader2
 } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FilmPresetId, EventPackageTier, PACKAGE_TIERS, PRIMARY_PACKAGE_TIER_KEYS, UserAccount } from '@/lib/types';
@@ -803,7 +803,7 @@ function CreateEventForm() {
                     gap: '8px'
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <Sparkles size={16} color="#27AE60" />
+                      <Wallet size={16} color="#27AE60" />
                       <span style={{ fontSize: '13px', color: '#1D1D1F' }}>
                         <strong>Komisi Mitra WO ({(vendorCommissionRate * 100)}%):</strong>
                       </span>
@@ -875,7 +875,7 @@ function CreateEventForm() {
                     boxShadow: previewSample === 'couple' ? '0 2px 8px rgba(194, 120, 3, 0.3)' : 'none'
                   }}
                 >
-                  ✨ Foto Utama / Host
+                  Foto Utama / Host
                 </button>
                 <button
                   type="button"
@@ -1514,7 +1514,7 @@ function CreateEventForm() {
                 flexWrap: 'wrap'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <Sparkles size={20} color="#27AE60" style={{ flexShrink: 0 }} />
+                  <Wallet size={20} color="#27AE60" style={{ flexShrink: 0 }} />
                   <div>
                     <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>
                       Status Kemitraan WO: {currentUser?.companyName || currentUser?.name}

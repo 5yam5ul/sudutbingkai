@@ -7,7 +7,7 @@ import {
   Shield, DollarSign, Calendar, Camera, Users, FileText,
   Wallet, Video, Package, CheckCircle2, AlertCircle, Eye,
   EyeOff, Trash2, Download, ExternalLink, RefreshCw, Plus,
-  Sliders, Search, ArrowRight, LogOut, Check, X, Flame, Sparkles,
+  Sliders, Search, ArrowRight, LogOut, Check, X, Flame,
   Edit, Pencil, ArrowUpRight, ArrowDownRight, Layers, CreditCard,
   Mic, Volume2, Film, Play
 } from 'lucide-react';
