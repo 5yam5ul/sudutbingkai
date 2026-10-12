@@ -863,7 +863,7 @@ export default function SuperAdminDashboard() {
           {[
             { id: 'overview', label: 'Ringkasan & Finansial', icon: DollarSign, count: null },
             { id: 'events', label: 'Manajemen Acara', icon: Calendar, count: events.length },
-            { id: 'moderation', label: 'Moderasi Foto', icon: Camera, count: photos.length },
+            { id: 'moderation', label: 'Moderasi Media Tamu', icon: Camera, count: photos.length + videoWishes.length + voiceNotes.length },
             { id: 'vendors', label: 'Mitra Vendor (WO)', icon: Users, count: vendors.length },
             { id: 'invoices', label: 'Pusat Invoice', icon: FileText, count: invoices.length },
             { id: 'payouts', label: 'Pencairan Dana', icon: Wallet, count: payouts.filter(p => p.status === 'pending').length || null, alert: payouts.filter(p => p.status === 'pending').length > 0 },

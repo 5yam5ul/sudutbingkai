@@ -1197,7 +1197,7 @@ export default function EventDashboardPage() {
                 Jadilah yang Pertama Mengisi Rol Foto
               </h3>
               <p style={{ color: '#6E6E73', fontSize: '14.5px', lineHeight: 1.6, maxWidth: '460px', margin: '0 auto 26px' }}>
-                Belum ada jepretan kamera dari para tamu. Abadikan senyum, tatapan bahagia, dan momen hangat untuk kedua pengantin sekarang juga.
+                Belum ada jepretan kamera dari para tamu. Abadikan senyum, tawa bahagia, dan momen hangat untuk {event?.coupleOrHost || 'tuan rumah'} sekarang juga.
               </p>
               <Link
                 href={`/cam/${event?.slug || eventId}`}
@@ -2069,7 +2069,7 @@ export default function EventDashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
                 {[
                   { pax: 25, price: 'Rp 49.000', perPax: 'Rp 1.960 / tamu', desc: 'Cocok jika rombongan kecil bertambah' },
-                  { pax: 50, price: 'Rp 89.000', perPax: 'Rp 1.780 / tamu', badge: 'PALING POPULER', desc: 'Ideal untuk tambahan 5-6 meja tamu' },
+                  { pax: 50, price: 'Rp 89.000', perPax: 'Rp 1.780 / tamu', badge: 'PALING POPULER', desc: 'Ideal untuk tambahan rombongan 50 tamu undangan' },
                   { pax: 100, price: 'Rp 149.000', perPax: 'Rp 1.490 / tamu', desc: 'Untuk resepsi besar yang sangat ramai' },
                   { pax: 250, price: 'Rp 249.000', perPax: 'Rp 996 / tamu', desc: 'Keluarga besar & rekan kantor membludak' }
                 ].map(opt => (

@@ -188,7 +188,7 @@ export default function VendorPortalPage() {
     const link = typeof window !== 'undefined' ? `${window.location.origin}/?ref=${referralCode}` : `https://sudutbingkai.vercel.app/?ref=${referralCode}`;
     navigator.clipboard.writeText(link);
     setCopiedLink(true);
-    toast.success('Tautan promosi mitra disalin! Siap dibagikan ke calon pengantin.');
+    toast.success('Tautan promosi mitra disalin! Siap dibagikan ke klien Anda.');
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
@@ -709,7 +709,7 @@ export default function VendorPortalPage() {
             }}
           >
             <Users size={14} />
-            <span className="desktop-only">Daftar Klien Pengantin ({clients.length})</span>
+            <span className="desktop-only">Daftar Klien Acara ({clients.length})</span>
             <span className="mobile-only">Klien ({clients.length})</span>
           </button>
 
@@ -749,7 +749,7 @@ export default function VendorPortalPage() {
                     Dompet Saldo Komisi & Kode Promo Klien
                   </h2>
                   <p style={{ color: '#515154', fontSize: '14px', maxWidth: '680px', lineHeight: 1.6 }}>
-                    Dapatkan komisi bersih <strong>15% per acara</strong> setiap kali calon pengantin menggunakan kode promo Anda. Klien Anda juga otomatis hemat <strong>10%</strong> di semua paket!
+                    Dapatkan komisi bersih <strong>{partnerTier === 'vip' ? '20%' : partnerTier === 'regular' ? '12%' : '15%'} per acara</strong> setiap kali klien menggunakan kode promo Anda. Klien Anda juga otomatis hemat <strong>10%</strong> di semua paket!
                   </p>
                 </div>
 
@@ -828,7 +828,7 @@ export default function VendorPortalPage() {
                   </div>
 
                   <p style={{ fontSize: '12.5px', color: '#515154', lineHeight: 1.5, margin: '0 0 16px' }}>
-                    Bagikan kode promo ini ke calon pengantin Anda. Saat mereka checkout, mereka hemat 10% dan Anda otomatis mendapatkan komisi 15% dari nilai paket.
+                    Bagikan kode promo ini ke klien Anda. Saat mereka checkout, mereka hemat 10% dan Anda otomatis mendapatkan komisi {partnerTier === 'vip' ? '20%' : partnerTier === 'regular' ? '12%' : '15%'} dari nilai paket.
                   </p>
                 </div>
 
@@ -861,7 +861,7 @@ export default function VendorPortalPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
                   <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
-                    Riwayat Komisi dari Klien Pengantin
+                    Riwayat Komisi dari Klien Acara
                   </h3>
                   <p style={{ fontSize: '13px', color: '#6E6E73', margin: '4px 0 0' }}>
                     Daftar klien yang menggunakan kode voucher Anda dan komisi yang Anda hasilkan.
@@ -878,7 +878,7 @@ export default function VendorPortalPage() {
                       <th style={{ padding: '10px 12px' }}>Paket Acara</th>
                       <th style={{ padding: '10px 12px' }}>Tanggal Acara</th>
                       <th style={{ padding: '10px 12px' }}>Pembayaran Klien</th>
-                      <th style={{ padding: '10px 12px', color: '#C27803' }}>Komisi Anda (15%)</th>
+                      <th style={{ padding: '10px 12px', color: '#C27803' }}>Komisi Anda ({partnerTier === 'vip' ? '20%' : partnerTier === 'regular' ? '12%' : '15%'})</th>
                       <th style={{ padding: '10px 12px', textAlign: 'right' }}>Aksi</th>
                     </tr>
                   </thead>
@@ -1493,7 +1493,7 @@ export default function VendorPortalPage() {
                         </strong>
                       </div>
                       <p style={{ fontSize: '12px', color: '#515154', lineHeight: 1.5, margin: 0 }}>
-                        Jika Anda charge fasilitas kamera digital ini ke pengantin dengan tarif normal, Anda mengantongi <strong>margin keuntungan {profitMarginPercent}%</strong> bersih!
+                        Jika Anda tawarkan fasilitas kamera digital ini ke klien dengan tarif normal, Anda mengantongi <strong>margin keuntungan {profitMarginPercent}%</strong> bersih!
                       </p>
                     </div>
                   </div>
@@ -1566,7 +1566,7 @@ export default function VendorPortalPage() {
                 </h2>
 
                 <p style={{ color: '#515154', fontSize: '14.5px', lineHeight: 1.6, marginBottom: '24px' }}>
-                  Bantu ceritakan keseruan tamu saat memotret kamera analog di acara pernikahan klien Anda. Rekam video minimal 1 menit (60 detik), kirimkan tautannya, dan dapatkan bonus saldo komisi yang langsung bisa ditarik ke rekening bank Anda!
+                  Bantu ceritakan keseruan tamu saat memotret kamera analog di acara klien Anda (pernikahan, ulang tahun, gathering, dll). Rekam video minimal 1 menit (60 detik), kirimkan tautannya, dan dapatkan bonus saldo komisi yang langsung bisa ditarik ke rekening bank Anda!
                 </p>
 
                 {/* 3 Syarat Kunci */}
@@ -1817,7 +1817,7 @@ export default function VendorPortalPage() {
                 Upload Logo Vendor & Tampilkan di Homepage
               </h2>
               <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6 }}>
-                Logo agensi Anda akan otomatis tampil di <strong>section mitra resmi di homepage SudutBingkai</strong>, serta dicetak di kartu QR tamu pengantin klien Anda.
+                Logo agensi Anda akan otomatis tampil di <strong>section mitra resmi di homepage SudutBingkai</strong>, serta dicetak di kartu QR tamu klien Anda.
               </p>
             </div>
 

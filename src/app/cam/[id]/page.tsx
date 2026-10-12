@@ -853,7 +853,7 @@ export default function GuestCameraPage() {
       const data = await res.json();
       if (data.success) {
         setHasSentVoice(true);
-        toast.success('Pesan suara dan doa Anda telah tersimpan untuk pengantin!');
+        toast.success(`Pesan suara dan doa Anda telah tersimpan untuk ${event?.coupleOrHost || 'tuan rumah'}!`);
       } else {
         toast.error('Gagal mengirim pesan: ' + data.error);
       }
@@ -1315,7 +1315,7 @@ export default function GuestCameraPage() {
               transition: 'all 0.2s ease',
               boxShadow: currentWish.trim() ? '0 2px 8px rgba(194, 120, 3, 0.35)' : 'none'
             }}
-            title="Tuliskan ucapan untuk pengantin"
+            title={`Tuliskan ucapan untuk ${event?.coupleOrHost || 'tuan rumah'}`}
           >
             <Heart size={12} fill={currentWish.trim() ? 'currentColor' : 'none'} color={currentWish.trim() ? '#fff' : '#C27803'} />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -2144,7 +2144,7 @@ export default function GuestCameraPage() {
           </h2>
 
           <p style={{ color: '#A1A1A6', fontSize: '13px', maxWidth: '320px', lineHeight: 1.5, marginBottom: '20px' }}>
-            Anda telah menghabiskan seluruh jepretan ({maxShots} foto). Semua foto telah aman tersimpan di roll pernikahan {event?.coupleOrHost || 'pengantin'}.
+            Anda telah menghabiskan seluruh jepretan ({maxShots} foto). Semua foto telah aman tersimpan di roll album {event?.coupleOrHost || 'tuan rumah'}.
           </p>
 
           {/* Conditional Outro Wish: Video Wish (Wedding / Unlimited) vs Voice Note (Party / Event) */}
@@ -2358,7 +2358,7 @@ export default function GuestCameraPage() {
         }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
           <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', fontWeight: 600 }}>
-            {event?.coupleOrHost || 'Pernikahan Spesial'}
+            {event?.coupleOrHost || event?.title || 'SudutBingkai Acara'}
           </span>
         </div>
 
@@ -2367,7 +2367,7 @@ export default function GuestCameraPage() {
         </h1>
 
         <p style={{ color: '#515154', fontSize: '13px', lineHeight: 1.6, marginBottom: '22px' }}>
-          Jepret momen seru dan hangat di meja Anda. Foto langsung tersimpan ke album {event?.coupleOrHost || 'pengantin'} tanpa unduh aplikasi.
+          Jepret momen spontan dan seru bersama para tamu. Foto langsung tersimpan ke album {event?.coupleOrHost || 'tuan rumah'} tanpa unduh aplikasi.
         </p>
 
         <form onSubmit={handleNameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>

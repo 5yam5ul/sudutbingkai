@@ -140,7 +140,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     retentionDays: 60,
     storageCapacity: '20 GB Cloud Storage',
     maxFileSize: '10 MB / foto',
-    maxVoiceDuration: '15 detik / pesan suara',
+    maxVoiceDuration: '15 detik / video ucapan (Reels VHS)',
     popular: true
   },
   unlimited: {
@@ -159,7 +159,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     retentionDays: 90,
     storageCapacity: '40 GB Cloud Storage',
     maxFileSize: '10 MB / foto',
-    maxVoiceDuration: '15 detik / pesan suara'
+    maxVoiceDuration: '15 detik / video ucapan (Reels VHS)'
   }
 };
 

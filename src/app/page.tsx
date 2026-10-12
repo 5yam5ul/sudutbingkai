@@ -142,7 +142,7 @@ export default function HomePage() {
   const faqs = [
     {
       q: 'Berapa lama foto disimpan di web dan apa batasan penyimpanannya?',
-      a: 'Masa simpan dirancang efisien dan pas agar server tetap cepat: mulai dari 3–7 hari (Starter & Mini), 14–30 hari (Small & Party), hingga 60 Hari / 2 Bulan untuk Paket Wedding (20 GB Cloud) dan 90 Hari untuk Paket Unlimited. Selama masa aktif tersebut, pengantin dan keluarga dapat mengunduh seluruh arsip foto resolusi tinggi asli (ZIP) dan pesan suara ke laptop atau Google Drive mereka secara gratis.'
+      a: 'Masa simpan dirancang efisien dan pas agar server tetap cepat: mulai dari 3–7 hari (Starter & Mini), 14–30 hari (Small & Party), hingga 60 Hari / 2 Bulan untuk Paket Wedding (20 GB Cloud) dan 90 Hari untuk Paket Unlimited. Selama masa aktif tersebut, penyelenggara acara dan keluarga dapat mengunduh seluruh arsip foto resolusi tinggi asli (ZIP), video ucapan, serta pesan suara ke laptop atau Google Drive mereka secara gratis.'
     },
     {
       q: 'Apakah SudutBingkai hanya untuk acara pernikahan?',
@@ -273,7 +273,7 @@ export default function HomePage() {
                   }}
                 >
                   <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981' }} />
-                  <span>Dashboard ({currentUser.role === 'vendor' ? 'Mitra' : 'Pengantin'})</span>
+                  <span>Dashboard ({currentUser.role === 'vendor' ? 'Mitra' : 'Host / Klien'})</span>
                 </Link>
                 <button
                   type="button"
@@ -484,10 +484,10 @@ export default function HomePage() {
               maxWidth: '495px'
             }}>
               <span className="desktop-only">
-                Di setiap meja pesta, tersimpan tawa lepas kawan lama dan momen hangat yang tak tertangkap fotografer resmi. SudutBingkai menghadirkan kamera analog sekali pakai di tangan setiap tamu lewat kartu QR di meja—tanpa perlu repot unduh aplikasi.
+                Di setiap sudut pesta, tersimpan tawa lepas kawan lama dan momen hangat yang tak tertangkap fotografer resmi. SudutBingkai menghadirkan kamera analog sekali pakai di tangan setiap tamu lewat kartu QR fisik—tanpa perlu repot unduh aplikasi.
               </span>
               <span className="mobile-only">
-                Kamera analog sekali pakai di genggaman setiap tamu lewat kartu QR di meja makan. Abadikan tawa jujur dan kehangatan tanpa perlu download aplikasi.
+                Kamera analog sekali pakai di genggaman setiap tamu lewat kartu QR fisik. Abadikan tawa jujur dan kehangatan tanpa perlu download aplikasi.
               </span>
             </p>
 
@@ -596,7 +596,7 @@ export default function HomePage() {
             </div>
 
             {/* 2. Physical Acrylic / Matte Gold Wedding Table Tent Card */}
-            <div className="table-card-stand" title="Kartu Meja Fisik SudutBingkai">
+            <div className="table-card-stand" title="Kartu QR Tamu Fisik SudutBingkai">
               <div className="table-card-inner-border">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '4px' }}>
                   <Camera size={11} color="#C27803" />
@@ -611,7 +611,7 @@ export default function HomePage() {
 
                 <div style={{ display: 'inline-block', background: 'rgba(194, 120, 3, 0.12)', border: '1px solid rgba(194, 120, 3, 0.3)', borderRadius: '999px', padding: '2px 8px', marginBottom: '6px' }}>
                   <span className="font-mono-film" style={{ fontSize: '8.5px', color: '#9A6305', fontWeight: 700 }}>
-                    MEJA 04
+                    KARTU TAMU
                   </span>
                 </div>
 
@@ -651,7 +651,7 @@ export default function HomePage() {
                 </div>
 
                 <div style={{ fontSize: '9px', fontWeight: 600, color: '#1D1D1F', marginBottom: '1px' }}>
-                  Pindai dari Mejamu
+                  Pindai & Jepret Momen
                 </div>
                 <div style={{ fontSize: '8px', color: '#86868B' }}>
                   Ambil foto kenangan • Tanpa unduh aplikasi
@@ -802,7 +802,7 @@ export default function HomePage() {
               </div>
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#1D1D1F' }}>
-                  Pesan Suara • Meja 4
+                  Pesan Suara • Tamu Undangan
                 </span>
                 <span style={{ fontSize: '10px', color: '#86868B' }}>
                   &ldquo;Selamat ya Dimas & Sarah!&rdquo; (0:14s)
@@ -937,7 +937,7 @@ export default function HomePage() {
               100% Bebas Ribet di Hari-H
             </strong>
             <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
-              Tamu tidak perlu antre instal aplikasi apa pun di App Store atau Play Store. Cukup letakkan barcode di meja resepsi, tamu scan dengan kamera HP bawaan dan langsung memotret.
+              Tamu tidak perlu antre instal aplikasi apa pun di App Store atau Play Store. Cukup letakkan kartu barcode QR tamu di meja atau area resepsi, tamu scan dengan kamera HP bawaan dan langsung memotret.
             </p>
           </div>
 
@@ -966,7 +966,7 @@ export default function HomePage() {
               Tarif Mitra & Branding Agensi
             </strong>
             <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
-              Dapatkan harga khusus agensi untuk margin usaha Anda. Nama & logo Wedding Organizer Anda dapat disematkan langsung pada template kartu cetak barcode dan album digital.
+              Dapatkan harga khusus agensi untuk margin usaha Anda. Nama & logo Wedding Organizer / Event Planner Anda dapat disematkan langsung pada template kartu cetak barcode dan album digital.
             </p>
           </div>
         </div>
@@ -1083,9 +1083,9 @@ export default function HomePage() {
             <div style={{ width: '48px', height: '48px', borderRadius: '16px', background: 'rgba(194, 120, 3, 0.12)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontFamily: 'var(--font-mono)', fontSize: '18px', marginBottom: '24px' }}>
               02
             </div>
-            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px', color: '#1D1D1F' }}>Sebarkan Barcode Meja</h3>
+            <h3 style={{ fontSize: '20px', fontWeight: 700, marginBottom: '10px', color: '#1D1D1F' }}>Sebarkan Barcode QR Tamu</h3>
             <p style={{ color: '#515154', fontSize: '14px', lineHeight: 1.6 }}>
-              Cetak kartu meja berdesain elegan yang kami sediakan. Tamu cukup mengarahkan kamera HP biasa ke barcode—ponsel mereka seketika bertransformasi menjadi kamera saku analog.
+              Cetak kartu QR tamu berdesain elegan yang kami sediakan. Tamu cukup mengarahkan kamera HP biasa ke barcode—ponsel mereka seketika bertransformasi menjadi kamera saku analog.
             </p>
           </div>
 
@@ -1294,7 +1294,7 @@ export default function HomePage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={14} color="#C27803" />
-                    <span>Cetak QR Meja Tamu</span>
+                    <span>Cetak Kartu QR Tamu</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={14} color="#C27803" />
@@ -1379,7 +1379,7 @@ export default function HomePage() {
                   <div style={{ width: '100%', height: 'calc(100% - 10px)', overflow: 'hidden', borderRadius: '2px', background: '#1D1D1F' }}>
                     <img
                       src="/images/testimonials/wedding_1.jpg"
-                      alt="Selfie Tamu Meja 04"
+                      alt="Selfie Tamu Undangan"
                       width={146}
                       height={190}
                       loading="lazy"
@@ -1388,7 +1388,7 @@ export default function HomePage() {
                     />
                   </div>
                   <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
-                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>MEJA 04</span>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>KANDID TAMU</span>
                     <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:14 WIB</span>
                   </div>
                 </div>
@@ -1409,7 +1409,7 @@ export default function HomePage() {
                   <div style={{ width: '100%', height: 'calc(100% - 10px)', overflow: 'hidden', borderRadius: '2px', background: '#1D1D1F' }}>
                     <img
                       src="/images/testimonials/wedding_2.jpg"
-                      alt="Candid Meja 02"
+                      alt="Candid Tamu Undangan"
                       width={146}
                       height={190}
                       loading="lazy"
@@ -1418,7 +1418,7 @@ export default function HomePage() {
                     />
                   </div>
                   <div style={{ marginTop: '5px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 2px' }}>
-                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>MEJA 02</span>
+                    <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#86868B', letterSpacing: '0.05em' }}>MOMEN SERU</span>
                     <span style={{ fontSize: '8px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 600 }}>21:38 WIB</span>
                   </div>
                 </div>

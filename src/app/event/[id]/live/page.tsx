@@ -182,7 +182,7 @@ export default function LiveProjectorWallPage() {
             {[
               { id: 'polaroid', label: 'Polaroid', icon: <Film size={13} /> },
               { id: 'kenburns', label: 'Sinematik Zoom', icon: <Camera size={13} /> },
-              { id: 'split', label: 'Split QR Meja', icon: <SplitSquareVertical size={13} /> },
+              { id: 'split', label: 'Split Layar QR Tamu', icon: <SplitSquareVertical size={13} /> },
               { id: 'mosaic', label: 'Mosaik Wall', icon: <Grid size={13} /> }
             ].map(m => (
               <button
@@ -562,12 +562,12 @@ export default function LiveProjectorWallPage() {
                 marginBottom: '20px'
               }}>
                 {qrDataUrl && (
-                  <img src={qrDataUrl} alt="Scan QR Meja" style={{ width: '220px', height: '220px', display: 'block' }} />
+                  <img src={qrDataUrl} alt="Scan QR Tamu" style={{ width: '220px', height: '220px', display: 'block' }} />
                 )}
               </div>
 
               <p style={{ color: '#D1D5DB', fontSize: '14px', lineHeight: 1.5, margin: 0 }}>
-                Arahkan kamera HP ke barcode meja atau layar ini untuk membuka kamera analog sekali pakai.
+                Arahkan kamera HP ke kartu barcode QR atau layar ini untuk membuka kamera analog sekali pakai.
               </p>
             </div>
 
@@ -660,7 +660,7 @@ export default function LiveProjectorWallPage() {
           zIndex: 40
         }}>
           {qrDataUrl && (
-            <img src={qrDataUrl} alt="Scan QR Meja" style={{ width: '70px', height: '70px', borderRadius: '8px' }} />
+            <img src={qrDataUrl} alt="Scan QR Tamu" style={{ width: '70px', height: '70px', borderRadius: '8px' }} />
           )}
           <div style={{ textAlign: 'left' }}>
             <span style={{ fontSize: '11px', fontWeight: '800', color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block' }}>

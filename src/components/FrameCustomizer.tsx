@@ -379,7 +379,7 @@ export default function FrameCustomizer({
                 transition: 'all 0.15s ease'
               }}
             >
-              📸 Selfie Tamu Meja
+              📸 Selfie Para Tamu
             </button>
           </div>
 

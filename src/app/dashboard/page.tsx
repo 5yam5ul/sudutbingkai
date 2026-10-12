@@ -699,7 +699,7 @@ export default function BrideDashboardPage() {
                 cursor: 'pointer'
               }}
             >
-              <span className="desktop-only">Galeri & Moderasi ({photos.length} Foto, {voiceNotes.length} Suara)</span>
+              <span className="desktop-only">Galeri & Moderasi ({photos.length} Foto{videoWishes.length > 0 ? `, ${videoWishes.length} Video` : ''}, {voiceNotes.length} Suara)</span>
               <span className="mobile-only">Galeri ({photos.length})</span>
             </button>
 
@@ -1332,7 +1332,7 @@ export default function BrideDashboardPage() {
                     }}
                   >
                     <Upload size={16} />
-                    {isUploadingCover ? 'Mengunggah Foto...' : 'Pilih Foto Pengantin (JPG/PNG)'}
+                    {isUploadingCover ? 'Mengunggah Foto...' : 'Pilih Foto Cover / Host (JPG/PNG)'}
                     <input
                       type="file"
                       accept="image/*"
@@ -1817,10 +1817,14 @@ export default function BrideDashboardPage() {
                 >
                   <div>
                     <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>
-                      Pesan Suara Penutup Tamu (Voice Note 15 Detik)
+                      {packageTier === 'wedding' || packageTier === 'unlimited'
+                        ? '🎬 Video Ucapan Tamu 15 Detik (Fitur Spesial Paket Wedding/Unlimited)'
+                        : '🎙️ Pesan Suara Penutup Tamu (Voice Note 15 Detik)'}
                     </strong>
                     <span style={{ fontSize: '11.5px', color: '#86868B' }}>
-                      Saat kuota foto tamu habis, izinkan mereka merekam ucapan suara penutup untuk Anda.
+                      {packageTier === 'wedding' || packageTier === 'unlimited'
+                        ? 'Saat kuota foto tamu habis, izinkan mereka merekam video ucapan penutup 15 detik untuk Anda.'
+                        : 'Saat kuota foto tamu habis, izinkan mereka merekam ucapan suara penutup untuk Anda.'}
                     </span>
                   </div>
                   <input

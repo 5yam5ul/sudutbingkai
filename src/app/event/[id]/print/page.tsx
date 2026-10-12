@@ -149,7 +149,7 @@ export default function PrintTableCardPage() {
           }}
         >
           <Camera size={13} />
-          <span>{customBadge || 'KAMERA MEJA TAMU'}</span>
+          <span>{customBadge || 'KAMERA TAMU'}</span>
         </div>
 
         <h1
@@ -161,7 +161,7 @@ export default function PrintTableCardPage() {
             marginBottom: '6px'
           }}
         >
-          {customTitle || event?.title || 'Pernikahan Spesial'}
+          {customTitle || event?.title || 'SudutBingkai Acara'}
         </h1>
 
         <p style={{ fontSize: format === 'mini' ? '11px' : '13px', color: ts.mutedColor, fontWeight: 500, margin: 0 }}>
@@ -289,7 +289,7 @@ export default function PrintTableCardPage() {
                 3
               </span>
               <p style={{ fontSize: format === 'mini' ? '9.5px' : '10.5px', color: ts.mutedColor, lineHeight: 1.25, margin: 0 }}>
-                Jepret momen seru meja!
+                Jepret momen seru acaramu!
               </p>
             </div>
           </div>
@@ -355,7 +355,7 @@ export default function PrintTableCardPage() {
           </Link>
           <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#FBFBFA' }}>
-            Editor & Cetak QR Meja Tamu
+            Editor & Cetak Kartu QR Tamu
           </span>
         </div>
 
@@ -572,7 +572,7 @@ export default function PrintTableCardPage() {
                   type="text"
                   value={customBadge}
                   onChange={(e) => setCustomBadge(e.target.value)}
-                  placeholder="KAMERA MEJA TAMU"
+                  placeholder="KAMERA TAMU"
                   className="input-field"
                   style={{ padding: '8px 12px', fontSize: '12.5px' }}
                 />

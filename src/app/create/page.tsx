@@ -299,7 +299,7 @@ function CreateEventForm() {
             Siapkan Wadah <em>Kenangan Acaramu</em>
           </h1>
           <p style={{ color: '#6E6E73', fontSize: '14px', maxWidth: '520px', margin: '0 auto' }}>
-            Atur nama acara, konfirmasi kuota paket yang sudah dibeli, pilih karakter warna film analog, dan dapatkan kartu barcode meja seketika.
+            Atur nama acara, konfirmasi kuota paket yang sudah dibeli, pilih karakter warna film analog, dan dapatkan kartu barcode QR tamu seketika.
           </p>
         </div>
 
@@ -465,7 +465,7 @@ function CreateEventForm() {
                   />
                 </div>
                 <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '5px' }}>
-                  Tautan ramah ketik yang dicetak di kartu meja, proyektor, atau undangan fisik.
+                  Tautan ramah ketik yang dicetak di kartu QR fisik, proyektor, atau undangan.
                 </span>
               </div>
 
@@ -657,7 +657,7 @@ function CreateEventForm() {
                     boxShadow: previewSample === 'couple' ? '0 2px 8px rgba(194, 120, 3, 0.3)' : 'none'
                   }}
                 >
-                  💍 Foto Pengantin
+                  ✨ Foto Utama / Host
                 </button>
                 <button
                   type="button"
@@ -674,7 +674,7 @@ function CreateEventForm() {
                     boxShadow: previewSample === 'guests' ? '0 2px 8px rgba(194, 120, 3, 0.3)' : 'none'
                   }}
                 >
-                  📸 Selfie Tamu Meja
+                  📸 Selfie Para Tamu
                 </button>
               </div>
             </div>
@@ -1115,7 +1115,7 @@ function CreateEventForm() {
               Kredensial Kendali Acara
             </h2>
             <p style={{ fontSize: '13px', color: '#6E6E73', marginBottom: '20px', lineHeight: 1.5 }}>
-              Akun ini digunakan untuk membuka Dashboard, mengunduh seluruh foto tamu dalam arsip ZIP kualitas tinggi, memoderasi foto, serta mencetak kartu barcode meja.
+              Akun ini digunakan untuk membuka Dashboard, mengunduh seluruh foto tamu dalam arsip ZIP kualitas tinggi, memoderasi foto, serta mencetak kartu QR tamu.
             </p>
 
             {existingHost ? (
@@ -1170,12 +1170,12 @@ function CreateEventForm() {
                 <div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
                     <Mail size={13} color="#C27803" />
-                    Email Anda (Host / Pengantin) *
+                    Email Anda (Host / Penyelenggara) *
                   </label>
                   <input
                     type="email"
                     required
-                    placeholder="contoh: pengantin@gmail.com"
+                    placeholder="contoh: host@gmail.com"
                     value={hostEmail}
                     onChange={(e) => setHostEmail(e.target.value)}
                     className="glass-input"
@@ -1226,13 +1226,13 @@ function CreateEventForm() {
                 {loading
                   ? 'Menyiapkan Album Digital...'
                   : activeTier.isFree
-                    ? 'Terbitkan Album & Unduh Barcode Meja (Gratis)'
+                    ? 'Terbitkan Album & Unduh Kartu QR Tamu (Gratis)'
                     : `Lanjut ke Pembayaran Mayar (${activeTier.price})`}
               </span>
               <ArrowRight size={18} />
             </button>
             <span style={{ fontSize: '12px', color: '#86868B' }}>
-              Album Anda akan langsung aktif dan kartu barcode meja siap dicetak seketika.
+              Album Anda akan langsung aktif dan kartu QR tamu siap dicetak seketika.
             </span>
           </div>
 
