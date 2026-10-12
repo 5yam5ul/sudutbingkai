@@ -2343,149 +2343,66 @@ export default function GuestCameraPage() {
         )}
       </AnimatePresence>
 
-      {/* Full-Screen Brand Celebration & Viral Marketing Outro (when quota is exhausted) */}
+      {/* Full-Screen Brand Celebration Outro (Clean, Elegant, Non-cluttered) */}
       {remaining === 0 && (
         <div style={{
           position: 'fixed',
           inset: 0,
-          background: 'linear-gradient(180deg, #13110E 0%, #090807 100%)',
+          background: '#0B0A09',
+          backgroundImage: 'radial-gradient(ellipse 80% 50% at 50% -20%, rgba(194, 120, 3, 0.12), transparent)',
           zIndex: 90,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'flex-start',
-          padding: 'calc(max(24px, env(safe-area-inset-top, 0px)) + 8px) 20px calc(max(24px, env(safe-area-inset-bottom, 0px)) + 20px)',
+          padding: 'calc(max(20px, env(safe-area-inset-top, 0px)) + 12px) 20px calc(max(20px, env(safe-area-inset-bottom, 0px)) + 16px)',
           textAlign: 'center',
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
           color: '#FFFFFF'
         }}>
-          {/* Ambient Warm Golden Glow */}
-          <div style={{
-            position: 'absolute',
-            top: '5%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '320px',
-            height: '240px',
-            background: 'radial-gradient(circle, rgba(194, 120, 3, 0.16) 0%, transparent 70%)',
-            pointerEvents: 'none',
-            zIndex: 0
-          }} />
-
-          {/* Top Brand Logo: Sudut Bingkai */}
-          <div style={{ position: 'relative', zIndex: 1, width: '100%', maxWidth: '360px', margin: '0 auto' }}>
-            <Link href="/" style={{ textDecoration: 'none', display: 'inline-block' }}>
-              <img 
-                src="/sudut-bingkai-logo.png" 
-                alt="Sudut Bingkai" 
-                style={{ 
-                  height: '36px', 
-                  width: 'auto', 
-                  objectFit: 'contain',
-                  margin: '0 auto 12px',
-                  display: 'block',
-                  filter: 'drop-shadow(0 2px 10px rgba(194, 120, 3, 0.4))'
-                }} 
-              />
-            </Link>
-
-            {/* Event & Quota Completed Pill */}
+          <div style={{ width: '100%', maxWidth: '360px', margin: '0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            {/* Top Brand & Quota Badge (Clean unified pill, clearly visible) */}
             <div style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '7px',
-              background: 'rgba(194, 120, 3, 0.12)',
-              border: '1px solid rgba(194, 120, 3, 0.35)',
-              padding: '5px 14px',
+              gap: '8px',
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.14)',
+              padding: '5px 14px 5px 10px',
               borderRadius: '999px',
-              marginBottom: '14px'
+              marginBottom: '16px'
             }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#F59E0B', boxShadow: '0 0 8px #F59E0B' }} />
-              <span className="font-mono-film" style={{ color: '#F59E0B', fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em' }}>
-                ROL KENANGAN PENUH • {maxShots} FOTO SELESAI
+              <img 
+                src="/corner-icon.png" 
+                alt="Sudut Bingkai" 
+                style={{ width: '18px', height: '18px', borderRadius: '4px', objectFit: 'contain' }} 
+              />
+              <span style={{ 
+                fontFamily: 'var(--font-serif)', 
+                fontSize: '14px', 
+                fontWeight: 600, 
+                color: '#FFFFFF', 
+                letterSpacing: '0.03em' 
+              }}>
+                Sudut Bingkai
+              </span>
+              <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'rgba(255, 255, 255, 0.3)' }} />
+              <span className="font-mono-film" style={{ fontSize: '10px', color: '#D97706', letterSpacing: '0.06em' }}>
+                ROL PENUH ({maxShots} FOTO)
               </span>
             </div>
 
             {/* Warm & Appreciative Headline */}
-            <h1 className="font-display-serif" style={{ fontSize: '26px', lineHeight: 1.25, color: '#FFFFFF', marginBottom: '8px', fontWeight: 700 }}>
-              Terima Kasih, <span style={{ color: '#F59E0B' }}>{guestName}</span>!
+            <h1 className="font-display-serif" style={{ fontSize: '27px', lineHeight: 1.2, color: '#FFFFFF', marginBottom: '6px', fontWeight: 700 }}>
+              Terima Kasih, <span style={{ color: '#D97706' }}>{guestName}</span>
             </h1>
 
-            <p style={{ color: '#A1A1A6', fontSize: '13px', lineHeight: 1.6, maxWidth: '330px', margin: '0 auto 18px' }}>
-              Setiap tawa, senyuman, dan momen spontanmu kini tersimpan abadi di album kenangan <strong>{event?.coupleOrHost || event?.title || 'Tuan Rumah'}</strong>.
+            <p style={{ color: 'rgba(255, 255, 255, 0.65)', fontSize: '13px', lineHeight: 1.5, maxWidth: '320px', margin: '0 auto 14px' }}>
+              {shotCount} fotomu kini tersimpan abadi di album kenangan <strong>{event?.coupleOrHost || event?.title || 'tuan rumah'}</strong>.
             </p>
 
-            {/* Mini Film Strip Preview (Showcase Guest's 10 Photos) */}
-            {myPhotos.length > 0 && (
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.04)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '16px',
-                padding: '12px 12px 10px',
-                marginBottom: '18px',
-                textAlign: 'left'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', padding: '0 2px' }}>
-                  <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#86868B', letterSpacing: '0.05em' }}>
-                    ROL FOTO ANDA ({myPhotos.length} JEPETAN)
-                  </span>
-                  <button
-                    onClick={() => setShowRollModal(true)}
-                    style={{ background: 'none', border: 'none', color: '#F59E0B', fontSize: '11px', fontWeight: 600, cursor: 'pointer', padding: 0 }}
-                  >
-                    Buka Semua →
-                  </button>
-                </div>
-                <div style={{
-                  display: 'flex',
-                  gap: '8px',
-                  overflowX: 'auto',
-                  paddingBottom: '4px',
-                  scrollbarWidth: 'none',
-                  WebkitOverflowScrolling: 'touch'
-                }}>
-                  {myPhotos.map((p, idx) => (
-                    <div
-                      key={p.id || idx}
-                      onClick={() => {
-                        setPreviewPhoto(p);
-                        setPreviewSlideDirection(0);
-                      }}
-                      style={{
-                        flexShrink: 0,
-                        width: '66px',
-                        height: '88px',
-                        borderRadius: '10px',
-                        overflow: 'hidden',
-                        border: '1.5px solid rgba(255, 255, 255, 0.16)',
-                        cursor: 'pointer',
-                        position: 'relative',
-                        background: '#1A1815',
-                        boxShadow: '0 4px 10px rgba(0,0,0,0.5)'
-                      }}
-                    >
-                      <img src={p.imageData} alt={`Shot #${p.shotNumber}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      <span style={{
-                        position: 'absolute',
-                        bottom: '2px',
-                        right: '3px',
-                        fontSize: '8px',
-                        fontFamily: 'var(--font-mono)',
-                        color: '#FFFFFF',
-                        background: 'rgba(0,0,0,0.7)',
-                        padding: '1px 3px',
-                        borderRadius: '3px'
-                      }}>
-                        #{p.shotNumber}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Outro Wish Handling: Video Wish vs Voice Note */}
+            {/* Subtle Voice/Video Status or Recorder */}
             {(() => {
               const isVideoWishTier = event?.closingWishType === 'video' || event?.packageTier === 'wedding' || event?.packageTier === 'unlimited';
 
@@ -2493,33 +2410,25 @@ export default function GuestCameraPage() {
                 if (hasSentVideoWish) {
                   return (
                     <div style={{
-                      background: 'rgba(34, 197, 94, 0.12)',
-                      border: '1px solid rgba(34, 197, 94, 0.35)',
-                      borderRadius: '16px',
-                      padding: '12px 16px',
-                      marginBottom: '18px',
-                      display: 'flex',
+                      display: 'inline-flex',
                       alignItems: 'center',
-                      gap: '12px',
-                      textAlign: 'left'
+                      gap: '6px',
+                      color: '#86EFAC',
+                      fontSize: '11.5px',
+                      background: 'rgba(34, 197, 94, 0.1)',
+                      border: '1px solid rgba(34, 197, 94, 0.22)',
+                      padding: '4px 12px',
+                      borderRadius: '999px',
+                      marginBottom: '14px'
                     }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(34, 197, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Check size={18} color="#22C55E" />
-                      </div>
-                      <div>
-                        <strong style={{ fontSize: '13px', color: '#86EFAC', display: 'block' }}>
-                          Video Ucapan 15 Detik Tersimpan!
-                        </strong>
-                        <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4, display: 'block' }}>
-                          Telah masuk ke galeri video kenangan {event?.coupleOrHost || 'tuan rumah'}.
-                        </span>
-                      </div>
+                      <Check size={12} color="#22C55E" />
+                      <span>Video ucapan tersimpan di galeri</span>
                     </div>
                   );
                 }
 
                 return (
-                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
+                  <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
                     <VideoWishRecorder
                       eventId={event?.id || eventId}
                       guestName={guestName}
@@ -2549,17 +2458,15 @@ export default function GuestCameraPage() {
               if (event?.allowVoiceNote !== false && !hasSentVoice) {
                 return (
                   <div style={{
-                    background: 'rgba(255, 255, 255, 0.06)',
-                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                    borderRadius: '18px',
-                    padding: '16px 18px',
-                    marginBottom: '18px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '16px',
+                    padding: '14px 16px',
+                    marginBottom: '16px',
+                    width: '100%',
                     textAlign: 'center'
                   }}>
-                    <span className="font-mono-film" style={{ color: '#D97706', fontSize: '10px', display: 'block', marginBottom: '4px' }}>
-                      PESAN PENUTUP SPESIAL
-                    </span>
-                    <strong style={{ fontSize: '13px', color: '#FFFFFF', display: 'block', marginBottom: '8px' }}>
+                    <strong style={{ fontSize: '12.5px', color: '#FFFFFF', display: 'block', marginBottom: '8px' }}>
                       Tinggalkan Ucapan Suara untuk {event?.coupleOrHost || 'Tuan Rumah'}
                     </strong>
 
@@ -2572,28 +2479,27 @@ export default function GuestCameraPage() {
                             color: '#FFFFFF',
                             border: 'none',
                             borderRadius: '999px',
-                            padding: '10px 20px',
-                            fontSize: '12.5px',
+                            padding: '8px 18px',
+                            fontSize: '12px',
                             fontWeight: 600,
                             cursor: 'pointer',
                             display: 'inline-flex',
                             alignItems: 'center',
-                            gap: '8px',
-                            marginTop: '4px'
+                            gap: '7px'
                           }}
                         >
-                          {isRecording ? <Square size={14} /> : <Mic size={14} />}
-                          <span>{isRecording ? `Merekam (${recordDuration}s / 15s) - Stop` : 'Tekan & Rekam Ucapan (15s)'}</span>
+                          {isRecording ? <Square size={13} /> : <Mic size={13} />}
+                          <span>{isRecording ? `Merekam (${recordDuration}s / 15s) - Stop` : 'Rekam Pesan Suara (15s)'}</span>
                         </button>
                         {isRecording && (
-                          <span style={{ fontSize: '11px', color: '#F87171', display: 'block', marginTop: '6px', animation: 'pulse 1s infinite' }}>
-                            ● Sedang merekam suara Anda...
+                          <span style={{ fontSize: '10.5px', color: '#F87171', display: 'block', marginTop: '6px' }}>
+                            ● Sedang merekam...
                           </span>
                         )}
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '12px', color: '#4ADE80' }}>✓ Rekaman suara siap dikirim ({recordDuration}s)</span>
+                        <span style={{ fontSize: '11.5px', color: '#4ADE80' }}>✓ Rekaman siap kirim ({recordDuration}s)</span>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button
                             onClick={submitVoiceNote}
@@ -2602,14 +2508,14 @@ export default function GuestCameraPage() {
                               background: '#C27803',
                               color: '#FFFFFF',
                               border: 'none',
-                              borderRadius: '10px',
-                              padding: '8px 16px',
-                              fontSize: '12px',
+                              borderRadius: '9px',
+                              padding: '7px 14px',
+                              fontSize: '11.5px',
                               fontWeight: 600,
                               cursor: 'pointer'
                             }}
                           >
-                            {isUploadingAudio ? 'Mengirim...' : 'Kirim Pesan Suara'}
+                            {isUploadingAudio ? 'Mengirim...' : 'Kirim'}
                           </button>
                           <button
                             onClick={() => setAudioBlob(null)}
@@ -2617,9 +2523,9 @@ export default function GuestCameraPage() {
                               background: 'rgba(255, 255, 255, 0.15)',
                               color: '#FFFFFF',
                               border: 'none',
-                              borderRadius: '10px',
-                              padding: '8px 12px',
-                              fontSize: '12px',
+                              borderRadius: '9px',
+                              padding: '7px 12px',
+                              fontSize: '11.5px',
                               cursor: 'pointer'
                             }}
                           >
@@ -2635,27 +2541,19 @@ export default function GuestCameraPage() {
               if (hasSentVoice) {
                 return (
                   <div style={{
-                    background: 'rgba(34, 197, 94, 0.12)',
-                    border: '1px solid rgba(34, 197, 94, 0.35)',
-                    borderRadius: '16px',
-                    padding: '12px 16px',
-                    marginBottom: '18px',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '12px',
-                    textAlign: 'left'
+                    gap: '6px',
+                    color: '#86EFAC',
+                    fontSize: '11px',
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    border: '1px solid rgba(34, 197, 94, 0.22)',
+                    padding: '3px 11px',
+                    borderRadius: '999px',
+                    marginBottom: '14px'
                   }}>
-                    <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(34, 197, 94, 0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      <Check size={18} color="#22C55E" />
-                    </div>
-                    <div>
-                      <strong style={{ fontSize: '13px', color: '#86EFAC', display: 'block' }}>
-                        Pesan Suara & Doa Tersimpan!
-                      </strong>
-                      <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', lineHeight: 1.4, display: 'block' }}>
-                        Terima kasih! Pesan suara dan doa spesial Anda telah tersimpan rapi untuk {event?.coupleOrHost || 'tuan rumah'}.
-                      </span>
-                    </div>
+                    <Check size={12} color="#22C55E" />
+                    <span>Pesan suara tersimpan untuk {event?.coupleOrHost || 'tuan rumah'}</span>
                   </div>
                 );
               }
@@ -2663,119 +2561,146 @@ export default function GuestCameraPage() {
               return null;
             })()}
 
-            {/* Primary Action Buttons */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%' }}>
+            {/* Mini Film Strip Preview (Showcase Guest Photos directly, tap to inspect) */}
+            {myPhotos.length > 0 && (
+              <div style={{ width: '100%', marginBottom: '16px' }}>
+                <div style={{
+                  display: 'flex',
+                  gap: '8px',
+                  overflowX: 'auto',
+                  padding: '2px 2px 6px',
+                  scrollbarWidth: 'none',
+                  WebkitOverflowScrolling: 'touch'
+                }}>
+                  {myPhotos.map((p, idx) => (
+                    <div
+                      key={p.id || idx}
+                      onClick={() => {
+                        setPreviewPhoto(p);
+                        setPreviewSlideDirection(0);
+                      }}
+                      style={{
+                        flexShrink: 0,
+                        width: '68px',
+                        height: '90px',
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        border: '1px solid rgba(255, 255, 255, 0.16)',
+                        cursor: 'pointer',
+                        position: 'relative',
+                        background: '#1A1815'
+                      }}
+                    >
+                      <img src={p.imageData} alt={`Shot #${p.shotNumber}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <span style={{
+                        position: 'absolute',
+                        bottom: '2px',
+                        right: '3px',
+                        fontSize: '8px',
+                        fontFamily: 'var(--font-mono)',
+                        color: '#FFFFFF',
+                        background: 'rgba(0,0,0,0.75)',
+                        padding: '1px 3px',
+                        borderRadius: '3px'
+                      }}>
+                        #{p.shotNumber}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Primary Action Buttons (Concise, Clean, High Contrast) */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', maxWidth: '320px' }}>
               <button
                 onClick={() => setShowRollModal(true)}
-                className="btn-apple-black"
                 style={{
                   background: '#FFFFFF',
                   color: '#1D1D1F',
                   width: '100%',
-                  padding: '14px',
-                  borderRadius: '14px',
-                  fontSize: '14px',
+                  padding: '13px',
+                  borderRadius: '13px',
+                  fontSize: '13.5px',
                   fontWeight: 600,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: '0 4px 16px rgba(255, 255, 255, 0.12)',
+                  border: 'none',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.3)',
                   cursor: 'pointer'
                 }}
               >
-                <Eye size={17} color="#1D1D1F" />
+                <Eye size={16} />
                 <span>Buka & Simpan Foto Saya ({myPhotos.length})</span>
               </button>
 
               <Link
                 href={`/event/${eventId}`}
                 style={{
-                  width: '100%',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(255, 255, 255, 0.22)',
-                  color: '#FFFFFF',
-                  padding: '13px',
-                  borderRadius: '14px',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
+                  color: 'rgba(255, 255, 255, 0.75)',
+                  padding: '9px',
+                  fontSize: '12.5px',
+                  fontWeight: 500,
                   textAlign: 'center',
                   textDecoration: 'none',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  gap: '8px',
-                  backdropFilter: 'blur(8px)'
+                  gap: '6px'
                 }}
               >
-                <Layers size={16} />
-                <span>Jelajahi Galeri Bersama Acara</span>
+                <Layers size={14} />
+                <span>Lihat Galeri Bersama Acara →</span>
               </Link>
             </div>
 
-            {/* VIRAL MARKETING FUNNEL: Product-Led Growth for Sudut Bingkai */}
+            {/* Tasteful Product-Led Growth (Natural & Understated, No AI Sparkles) */}
             <div style={{
-              margin: '22px 0 0',
-              padding: '16px 18px',
-              borderRadius: '18px',
-              background: 'linear-gradient(135deg, rgba(194, 120, 3, 0.15) 0%, rgba(26, 24, 21, 0.95) 100%)',
-              border: '1px solid rgba(194, 120, 3, 0.38)',
-              textAlign: 'left',
-              boxShadow: '0 12px 30px rgba(0, 0, 0, 0.5)',
-              position: 'relative',
-              overflow: 'hidden'
+              marginTop: '20px',
+              width: '100%',
+              maxWidth: '320px',
+              padding: '14px 16px',
+              borderRadius: '14px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              border: '1px solid rgba(255, 255, 255, 0.09)',
+              textAlign: 'left'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={15} color="#F59E0B" />
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#F59E0B', letterSpacing: '0.04em' }}>
-                    INGIN ACARAMU SEPERTI INI?
-                  </span>
-                </div>
-                <span style={{ fontSize: '9.5px', background: 'rgba(245, 158, 11, 0.2)', color: '#FCD34D', padding: '2px 8px', borderRadius: '6px', fontWeight: 700, border: '1px solid rgba(245, 158, 11, 0.3)' }}>
-                  COBA GRATIS
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '5px' }}>
+                <span style={{ fontSize: '11.5px', fontWeight: 600, color: '#FFFFFF' }}>
+                  Hadirkan Kamera di Acaramu
                 </span>
+                <Link
+                  href="/create"
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    color: '#D97706',
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}
+                >
+                  <span>Mulai Sekarang</span>
+                  <ArrowRight size={11} />
+                </Link>
               </div>
-
-              <p style={{ fontSize: '12px', color: '#D1D1D6', lineHeight: 1.5, margin: '0 0 12px 0' }}>
-                Hadirkan kamera tamu analog digital di pernikahan, ulang tahun, atau acaramu. Tamu jepret momen spontan tanpa instal aplikasi!
+              <p style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', lineHeight: 1.45, margin: 0 }}>
+                Kamera tamu analog digital untuk pernikahan, ulang tahun, atau perayaan spesial tanpa instal aplikasi.
               </p>
-
-              <Link
-                href="/create"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  background: '#C27803',
-                  color: '#FFFFFF',
-                  padding: '8px 16px',
-                  borderRadius: '10px',
-                  fontSize: '12px',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  boxShadow: '0 2px 10px rgba(194, 120, 3, 0.4)'
-                }}
-              >
-                <span>Buat Kamera Acaramu Sendiri</span>
-                <ArrowRight size={13} />
-              </Link>
             </div>
 
             {/* Vendor Partner Attribution (if applicable) */}
             {event?.vendorName && (
-              <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#86868B', fontSize: '11px' }}>
-                {event.vendorLogo ? (
-                  <img src={event.vendorLogo} alt={event.vendorName} style={{ height: '16px', maxWidth: '64px', objectFit: 'contain' }} />
-                ) : null}
-                <span>Partner WO: <strong style={{ color: '#FFFFFF' }}>{event.vendorName}</strong></span>
+              <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'rgba(255, 255, 255, 0.45)', fontSize: '10.5px' }}>
+                {event.vendorLogo && (
+                  <img src={event.vendorLogo} alt={event.vendorName} style={{ height: '14px', maxWidth: '50px', objectFit: 'contain' }} />
+                )}
+                <span>Partner WO: <strong style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{event.vendorName}</strong></span>
               </div>
             )}
-
-            {/* Branding Watermark Footer */}
-            <div style={{ marginTop: '18px', paddingBottom: 'calc(16px + env(safe-area-inset-bottom, 0px))', color: 'rgba(255, 255, 255, 0.35)', fontSize: '10.5px', fontFamily: 'var(--font-mono)' }}>
-              SUDUT BINGKAI • DIGITAL DISPOSABLE CAMERA
-            </div>
           </div>
         </div>
       )}
