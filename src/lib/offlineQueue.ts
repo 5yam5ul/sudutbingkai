@@ -10,6 +10,7 @@ const STORE_NAME = 'photos_queue';
 export interface OfflinePhotoPayload {
   id: string;
   eventId: string;
+  sessionId?: string;
   guestName: string;
   shotNumber: number;
   imageData: string; // base64
@@ -111,6 +112,7 @@ export async function flushOfflineQueue(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId: item.eventId,
+          sessionId: item.sessionId,
           guestName: item.guestName,
           shotNumber: item.shotNumber,
           imageData: item.imageData,

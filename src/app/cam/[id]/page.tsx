@@ -71,12 +71,31 @@ const slideVariants = {
   })
 };
 
+function getOrCreateGuestSession(canonicalId: string, urlId: string): string {
+  if (typeof window === 'undefined') return 'sess_' + Date.now();
+  const primaryKey = `sb_guest_session_${canonicalId}`;
+  const secondaryKey = `sb_guest_session_${urlId}`;
+  let sId = localStorage.getItem(primaryKey) || localStorage.getItem(secondaryKey) || localStorage.getItem('sb_guest_session_global');
+  if (!sId) {
+    sId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+    try {
+      localStorage.setItem('sb_guest_session_global', sId);
+    } catch {}
+  }
+  try {
+    localStorage.setItem(primaryKey, sId);
+    localStorage.setItem(secondaryKey, sId);
+  } catch {}
+  return sId;
+}
+
 export default function GuestCameraPage() {
   const params = useParams();
   const eventId = params.id as string;
   const isDemo = eventId === 'demo' || eventId === 'simulation' || eventId === 'test';
 
   const [event, setEvent] = useState<EventData | null>(null);
+  const [guestSessionId, setGuestSessionId] = useState<string>('');
   const [guestName, setGuestName] = useState('');
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
@@ -171,6 +190,18 @@ export default function GuestCameraPage() {
 
   // Fetch event data & handle offline sync listener
   useEffect(() => {
+    // 1. Initialize persistent session and fast local shot count recovery
+    const initialSession = getOrCreateGuestSession(eventId, eventId);
+    setGuestSessionId(initialSession);
+
+    const cachedCount = localStorage.getItem(`sb_shot_count_${eventId}`) || localStorage.getItem('sb_shot_count_global');
+    if (cachedCount) {
+      const parsedCount = parseInt(cachedCount, 10);
+      if (!isNaN(parsedCount) && parsedCount > 0) {
+        setShotCount(parsedCount);
+      }
+    }
+
     if (isDemo) {
       setEvent({
         id: 'demo',
@@ -211,12 +242,57 @@ export default function GuestCameraPage() {
               setUseFrame(false);
             }
 
+            const canonicalId = data.event.id;
+            const activeSession = getOrCreateGuestSession(canonicalId, eventId);
+            setGuestSessionId(activeSession);
+
             // Dual-key lookup: check canonical event.id as well
-            const canonicalName = localStorage.getItem(`sb_guest_${data.event.id}`);
+            const canonicalName = localStorage.getItem(`sb_guest_${canonicalId}`);
             if (canonicalName) {
               setGuestName(canonicalName);
               setHasEnteredName(true);
             }
+
+            // Sync authentic shot count and photos directly from backend database
+            const guestIdentifier = canonicalName || savedName || '';
+            const queryParams = new URLSearchParams({
+              eventId: canonicalId,
+              sessionId: activeSession
+            });
+            if (guestIdentifier && guestIdentifier !== 'Tamu') {
+              queryParams.set('guestName', guestIdentifier);
+            }
+
+            fetch(`/api/photos?${queryParams.toString()}`)
+              .then(res => res.json())
+              .then(pData => {
+                if (pData.success && Array.isArray(pData.photos)) {
+                  const verifiedCount = pData.photos.length;
+                  if (verifiedCount > 0) {
+                    setShotCount(verifiedCount);
+                    try {
+                      localStorage.setItem(`sb_shot_count_${canonicalId}`, String(verifiedCount));
+                      localStorage.setItem(`sb_shot_count_${eventId}`, String(verifiedCount));
+                      localStorage.setItem('sb_shot_count_global', String(verifiedCount));
+                    } catch {}
+
+                    const serverPhotos: GuestPhoto[] = pData.photos.map((p: any, idx: number) => ({
+                      id: p.id,
+                      shotNumber: p.shotNumber || (idx + 1),
+                      imageData: p.imageData,
+                      timestamp: new Date(p.timestamp || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
+                      caption: p.caption || '',
+                      aspectRatio: p.aspectRatio || '3:4',
+                      frameId: p.frameId || 'none'
+                    }));
+                    setMyPhotos(serverPhotos);
+                    if (serverPhotos.length > 0) {
+                      setLastShotThumb(serverPhotos[serverPhotos.length - 1].imageData);
+                    }
+                  }
+                }
+              })
+              .catch(err => console.warn('Sync server photos error:', err));
           } else {
             setEventNotFound(true);
           }
@@ -235,10 +311,12 @@ export default function GuestCameraPage() {
       const savedPhotos = localStorage.getItem(`sb_my_shots_${eventId}`);
       if (savedPhotos) {
         const parsed = JSON.parse(savedPhotos);
-        setMyPhotos(parsed);
-        setShotCount(parsed.length);
-        if (parsed.length > 0) {
-          setLastShotThumb(parsed[parsed.length - 1].imageData);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setMyPhotos(parsed);
+          setShotCount(prev => Math.max(prev, parsed.length));
+          if (parsed.length > 0) {
+            setLastShotThumb(parsed[parsed.length - 1].imageData);
+          }
         }
       }
     } catch (e) {
@@ -532,6 +610,14 @@ export default function GuestCameraPage() {
       const newShotNum = shotCount + 1;
       setShotCount(newShotNum);
 
+      // Lightweight persistence that NEVER overflows 5MB quota
+      const canonicalId = event?.id || eventId;
+      try {
+        localStorage.setItem(`sb_shot_count_${canonicalId}`, String(newShotNum));
+        localStorage.setItem(`sb_shot_count_${eventId}`, String(newShotNum));
+        localStorage.setItem('sb_shot_count_global', String(newShotNum));
+      } catch {}
+
       // Create a sharp, balanced storage version (960px width, 0.84 quality, ~80KB)
       // This guarantees safe localStorage persistence across page reloads without running out of quota!
       const storageCanvas = document.createElement('canvas');
@@ -563,11 +649,12 @@ export default function GuestCameraPage() {
 
       // Store sharp storageBase64 in localStorage so reloads don't blow up 5MB quota
       try {
-        const persistentShots = updatedShots.map(p => ({
+        const persistentShots = updatedShots.slice(-6).map(p => ({
           ...p,
-          imageData: p.id === newGuestPhoto.id ? storageBase64 : p.imageData
+          imageData: p.id === newGuestPhoto.id ? storageBase64 : (p.imageData && p.imageData.length < 150000 ? p.imageData : storageBase64)
         }));
         localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
+        if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(persistentShots));
       } catch (err) {
         console.warn('LocalStorage quota limit reached, saving in memory:', err);
       }
@@ -578,6 +665,7 @@ export default function GuestCameraPage() {
 
       // Point 5: Send high-res photo to server or store in offline queue if offline
       const displayName = guestName;
+      const currentSession = guestSessionId || getOrCreateGuestSession(canonicalId, eventId);
 
       if (isDemo) {
         // PURE LOCAL SIMULATION DEMO!
@@ -587,7 +675,8 @@ export default function GuestCameraPage() {
       } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
         addPhotoToOfflineQueue({
           id: newGuestPhoto.id,
-          eventId,
+          eventId: canonicalId,
+          sessionId: currentSession,
           guestName: displayName,
           shotNumber: newShotNum,
           imageData: highResDataUrl,
@@ -604,7 +693,8 @@ export default function GuestCameraPage() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            eventId,
+            eventId: canonicalId,
+            sessionId: currentSession,
             guestName: displayName,
             shotNumber: newShotNum,
             imageData: highResDataUrl,
@@ -617,13 +707,16 @@ export default function GuestCameraPage() {
         .then(data => {
           if (data.success && data.photo?.imageData) {
             setMyPhotos(prev => prev.map(p => p.id === newGuestPhoto.id ? { ...p, imageData: data.photo.imageData } : p));
+          } else if (!data.success && data.error) {
+            toast.error(data.error);
           }
         })
         .catch(async () => {
           // Network dropped during upload, queue it safely in IndexedDB
           await addPhotoToOfflineQueue({
             id: newGuestPhoto.id,
-            eventId,
+            eventId: canonicalId,
+            sessionId: currentSession,
             guestName: displayName,
             shotNumber: newShotNum,
             imageData: highResDataUrl,
@@ -663,8 +756,13 @@ export default function GuestCameraPage() {
         } else {
           setLastShotThumb(null);
         }
+        const canonicalId = event?.id || eventId;
         try {
-          localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updated));
+          localStorage.setItem(`sb_shot_count_${canonicalId}`, String(updated.length));
+          localStorage.setItem(`sb_shot_count_${eventId}`, String(updated.length));
+          localStorage.setItem('sb_shot_count_global', String(updated.length));
+          localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updated.slice(-6)));
+          if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(updated.slice(-6)));
         } catch (e) {
           console.error(e);
         }

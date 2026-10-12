@@ -16,8 +16,19 @@ export async function GET(request: Request) {
       }
     }
 
-    const photos = await getAllPhotos(resolvedEventId, includeHidden);
-    return NextResponse.json({ success: true, photos });
+    const sessionId = searchParams.get('sessionId');
+    const guestName = searchParams.get('guestName');
+
+    let photos = await getAllPhotos(resolvedEventId, includeHidden);
+
+    if (sessionId || (guestName && guestName.trim() !== 'Tamu')) {
+      photos = photos.filter(p => 
+        (sessionId && p.sessionId === sessionId) ||
+        (guestName && guestName.trim() !== 'Tamu' && p.guestName.toLowerCase() === guestName.trim().toLowerCase())
+      );
+    }
+
+    return NextResponse.json({ success: true, photos, count: photos.length });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
   }
