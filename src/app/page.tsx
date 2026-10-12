@@ -1819,7 +1819,7 @@ export default function HomePage() {
           <div style={{ display: 'flex', gap: '32px', fontSize: '13px', color: '#515154' }}>
             <Link href="/create" style={{ color: 'inherit', textDecoration: 'none' }}>Buat Album</Link>
             <Link href="/cam/demo" style={{ color: 'inherit', textDecoration: 'none' }}>Kamera Tamu</Link>
-            <Link href="/event/wedding-sarah-dimas" style={{ color: 'inherit', textDecoration: 'none' }}>Lihat Contoh Galeri</Link>
+            <Link href="/vendor" style={{ color: 'inherit', textDecoration: 'none' }}>Mitra Vendor</Link>
           </div>
         </div>
 

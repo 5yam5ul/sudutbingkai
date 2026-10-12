@@ -185,14 +185,6 @@ export default function BrideDashboardPage() {
             }
           } catch {}
         }
-        if (!selected && user?.email === 'pengantin@sudutbingkai.id') {
-          const fallbackRes = await fetch('/api/events?id=wedding-sarah-dimas');
-          const fallbackData = await fallbackRes.json();
-          if (fallbackData.success && fallbackData.event) {
-            selected = fallbackData.event;
-            setEvents([fallbackData.event]);
-          }
-        }
       }
 
       if (selected) {

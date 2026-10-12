@@ -21,15 +21,9 @@ export async function GET(request: Request) {
 
     if (hostEmail) {
       const cleanHost = hostEmail.trim().toLowerCase();
-      events = events.filter(e => 
-        (e.hostEmail && e.hostEmail.toLowerCase() === cleanHost) ||
-        (cleanHost === 'pengantin@sudutbingkai.id' && (e.id === 'wedding-sarah-dimas' || e.id === 'demo-nikahan'))
-      );
+      events = events.filter(e => e.hostEmail && e.hostEmail.toLowerCase() === cleanHost);
     } else if (vendorId) {
-      events = events.filter(e => 
-        e.vendorId === vendorId ||
-        (vendorId === 'vendor_vows_co' && (e.id === 'wedding-sarah-dimas' || e.id === 'demo-nikahan'))
-      );
+      events = events.filter(e => e.vendorId === vendorId);
     }
 
     return NextResponse.json({ success: true, events });

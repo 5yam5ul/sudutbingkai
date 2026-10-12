@@ -32,22 +32,7 @@ function ensureLocalDataFiles() {
 
   try {
     if (!fs.existsSync(EVENTS_FILE)) {
-      const sampleEvent: EventData = {
-        id: 'wedding-sarah-dimas',
-        slug: 'sarah-dimas',
-        title: 'Pernikahan Sarah & Dimas',
-        coupleOrHost: 'Sarah & Dimas',
-        eventDate: '2026-11-20T09:00:00Z',
-        location: 'Plataran Dharmawangsa, Jakarta',
-        preset: 'portra',
-        allowGuestPresetSwitch: true,
-        maxGuests: 150,
-        additionalPax: 0,
-        shotsPerGuest: 20,
-        revealMode: 'instant',
-        createdAt: new Date().toISOString()
-      };
-      fs.writeFileSync(EVENTS_FILE, JSON.stringify([sampleEvent], null, 2), 'utf8');
+      fs.writeFileSync(EVENTS_FILE, JSON.stringify([], null, 2), 'utf8');
     }
 
     if (!fs.existsSync(PHOTOS_FILE)) {
@@ -55,27 +40,7 @@ function ensureLocalDataFiles() {
     }
 
     if (!fs.existsSync(INVOICES_FILE)) {
-      const sampleInvoice: InvoiceRecord = {
-        id: 'inv_wedding_sarah_dimas',
-        invoiceNumber: 'INV/SB/2026/02/0001',
-        eventId: 'wedding-sarah-dimas',
-        orderId: 'ord_sample_001',
-        buyerType: 'client',
-        buyerName: 'Sarah & Dimas',
-        buyerEmail: 'pengantin@sudutbingkai.id',
-        buyerPhone: '081298765432',
-        tierId: 'wedding',
-        tierName: 'Wedding (300 Tamu)',
-        originalPrice: 499000,
-        discountAmount: 49900,
-        discountCode: 'VOWSANDCO',
-        finalAmount: 449100,
-        paymentMethod: 'qris',
-        status: 'paid',
-        paidAt: '2026-02-14T10:30:00Z',
-        createdAt: '2026-02-14T10:25:00Z'
-      };
-      fs.writeFileSync(INVOICES_FILE, JSON.stringify([sampleInvoice], null, 2), 'utf8');
+      fs.writeFileSync(INVOICES_FILE, JSON.stringify([], null, 2), 'utf8');
     }
 
     if (!fs.existsSync(PAYOUTS_FILE)) {
@@ -83,24 +48,7 @@ function ensureLocalDataFiles() {
     }
 
     if (!fs.existsSync(TESTIMONIALS_FILE)) {
-      const sampleTestimonial: VideoTestimonialSubmission = {
-        id: 'testi_sample_01',
-        eventId: 'wedding-sarah-dimas',
-        eventTitle: 'Pernikahan Sarah & Dimas',
-        submitterType: 'vendor',
-        submitterId: 'vendor-1',
-        submitterName: 'Vows & Co Wedding Organizer',
-        videoType: 'link',
-        videoUrl: 'https://drive.google.com/file/d/sample-wedding-testimonial/view',
-        durationSeconds: 78,
-        caption: 'Keseruan tamu saat heboh scan barcode di meja ballroom, antusiasme tinggi banget!',
-        rewardAmount: 50000,
-        status: 'approved',
-        adminNotes: 'Video jernih, durasi 78 detik, interaksi tamu sangat natural.',
-        rewardPaidAt: '2026-02-15T14:00:00Z',
-        submittedAt: '2026-02-15T11:20:00Z'
-      };
-      fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify([sampleTestimonial], null, 2), 'utf8');
+      fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify([], null, 2), 'utf8');
     }
   } catch {
     // Ignore in read-only environment
@@ -278,16 +226,13 @@ export async function getAllEvents(): Promise<EventData[]> {
 
 export async function getEventById(id: string): Promise<EventData | null> {
   const cleanKey = (id || '').trim().toLowerCase();
-  const targetId = (cleanKey === 'demo-nikahan' || cleanKey === 'sarah-dimas' || cleanKey === 'wedding-sarah-dimas')
-    ? 'wedding-sarah-dimas'
-    : id;
 
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .or(`id.eq.${id},id.eq.${targetId},slug.eq.${cleanKey}`)
+        .or(`id.eq.${id},slug.eq.${cleanKey}`)
         .maybeSingle();
 
       if (!error && data) {
@@ -302,7 +247,6 @@ export async function getEventById(id: string): Promise<EventData | null> {
   const events = await getAllEvents();
   return events.find(e => 
     e.id === id || 
-    e.id === targetId || 
     (e.slug && e.slug.toLowerCase() === cleanKey) ||
     e.id.toLowerCase() === cleanKey ||
     e.id.toLowerCase().replace(/^wedding-|^event-|^sb-/, '') === cleanKey
@@ -447,11 +391,7 @@ export async function getAllPhotos(eventId?: string, includeHidden: boolean = fa
         .order('timestamp', { ascending: false });
 
       if (eventId) {
-        if (eventId === 'wedding-sarah-dimas' || eventId === 'demo-nikahan') {
-          query = query.or('event_id.eq.wedding-sarah-dimas,event_id.eq.demo-nikahan');
-        } else {
-          query = query.eq('event_id', eventId);
-        }
+        query = query.eq('event_id', eventId);
       }
       if (!includeHidden) {
         query = query.eq('is_hidden', false);
@@ -476,11 +416,7 @@ export async function getAllPhotos(eventId?: string, includeHidden: boolean = fa
       const raw = fs.readFileSync(PHOTOS_FILE, 'utf8');
       let photos: PhotoRecord[] = JSON.parse(raw);
       if (eventId) {
-        if (eventId === 'wedding-sarah-dimas' || eventId === 'demo-nikahan') {
-          photos = photos.filter(p => p.eventId === 'wedding-sarah-dimas' || p.eventId === 'demo-nikahan');
-        } else {
-          photos = photos.filter(p => p.eventId === eventId);
-        }
+        photos = photos.filter(p => p.eventId === eventId);
       }
       if (!includeHidden) {
         photos = photos.filter(p => !p.isHidden);
