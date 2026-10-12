@@ -13,7 +13,9 @@ export interface FilmPreset {
   iso: string;
 }
 
-export type EventPackageTier = 'starter' | 'mini' | 'small' | 'party' | 'event' | 'wedding' | 'unlimited';
+export type EventPackageTier = 'starter' | 'intimate' | 'wedding' | 'unlimited' | 'mini' | 'small' | 'party' | 'event';
+
+export const PRIMARY_PACKAGE_TIER_KEYS: EventPackageTier[] = ['starter', 'intimate', 'wedding', 'unlimited'];
 
 export const PACKAGE_TIERS: Record<EventPackageTier, {
   id: EventPackageTier;
@@ -51,6 +53,24 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     maxFileSize: '10 MB / foto',
     maxVoiceDuration: '15 detik / pesan suara',
     isFree: true
+  },
+  intimate: {
+    id: 'intimate',
+    name: 'Intimate Party',
+    price: 'Rp 129.000',
+    originalPrice: 'Rp 169.000',
+    discountBadge: 'HEMAT 24%',
+    guestsLabel: 'Hingga 50 tamu',
+    maxGuests: 50,
+    shotsPerGuest: 20,
+    maxPresets: 3,
+    badge: 'HEMAT 24% • 50 TAMU',
+    desc: 'Ulang tahun, bridal shower, tunangan, arisan, atau gathering intimate.',
+    retentionLabel: 'Penyimpanan 14 Hari (2 Minggu)',
+    retentionDays: 14,
+    storageCapacity: '2 GB Cloud Storage',
+    maxFileSize: '10 MB / foto',
+    maxVoiceDuration: '15 detik / pesan suara'
   },
   mini: {
     id: 'mini',

@@ -5,12 +5,13 @@ import { EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
 // Price map in IDR
 const TIER_PRICES: Record<EventPackageTier, number> = {
   starter: 0,
+  intimate: 129000,
+  wedding: 499000,
+  unlimited: 999000,
   mini: 54000,
   small: 89000,
   party: 179000,
   event: 269000,
-  wedding: 349000,
-  unlimited: 599000,
 };
 
 const ADDON_PAX_PRICES: Record<number, number> = {

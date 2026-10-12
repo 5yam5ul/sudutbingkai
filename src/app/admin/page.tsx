@@ -52,8 +52,8 @@ export default function SuperAdminDashboard() {
     eventDate: new Date().toISOString().substring(0, 10),
     location: '',
     packageTier: 'wedding',
-    maxGuests: 150,
-    shotsPerGuest: 20,
+    maxGuests: 300,
+    shotsPerGuest: 25,
     preset: 'portra',
     revealMode: 'instant'
   });
@@ -212,8 +212,8 @@ export default function SuperAdminDashboard() {
           eventDate: new Date().toISOString().substring(0, 10),
           location: '',
           packageTier: 'wedding',
-          maxGuests: 150,
-          shotsPerGuest: 20,
+          maxGuests: 300,
+          shotsPerGuest: 25,
           preset: 'portra',
           revealMode: 'instant'
         });
@@ -2025,11 +2025,15 @@ export default function SuperAdminDashboard() {
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
-                    <option value="free">Free Test (2 Tamu)</option>
-                    <option value="party">Party (75 Tamu)</option>
-                    <option value="event">Event (150 Tamu)</option>
-                    <option value="wedding">Wedding (300 Tamu)</option>
-                    <option value="unlimited">Unlimited (2000 Tamu)</option>
+                    <option value="starter">Starter / Gratis (5 Tamu - Rp 0)</option>
+                    <option value="intimate">Intimate Party (50 Tamu - Rp 129.000)</option>
+                    <option value="wedding">Wedding Resepsi (300 Tamu - Rp 499.000)</option>
+                    <option value="unlimited">Grand / Unlimited (1000 Tamu - Rp 999.000)</option>
+                    <option value="free">Legacy: Free Test (2 Tamu)</option>
+                    <option value="mini">Legacy: Mini (25 Tamu)</option>
+                    <option value="small">Legacy: Small (50 Tamu)</option>
+                    <option value="party">Legacy: Party (75 Tamu)</option>
+                    <option value="event">Legacy: Event (150 Tamu)</option>
                   </select>
                 </div>
                 <div>
@@ -2209,14 +2213,28 @@ export default function SuperAdminDashboard() {
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Paket</label>
                   <select
                     value={newEventForm.packageTier}
-                    onChange={(e) => setNewEventForm({ ...newEventForm, packageTier: e.target.value as any })}
+                    onChange={(e) => {
+                      const tierKey = e.target.value as any;
+                      const defaults: Record<string, { maxGuests: number; shotsPerGuest: number }> = {
+                        starter: { maxGuests: 5, shotsPerGuest: 10 },
+                        intimate: { maxGuests: 50, shotsPerGuest: 20 },
+                        wedding: { maxGuests: 300, shotsPerGuest: 25 },
+                        unlimited: { maxGuests: 1000, shotsPerGuest: 36 },
+                      };
+                      const def = defaults[tierKey];
+                      setNewEventForm({
+                        ...newEventForm,
+                        packageTier: tierKey,
+                        ...(def ? { maxGuests: def.maxGuests, shotsPerGuest: def.shotsPerGuest } : {})
+                      });
+                    }}
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
-                    <option value="party">Party (75 Tamu)</option>
-                    <option value="event">Event (150 Tamu)</option>
-                    <option value="wedding">Wedding (300 Tamu)</option>
-                    <option value="unlimited">Unlimited (2000 Tamu)</option>
+                    <option value="starter">Starter / Gratis (5 Tamu - Rp 0)</option>
+                    <option value="intimate">Intimate Party (50 Tamu - Rp 129.000)</option>
+                    <option value="wedding">Wedding Resepsi (300 Tamu - Rp 499.000)</option>
+                    <option value="unlimited">Grand / Unlimited (1000 Tamu - Rp 999.000)</option>
                   </select>
                 </div>
                 <div>

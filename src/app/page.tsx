@@ -130,19 +130,75 @@ export default function HomePage() {
   };
 
   const pricingTiers = [
-    { name: 'Starter', price: 'Gratis', originalPrice: null, discountBadge: null, guests: 'Hingga 5 tamu', desc: 'Cocok untuk uji coba privat bersama keluarga dekat.', retention: '3 Hari', storage: '500 MB', shotsPerGuest: '10 foto / tamu', wishFeature: 'Pesan Suara 15s', popular: false, isFree: true },
-    { name: 'Mini', price: 'Rp 54.000', originalPrice: 'Rp 69.000', discountBadge: 'HEMAT 20%', guests: 'Hingga 15 tamu', desc: 'Untuk pesta kecil, intimate dinner, atau bridal shower.', retention: '7 Hari (1 Minggu)', storage: '1 GB', shotsPerGuest: '15 foto / tamu', wishFeature: 'Pesan Suara 15s', popular: false },
-    { name: 'Small', price: 'Rp 89.000', originalPrice: 'Rp 119.000', discountBadge: 'HEMAT 25%', guests: 'Hingga 35 tamu', desc: 'Cocok untuk gathering teman satu geng atau engagement.', retention: '14 Hari (2 Minggu)', storage: '2 GB', shotsPerGuest: '20 foto / tamu', wishFeature: 'Pesan Suara 15s', popular: false },
-    { name: 'Party', price: 'Rp 179.000', originalPrice: 'Rp 219.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 75 tamu', desc: 'Ulang tahun, intimate wedding, atau acara kantor.', retention: '30 Hari (1 Bulan)', storage: '5 GB', shotsPerGuest: '25 foto / tamu', wishFeature: 'Pesan Suara 15s', popular: false },
-    { name: 'Event', price: 'Rp 269.000', originalPrice: 'Rp 329.000', discountBadge: 'HEMAT 18%', guests: 'Hingga 150 tamu', desc: 'Resepsi pernikahan sedang atau reuni akbar.', retention: '45 Hari (1.5 Bulan)', storage: '10 GB', shotsPerGuest: '30 foto / tamu', wishFeature: 'Pesan Suara 15s', popular: false },
-    { name: 'Wedding', price: 'Rp 499.000', originalPrice: 'Rp 599.000', discountBadge: 'HEMAT 17%', guests: 'Hingga 300 tamu', desc: 'Pilihan paling populer untuk pesta pernikahan lengkap.', retention: '60 Hari (2 Bulan)', storage: '20 GB Cloud Storage', shotsPerGuest: '36 foto / tamu (1 Roll Film)', wishFeature: '🎬 Video Ucapan 15s (Reels VHS)', isExclusiveWish: true, popular: true },
-    { name: 'Unlimited', price: 'Rp 999.000', originalPrice: 'Rp 1.199.000', discountBadge: 'HEMAT 17%', guests: 'Tamu tanpa batas', desc: 'Festival, konser, atau wedding akbar ribuan tamu.', retention: '90 Hari (3 Bulan)', storage: '40 GB Cloud Storage', shotsPerGuest: '99 foto / tamu (Tanpa Batas)', wishFeature: '🎬 Video Ucapan 15s (Reels VHS)', isExclusiveWish: true, popular: false }
+    { 
+      id: 'starter',
+      name: 'Starter', 
+      price: 'Gratis', 
+      originalPrice: null, 
+      discountBadge: null, 
+      guests: 'Hingga 5 tamu', 
+      desc: 'Cocok untuk uji coba privat bersama keluarga dekat.', 
+      retention: '3 Hari', 
+      storage: '500 MB', 
+      shotsPerGuest: '10 foto / tamu', 
+      presets: '1 Filter (Portra)',
+      wishFeature: 'Pesan Suara 15s', 
+      popular: false, 
+      isFree: true 
+    },
+    { 
+      id: 'intimate',
+      name: 'Intimate Party', 
+      price: 'Rp 129.000', 
+      originalPrice: 'Rp 169.000', 
+      discountBadge: 'HEMAT 24%', 
+      guests: 'Hingga 50 tamu', 
+      desc: 'Ulang tahun, bridal shower, tunangan, arisan, atau gathering intimate.', 
+      retention: '14 Hari (2 Minggu)', 
+      storage: '2 GB Cloud', 
+      shotsPerGuest: '20 foto / tamu', 
+      presets: '3 Karakter Film Analog',
+      wishFeature: 'Pesan Suara 15s', 
+      popular: false 
+    },
+    { 
+      id: 'wedding',
+      name: 'Wedding Resepsi', 
+      price: 'Rp 499.000', 
+      originalPrice: 'Rp 599.000', 
+      discountBadge: 'HEMAT 17%', 
+      guests: 'Hingga 300 tamu', 
+      desc: 'Pilihan utama paling populer untuk pesta pernikahan lengkap.', 
+      retention: '60 Hari (2 Bulan)', 
+      storage: '20 GB Cloud Storage', 
+      shotsPerGuest: '36 foto / tamu (1 Roll Film)', 
+      presets: 'Semua 8 Karakter Film Lengkap',
+      wishFeature: '🎬 Video Ucapan 15s (Reels VHS)', 
+      isExclusiveWish: true, 
+      popular: true 
+    },
+    { 
+      id: 'unlimited',
+      name: 'Grand / Unlimited', 
+      price: 'Rp 999.000', 
+      originalPrice: 'Rp 1.199.000', 
+      discountBadge: 'HEMAT 17%', 
+      guests: 'Tamu tanpa batas', 
+      desc: 'Festival, konser, atau wedding akbar ribuan tamu.', 
+      retention: '90 Hari (3 Bulan)', 
+      storage: '40 GB Cloud Storage', 
+      shotsPerGuest: '99 foto / tamu (Tanpa Batas)', 
+      presets: 'Semua 8 Karakter Film Lengkap',
+      wishFeature: '🎬 Video Ucapan 15s (Reels VHS)', 
+      isExclusiveWish: true, 
+      popular: false 
+    }
   ];
 
   const faqs = [
     {
       q: 'Berapa lama foto disimpan di web dan apa batasan penyimpanannya?',
-      a: 'Masa simpan dirancang efisien dan pas agar server tetap cepat: mulai dari 3–7 hari (Starter & Mini), 14–30 hari (Small & Party), hingga 60 Hari / 2 Bulan untuk Paket Wedding (20 GB Cloud) dan 90 Hari untuk Paket Unlimited. Selama masa aktif tersebut, penyelenggara acara dan keluarga dapat mengunduh seluruh arsip foto resolusi tinggi asli (ZIP), video ucapan, serta pesan suara ke laptop atau Google Drive mereka secara gratis.'
+      a: 'Masa simpan dirancang efisien dan pas agar server tetap cepat: 3 Hari (Starter Gratis), 14 Hari (Intimate Party), 60 Hari / 2 Bulan (Paket Wedding), hingga 90 Hari untuk Paket Grand Unlimited. Selama masa aktif tersebut, penyelenggara acara dan keluarga dapat mengunduh seluruh arsip foto resolusi tinggi asli (ZIP), video ucapan, serta pesan suara ke laptop atau Google Drive mereka secara gratis.'
     },
     {
       q: 'Apakah SudutBingkai hanya untuk acara pernikahan?',
@@ -1208,30 +1264,34 @@ export default function HomePage() {
               className="glass-card"
               style={{
                 padding: '28px 24px',
-                borderRadius: '22px',
+                borderRadius: '24px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
                 position: 'relative',
-                border: tier.popular ? '2px solid #C27803' : '1px solid rgba(0, 0, 0, 0.08)',
-                background: tier.popular ? 'rgba(255, 255, 255, 0.95)' : undefined
+                border: tier.popular ? '2.5px solid #C27803' : '1px solid rgba(0, 0, 0, 0.08)',
+                background: tier.popular ? '#FFFFFF' : 'rgba(255, 255, 255, 0.85)',
+                boxShadow: tier.popular ? '0 16px 40px rgba(194, 120, 3, 0.15)' : '0 4px 20px rgba(0, 0, 0, 0.03)',
+                transform: tier.popular ? 'scale(1.02)' : 'none',
+                transition: 'all 0.3s ease'
               }}
             >
               {tier.popular && (
                 <div style={{
                   position: 'absolute',
-                  top: '-12px',
+                  top: '-13px',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: '#C27803',
+                  background: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
                   color: '#FFFFFF',
                   fontSize: '11px',
                   fontWeight: 700,
-                  padding: '3px 12px',
+                  padding: '4px 14px',
                   borderRadius: '999px',
-                  letterSpacing: '0.04em'
+                  letterSpacing: '0.05em',
+                  boxShadow: '0 4px 12px rgba(194, 120, 3, 0.35)'
                 }}>
-                  PALING POPULER
+                  ⭐ PALING POPULER
                 </div>
               )}
 
@@ -1280,11 +1340,11 @@ export default function HomePage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <Check size={14} color="#C27803" />
-                    <span>Preset film analog</span>
+                    <span>Preset: <strong>{tier.presets}</strong></span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={14} color={tier.isExclusiveWish ? "#FF0055" : "#C27803"} />
-                    <span style={{ fontWeight: tier.isExclusiveWish ? 700 : 400, color: tier.isExclusiveWish ? "#1D1D1F" : undefined }}>
+                    <Check size={14} color={tier.isExclusiveWish ? "#D97706" : "#C27803"} />
+                    <span style={{ fontWeight: tier.isExclusiveWish ? 700 : 400, color: tier.isExclusiveWish ? "#B45309" : undefined }}>
                       {tier.wishFeature}
                     </span>
                   </div>
@@ -1304,7 +1364,7 @@ export default function HomePage() {
               </div>
 
               <Link
-                href={`/create?package=${tier.name.toLowerCase()}`}
+                href={`/create?package=${tier.id}`}
                 className={tier.popular ? "btn-apple-black" : "btn-glass-secondary"}
                 style={{ width: '100%', padding: '12px', fontSize: '13.5px', textAlign: 'center' }}
               >

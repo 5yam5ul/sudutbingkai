@@ -9,7 +9,7 @@ import {
   Mail, Key, UserCheck
 } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
-import { FilmPresetId, EventPackageTier, PACKAGE_TIERS, UserAccount } from '@/lib/types';
+import { FilmPresetId, EventPackageTier, PACKAGE_TIERS, PRIMARY_PACKAGE_TIER_KEYS, UserAccount } from '@/lib/types';
 import { getClientSession, setClientSession } from '@/lib/auth';
 import { FrameId } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
@@ -563,7 +563,8 @@ function CreateEventForm() {
                       Pilih paket yang sudah Anda beli di website:
                     </span>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
-                      {Object.values(PACKAGE_TIERS).map((tier) => {
+                      {PRIMARY_PACKAGE_TIER_KEYS.map((tierKey) => {
+                        const tier = PACKAGE_TIERS[tierKey];
                         const isCurrent = selectedTier === tier.id;
                         return (
                           <button
