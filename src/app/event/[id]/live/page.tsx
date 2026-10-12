@@ -5,10 +5,11 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
-import { Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw, Layout, Film, Grid, SplitSquareVertical, Clock, Sparkles } from 'lucide-react';
+import { Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw, Layout, Film, Grid, SplitSquareVertical, Clock, Sparkles, Disc, Layers, Copy, Shuffle } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { EventData, PhotoRecord } from '@/lib/types';
 
-type SlideshowMode = 'polaroid' | 'kenburns' | 'split' | 'mosaic';
+type SlideshowMode = 'polaroid' | 'kenburns' | 'filmstrip' | 'coverflow' | 'stack' | 'duo' | 'mosaic' | 'split';
 
 export default function LiveProjectorWallPage() {
   const params = useParams();
@@ -23,6 +24,7 @@ export default function LiveProjectorWallPage() {
   // Slideshow presentation options
   const [displayMode, setDisplayMode] = useState<SlideshowMode>('polaroid');
   const [cycleSpeed, setCycleSpeed] = useState<number>(5000);
+  const [isAutoMix, setIsAutoMix] = useState(false);
 
   // Countdown Timer State for Delayed Mode (Anti-Leak Shield)
   const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
@@ -67,14 +69,24 @@ export default function LiveProjectorWallPage() {
     return () => clearInterval(interval);
   }, [eventId]);
 
-  // Slideshow cycle respecting cycleSpeed
+  // Slideshow cycle respecting cycleSpeed and Auto-Mix mode
   useEffect(() => {
     if (photos.length <= 1) return;
     const slideTimer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % photos.length);
+      setCurrentIndex((prev) => {
+        const nextIdx = (prev + 1) % photos.length;
+        if (isAutoMix && nextIdx % 3 === 0) {
+          const rotationModes: SlideshowMode[] = ['polaroid', 'filmstrip', 'coverflow', 'kenburns', 'stack', 'duo', 'mosaic'];
+          setDisplayMode((prevMode) => {
+            const nextModeIdx = (rotationModes.indexOf(prevMode) + 1) % rotationModes.length;
+            return rotationModes[nextModeIdx];
+          });
+        }
+        return nextIdx;
+      });
     }, cycleSpeed);
     return () => clearInterval(slideTimer);
-  }, [photos.length, cycleSpeed]);
+  }, [photos.length, cycleSpeed, isAutoMix]);
 
   // Auto-scroll active photo card into view in Mosaic Mode
   useEffect(() => {
@@ -182,36 +194,47 @@ export default function LiveProjectorWallPage() {
         </div>
 
         {/* Presentation Controls Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
           {/* Mode Switchers */}
           <div style={{
             display: 'flex',
             background: 'rgba(255, 255, 255, 0.08)',
             padding: '3px',
             borderRadius: '12px',
-            border: '1px solid rgba(255, 255, 255, 0.12)'
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            gap: '2px',
+            maxWidth: '100%',
+            overflowX: 'auto'
           }}>
             {[
-              { id: 'polaroid', label: 'Polaroid', icon: <Film size={13} /> },
-              { id: 'kenburns', label: 'Sinematik Zoom', icon: <Camera size={13} /> },
-              { id: 'split', label: 'Split Layar QR Tamu', icon: <SplitSquareVertical size={13} /> },
-              { id: 'mosaic', label: 'Mosaik Wall', icon: <Grid size={13} /> }
+              { id: 'polaroid', label: 'Polaroid', icon: <Film size={12} /> },
+              { id: 'filmstrip', label: 'Rol Film 35mm', icon: <Disc size={12} /> },
+              { id: 'coverflow', label: '3D Coverflow', icon: <Layers size={12} /> },
+              { id: 'kenburns', label: 'Sinematik Zoom', icon: <Camera size={12} /> },
+              { id: 'stack', label: 'Tumpukan Meja', icon: <Copy size={12} /> },
+              { id: 'duo', label: 'Duo Side-by-Side', icon: <Layout size={12} /> },
+              { id: 'mosaic', label: 'Mosaik Wall', icon: <Grid size={12} /> },
+              { id: 'split', label: 'Split Layar QR', icon: <SplitSquareVertical size={12} /> },
             ].map(m => (
               <button
                 key={m.id}
-                onClick={() => setDisplayMode(m.id as SlideshowMode)}
+                onClick={() => {
+                  setDisplayMode(m.id as SlideshowMode);
+                  setIsAutoMix(false);
+                }}
                 style={{
-                  padding: '5px 10px',
+                  padding: '5px 9px',
                   borderRadius: '9px',
                   border: 'none',
-                  background: displayMode === m.id ? '#C27803' : 'transparent',
-                  color: displayMode === m.id ? '#FFFFFF' : '#A1A1A6',
-                  fontSize: '11.5px',
+                  background: displayMode === m.id && !isAutoMix ? '#C27803' : 'transparent',
+                  color: displayMode === m.id && !isAutoMix ? '#FFFFFF' : '#A1A1A6',
+                  fontSize: '11px',
                   fontWeight: 600,
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
+                  gap: '4px',
+                  whiteSpace: 'nowrap',
                   transition: 'background 0.2s'
                 }}
               >
@@ -220,6 +243,31 @@ export default function LiveProjectorWallPage() {
               </button>
             ))}
           </div>
+
+          {/* Auto-Mix Button */}
+          <button
+            onClick={() => setIsAutoMix(prev => !prev)}
+            title="Otomatis berganti animasi setiap 3 foto"
+            style={{
+              padding: '5px 11px',
+              borderRadius: '11px',
+              border: isAutoMix ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.15)',
+              background: isAutoMix ? 'linear-gradient(135deg, #C27803 0%, #D97706 100%)' : 'rgba(255, 255, 255, 0.08)',
+              color: '#FFFFFF',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              boxShadow: isAutoMix ? '0 0 16px rgba(245, 158, 11, 0.4)' : 'none',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Shuffle size={12} />
+            <span>{isAutoMix ? 'Auto-Mix: ON' : 'Auto-Mix'}</span>
+          </button>
 
           {/* Speed Toggle */}
           <div style={{
@@ -433,67 +481,424 @@ export default function LiveProjectorWallPage() {
         ) : displayMode === 'polaroid' ? (
           /* MODE 1: POLAROID SPOTLIGHT */
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '900px', width: '100%' }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentPhoto.id}
+                initial={{ opacity: 0, scale: 0.92, rotate: -2, y: 20 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
+                exit={{ opacity: 0, scale: 1.05, rotate: 2, y: -20 }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  background: '#FAF8F5',
+                  padding: '16px 16px 36px 16px',
+                  borderRadius: '24px',
+                  boxShadow: '0 30px 80px rgba(0, 0, 0, 0.9), 0 0 50px rgba(194, 120, 3, 0.18)',
+                  width: '100%',
+                  maxWidth: '460px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center'
+                }}
+              >
+                <div style={{
+                  width: '100%',
+                  aspectRatio: '3/4',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  background: '#12100B',
+                  position: 'relative'
+                }}>
+                  <img
+                    src={currentPhoto.imageData}
+                    alt={`Diabadikan oleh ${currentPhoto.guestName}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                </div>
+
+                <div style={{ marginTop: '16px', textAlign: 'center', color: '#1A1815', width: '100%' }}>
+                  <span style={{ fontSize: '18px', fontWeight: '800', fontFamily: 'var(--font-display)', display: 'block' }}>
+                    Diabadikan oleh @{currentPhoto.guestName}
+                  </span>
+                  <span style={{ fontSize: '13px', color: '#736D65', fontFamily: 'var(--font-lcd)', display: 'block', marginTop: '2px' }}>
+                    FRAME #{currentPhoto.shotNumber} • {new Date(currentPhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+
+                  {currentPhoto.caption && (
+                    <div style={{
+                      marginTop: '12px',
+                      padding: '8px 16px',
+                      background: 'rgba(194, 120, 3, 0.08)',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(194, 120, 3, 0.25)',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      maxWidth: '95%'
+                    }}>
+                      <span style={{ fontSize: '14px' }}>💬</span>
+                      <span style={{
+                        fontSize: '13.5px',
+                        color: '#78350F',
+                        fontStyle: 'italic',
+                        fontWeight: 600,
+                        lineHeight: '1.4'
+                      }}>
+                        &ldquo;{currentPhoto.caption}&rdquo;
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+        ) : displayMode === 'filmstrip' ? (
+          /* MODE: ROL FILM 35MM (Cinematic Filmstrip with Perforations) */
+          <div style={{ width: '100%', maxWidth: '1280px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
             <div style={{
-              background: '#FAF8F5',
-              padding: '16px 16px 40px 16px',
-              borderRadius: '24px',
-              boxShadow: '0 30px 80px rgba(0, 0, 0, 0.9), 0 0 50px rgba(194, 120, 3, 0.18)',
               width: '100%',
-              maxWidth: '460px',
-              transition: 'all 0.5s ease',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center'
+              background: '#0E0D0B',
+              borderRadius: '24px',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              overflow: 'hidden',
+              boxShadow: '0 30px 80px rgba(0,0,0,0.9)',
+              position: 'relative'
             }}>
+              {/* Top Sprocket Perforations & Film Code */}
               <div style={{
-                width: '100%',
-                aspectRatio: '3/4',
-                borderRadius: '16px',
+                height: '42px',
+                background: '#141210',
+                borderBottom: '2px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 20px',
+                overflow: 'hidden'
+              }}>
+                <span className="font-mono-film" style={{ fontSize: '11px', color: '#D97706', letterSpacing: '0.18em', fontWeight: 700 }}>
+                  KODAK VISION3 500T • SAFETY FILM
+                </span>
+                <div style={{ display: 'flex', gap: '14px' }}>
+                  {Array.from({ length: 18 }).map((_, i) => (
+                    <div key={i} style={{ width: '15px', height: '22px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.85)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.7)' }} />
+                  ))}
+                </div>
+                <span className="font-mono-film" style={{ fontSize: '11px', color: '#D97706', letterSpacing: '0.18em' }}>
+                  EXP #{currentPhoto.shotNumber} 36A
+                </span>
+              </div>
+
+              {/* Main Film Frames Reel (3 frames carousel: Prev, Center/Active, Next) */}
+              <div style={{
+                padding: '24px 20px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '24px',
                 overflow: 'hidden',
-                background: '#12100B',
+                background: '#090807',
                 position: 'relative'
               }}>
-                <img
-                  src={currentPhoto.imageData}
-                  alt={`Diabadikan oleh ${currentPhoto.guestName}`}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+                {[-1, 0, 1].map((offset) => {
+                  const pIdx = (currentIndex + offset + photos.length) % photos.length;
+                  const p = photos[pIdx];
+                  if (!p) return null;
+                  const isCenter = offset === 0;
+
+                  return (
+                    <div
+                      key={`${p.id}-${offset}`}
+                      style={{
+                        flexShrink: 0,
+                        width: isCenter ? '360px' : '260px',
+                        transition: 'all 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+                        transform: isCenter ? 'scale(1.05)' : 'scale(0.92)',
+                        opacity: isCenter ? 1 : 0.45,
+                        filter: isCenter ? 'none' : 'grayscale(35%) brightness(0.6)'
+                      }}
+                    >
+                      <div style={{
+                        background: '#000',
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                        aspectRatio: '3/4',
+                        border: isCenter ? '3px solid #D97706' : '1px solid rgba(255,255,255,0.1)',
+                        boxShadow: isCenter ? '0 0 50px rgba(217, 119, 6, 0.35)' : 'none',
+                        position: 'relative'
+                      }}>
+                        <img src={p.imageData} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <span className="font-mono-film" style={{
+                          position: 'absolute',
+                          top: '10px',
+                          left: '12px',
+                          fontSize: '10px',
+                          color: '#F59E0B',
+                          background: 'rgba(0,0,0,0.7)',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          letterSpacing: '0.08em'
+                        }}>
+                          #{p.shotNumber}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              <div style={{ marginTop: '16px', textAlign: 'center', color: '#1A1815', width: '100%' }}>
-                <span style={{ fontSize: '18px', fontWeight: '800', fontFamily: 'var(--font-display)', display: 'block' }}>
-                  Diabadikan oleh @{currentPhoto.guestName}
+              {/* Bottom Sprocket Perforations */}
+              <div style={{
+                height: '42px',
+                background: '#141210',
+                borderTop: '2px solid rgba(255, 255, 255, 0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0 20px',
+                overflow: 'hidden'
+              }}>
+                <span className="font-mono-film" style={{ fontSize: '11px', color: '#D97706', letterSpacing: '0.18em' }}>
+                  SUDUT BINGKAI LIVE FILM REEL
                 </span>
-                <span style={{ fontSize: '13px', color: '#736D65', fontFamily: 'var(--font-lcd)', display: 'block', marginTop: '2px' }}>
-                  FRAME #{currentPhoto.shotNumber} • {new Date(currentPhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                <div style={{ display: 'flex', gap: '14px' }}>
+                  {Array.from({ length: 18 }).map((_, i) => (
+                    <div key={i} style={{ width: '15px', height: '22px', borderRadius: '4px', background: 'rgba(255, 255, 255, 0.85)', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.7)' }} />
+                  ))}
+                </div>
+                <span className="font-mono-film" style={{ fontSize: '11px', color: '#D97706', letterSpacing: '0.18em' }}>
+                  35MM ANALOG
                 </span>
-
-                {currentPhoto.caption && (
-                  <div style={{
-                    marginTop: '12px',
-                    padding: '8px 16px',
-                    background: 'rgba(194, 120, 3, 0.08)',
-                    borderRadius: '12px',
-                    border: '1px solid rgba(194, 120, 3, 0.25)',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    maxWidth: '95%'
-                  }}>
-                    <span style={{ fontSize: '14px' }}>💬</span>
-                    <span style={{
-                      fontSize: '13.5px',
-                      color: '#78350F',
-                      fontStyle: 'italic',
-                      fontWeight: 600,
-                      lineHeight: '1.4'
-                    }}>
-                      &ldquo;{currentPhoto.caption}&rdquo;
-                    </span>
-                  </div>
-                )}
               </div>
             </div>
+
+            {/* Active Subtitle Capsule */}
+            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+              <span className="font-display-serif" style={{ fontSize: '24px', fontWeight: 700, color: '#FFFFFF', display: 'block' }}>
+                Diabadikan oleh @{currentPhoto.guestName}
+              </span>
+              {currentPhoto.caption && (
+                <p style={{ fontSize: '15px', color: '#FDE68A', fontStyle: 'italic', margin: '4px 0 0' }}>
+                  &ldquo;{currentPhoto.caption}&rdquo;
+                </p>
+              )}
+            </div>
+          </div>
+        ) : displayMode === 'coverflow' ? (
+          /* MODE: 3D COVERFLOW STAGE */
+          <div style={{ width: '100%', maxWidth: '1300px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+            <div style={{
+              perspective: '1200px',
+              width: '100%',
+              height: '520px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              position: 'relative'
+            }}>
+              {[-2, -1, 0, 1, 2].map((offset) => {
+                const pIdx = (currentIndex + offset + photos.length) % photos.length;
+                const p = photos[pIdx];
+                if (!p) return null;
+                const isCenter = offset === 0;
+                const xPos = offset * 260;
+                const zPos = isCenter ? 60 : -100 - Math.abs(offset) * 50;
+                const rotY = isCenter ? 0 : offset < 0 ? 38 : -38;
+                const opac = isCenter ? 1 : Math.max(0.35, 1 - Math.abs(offset) * 0.3);
+                const scaleVal = isCenter ? 1.06 : 0.86;
+
+                return (
+                  <div
+                    key={`${p.id}-${offset}`}
+                    onClick={() => setCurrentIndex(pIdx)}
+                    style={{
+                      position: 'absolute',
+                      width: '320px',
+                      cursor: 'pointer',
+                      transform: `translateX(${xPos}px) translateZ(${zPos}px) rotateY(${rotY}deg) scale(${scaleVal})`,
+                      opacity: opac,
+                      transition: 'all 0.65s cubic-bezier(0.25, 1, 0.5, 1)',
+                      zIndex: 10 - Math.abs(offset),
+                      filter: isCenter ? 'none' : 'brightness(0.65)'
+                    }}
+                  >
+                    <div style={{
+                      background: '#FAF8F5',
+                      padding: '12px 12px 28px',
+                      borderRadius: '20px',
+                      boxShadow: isCenter ? '0 30px 70px rgba(0, 0, 0, 0.95), 0 0 40px rgba(194, 120, 3, 0.3)' : '0 15px 35px rgba(0,0,0,0.6)',
+                      border: isCenter ? '2px solid #C27803' : '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                      <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '14px', overflow: 'hidden', background: '#12100B' }}>
+                        <img src={p.imageData} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                      <div style={{ marginTop: '12px', textAlign: 'center', color: '#1A1815' }}>
+                        <strong style={{ fontSize: '14px', display: 'block' }}>@{p.guestName}</strong>
+                        <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#78350F' }}>
+                          FRAME #{p.shotNumber}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Active Caption Badge */}
+            {currentPhoto.caption && (
+              <div style={{
+                marginTop: '16px',
+                padding: '10px 24px',
+                borderRadius: '999px',
+                background: 'rgba(20, 18, 15, 0.85)',
+                border: '1px solid rgba(194, 120, 3, 0.4)',
+                backdropFilter: 'blur(10px)',
+                color: '#FDE68A',
+                fontSize: '15px',
+                fontStyle: 'italic',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.6)'
+              }}>
+                💬 &ldquo;{currentPhoto.caption}&rdquo;
+              </div>
+            )}
+          </div>
+        ) : displayMode === 'stack' ? (
+          /* MODE: POLAROID STACK / SHUFFLE */
+          <div style={{ width: '100%', maxWidth: '700px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
+            <div style={{ position: 'relative', width: '380px', height: '490px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {/* Back Card 3 */}
+              {photos.length > 2 && (
+                <div style={{
+                  position: 'absolute',
+                  width: '360px',
+                  background: '#ECEBE6',
+                  padding: '14px 14px 34px',
+                  borderRadius: '22px',
+                  transform: 'rotate(-7deg) translateY(18px) scale(0.92)',
+                  boxShadow: '0 15px 35px rgba(0,0,0,0.5)',
+                  opacity: 0.65
+                }}>
+                  <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '14px', background: '#2B2824', overflow: 'hidden' }}>
+                    <img src={photos[(currentIndex + 2) % photos.length]?.imageData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.6)' }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Back Card 2 */}
+              {photos.length > 1 && (
+                <div style={{
+                  position: 'absolute',
+                  width: '365px',
+                  background: '#F3F1EC',
+                  padding: '14px 14px 36px',
+                  borderRadius: '22px',
+                  transform: 'rotate(5deg) translateY(8px) scale(0.96)',
+                  boxShadow: '0 20px 45px rgba(0,0,0,0.6)',
+                  opacity: 0.85
+                }}>
+                  <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '14px', background: '#2B2824', overflow: 'hidden' }}>
+                    <img src={photos[(currentIndex + 1) % photos.length]?.imageData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'brightness(0.8)' }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Top Animated Active Card */}
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentPhoto.id}
+                  initial={{ opacity: 0, x: -60, rotate: -6, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, rotate: -1, scale: 1 }}
+                  exit={{ opacity: 0, x: 380, rotate: 22, scale: 1.05 }}
+                  transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                  style={{
+                    position: 'absolute',
+                    width: '370px',
+                    background: '#FAF8F5',
+                    padding: '14px 14px 36px',
+                    borderRadius: '22px',
+                    boxShadow: '0 30px 80px rgba(0,0,0,0.95), 0 0 35px rgba(194, 120, 3, 0.2)',
+                    zIndex: 20
+                  }}
+                >
+                  {/* Vintage Tape strip */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-12px',
+                    left: '50%',
+                    transform: 'translateX(-50%) rotate(-2deg)',
+                    width: '80px',
+                    height: '24px',
+                    background: 'rgba(245, 158, 11, 0.35)',
+                    backdropFilter: 'blur(3px)',
+                    border: '1px dashed rgba(255,255,255,0.4)',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+                    zIndex: 30
+                  }} />
+
+                  <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '14px', overflow: 'hidden', background: '#12100B' }}>
+                    <img src={currentPhoto.imageData} alt={currentPhoto.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+
+                  <div style={{ marginTop: '14px', textAlign: 'center', color: '#1A1815' }}>
+                    <span style={{ fontSize: '17px', fontWeight: 800, fontFamily: 'var(--font-display)', display: 'block' }}>
+                      @{currentPhoto.guestName}
+                    </span>
+                    <span className="font-mono-film" style={{ fontSize: '11px', color: '#736D65' }}>
+                      Jepretan #{currentPhoto.shotNumber}
+                    </span>
+                    {currentPhoto.caption && (
+                      <p style={{ fontSize: '12.5px', color: '#78350F', fontStyle: 'italic', margin: '6px 0 0' }}>
+                        &ldquo;{currentPhoto.caption}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        ) : displayMode === 'duo' ? (
+          /* MODE: DUO SHOWCASE (Side-by-Side Dual Guest Perspective) */
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+            gap: '32px',
+            maxWidth: '1000px',
+            width: '100%',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {[currentPhoto, photos[(currentIndex + 1) % photos.length]].map((p, idx) => {
+              if (!p) return null;
+              return (
+                <div
+                  key={`${p.id}-${idx}`}
+                  style={{
+                    background: '#FAF8F5',
+                    padding: '16px 16px 36px',
+                    borderRadius: '24px',
+                    boxShadow: '0 25px 65px rgba(0,0,0,0.85)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    transform: idx === 0 ? 'rotate(-1.5deg)' : 'rotate(1.5deg)',
+                    transition: 'all 0.5s ease'
+                  }}
+                >
+                  <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '16px', overflow: 'hidden', background: '#12100B' }}>
+                    <img src={p.imageData} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </div>
+                  <div style={{ marginTop: '14px', textAlign: 'center', color: '#1A1815' }}>
+                    <span style={{ fontSize: '17px', fontWeight: 800, fontFamily: 'var(--font-display)', display: 'block' }}>
+                      @{p.guestName}
+                    </span>
+                    <span className="font-mono-film" style={{ fontSize: '11px', color: '#736D65' }}>
+                      FRAME #{p.shotNumber} • {new Date(p.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                    {p.caption && (
+                      <p style={{ fontSize: '13px', color: '#78350F', fontStyle: 'italic', margin: '8px 0 0', fontWeight: 600 }}>
+                        &ldquo;{p.caption}&rdquo;
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         ) : displayMode === 'kenburns' ? (
           /* MODE 2: CINEMATIC FULLSCREEN KEN BURNS ZOOM */
