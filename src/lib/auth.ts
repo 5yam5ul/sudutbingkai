@@ -37,15 +37,33 @@ export const SYSTEM_USERS: Record<string, AuthAccount> = {
       event: 1
     },
     clientCount: 14
+  },
+  'admin': {
+    id: 'admin_sudutbingkai',
+    name: 'Super Admin SudutBingkai',
+    email: 'admin@sudutbingkai.id',
+    password: 'admin123',
+    role: 'admin',
+    companyName: 'Sudut Bingkai HQ',
+    phone: '081234567890'
   }
 };
 
 // Backward-compatible alias
 export const DEMO_USERS = SYSTEM_USERS;
 
-export function authenticateUser(email: string, pass: string, role?: 'host' | 'vendor'): UserAccount | null {
+export function authenticateUser(email: string, pass: string, role?: 'host' | 'vendor' | 'admin'): UserAccount | null {
   const cleanEmail = email.trim().toLowerCase();
   const cleanPass = pass.trim();
+
+  // Check Super Admin
+  if (
+    (!role || role === 'admin') &&
+    (cleanEmail === 'admin@sudutbingkai.id' || cleanEmail === 'superadmin@sudutbingkai.id') &&
+    (cleanPass === 'admin123' || cleanPass === 'adminpass2026' || cleanPass === 'sudutbingkai2026')
+  ) {
+    return SYSTEM_USERS['admin'];
+  }
 
   // Check Pengantin / Host
   if (

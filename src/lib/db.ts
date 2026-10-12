@@ -967,6 +967,51 @@ export async function getPayoutRequests(vendorId?: string): Promise<PayoutReques
   }
 }
 
+export async function updatePayoutStatus(
+  id: string,
+  status: 'approved' | 'rejected',
+  proofUrl?: string,
+  notes?: string
+): Promise<PayoutRequest | null> {
+  const processedAt = new Date().toISOString();
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase
+        .from('payout_requests')
+        .update({
+          status,
+          proof_url: proofUrl || null,
+          notes: notes || null,
+          processed_at: processedAt
+        })
+        .eq('id', id);
+    } catch (e) {
+      // Fallback
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(PAYOUTS_FILE) ? fs.readFileSync(PAYOUTS_FILE, 'utf8') : '[]';
+    const payouts: PayoutRequest[] = JSON.parse(raw);
+    const index = payouts.findIndex(p => p.id === id);
+    if (index === -1) return null;
+
+    payouts[index].status = status;
+    payouts[index].processedAt = processedAt;
+    if (proofUrl) payouts[index].proofUrl = proofUrl;
+    if (notes) payouts[index].notes = notes;
+
+    fs.writeFileSync(PAYOUTS_FILE, JSON.stringify(payouts, null, 2), 'utf8');
+    return payouts[index];
+  } catch {
+    return null;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // TESTIMONIAL VIDEO SUBMISSIONS (REVENUE REWARD)
 // ---------------------------------------------------------------------------

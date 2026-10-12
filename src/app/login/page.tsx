@@ -8,7 +8,7 @@ import { authenticateUser, setClientSession, getClientSession } from '@/lib/auth
 
 export default function LoginPage() {
   const router = useRouter();
-  const [role, setRole] = useState<'host' | 'vendor'>('host');
+  const [role, setRole] = useState<'host' | 'vendor' | 'admin'>('host');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,7 +17,9 @@ export default function LoginPage() {
   useEffect(() => {
     const existing = getClientSession();
     if (existing) {
-      if (existing.role === 'vendor') {
+      if (existing.role === 'admin') {
+        router.push('/admin');
+      } else if (existing.role === 'vendor') {
         router.push('/vendor');
       } else {
         router.push('/dashboard');
@@ -25,7 +27,7 @@ export default function LoginPage() {
     }
   }, [router]);
 
-  const handleRoleChange = (newRole: 'host' | 'vendor') => {
+  const handleRoleChange = (newRole: 'host' | 'vendor' | 'admin') => {
     setRole(newRole);
     setErrorMsg('');
     setEmail('');
@@ -41,7 +43,9 @@ export default function LoginPage() {
       const user = authenticateUser(email, password, role);
       if (user) {
         setClientSession(user);
-        if (user.role === 'vendor') {
+        if (user.role === 'admin') {
+          router.push('/admin');
+        } else if (user.role === 'vendor') {
           router.push('/vendor');
         } else {
           router.push('/dashboard');
@@ -55,7 +59,10 @@ export default function LoginPage() {
 
   const handleFillCredentials = () => {
     setErrorMsg('');
-    if (role === 'host') {
+    if (role === 'admin') {
+      setEmail('admin@sudutbingkai.id');
+      setPassword('admin123');
+    } else if (role === 'host') {
       setEmail('pengantin@sudutbingkai.id');
       setPassword('pengantin123');
     } else {
@@ -104,7 +111,7 @@ export default function LoginPage() {
           {/* Role Switcher Tabs */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
+            gridTemplateColumns: 'repeat(3, 1fr)',
             gap: '6px',
             background: 'rgba(0, 0, 0, 0.04)',
             padding: '4px',
@@ -118,20 +125,20 @@ export default function LoginPage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px',
-                padding: '10px',
+                gap: '5px',
+                padding: '10px 6px',
                 borderRadius: '10px',
                 border: 'none',
                 cursor: 'pointer',
                 background: role === 'host' ? '#FFFFFF' : 'transparent',
                 color: role === 'host' ? '#1D1D1F' : '#6E6E73',
                 fontWeight: role === 'host' ? 700 : 500,
-                fontSize: '13px',
+                fontSize: '12px',
                 boxShadow: role === 'host' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
                 transition: 'all 0.2s'
               }}
             >
-              <Heart size={14} color={role === 'host' ? '#C27803' : 'currentColor'} />
+              <Heart size={13} color={role === 'host' ? '#C27803' : 'currentColor'} />
               <span>Pengantin</span>
             </button>
 
@@ -142,47 +149,71 @@ export default function LoginPage() {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px',
-                padding: '10px',
+                gap: '5px',
+                padding: '10px 6px',
                 borderRadius: '10px',
                 border: 'none',
                 cursor: 'pointer',
                 background: role === 'vendor' ? '#FFFFFF' : 'transparent',
                 color: role === 'vendor' ? '#1D1D1F' : '#6E6E73',
                 fontWeight: role === 'vendor' ? 700 : 500,
-                fontSize: '13px',
+                fontSize: '12px',
                 boxShadow: role === 'vendor' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
                 transition: 'all 0.2s'
               }}
             >
-              <Briefcase size={14} color={role === 'vendor' ? '#C27803' : 'currentColor'} />
-              <span>Mitra Vendor</span>
+              <Briefcase size={13} color={role === 'vendor' ? '#C27803' : 'currentColor'} />
+              <span>Mitra WO</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleRoleChange('admin')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px',
+                padding: '10px 6px',
+                borderRadius: '10px',
+                border: 'none',
+                cursor: 'pointer',
+                background: role === 'admin' ? '#1D1D1F' : 'transparent',
+                color: role === 'admin' ? '#FFFFFF' : '#6E6E73',
+                fontWeight: role === 'admin' ? 700 : 500,
+                fontSize: '12px',
+                boxShadow: role === 'admin' ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <Shield size={13} color={role === 'admin' ? '#F59E0B' : 'currentColor'} />
+              <span>Admin</span>
             </button>
           </div>
 
           {/* Official Account Credentials Helper */}
           <div style={{
-            background: 'rgba(194, 120, 3, 0.06)',
-            border: '1px solid rgba(194, 120, 3, 0.22)',
+            background: role === 'admin' ? 'rgba(30, 27, 75, 0.05)' : 'rgba(194, 120, 3, 0.06)',
+            border: role === 'admin' ? '1px solid rgba(79, 70, 229, 0.3)' : '1px solid rgba(194, 120, 3, 0.22)',
             borderRadius: '14px',
             padding: '12px 14px',
             marginBottom: '20px'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <span className="font-mono-film" style={{ fontSize: '10px', color: '#C27803' }}>
-                AKUN UJI COBA RESMI
+              <span className="font-mono-film" style={{ fontSize: '10px', color: role === 'admin' ? '#4F46E5' : '#C27803' }}>
+                {role === 'admin' ? 'AKUN SUPER ADMIN' : 'AKUN UJI COBA RESMI'}
               </span>
               <button
                 type="button"
                 onClick={handleFillCredentials}
                 style={{
                   background: '#FFFFFF',
-                  border: '1px solid rgba(194, 120, 3, 0.35)',
+                  border: role === 'admin' ? '1px solid rgba(79, 70, 229, 0.4)' : '1px solid rgba(194, 120, 3, 0.35)',
                   borderRadius: '6px',
                   padding: '3px 8px',
                   fontSize: '11px',
                   fontWeight: 600,
-                  color: '#C27803',
+                  color: role === 'admin' ? '#4F46E5' : '#C27803',
                   cursor: 'pointer'
                 }}
               >
@@ -190,8 +221,8 @@ export default function LoginPage() {
               </button>
             </div>
             <div style={{ fontSize: '12px', color: '#1D1D1F', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <div>Email: <strong>{role === 'host' ? 'pengantin@sudutbingkai.id' : 'vendor@sudutbingkai.id'}</strong></div>
-              <div>Password: <strong>{role === 'host' ? 'pengantin123' : 'vendor123'}</strong></div>
+              <div>Email: <strong>{role === 'admin' ? 'admin@sudutbingkai.id' : role === 'host' ? 'pengantin@sudutbingkai.id' : 'vendor@sudutbingkai.id'}</strong></div>
+              <div>Password: <strong>{role === 'admin' ? 'admin123' : role === 'host' ? 'pengantin123' : 'vendor123'}</strong></div>
             </div>
           </div>
 

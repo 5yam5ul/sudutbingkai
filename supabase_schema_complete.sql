@@ -213,7 +213,25 @@ CREATE TABLE IF NOT EXISTS public.addons (
 );
 
 -- ------------------------------------------------------------------------------
--- 9. KEAMANAN: ROW LEVEL SECURITY (RLS) POLICIES
+-- 9. TABEL ADMIN_AUDIT_LOGS (Merekam jejak aktivitas Super Admin)
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.admin_audit_logs (
+  id TEXT PRIMARY KEY,
+  admin_id TEXT NOT NULL,
+  admin_email TEXT NOT NULL,
+  action TEXT NOT NULL, -- 'FORCE_PAID_INVOICE', 'APPROVE_PAYOUT', 'CENSOR_PHOTO', 'OVERRIDE_EVENT', dll
+  target_entity TEXT NOT NULL, -- 'invoice', 'event', 'photo', 'vendor', dll
+  target_id TEXT NOT NULL,
+  details JSONB,
+  ip_address TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON public.admin_audit_logs(action);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.admin_audit_logs(created_at DESC);
+
+-- ------------------------------------------------------------------------------
+-- 10. KEAMANAN: ROW LEVEL SECURITY (RLS) POLICIES
 -- ------------------------------------------------------------------------------
 -- Mengaktifkan RLS dan memberi izin baca/tulis aplikasi
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
@@ -224,6 +242,7 @@ ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payout_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.testimonials ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.addons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.admin_audit_logs ENABLE ROW LEVEL SECURITY;
 
 -- Policy Publik Bebas Baca/Tulis untuk operasional aplikasi
 DO $$
@@ -267,11 +286,34 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'addons_open_policy') THEN
     CREATE POLICY addons_open_policy ON public.addons FOR ALL USING (true) WITH CHECK (true);
   END IF;
+
+  -- Admin Audit Logs
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE policyname = 'audit_logs_open_policy') THEN
+    CREATE POLICY audit_logs_open_policy ON public.admin_audit_logs FOR ALL USING (true) WITH CHECK (true);
+  END IF;
 END $$;
 
 -- ------------------------------------------------------------------------------
--- 10. SEED DATA AWAL (Contoh Data Uji & Katalog Add-on)
+-- 11. SEED DATA AWAL (Contoh Data Uji & Akun Super Admin)
 -- ------------------------------------------------------------------------------
+-- Tambahkan akun Super Admin Default
+INSERT INTO public.vendors (
+  id, name, company_name, email, phone, role, tier, partner_tier, referral_code, wallet_balance, total_earnings
+) VALUES (
+  'admin_sudutbingkai',
+  'Super Admin SudutBingkai',
+  'Sudut Bingkai HQ',
+  'admin@sudutbingkai.id',
+  '081234567890',
+  'admin',
+  'agency',
+  'vip',
+  'ADMINSB',
+  0,
+  0
+) ON CONFLICT (id) DO UPDATE SET
+  role = 'admin';
+
 -- Tambahkan data default vendor mitra
 INSERT INTO public.vendors (
   id, name, company_name, email, phone, instagram, logo_url, role, tier, partner_tier, referral_code, wallet_balance, total_earnings, bank_account, event_quota_tokens, client_count
@@ -305,3 +347,4 @@ VALUES
   ('addon_banner_welcome', 'Welcome Gate Roll-Up Banner (60x160cm)', 'banner', 'Standing banner cetak Albatros matte anti-glare dengan QR Code raksasa untuk foyer masuk ballroom.', 249000, '1 set', true, true),
   ('addon_tv_vertikal_43', 'Sewa TV Vertikal Totem Kiosk 43 Inch', 'hardware_rental', 'Standing Digital Totem TV vertikal 43 inci untuk menampilkan live slideshow foto tamu di ballroom.', 1350000, '1 hari', true, true)
 ON CONFLICT (id) DO NOTHING;
+
