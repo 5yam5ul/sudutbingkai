@@ -42,12 +42,48 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Ukuran foto melebihi batas maksimal' }, { status: 413 });
     }
 
+    // 1. Enforce individual guest quota (shotsPerGuest)
+    const allowedShotsPerGuest = event.shotsPerGuest || 10;
+    const requestedShotNumber = Number(body.shotNumber) || 1;
+    if (requestedShotNumber > allowedShotsPerGuest) {
+      return NextResponse.json({
+        success: false,
+        error: `Jatah foto Anda untuk acara ini sudah habis (Maksimal ${allowedShotsPerGuest} foto).`
+      }, { status: 403 });
+    }
+
+    // 2. Query existing photos in database for this event
+    const existingPhotos = await getAllPhotos(event.id, true);
+
+    // Count shots previously taken by this session/guest
+    const guestExistingShots = existingPhotos.filter(p => 
+      (body.sessionId && p.sessionId === body.sessionId) || 
+      (body.guestName && body.guestName !== 'Tamu' && p.guestName.toLowerCase() === body.guestName.trim().toLowerCase())
+    );
+    if (guestExistingShots.length >= allowedShotsPerGuest) {
+      return NextResponse.json({
+        success: false,
+        error: `Jatah foto Anda untuk acara ini sudah habis (Maksimal ${allowedShotsPerGuest} foto).`
+      }, { status: 403 });
+    }
+
+    // 3. Strict total event capacity check (maxGuests + additionalPax)
+    const maxCapacity = (event.maxGuests || 5) + (event.additionalPax || 0);
+    const uniqueGuests = new Set(existingPhotos.map(p => p.sessionId || p.guestName));
+    const isNewGuest = !uniqueGuests.has(body.sessionId || body.guestName);
+    if (isNewGuest && uniqueGuests.size >= maxCapacity) {
+      return NextResponse.json({
+        success: false,
+        error: `Kapasitas tamu untuk acara ini telah penuh (${maxCapacity} tamu). Silakan hubungi penyelenggara acara.`
+      }, { status: 403 });
+    }
+
     const newPhoto: PhotoRecord = {
       id: 'photo-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       eventId: event.id,
       guestName: (body.guestName || 'Tamu').trim(),
       sessionId: body.sessionId || 'session-' + Date.now(),
-      shotNumber: Number(body.shotNumber) || 1,
+      shotNumber: guestExistingShots.length + 1,
       imageData: body.imageData,
       timestamp: new Date().toISOString(),
       caption: (body.caption || '').trim(),

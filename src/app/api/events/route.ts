@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent } from '@/lib/db';
-import { EventData } from '@/lib/types';
+import { EventData, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 
 export async function GET(request: Request) {
   try {
@@ -46,6 +46,18 @@ export async function POST(request: Request) {
       ? rawSlug.toString().trim().toLowerCase().replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
       : undefined;
 
+    const tierKey = (body.packageTier || 'wedding') as EventPackageTier;
+    const tierConfig = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.starter;
+    const isAdmin = body.adminAuthorized === true;
+
+    const defaultShots = tierConfig.shotsPerGuest;
+    const requestedShots = body.shotsPerGuest !== undefined ? Number(body.shotsPerGuest) : defaultShots;
+    const safeShots = isAdmin ? requestedShots : Math.min(requestedShots, tierConfig.shotsPerGuest);
+
+    const defaultGuests = tierConfig.maxGuests;
+    const requestedGuests = body.maxGuests !== undefined ? Number(body.maxGuests) : defaultGuests;
+    const safeGuests = isAdmin ? requestedGuests : Math.min(requestedGuests, tierConfig.maxGuests + (Number(body.additionalPax) || 0));
+
     const newEvent: EventData = {
       id,
       slug: cleanSlug,
@@ -56,10 +68,10 @@ export async function POST(request: Request) {
       preset: body.preset || 'portra',
       allowedPresets: body.allowedPresets || ['portra'],
       allowGuestPresetSwitch: body.allowGuestPresetSwitch !== false,
-      packageTier: body.packageTier || 'wedding',
-      maxGuests: Number(body.maxGuests) || 150,
+      packageTier: tierKey,
+      maxGuests: safeGuests,
       additionalPax: Number(body.additionalPax) || 0,
-      shotsPerGuest: Number(body.shotsPerGuest) || 20,
+      shotsPerGuest: safeShots,
       revealMode: body.revealMode || 'instant',
       revealTime: body.revealTime,
       coverUrl: body.coverUrl,
@@ -68,7 +80,7 @@ export async function POST(request: Request) {
       frameText: body.frameText,
       allowVoiceNote: body.allowVoiceNote !== false,
       allowGuestFrameToggle: body.allowGuestFrameToggle !== false,
-      closingWishType: body.closingWishType || (body.packageTier === 'wedding' || body.packageTier === 'unlimited' ? 'video' : 'voice'),
+      closingWishType: body.closingWishType || (tierKey === 'wedding' || tierKey === 'unlimited' ? 'video' : 'voice'),
       createdAt: new Date().toISOString(),
       hostEmail: body.hostEmail,
       paymentStatus: body.paymentStatus || 'paid',
@@ -95,7 +107,64 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'ID acara diperlukan' }, { status: 400 });
     }
 
+    const existingEvent = await getEventById(body.id);
+    if (!existingEvent) {
+      return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
+    }
+
+    const isCallerAdmin = body.adminAuthorized === true;
+    const currentTier = (existingEvent.packageTier || 'starter') as EventPackageTier;
+    const tierConfig = PACKAGE_TIERS[currentTier] || PACKAGE_TIERS.starter;
+
     const updates: Partial<EventData> = {};
+
+    // 1. Strict shotsPerGuest check against tier limits
+    if (body.shotsPerGuest !== undefined) {
+      const requestedShots = Number(body.shotsPerGuest);
+      if (!isCallerAdmin && requestedShots > tierConfig.shotsPerGuest) {
+        return NextResponse.json({
+          success: false,
+          error: `Paket ${tierConfig.name} dibatasi maksimal ${tierConfig.shotsPerGuest} foto per tamu. Anda tidak dapat mengatur ${requestedShots} foto tanpa upgrade paket.`
+        }, { status: 400 });
+      }
+      updates.shotsPerGuest = Math.max(1, requestedShots);
+    }
+
+    // 2. Strict packageTier escalation prevention (cannot self-upgrade without payment or admin)
+    if (body.packageTier !== undefined && body.packageTier !== existingEvent.packageTier) {
+      if (!isCallerAdmin) {
+        return NextResponse.json({
+          success: false,
+          error: 'Peningkatan paket hanya dapat diproses melalui pembayaran resmi atau verifikasi admin.'
+        }, { status: 403 });
+      }
+      updates.packageTier = body.packageTier;
+    }
+
+    // 3. Strict maxGuests check against tier + additionalPax
+    if (body.maxGuests !== undefined) {
+      const requestedGuests = Number(body.maxGuests);
+      const maxAllowedGuests = tierConfig.maxGuests + (existingEvent.additionalPax || 0);
+      if (!isCallerAdmin && requestedGuests > maxAllowedGuests) {
+        return NextResponse.json({
+          success: false,
+          error: `Batas kapasitas Paket ${tierConfig.name} adalah ${tierConfig.maxGuests} tamu (+ ${existingEvent.additionalPax || 0} pax tambahan).`
+        }, { status: 400 });
+      }
+      updates.maxGuests = Math.max(1, requestedGuests);
+    }
+
+    // 4. Strict allowedPresets check
+    if (body.allowedPresets !== undefined && Array.isArray(body.allowedPresets)) {
+      if (!isCallerAdmin && body.allowedPresets.length > tierConfig.maxPresets) {
+        return NextResponse.json({
+          success: false,
+          error: `Paket ${tierConfig.name} dibatasi maksimal ${tierConfig.maxPresets} filter film.`
+        }, { status: 400 });
+      }
+      updates.allowedPresets = body.allowedPresets;
+    }
+
     if (body.slug !== undefined) {
       updates.slug = body.slug
         ? body.slug.toString().trim().toLowerCase().replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
@@ -106,12 +175,8 @@ export async function PATCH(request: Request) {
     if (body.eventDate) updates.eventDate = body.eventDate;
     if (body.location !== undefined) updates.location = body.location.trim();
     if (body.preset) updates.preset = body.preset;
-    if (body.allowedPresets) updates.allowedPresets = body.allowedPresets;
     if (body.allowGuestPresetSwitch !== undefined) updates.allowGuestPresetSwitch = body.allowGuestPresetSwitch;
-    if (body.packageTier) updates.packageTier = body.packageTier;
-    if (body.maxGuests) updates.maxGuests = Number(body.maxGuests);
     if (body.additionalPax !== undefined) updates.additionalPax = Number(body.additionalPax);
-    if (body.shotsPerGuest) updates.shotsPerGuest = Number(body.shotsPerGuest);
     if (body.revealMode) updates.revealMode = body.revealMode;
     if (body.revealTime !== undefined) updates.revealTime = body.revealTime;
     if (body.frameId) updates.frameId = body.frameId;

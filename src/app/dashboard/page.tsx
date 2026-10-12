@@ -103,13 +103,16 @@ export default function BrideDashboardPage() {
 
   const selectActiveEvent = async (selected: EventData) => {
     setEvent(selected);
-    setShotsPerGuest(selected.shotsPerGuest || 20);
+    const tierKey = (selected.packageTier && PACKAGE_TIERS[selected.packageTier as EventPackageTier]) ? (selected.packageTier as EventPackageTier) : 'starter';
+    const maxAllowedShots = PACKAGE_TIERS[tierKey]?.shotsPerGuest || 10;
+    const safeShots = Math.min(selected.shotsPerGuest || maxAllowedShots, maxAllowedShots);
+    setPackageTier(tierKey);
+    setShotsPerGuest(safeShots);
     setRevealMode(selected.revealMode || 'instant');
     setRevealTime(selected.revealTime || '');
     setPreset(selected.preset || 'portra');
     setAllowedPresets(selected.allowedPresets && selected.allowedPresets.length > 0 ? selected.allowedPresets : [selected.preset || 'portra']);
     setAllowGuestPresetSwitch(selected.allowGuestPresetSwitch || false);
-    setPackageTier((selected.packageTier && PACKAGE_TIERS[selected.packageTier]) ? selected.packageTier : 'wedding');
     setFrameId(selected.frameId || 'minimal-gold');
     setCustomFrameUrl(selected.customFrameUrl || '');
     setFrameText(selected.frameText || '');
@@ -380,19 +383,20 @@ export default function BrideDashboardPage() {
   const handleSaveSettings = async () => {
     if (!event) return;
     setIsSavingSettings(true);
+    const maxAllowedShots = PACKAGE_TIERS[packageTier]?.shotsPerGuest || 10;
+    const safeShots = Math.min(shotsPerGuest, maxAllowedShots);
     try {
       const res = await fetch('/api/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: event.id,
-          shotsPerGuest,
+          shotsPerGuest: safeShots,
           revealMode,
           revealTime: revealMode === 'delayed' ? revealTime : undefined,
           preset,
           allowedPresets,
           allowGuestPresetSwitch,
-          packageTier,
           frameId,
           customFrameUrl: customFrameUrl || undefined,
           frameText,
@@ -682,7 +686,9 @@ export default function BrideDashboardPage() {
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>JATAH PER TAMU</span>
-              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{event?.shotsPerGuest || 20} Foto</strong>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>
+                {Math.min(event?.shotsPerGuest || 10, PACKAGE_TIERS[packageTier]?.shotsPerGuest || 10)} Foto
+              </strong>
             </div>
 
             <div>
@@ -1576,18 +1582,33 @@ export default function BrideDashboardPage() {
               <div style={{ padding: '18px', borderRadius: '16px', background: 'rgba(0,0,0,0.03)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>
-                      Izinkan Tamu Ganti Filter Film di Kamera
-                    </strong>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>
+                        Izinkan Tamu Ganti Filter Film di Kamera
+                      </strong>
+                      {(PACKAGE_TIERS[packageTier]?.maxPresets || 1) <= 1 && (
+                        <span style={{ fontSize: '10px', background: '#F3F4F6', color: '#6B7280', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                          Terkunci di Paket Starter
+                        </span>
+                      )}
+                    </div>
                     <span style={{ fontSize: '11.5px', color: '#86868B' }}>
-                      Jika aktif, tamu dapat memilih filter analog sendiri di ponsel saat memotret.
+                      {(PACKAGE_TIERS[packageTier]?.maxPresets || 1) <= 1
+                        ? `Paket ${PACKAGE_TIERS[packageTier]?.name || 'Starter'} hanya menyertakan 1 filter analog aktif. Upgrade paket untuk membuka fitur multi-filter pilihan tamu.`
+                        : 'Jika aktif, tamu dapat memilih filter analog sendiri di ponsel saat memotret.'}
                     </span>
                   </div>
                   <input
                     type="checkbox"
-                    checked={allowGuestPresetSwitch}
+                    disabled={(PACKAGE_TIERS[packageTier]?.maxPresets || 1) <= 1}
+                    checked={allowGuestPresetSwitch && (PACKAGE_TIERS[packageTier]?.maxPresets || 1) > 1}
                     onChange={(e) => setAllowGuestPresetSwitch(e.target.checked)}
-                    style={{ width: '20px', height: '20px', accentColor: '#C27803', cursor: 'pointer' }}
+                    style={{ 
+                      width: '20px', 
+                      height: '20px', 
+                      accentColor: '#C27803', 
+                      cursor: (PACKAGE_TIERS[packageTier]?.maxPresets || 1) <= 1 ? 'not-allowed' : 'pointer' 
+                    }}
                   />
                 </div>
 
@@ -1666,21 +1687,57 @@ export default function BrideDashboardPage() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                 {/* Shots Per Guest */}
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <label style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B' }}>
-                      Jatah Foto Per Tamu
-                    </label>
-                    <strong style={{ color: '#C27803', fontSize: '14px' }}>{shotsPerGuest} Jepretan</strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B' }}>
+                        Jatah Foto Per Tamu
+                      </label>
+                      <span style={{ fontSize: '11px', color: '#86868B', marginLeft: '8px' }}>
+                        (Paket {PACKAGE_TIERS[packageTier]?.name || 'Starter'}: maks {PACKAGE_TIERS[packageTier]?.shotsPerGuest || 10} foto)
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <strong style={{ color: '#C27803', fontSize: '15px' }}>
+                        {shotsPerGuest} Jepretan
+                      </strong>
+                      {shotsPerGuest >= (PACKAGE_TIERS[packageTier]?.shotsPerGuest || 10) && (
+                        <span style={{ fontSize: '10px', background: '#FEF3C7', color: '#92400E', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                          MAX PAKET
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <input
                     type="range"
-                    min={5}
-                    max={50}
-                    step={5}
-                    value={shotsPerGuest}
-                    onChange={(e) => setShotsPerGuest(Number(e.target.value))}
+                    min={1}
+                    max={PACKAGE_TIERS[packageTier]?.shotsPerGuest || 10}
+                    step={1}
+                    value={Math.min(shotsPerGuest, PACKAGE_TIERS[packageTier]?.shotsPerGuest || 10)}
+                    onChange={(e) => {
+                      const maxVal = PACKAGE_TIERS[packageTier]?.shotsPerGuest || 10;
+                      const val = Math.min(Number(e.target.value), maxVal);
+                      setShotsPerGuest(val);
+                    }}
                     style={{ width: '100%', accentColor: '#C27803', cursor: 'pointer' }}
                   />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '11px', color: '#86868B' }}>
+                    <span>1 Foto</span>
+                    <span>Maksimal: {PACKAGE_TIERS[packageTier]?.shotsPerGuest || 10} Foto / Tamu</span>
+                  </div>
+
+                  {shotsPerGuest >= (PACKAGE_TIERS[packageTier]?.shotsPerGuest || 10) && (
+                    <div style={{ marginTop: '12px', padding: '12px 14px', borderRadius: '12px', background: 'rgba(194, 120, 3, 0.08)', border: '1px dashed rgba(194, 120, 3, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#6E6E73' }}>
+                        Butuh jatah foto lebih banyak atau kuota tamu lebih besar?
+                      </span>
+                      <Link 
+                        href={`/invoice/${event?.id}`}
+                        style={{ fontSize: '11.5px', fontWeight: 600, color: '#C27803', textDecoration: 'underline', whiteSpace: 'nowrap' }}
+                      >
+                        Upgrade Paket →
+                      </Link>
+                    </div>
+                  )}
                 </div>
 
                 {/* Reveal Mode */}

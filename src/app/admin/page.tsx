@@ -177,7 +177,10 @@ export default function SuperAdminDashboard() {
       const res = await fetch('/api/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(eventToEdit)
+        body: JSON.stringify({
+          ...eventToEdit,
+          adminAuthorized: true
+        })
       });
       const data = await res.json();
       if (data.success) {
@@ -203,7 +206,7 @@ export default function SuperAdminDashboard() {
       const res = await fetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newEventForm)
+        body: JSON.stringify({ ...newEventForm, adminAuthorized: true })
       });
       const data = await res.json();
       if (data.success) {
@@ -251,7 +254,7 @@ export default function SuperAdminDashboard() {
       const res = await fetch('/api/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: eventId, revealMode: 'instant' })
+        body: JSON.stringify({ id: eventId, revealMode: 'instant', adminAuthorized: true })
       });
       const data = await res.json();
       if (data.success) {
@@ -278,7 +281,7 @@ export default function SuperAdminDashboard() {
       const res = await fetch('/api/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: eventId, maxGuests: newTotal })
+        body: JSON.stringify({ id: eventId, maxGuests: newTotal, adminAuthorized: true })
       });
       const data = await res.json();
       if (data.success) {
