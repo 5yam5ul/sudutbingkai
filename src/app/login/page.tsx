@@ -128,11 +128,16 @@ function LoginFormContent() {
                      user.user_metadata?.name || 
                      userEmail.split('@')[0];
 
-    // Read roleParam directly from current URL searchParams to prevent state lag
+    // Read roleParam directly from current URL searchParams or saved role in localStorage
     const roleParam = searchParams.get('role');
-    let assignedRole: 'host' | 'vendor' | 'admin' = (roleParam === 'vendor' || portalRole === 'vendor') ? 'vendor' : 'host';
+    const savedRole = typeof window !== 'undefined' ? localStorage.getItem('sb_auth_role') : null;
+    let assignedRole: 'host' | 'vendor' | 'admin' = (roleParam === 'vendor' || savedRole === 'vendor' || portalRole === 'vendor') ? 'vendor' : 'host';
     if (userEmail === 'admin@sudutbingkai.id') {
       assignedRole = 'admin';
+    }
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sb_auth_role');
     }
 
     if (assignedRole === 'admin') {
@@ -265,6 +270,10 @@ function LoginFormContent() {
     }
 
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sb_auth_role', portalRole);
+      }
+
       const redirectUrl = typeof window !== 'undefined' 
         ? `${window.location.origin}/login?role=${portalRole}` 
         : undefined;

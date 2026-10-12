@@ -115,6 +115,12 @@ export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
+    // If redirected from Supabase OAuth to root with hash (e.g. /#access_token=...)
+    if (typeof window !== 'undefined' && window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error_description'))) {
+      window.location.replace('/login' + window.location.hash);
+      return;
+    }
+
     const session = getClientSession();
     if (session) {
       setCurrentUser(session);
