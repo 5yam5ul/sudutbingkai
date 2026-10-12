@@ -118,9 +118,9 @@ function LoginFormContent() {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, portalRole, searchParams]);
 
-  const handleSupabaseUserSession = (user: any) => {
+  const handleSupabaseUserSession = async (user: any) => {
     const userEmail = (user.email || '').trim().toLowerCase();
     if (!userEmail) return;
 
@@ -128,29 +128,129 @@ function LoginFormContent() {
                      user.user_metadata?.name || 
                      userEmail.split('@')[0];
 
-    // Smart role routing
-    let assignedRole: 'host' | 'vendor' | 'admin' = portalRole;
+    // Read roleParam directly from current URL searchParams to prevent state lag
+    const roleParam = searchParams.get('role');
+    let assignedRole: 'host' | 'vendor' | 'admin' = (roleParam === 'vendor' || portalRole === 'vendor') ? 'vendor' : 'host';
     if (userEmail === 'admin@sudutbingkai.id') {
       assignedRole = 'admin';
     }
 
+    if (assignedRole === 'admin') {
+      const adminUser: UserAccount = {
+        id: 'admin_sudutbingkai',
+        name: fullName || 'Super Admin SudutBingkai',
+        email: userEmail,
+        role: 'admin',
+        companyName: 'Sudut Bingkai HQ'
+      };
+      setClientSession(adminUser);
+      toast.success('Selamat datang, Super Admin!');
+      router.push('/admin');
+      return;
+    }
+
+    if (assignedRole === 'vendor') {
+      // 1. Check if vendor is already registered in DB
+      let existingVendor: any = null;
+      try {
+        const res = await fetch('/api/vendors');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.vendors)) {
+          existingVendor = data.vendors.find((v: any) => 
+            (v.email && v.email.toLowerCase() === userEmail) ||
+            (v.id && (v.id === user.id || v.id === 'usr_g_' + user.id.substring(0, 10)))
+          );
+        }
+      } catch (err) {
+        console.warn('Check vendor error:', err);
+      }
+
+      if (existingVendor) {
+        const sessionUser: UserAccount = {
+          id: existingVendor.id,
+          name: existingVendor.name || fullName,
+          companyName: existingVendor.companyName || existingVendor.name || fullName,
+          email: userEmail,
+          role: 'vendor',
+          phone: existingVendor.phone || '',
+          instagram: existingVendor.instagram || '',
+          city: existingVendor.city || 'Jakarta',
+          partnerTier: existingVendor.partnerTier || 'regular',
+          referralCode: existingVendor.referralCode,
+          walletBalance: existingVendor.walletBalance || 0,
+          totalEarnings: existingVendor.totalEarnings || 0,
+          clientCount: existingVendor.clientCount || 0
+        };
+        setClientSession(sessionUser);
+        toast.success(`Selamat datang kembali di Portal Mitra, ${sessionUser.companyName || fullName}!`);
+        router.push('/vendor');
+        return;
+      } else {
+        // 2. Auto-register new vendor using Google account metadata
+        const defaultCompanyName = `${fullName} Planner`;
+        const generatedRef = (fullName.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'WO') + Date.now().toString().slice(-4);
+        try {
+          const regRes = await fetch('/api/vendors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: 'vendor_g_' + user.id.substring(0, 10),
+              name: fullName,
+              companyName: defaultCompanyName,
+              email: userEmail,
+              city: 'Jakarta',
+              referralCode: generatedRef,
+              partnerTier: 'regular',
+              tier: 'starter',
+              commissionRate: 0.12
+            })
+          });
+          const regData = await regRes.json();
+          const newV = regData.vendor || {};
+          const sessionUser: UserAccount = {
+            id: newV.id || ('vendor_g_' + user.id.substring(0, 10)),
+            name: fullName,
+            companyName: newV.companyName || defaultCompanyName,
+            email: userEmail,
+            role: 'vendor',
+            partnerTier: 'regular',
+            referralCode: generatedRef,
+            walletBalance: 0,
+            totalEarnings: 0
+          };
+          setClientSession(sessionUser);
+          toast.success(`Selamat datang di Kemitraan SudutBingkai, ${sessionUser.companyName}! Anda dapat melengkapi profil brand di menu Pengaturan.`);
+          router.push('/vendor');
+          return;
+        } catch (err) {
+          console.warn('Auto vendor creation fallback:', err);
+          const fallbackUser: UserAccount = {
+            id: 'vendor_g_' + user.id.substring(0, 10),
+            name: fullName,
+            companyName: defaultCompanyName,
+            email: userEmail,
+            role: 'vendor',
+            referralCode: generatedRef
+          };
+          setClientSession(fallbackUser);
+          toast.success(`Selamat datang di Portal Mitra, ${fullName}!`);
+          router.push('/vendor');
+          return;
+        }
+      }
+    }
+
+    // Host / Pengantin default
     const sessionUser: UserAccount = {
       id: 'usr_g_' + user.id.substring(0, 10),
       name: fullName,
       email: userEmail,
-      role: assignedRole
+      role: 'host'
     };
 
     setClientSession(sessionUser);
     toast.success(`Selamat datang, ${fullName}!`);
-    
-    if (assignedRole === 'admin') {
-      router.push('/admin');
-    } else if (assignedRole === 'vendor') {
-      router.push('/vendor');
-    } else {
-      router.push('/dashboard');
-    }
+    router.push('/dashboard');
   };
 
   // Google OAuth Sign-In
@@ -603,59 +703,65 @@ function LoginFormContent() {
           </div>
 
 
-          {/* GOOGLE SIGN-IN BUTTON (Host Only) */}
-          {portalRole === 'host' && (
-            <div style={{ marginBottom: '18px' }}>
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={googleLoading}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  background: '#FFFFFF',
-                  color: '#1D1D1F',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  cursor: googleLoading ? 'wait' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {googleLoading ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" color="#C27803" />
-                    <span>Menghubungkan ke Google...</span>
-                  </>
-                ) : (
-                  <>
-                    <GoogleIcon />
-                    <span>{authMode === 'login' ? 'Masuk dengan Google' : 'Daftar dengan Google'}</span>
-                  </>
-                )}
-              </button>
-
-              <div style={{
+          {/* GOOGLE SIGN-IN / SIGN-UP BUTTON */}
+          <div style={{ marginBottom: '18px' }}>
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                background: '#FFFFFF',
+                color: '#1D1D1F',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                cursor: googleLoading ? 'wait' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                margin: '18px 0 14px',
-                color: '#86868B',
-                fontSize: '11.5px'
-              }}>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(0, 0, 0, 0.08)' }} />
-                <span style={{ padding: '0 12px' }}>
-                  {authMode === 'login' ? 'atau masuk dengan email' : 'atau daftar dengan email'}
-                </span>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(0, 0, 0, 0.08)' }} />
-              </div>
+                justifyContent: 'center',
+                gap: '10px',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              {googleLoading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" color="#C27803" />
+                  <span>Menghubungkan ke Google...</span>
+                </>
+              ) : (
+                <>
+                  <GoogleIcon />
+                  <span>
+                    {portalRole === 'vendor' 
+                      ? (authMode === 'login' ? 'Masuk dengan Google (Akun Mitra)' : 'Daftar Agensi dengan Google')
+                      : (authMode === 'login' ? 'Masuk dengan Google' : 'Daftar dengan Google')
+                    }
+                  </span>
+                </>
+              )}
+            </button>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              margin: '18px 0 14px',
+              color: '#86868B',
+              fontSize: '11.5px'
+            }}>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(0, 0, 0, 0.08)' }} />
+              <span style={{ padding: '0 12px' }}>
+                {authMode === 'login' 
+                  ? 'atau masuk dengan email & kata sandi' 
+                  : (portalRole === 'vendor' ? 'atau isi formulir pendaftaran agensi' : 'atau daftar dengan email')
+                }
+              </span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(0, 0, 0, 0.08)' }} />
             </div>
-          )}
+          </div>
 
           {/* Error Message Alert */}
           {errorMsg && (

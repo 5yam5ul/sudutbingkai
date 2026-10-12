@@ -323,10 +323,14 @@ export default function VendorPortalPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success && data.vendors && data.vendors.length > 0) {
-          const v = data.vendors.find((item: any) => item.id === session?.id);
+          const v = data.vendors.find((item: any) => 
+            item.id === session?.id || 
+            (session?.email && item.email?.toLowerCase() === session?.email?.toLowerCase())
+          );
           if (v) {
-            setCompanyName(v.name || session.companyName || session.name || '');
+            setCompanyName(v.companyName || v.name || session.companyName || session.name || '');
             setInstagram(v.instagram || session.instagram || '');
+            setPhone(v.phone || session.phone || '');
             setLogoUrl(v.logoUrl || '');
             if (v.city) setCity(v.city);
           }
@@ -476,13 +480,16 @@ export default function VendorPortalPage() {
     setIsSaving(true);
 
     try {
-      const vendorId = vendor.id || 'vendor_vows_co';
+      const vendorId = vendor.id || `vendor_${Date.now()}`;
       const res = await fetch('/api/vendors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: vendorId,
-          name: companyName,
+          name: companyName || vendor.name,
+          companyName: companyName || vendor.name,
+          email: vendor.email,
+          phone,
           instagram,
           city,
           logoUrl,
@@ -493,13 +500,23 @@ export default function VendorPortalPage() {
       const data = await res.json();
       if (data.success) {
         setIsBrandingSaved(true);
-        const updated = { ...vendor, companyName, name: companyName, instagram, logoUrl };
+        const updated = { 
+          ...vendor, 
+          companyName: companyName || vendor.name, 
+          name: companyName || vendor.name, 
+          phone, 
+          instagram, 
+          city, 
+          logoUrl 
+        };
         setVendor(updated);
         setClientSession(updated);
+        toast.success('Pengaturan profil dan identitas agensi berhasil diperbarui!');
         setTimeout(() => setIsBrandingSaved(false), 3500);
       }
     } catch (err) {
       console.error(err);
+      toast.error('Gagal menyimpan profil vendor.');
     } finally {
       setIsSaving(false);
     }
