@@ -958,45 +958,143 @@ export default function GuestCameraPage() {
     e.target.value = '';
   };
 
-  const downloadSinglePhoto = (dataUrl: string, shotNum: number) => {
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = `SudutBingkai_${event?.title || 'Nikahan'}_Jepretan${shotNum}.jpg`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    toast.success(`Jepretan #${shotNum} tersimpan ke galeri Anda!`);
-  };
-
-  // Point 2: Native Web Share API
-  const handleSharePhoto = async (photo: GuestPhoto) => {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        if (photo.imageData.startsWith('data:image')) {
-          const res = await fetch(photo.imageData);
-          const blob = await res.blob();
-          const file = new File([blob], `SudutBingkai_${photo.shotNumber}.jpg`, { type: 'image/jpeg' });
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              title: event?.title || 'Foto SudutBingkai',
-              text: `Momen seru di ${event?.title}!`,
-              files: [file]
-            });
-            return;
-          }
+  const downloadSinglePhoto = async (imageUrl: string, shotNum: number) => {
+    const toastId = toast.loading('Mengunduh foto...');
+    try {
+      let blob: Blob | null = null;
+      if (imageUrl.startsWith('data:image')) {
+        const res = await fetch(imageUrl);
+        blob = await res.blob();
+      } else {
+        try {
+          const res = await fetch(imageUrl, { mode: 'cors' });
+          if (res.ok) blob = await res.blob();
+        } catch (e) {
+          console.warn('Direct fetch failed, falling back to canvas:', e);
         }
-        await navigator.share({
-          title: event?.title || 'Foto SudutBingkai',
-          text: `Momen seru di ${event?.title}!`,
-          url: window.location.href
-        });
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Foto seru di ${event?.title}! ${window.location.href}`)}`, '_blank');
+        if (!blob) {
+          blob = await new Promise<Blob | null>((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0);
+                  canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.95);
+                } else {
+                  resolve(null);
+                }
+              } catch {
+                resolve(null);
+              }
+            };
+            img.onerror = () => resolve(null);
+            img.src = imageUrl;
+          });
         }
       }
-    } else {
-      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(`Foto seru di ${event?.title}! ${window.location.href}`)}`, '_blank');
+
+      if (blob) {
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `SudutBingkai_${event?.title || 'Acara'}_Jepretan${shotNum}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        toast.dismiss(toastId);
+        toast.success(`Jepretan #${shotNum} berhasil diunduh ke galeri!`);
+        return;
+      }
+
+      const a = document.createElement('a');
+      a.href = imageUrl;
+      a.download = `SudutBingkai_${event?.title || 'Acara'}_Jepretan${shotNum}.jpg`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.dismiss(toastId);
+      toast.success(`Jepretan #${shotNum} terbuka!`);
+    } catch (err) {
+      console.error('Download error:', err);
+      toast.dismiss(toastId);
+      toast.error('Gagal mengunduh foto');
+    }
+  };
+
+  // Native Web Share API with Real Image File
+  const handleSharePhoto = async (photo: GuestPhoto) => {
+    const toastId = toast.loading('Menyiapkan foto...');
+    try {
+      let blob: Blob | null = null;
+      if (photo.imageData.startsWith('data:image')) {
+        const res = await fetch(photo.imageData);
+        blob = await res.blob();
+      } else {
+        try {
+          const res = await fetch(photo.imageData, { mode: 'cors' });
+          if (res.ok) blob = await res.blob();
+        } catch (e) {
+          console.warn('Direct fetch failed for share, trying canvas:', e);
+        }
+        if (!blob) {
+          blob = await new Promise<Blob | null>((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0);
+                  canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.95);
+                } else {
+                  resolve(null);
+                }
+              } catch {
+                resolve(null);
+              }
+            };
+            img.onerror = () => resolve(null);
+            img.src = photo.imageData;
+          });
+        }
+      }
+
+      if (!blob) {
+        throw new Error('Gagal menyiapkan file foto');
+      }
+
+      const file = new File([blob], `SudutBingkai_Jepretan${photo.shotNumber}.jpg`, { type: 'image/jpeg' });
+      toast.dismiss(toastId);
+
+      // Trigger Native OS Share Sheet with the real image file
+      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Foto Jepretan #${photo.shotNumber} - ${event?.title || 'Sudut Bingkai'}`
+        });
+        return;
+      }
+
+      // If file sharing is not supported by browser (e.g. desktop), auto-download and guide user
+      await downloadSinglePhoto(photo.imageData, photo.shotNumber);
+      toast.success('Foto tersimpan di galeri HP! Siap dibagikan ke WhatsApp atau Instagram Story.');
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      if (err.name !== 'AbortError') {
+        console.warn('Share error:', err);
+        await downloadSinglePhoto(photo.imageData, photo.shotNumber);
+        toast.info('Foto diunduh ke galeri HP untuk dibagikan.');
+      }
     }
   };
 

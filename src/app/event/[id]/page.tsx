@@ -302,37 +302,141 @@ export default function EventDashboardPage() {
     });
   };
 
+  const downloadSinglePhoto = async (imageUrl: string, filename?: string) => {
+    const toastId = toast.loading('Mengunduh foto...');
+    try {
+      let blob: Blob | null = null;
+      if (imageUrl.startsWith('data:image')) {
+        const res = await fetch(imageUrl);
+        blob = await res.blob();
+      } else {
+        try {
+          const res = await fetch(imageUrl, { mode: 'cors' });
+          if (res.ok) blob = await res.blob();
+        } catch (e) {
+          console.warn('Direct fetch failed, falling back to canvas:', e);
+        }
+        if (!blob) {
+          blob = await new Promise<Blob | null>((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0);
+                  canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.95);
+                } else {
+                  resolve(null);
+                }
+              } catch {
+                resolve(null);
+              }
+            };
+            img.onerror = () => resolve(null);
+            img.src = imageUrl;
+          });
+        }
+      }
+
+      if (blob) {
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename || `SudutBingkai_${event?.title || 'Acara'}.jpg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+        toast.dismiss(toastId);
+        toast.success('Foto berhasil diunduh ke galeri!');
+        return;
+      }
+
+      const a = document.createElement('a');
+      a.href = imageUrl;
+      a.download = filename || `SudutBingkai_${event?.title || 'Acara'}.jpg`;
+      a.target = '_blank';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      toast.dismiss(toastId);
+      toast.success('Foto terbuka!');
+    } catch (err) {
+      console.error('Download error:', err);
+      toast.dismiss(toastId);
+      toast.error('Gagal mengunduh foto');
+    }
+  };
+
   const handleSharePhoto = async (photo: PhotoRecord) => {
-    if (navigator.share) {
-      try {
-        let file: File | null = null;
-        if (photo.imageData.startsWith('data:image')) {
-          const res = await fetch(photo.imageData);
-          const blob = await res.blob();
-          file = new File([blob], `sudutbingkai-${photo.guestName}.jpg`, { type: 'image/jpeg' });
+    const toastId = toast.loading('Menyiapkan foto...');
+    try {
+      let blob: Blob | null = null;
+      if (photo.imageData.startsWith('data:image')) {
+        const res = await fetch(photo.imageData);
+        blob = await res.blob();
+      } else {
+        try {
+          const res = await fetch(photo.imageData, { mode: 'cors' });
+          if (res.ok) blob = await res.blob();
+        } catch (e) {
+          console.warn('Direct fetch failed, falling back to canvas:', e);
         }
-        if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: `Momen Foto ${photo.guestName}`,
-            text: `Foto kenangan dari acara ${event?.title || 'Sudut Bingkai'}`
+        if (!blob) {
+          blob = await new Promise<Blob | null>((resolve) => {
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            img.onload = () => {
+              try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width;
+                canvas.height = img.naturalHeight || img.height;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                  ctx.drawImage(img, 0, 0);
+                  canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.95);
+                } else {
+                  resolve(null);
+                }
+              } catch {
+                resolve(null);
+              }
+            };
+            img.onerror = () => resolve(null);
+            img.src = photo.imageData;
           });
-          return;
-        } else {
-          await navigator.share({
-            title: `Momen Foto ${photo.guestName}`,
-            text: `Lihat foto ${photo.guestName} di acara ${event?.title}`,
-            url: window.location.href
-          });
-          return;
         }
-      } catch (err) {
-        console.warn('Share dismissed or failed:', err);
+      }
+
+      if (!blob) {
+        throw new Error('Gagal menyiapkan file foto');
+      }
+
+      const file = new File([blob], `SudutBingkai_${photo.guestName}_${photo.shotNumber}.jpg`, { type: 'image/jpeg' });
+      toast.dismiss(toastId);
+
+      if (typeof navigator !== 'undefined' && navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Foto ${photo.guestName} - ${event?.title || 'Sudut Bingkai'}`
+        });
+        return;
+      }
+
+      await downloadSinglePhoto(photo.imageData, `SudutBingkai_${photo.guestName}_${photo.shotNumber}.jpg`);
+      toast.success('Foto tersimpan di galeri HP! Siap dibagikan ke WhatsApp atau Instagram Story.');
+    } catch (err: any) {
+      toast.dismiss(toastId);
+      if (err.name !== 'AbortError') {
+        console.warn('Share error:', err);
+        await downloadSinglePhoto(photo.imageData, `SudutBingkai_${photo.guestName}_${photo.shotNumber}.jpg`);
+        toast.info('Foto diunduh ke galeri HP untuk dibagikan.');
       }
     }
-    // WhatsApp fallback
-    const text = encodeURIComponent(`Lihat foto kenangan dari acara ${event?.title || 'Sudut Bingkai'}: ${window.location.href}`);
-    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');
   };
 
   const copyGuestLink = () => {
@@ -1299,17 +1403,18 @@ export default function EventDashboardPage() {
                             <Share2 size={12} />
                           </button>
 
-                          <a
-                            href={photo.imageData}
-                            download={`sudutbingkai-${photo.guestName}-${photo.shotNumber}.jpg`}
-                            onClick={(e) => e.stopPropagation()}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadSinglePhoto(photo.imageData, `sudutbingkai-${photo.guestName}-${photo.shotNumber}.jpg`);
+                            }}
                             className="glass-pill"
-                            style={{ padding: '6px 8px', fontSize: '11px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            style={{ padding: '6px 8px', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
                             title="Unduh"
                           >
                             <Download size={12} />
                             <span className="desktop-only">Unduh</span>
-                          </a>
+                          </button>
                         </div>
                       ) : (
                         <span className="font-mono-film" style={{ fontSize: '9px', color: '#86868B' }}>Terkunci</span>
@@ -1959,9 +2064,8 @@ export default function EventDashboardPage() {
                   <span>Bagikan</span>
                 </button>
 
-                <a
-                  href={activePhoto.imageData}
-                  download={`sudutbingkai-${activePhoto.guestName}-${activePhoto.shotNumber}.jpg`}
+                <button
+                  onClick={() => downloadSinglePhoto(activePhoto.imageData, `sudutbingkai-${activePhoto.guestName}-${activePhoto.shotNumber}.jpg`)}
                   style={{
                     padding: '10px',
                     fontSize: '12.5px',
@@ -1969,17 +2073,17 @@ export default function EventDashboardPage() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '7px',
-                    textDecoration: 'none',
                     color: '#FFFFFF',
                     background: 'rgba(255, 255, 255, 0.12)',
                     border: '1px solid rgba(255, 255, 255, 0.25)',
                     borderRadius: '12px',
-                    fontWeight: 600
+                    fontWeight: 600,
+                    cursor: 'pointer'
                   }}
                 >
                   <Download size={14} />
                   <span>Unduh Foto</span>
-                </a>
+                </button>
               </div>
             </div>
           </motion.div>
