@@ -910,40 +910,14 @@ function LoginFormContent() {
             </div>
           )}
 
-          {/* Footer Area: Role Toggles & Admin Link */}
-          <div style={{ marginTop: '22px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'center' }}>
-            
-            {portalRole === 'host' ? (
-              <div style={{ fontSize: '12px', color: '#86868B' }}>
-                Mitra Vendor atau Wedding Organizer?{' '}
-                <button
-                  type="button"
-                  onClick={() => { setPortalRole('vendor'); setAuthMode('login'); setErrorMsg(''); }}
-                  style={{ background: 'none', border: 'none', color: '#C27803', fontWeight: 600, cursor: 'pointer', padding: 0 }}
-                >
-                  Buka Portal Mitra WO →
-                </button>
-              </div>
-            ) : (
-              <div style={{ fontSize: '12px', color: '#86868B' }}>
-                Bukan Mitra WO? Masuk sebagai Pengantin / Klien{' '}
-                <button
-                  type="button"
-                  onClick={() => { setPortalRole('host'); setAuthMode('login'); setErrorMsg(''); }}
-                  style={{ background: 'none', border: 'none', color: '#C27803', fontWeight: 600, cursor: 'pointer', padding: 0 }}
-                >
-                  Kembali ke Portal Pengantin →
-                </button>
-              </div>
-            )}
-
-            <div style={{ fontSize: '11px', color: '#A1A1A6', marginTop: '6px' }}>
+          {/* Footer Area: Admin Link */}
+          <div style={{ marginTop: '22px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', textAlign: 'center' }}>
+            <div style={{ fontSize: '11.5px', color: '#A1A1A6' }}>
               Pengelola Sistem?{' '}
-              <Link href="/admin/login" style={{ color: '#86868B', textDecoration: 'none' }}>
+              <Link href="/admin/login" style={{ color: '#86868B', textDecoration: 'none', fontWeight: 500 }}>
                 Masuk ke Panel Super Admin →
               </Link>
             </div>
-
           </div>
 
         </div>
