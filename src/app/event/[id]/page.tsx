@@ -731,7 +731,7 @@ export default function EventDashboardPage() {
                 textShadow: '0 3px 18px rgba(0, 0, 0, 0.65)'
               }}
             >
-              {event?.coupleOrHost || event?.title || 'Sarah & Dimas'}
+              {event?.coupleOrHost || event?.title || 'Galeri Acara'}
             </h1>
 
             {/* Date & Location */}

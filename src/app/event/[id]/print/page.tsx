@@ -308,13 +308,13 @@ export default function PrintTableCardPage() {
             gap: '3px'
           }}
         >
-          {(event?.vendorName || eventId === 'wedding-sarah-dimas') && (
+          {event?.vendorName && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', marginBottom: '2px' }}>
-              {(event?.vendorLogo || eventId === 'wedding-sarah-dimas') && (
+              {event?.vendorLogo && (
                 <span style={{ fontSize: '11px' }}>🏢</span>
               )}
               <span style={{ fontWeight: 700, color: ts.textColor, fontSize: format === 'mini' ? '9.5px' : '11px', letterSpacing: '0.5px' }}>
-                Organized with love by {event?.vendorName || 'Vows & Co. Wedding Planner'}
+                Organized with love by {event.vendorName}
               </span>
             </div>
           )}
@@ -584,7 +584,7 @@ export default function PrintTableCardPage() {
                   type="text"
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
-                  placeholder="Sarah & Dimas"
+                  placeholder="Contoh: Kevin & Cindy"
                   className="input-field"
                   style={{ padding: '8px 12px', fontSize: '12.5px' }}
                 />

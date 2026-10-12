@@ -42,11 +42,7 @@ export default function AdminLoginPage() {
     }, 400);
   };
 
-  const handleFillDemoAdmin = () => {
-    setEmail('admin@sudutbingkai.id');
-    setPassword('admin123');
-    setErrorMsg('');
-  };
+
 
   return (
     <div style={{
@@ -148,38 +144,7 @@ export default function AdminLoginPage() {
             </p>
           </div>
 
-          {/* Quick Demo Fill Helper */}
-          <div style={{
-            background: 'rgba(245, 158, 11, 0.06)',
-            border: '1px solid rgba(245, 158, 11, 0.2)',
-            borderRadius: '12px',
-            padding: '10px 14px',
-            marginBottom: '20px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div>
-              <span style={{ fontSize: '10px', color: '#F59E0B', display: 'block', fontWeight: 600 }}>AKUN PENGUJIAN</span>
-              <span style={{ fontSize: '12px', color: '#E5E5EA' }}>admin@sudutbingkai.id</span>
-            </div>
-            <button
-              type="button"
-              onClick={handleFillDemoAdmin}
-              style={{
-                background: 'rgba(255, 255, 255, 0.1)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                color: '#F59E0B',
-                borderRadius: '8px',
-                padding: '5px 10px',
-                fontSize: '11px',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              Gunakan Akun
-            </button>
-          </div>
+
 
           {/* Error Message */}
           {errorMsg && (

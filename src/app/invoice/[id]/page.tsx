@@ -30,12 +30,7 @@ export default function InvoicePage() {
         if (data.success && data.invoice) {
           setInvoice(data.invoice);
         } else {
-          // If not found by ID, try fetching sample
-          const fallbackRes = await fetch('/api/invoices?id=wedding-sarah-dimas');
-          const fallbackData = await fallbackRes.json();
-          if (fallbackData.success && fallbackData.invoice) {
-            setInvoice(fallbackData.invoice);
-          }
+          setInvoice(null);
         }
       } catch (err) {
         console.error('Gagal memuat invoice:', err);

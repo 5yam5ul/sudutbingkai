@@ -25,7 +25,7 @@ interface FrameCustomizerProps {
 export default function FrameCustomizer({
   initialFrameId = 'minimal-gold',
   initialCustomFrameUrl = '',
-  initialCoupleName = 'Sarah & Dimas',
+  initialCoupleName = 'Nama Acara',
   initialEventDate = '',
   initialTagline = 'The Beginning of Forever',
   initialAllowGuestToggle = true,
@@ -401,7 +401,7 @@ export default function FrameCustomizer({
               </label>
               <input
                 type="text"
-                placeholder="Sarah & Dimas"
+                placeholder="Contoh: Kevin & Cindy"
                 value={coupleName}
                 onChange={(e) => setCoupleName(e.target.value)}
                 className="glass-input"

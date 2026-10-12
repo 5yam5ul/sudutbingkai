@@ -149,7 +149,7 @@ export async function applyFrameToCanvas(
   ctx: CanvasRenderingContext2D,
   options: FrameRenderOptions
 ) {
-  const { frameId, coupleOrTitle = 'Sarah & Dimas', eventDate, tagline, customFrameUrl } = options;
+  const { frameId, coupleOrTitle = 'Nama Acara', eventDate, tagline, customFrameUrl } = options;
   if (frameId === 'none') return;
 
   const width = canvas.width;

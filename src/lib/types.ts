@@ -46,7 +46,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     shotsPerGuest: 10,
     maxPresets: 1,
     badge: 'GRATIS • 5 TAMU',
-    desc: 'Cocok untuk uji coba privat bersama keluarga dekat.',
+    desc: 'Ideal untuk acara privat & kumpul keluarga inti.',
     retentionLabel: 'Penyimpanan 3 Hari',
     retentionDays: 3,
     storageCapacity: '500 MB Cloud',

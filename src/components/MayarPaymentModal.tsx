@@ -175,7 +175,7 @@ export default function MayarPaymentModal({
                 lineHeight: 1.5,
                 color: '#7C4800'
               }}>
-                <strong>Mode Uji Coba Pengembang:</strong> Akun Mayar Anda sedang proses KYC. Anda dapat mensimulasikan pembayaran berhasil di bawah untuk memverifikasi alur aktivasi paket seketika.
+                <strong>Mode Simulasi Transaksi:</strong> Gateway pembayaran sedang proses verifikasi akun Mayar. Anda dapat menyelesaikan transaksi simulasi di bawah untuk mengaktifkan paket secara langsung.
               </div>
             )}
 

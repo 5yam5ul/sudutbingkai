@@ -185,7 +185,7 @@ export default function BrideDashboardPage() {
             }
           } catch {}
         }
-        if (!selected) {
+        if (!selected && user?.email === 'pengantin@sudutbingkai.id') {
           const fallbackRes = await fetch('/api/events?id=wedding-sarah-dimas');
           const fallbackData = await fallbackRes.json();
           if (fallbackData.success && fallbackData.event) {
@@ -547,8 +547,33 @@ export default function BrideDashboardPage() {
           </div>
         )}
 
-        {/* Event Quick Overview Card */}
-        <div className="glass-card form-section-card" style={{ marginBottom: '32px' }}>
+        {/* Empty State if Host has no events yet */}
+        {!loading && !event && (
+          <div className="glass-card" style={{ padding: '64px 24px', textAlign: 'center', borderRadius: '28px', maxWidth: '560px', margin: '40px auto' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: 'rgba(194, 120, 3, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <Camera size={28} color="#C27803" />
+            </div>
+            <h2 className="font-display-serif" style={{ fontSize: '24px', fontWeight: 700, color: '#1D1D1F', marginBottom: '10px' }}>
+              Belum Ada Album Acara
+            </h2>
+            <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6, marginBottom: '28px' }}>
+              Halo <strong>{user?.name || 'Keluarga'}</strong>! Akun Anda belum memiliki album foto yang terdaftar. Siapkan album pernikahan, ulang tahun, atau gathering Anda sekarang untuk mendapatkan kartu barcode QR tamu.
+            </p>
+            <Link
+              href="/create"
+              className="btn-apple-black"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '14px 28px', borderRadius: '999px', fontSize: '14.5px', textDecoration: 'none' }}
+            >
+              <span>Buat Wadah Album Acara (Gratis)</span>
+              <ArrowRight size={16} />
+            </Link>
+          </div>
+        )}
+
+        {event && (
+          <>
+            {/* Event Quick Overview Card */}
+            <div className="glass-card form-section-card" style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
@@ -1280,7 +1305,7 @@ export default function BrideDashboardPage() {
                     THE WEDDING CELEBRATION OF
                   </span>
                   <h3 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: '26px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-                    {event?.coupleOrHost || 'Sarah & Dimas'}
+                    {event?.coupleOrHost || 'Nama Acara'}
                   </h3>
                   <p style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.85)', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>{event?.eventDate || '14 FEBRUARI 2026'}</span>
@@ -1394,7 +1419,7 @@ export default function BrideDashboardPage() {
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {[
-                    { label: '👰 Sarah & Dimas (Default)', url: '/samples/dummy-couple.jpg' },
+                    { label: '👰 Potret Pengantin', url: '/samples/dummy-couple.jpg' },
                     { label: '🥂 Suasana Tamu & Pesta', url: '/samples/dummy-guests.jpg' },
                     { label: '✨ Romantic Warmth (Unsplash)', url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80' },
                     { label: '🌅 Sunset Silhouette (Unsplash)', url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1600&q=80' },
@@ -1442,7 +1467,7 @@ export default function BrideDashboardPage() {
               <FrameCustomizer
                 initialFrameId={frameId}
                 initialCustomFrameUrl={customFrameUrl}
-                initialCoupleName={event?.coupleOrHost || 'Sarah & Dimas'}
+                initialCoupleName={event?.coupleOrHost || 'Nama Acara'}
                 initialEventDate={event?.eventDate || ''}
                 initialTagline="The Beginning of Forever"
                 initialAllowGuestToggle={allowGuestFrameToggle}
@@ -1977,6 +2002,9 @@ export default function BrideDashboardPage() {
               </div>
             </div>
           </div>
+        )}
+
+          </>
         )}
       </main>
 

@@ -51,7 +51,6 @@ function LoginFormContent() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
-  const [showDemoBox, setShowDemoBox] = useState(false);
 
   // Check URL query param ?mode=register
   useEffect(() => {
@@ -259,16 +258,7 @@ function LoginFormContent() {
     }
   };
 
-  const handleFillDemo = (type: 'host' | 'vendor') => {
-    setErrorMsg('');
-    if (type === 'host') {
-      setEmail('pengantin@sudutbingkai.id');
-      setPassword('pengantin123');
-    } else {
-      setEmail('vendor@sudutbingkai.id');
-      setPassword('vendor123');
-    }
-  };
+
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FBFBFA', color: '#1D1D1F', display: 'flex', flexDirection: 'column' }}>
@@ -556,83 +546,7 @@ function LoginFormContent() {
               </Link>
             </div>
 
-            {/* Collapsible Demo / Tester Credentials */}
-            <div style={{ marginTop: '4px' }}>
-              <button
-                type="button"
-                onClick={() => setShowDemoBox(!showDemoBox)}
-                style={{
-                  width: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px',
-                  background: 'none',
-                  border: 'none',
-                  padding: '4px 0',
-                  cursor: 'pointer',
-                  color: '#A1A1A6',
-                  fontSize: '11px',
-                  fontWeight: 500
-                }}
-              >
-                <span>{showDemoBox ? 'Sembunyikan Akun Coba' : 'Gunakan Akun Uji Coba (Demo)'}</span>
-                {showDemoBox ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              </button>
 
-              {showDemoBox && (
-                <div style={{
-                  marginTop: '8px',
-                  background: 'rgba(194, 120, 3, 0.05)',
-                  border: '1px solid rgba(194, 120, 3, 0.18)',
-                  borderRadius: '12px',
-                  padding: '10px 12px'
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                    <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#C27803' }}>
-                      PILIH AKUN UJI COBA
-                    </span>
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
-                        type="button"
-                        onClick={() => handleFillDemo('host')}
-                        style={{
-                          background: '#FFFFFF',
-                          border: '1px solid rgba(0,0,0,0.1)',
-                          borderRadius: '6px',
-                          padding: '3px 7px',
-                          fontSize: '10.5px',
-                          fontWeight: 600,
-                          color: '#C27803',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Host Pengantin
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleFillDemo('vendor')}
-                        style={{
-                          background: '#FFFFFF',
-                          border: '1px solid rgba(0,0,0,0.1)',
-                          borderRadius: '6px',
-                          padding: '3px 7px',
-                          fontSize: '10.5px',
-                          fontWeight: 600,
-                          color: '#515154',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Mitra WO
-                      </button>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#515154', lineHeight: 1.4 }}>
-                    Klik tombol di atas untuk mengisi form otomatis saat pengujian fitur.
-                  </div>
-                </div>
-              )}
-            </div>
 
           </div>
 

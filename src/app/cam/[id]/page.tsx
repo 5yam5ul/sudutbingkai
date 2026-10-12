@@ -174,8 +174,8 @@ export default function GuestCameraPage() {
     if (isDemo) {
       setEvent({
         id: 'demo',
-        title: 'Simulasi Coba Kamera',
-        coupleOrHost: 'Tamu Uji Coba',
+        title: 'Preview Kamera Tamu',
+        coupleOrHost: 'Tamu Undangan',
         eventDate: new Date().toISOString(),
         preset: 'portra',
         allowedPresets: ['portra', 'funsaver', 'quicksnap', 'ektar', 'cinestill', 'ilford', 'agfa', 'trix'],
@@ -194,7 +194,7 @@ export default function GuestCameraPage() {
         setGuestName(savedName);
         setHasEnteredName(true);
       } else {
-        setGuestName('Tamu Uji Coba');
+        setGuestName('Tamu Undangan');
         setHasEnteredName(true);
       }
     } else {
@@ -583,7 +583,7 @@ export default function GuestCameraPage() {
         // PURE LOCAL SIMULATION DEMO!
         // DO NOT hit server / database!
         // Stored only locally in guest phone memory (localStorage).
-        toast.success(`Foto #${newShotNum} tersimpan di memori HP Anda (Mode Simulasi Demo)`);
+        toast.success(`Bidikan #${newShotNum} berhasil tersimpan di rol kamera!`);
       } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
         addPhotoToOfflineQueue({
           id: newGuestPhoto.id,
@@ -1531,7 +1531,7 @@ export default function GuestCameraPage() {
                 type="text"
                 autoFocus
                 maxLength={60}
-                placeholder="Contoh: Bahagia selalu Sarah & Dimas! 🎉"
+                placeholder={`Contoh: Bahagia selalu ${event?.coupleOrHost || 'kedua mempelai'}! 🎉`}
                 value={currentWish}
                 onChange={(e) => setCurrentWish(e.target.value)}
                 className="glass-input"
@@ -2379,7 +2379,7 @@ export default function GuestCameraPage() {
               type="text"
               required
               maxLength={24}
-              placeholder="Contoh: Sarah & Budi"
+              placeholder="Ketik nama Anda (misal: Rian)"
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
               className="glass-input"
@@ -2554,7 +2554,7 @@ export default function GuestCameraPage() {
             </div>
 
             <h1 className="font-display-serif" style={{ fontSize: '46px', lineHeight: 1.1, marginBottom: '16px', color: '#1D1D1F' }}>
-              {event?.title || 'Pernikahan Dimas & Sarah'}
+              {event?.title || 'Kamera Tamu SudutBingkai'}
             </h1>
 
             <p style={{ fontSize: '16px', color: '#515154', lineHeight: 1.7, marginBottom: '32px', maxWidth: '540px' }}>

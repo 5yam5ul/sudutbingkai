@@ -137,7 +137,7 @@ export default function HomePage() {
       originalPrice: null, 
       discountBadge: null, 
       guests: 'Hingga 5 tamu', 
-      desc: 'Cocok untuk uji coba privat bersama keluarga dekat.', 
+      desc: 'Ideal untuk acara privat & kumpul keluarga inti.', 
       retention: '3 Hari', 
       storage: '500 MB', 
       shotsPerGuest: '10 foto / tamu', 
@@ -1810,7 +1810,7 @@ export default function HomePage() {
           <div style={{ display: 'flex', gap: '32px', fontSize: '13px', color: '#515154' }}>
             <Link href="/create" style={{ color: 'inherit', textDecoration: 'none' }}>Buat Album</Link>
             <Link href="/cam/demo" style={{ color: 'inherit', textDecoration: 'none' }}>Kamera Tamu</Link>
-            <Link href="/event/wedding-sarah-dimas" style={{ color: 'inherit', textDecoration: 'none' }}>Galeri Acara</Link>
+            <Link href="/event/wedding-sarah-dimas" style={{ color: 'inherit', textDecoration: 'none' }}>Lihat Contoh Galeri</Link>
           </div>
         </div>
 

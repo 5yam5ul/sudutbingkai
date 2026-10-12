@@ -20,7 +20,12 @@ export default function VendorPortalPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [vendor, setVendor] = useState<UserAccount>(SYSTEM_USERS['vendor']);
+  const [vendor, setVendor] = useState<UserAccount>({
+    id: '',
+    name: '',
+    email: '',
+    role: 'vendor'
+  });
   const [activeTab, setActiveTab] = useState<'wallet' | 'wholesale' | 'testimonials' | 'branding' | 'clients' | 'marketing'>('wallet');
 
   // Partner Testimonial Rewards State
@@ -32,53 +37,22 @@ export default function VendorPortalPage() {
   const [isSubmittingTesti, setIsSubmittingTesti] = useState<boolean>(false);
 
   // Partner Wallet & Referral State
-  const [walletBalance, setWalletBalance] = useState<number>(420000);
-  const [totalEarnings, setTotalEarnings] = useState<number>(1260000);
-  const [referralCode, setReferralCode] = useState<string>('VOWSANDCO');
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [totalEarnings, setTotalEarnings] = useState<number>(0);
+  const [referralCode, setReferralCode] = useState<string>('MITRA');
   const [partnerTier, setPartnerTier] = useState<string>('pro');
   const [bankName, setBankName] = useState<string>('BCA');
-  const [accountNumber, setAccountNumber] = useState<string>('8730129841');
-  const [accountHolder, setAccountHolder] = useState<string>('Arya Pratama');
+  const [accountNumber, setAccountNumber] = useState<string>('');
+  const [accountHolder, setAccountHolder] = useState<string>('');
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
-  const [payoutAmount, setPayoutAmount] = useState<number>(420000);
+  const [payoutAmount, setPayoutAmount] = useState<number>(100000);
   const [isRequestingPayout, setIsRequestingPayout] = useState(false);
   const [payoutsList, setPayoutsList] = useState<PayoutRequest[]>([]);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Referral commissions list
-  const [referralHistory, setReferralHistory] = useState([
-    {
-      id: 'ref_001',
-      invoiceNumber: 'INV/SB/2026/02/0001',
-      clientName: 'Sarah & Dimas',
-      tierName: 'Wedding (300 Tamu)',
-      date: '14 Februari 2026',
-      totalPaid: 449100,
-      commissionAmount: 67500,
-      status: 'Lunas / Cair'
-    },
-    {
-      id: 'ref_002',
-      invoiceNumber: 'INV/SB/2026/02/0002',
-      clientName: 'Anisa & Reza',
-      tierName: 'Event (150 Tamu)',
-      date: '28 Februari 2026',
-      totalPaid: 242100,
-      commissionAmount: 36000,
-      status: 'Lunas / Cair'
-    },
-    {
-      id: 'ref_003',
-      invoiceNumber: 'INV/SB/2026/03/0001',
-      clientName: 'Jonathan & Maya',
-      tierName: 'Party (75 Tamu)',
-      date: '7 Maret 2026',
-      totalPaid: 161100,
-      commissionAmount: 24000,
-      status: 'Lunas / Cair'
-    }
-  ]);
+  const [referralHistory, setReferralHistory] = useState<any[]>([]);
 
   // Custom Glass Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -98,11 +72,11 @@ export default function VendorPortalPage() {
   });
 
   // Vendor Branding & Logo State
-  const [companyName, setCompanyName] = useState('Vows & Co. Wedding Planner');
-  const [instagram, setInstagram] = useState('@vowsandco.wo');
-  const [phone, setPhone] = useState('08118899001');
-  const [city, setCity] = useState('Jakarta');
-  const [logoUrl, setLogoUrl] = useState('https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=200&q=80');
+  const [companyName, setCompanyName] = useState('');
+  const [instagram, setInstagram] = useState('');
+  const [phone, setPhone] = useState('');
+  const [city, setCity] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isBrandingSaved, setIsBrandingSaved] = useState(false);
 
@@ -117,7 +91,7 @@ export default function VendorPortalPage() {
     eventsCount: number;
   } | null>(null);
   const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
-  const [voucherQuota, setVoucherQuota] = useState<number>(vendor.clientCount || 14);
+  const [voucherQuota, setVoucherQuota] = useState<number>(0);
 
   const handleBuyWholesalePackage = async (packageTitle: string, eventsCount: number, price: number) => {
     setPurchasingPlan(packageTitle);
@@ -260,64 +234,125 @@ export default function VendorPortalPage() {
     }
 
     setVendor(session);
+    setVoucherQuota(session.clientCount ?? 0);
     if (session.companyName) setCompanyName(session.companyName);
+    else if (session.name) setCompanyName(session.name);
     if (session.instagram) setInstagram(session.instagram);
     if (session.phone) setPhone(session.phone);
+
+    // If demo tester vendor account, populate sample mock stats
+    if (session.id === 'vendor_vows_co' || session.email === 'vendor@sudutbingkai.id') {
+      setWalletBalance(420000);
+      setTotalEarnings(1260000);
+      setReferralCode('VOWSANDCO');
+      setAccountNumber('8730129841');
+      setAccountHolder('Arya Pratama');
+      setPayoutAmount(420000);
+      setReferralHistory([
+        {
+          id: 'ref_001',
+          invoiceNumber: 'INV/SB/2026/02/0001',
+          clientName: 'Sarah & Dimas',
+          tierName: 'Wedding (300 Tamu)',
+          date: '14 Februari 2026',
+          totalPaid: 449100,
+          commissionAmount: 67500,
+          status: 'Lunas / Cair'
+        },
+        {
+          id: 'ref_002',
+          invoiceNumber: 'INV/SB/2026/02/0002',
+          clientName: 'Anisa & Reza',
+          tierName: 'Event (150 Tamu)',
+          date: '28 Februari 2026',
+          totalPaid: 242100,
+          commissionAmount: 36000,
+          status: 'Lunas / Cair'
+        },
+        {
+          id: 'ref_003',
+          invoiceNumber: 'INV/SB/2026/03/0001',
+          clientName: 'Jonathan & Maya',
+          tierName: 'Party (75 Tamu)',
+          date: '7 Maret 2026',
+          totalPaid: 161100,
+          commissionAmount: 24000,
+          status: 'Lunas / Cair'
+        }
+      ]);
+    } else {
+      if (session.referralCode) {
+        setReferralCode(session.referralCode);
+      } else if (session.name) {
+        setReferralCode(session.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10));
+      }
+      if (session.walletBalance) setWalletBalance(session.walletBalance);
+      if (session.totalEarnings) setTotalEarnings(session.totalEarnings);
+      if (session.bankAccount) {
+        if (session.bankAccount.bankName) setBankName(session.bankAccount.bankName);
+        if (session.bankAccount.accountNumber) setAccountNumber(session.bankAccount.accountNumber);
+        if (session.bankAccount.accountHolder) setAccountHolder(session.bankAccount.accountHolder);
+      }
+    }
 
     fetch('/api/vendors')
       .then(res => res.json())
       .then(data => {
         if (data.success && data.vendors && data.vendors.length > 0) {
-          const v = data.vendors.find((item: any) => item.id === (session?.id || 'vendor_vows_co')) || data.vendors[0];
-          setCompanyName(v.name);
-          setInstagram(v.instagram);
-          setLogoUrl(v.logoUrl);
-          if (v.city) setCity(v.city);
+          const v = data.vendors.find((item: any) => item.id === session?.id);
+          if (v) {
+            setCompanyName(v.name || session.companyName || session.name || '');
+            setInstagram(v.instagram || session.instagram || '');
+            setLogoUrl(v.logoUrl || '');
+            if (v.city) setCity(v.city);
+          }
         }
       })
       .catch(console.error);
 
-    const vendorId = session?.id || 'vendor_vows_co';
-    fetch(`/api/events?vendorId=${encodeURIComponent(vendorId)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.events) {
-          const realClients = data.events.map((ev: any) => ({
-            id: ev.id,
-            slug: ev.slug,
-            title: ev.title,
-            coupleOrHost: ev.coupleOrHost,
-            date: new Date(ev.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-            venue: ev.location || 'Lokasi Acara',
-            guestCount: ev.maxGuests || 150,
-            photoCount: 0,
-            preset: ev.preset,
-            status: new Date(ev.eventDate) < new Date() ? 'Selesai' : 'Aktif'
-          }));
-          setClients(realClients);
-        }
-      })
-      .catch(console.error);
+    const vendorId = session?.id || '';
+    if (vendorId) {
+      fetch(`/api/events?vendorId=${encodeURIComponent(vendorId)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.events) {
+            const realClients = data.events.map((ev: any) => ({
+              id: ev.id,
+              slug: ev.slug,
+              title: ev.title,
+              coupleOrHost: ev.coupleOrHost,
+              date: new Date(ev.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+              venue: ev.location || 'Lokasi Acara',
+              guestCount: ev.maxGuests || 150,
+              photoCount: 0,
+              preset: ev.preset,
+              status: new Date(ev.eventDate) < new Date() ? 'Selesai' : 'Aktif'
+            }));
+            setClients(realClients);
+          }
+        })
+        .catch(console.error);
 
-    // Fetch vendor payout history
-    fetch(`/api/payouts?vendorId=${encodeURIComponent(vendorId)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.payouts) {
-          setPayoutsList(data.payouts);
-        }
-      })
-      .catch(console.error);
+      // Fetch vendor payout history
+      fetch(`/api/payouts?vendorId=${encodeURIComponent(vendorId)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.payouts) {
+            setPayoutsList(data.payouts);
+          }
+        })
+        .catch(console.error);
 
-    // Fetch vendor video testimonials
-    fetch(`/api/testimonials?vendorId=${encodeURIComponent(vendorId)}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.testimonials) {
-          setTestimonials(data.testimonials);
-        }
-      })
-      .catch(console.error);
+      // Fetch vendor video testimonials
+      fetch(`/api/testimonials?vendorId=${encodeURIComponent(vendorId)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.testimonials) {
+            setTestimonials(data.testimonials);
+          }
+        })
+        .catch(console.error);
+    }
   }, []);
 
   const handleSubmitTestimonial = async (e: React.FormEvent) => {
@@ -883,50 +918,58 @@ export default function VendorPortalPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {referralHistory.map((item) => (
-                      <tr key={item.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
-                        <td style={{ padding: '14px 12px', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
-                          {item.invoiceNumber}
-                        </td>
-                        <td style={{ padding: '14px 12px' }}>
-                          <strong style={{ color: '#1D1D1F' }}>{item.clientName}</strong>
-                        </td>
-                        <td style={{ padding: '14px 12px', color: '#515154' }}>
-                          {item.tierName}
-                        </td>
-                        <td style={{ padding: '14px 12px', color: '#6E6E73' }}>
-                          {item.date}
-                        </td>
-                        <td style={{ padding: '14px 12px' }}>
-                          Rp {item.totalPaid.toLocaleString('id-ID')}
-                        </td>
-                        <td style={{ padding: '14px 12px', fontWeight: 700, color: '#10B981' }}>
-                          +Rp {item.commissionAmount.toLocaleString('id-ID')}
-                        </td>
-                        <td style={{ padding: '14px 12px', textAlign: 'right' }}>
-                          <Link
-                            href={`/invoice/${item.invoiceNumber}`}
-                            target="_blank"
-                            style={{
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                              padding: '5px 12px',
-                              borderRadius: '999px',
-                              background: 'rgba(0,0,0,0.04)',
-                              border: '1px solid rgba(0,0,0,0.08)',
-                              color: '#1D1D1F',
-                              fontSize: '12px',
-                              textDecoration: 'none',
-                              fontWeight: 500
-                            }}
-                          >
-                            <span>Lihat Invoice</span>
-                            <ExternalLink size={12} />
-                          </Link>
+                    {referralHistory.length > 0 ? (
+                      referralHistory.map((item) => (
+                        <tr key={item.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                          <td style={{ padding: '14px 12px', fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                            {item.invoiceNumber}
+                          </td>
+                          <td style={{ padding: '14px 12px' }}>
+                            <strong style={{ color: '#1D1D1F' }}>{item.clientName}</strong>
+                          </td>
+                          <td style={{ padding: '14px 12px', color: '#515154' }}>
+                            {item.tierName}
+                          </td>
+                          <td style={{ padding: '14px 12px', color: '#6E6E73' }}>
+                            {item.date}
+                          </td>
+                          <td style={{ padding: '14px 12px' }}>
+                            Rp {item.totalPaid.toLocaleString('id-ID')}
+                          </td>
+                          <td style={{ padding: '14px 12px', fontWeight: 700, color: '#10B981' }}>
+                            +Rp {item.commissionAmount.toLocaleString('id-ID')}
+                          </td>
+                          <td style={{ padding: '14px 12px', textAlign: 'right' }}>
+                            <Link
+                              href={`/invoice/${item.invoiceNumber}`}
+                              target="_blank"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                padding: '5px 12px',
+                                borderRadius: '999px',
+                                background: 'rgba(0,0,0,0.04)',
+                                border: '1px solid rgba(0,0,0,0.08)',
+                                color: '#1D1D1F',
+                                fontSize: '12px',
+                                textDecoration: 'none',
+                                fontWeight: 500
+                              }}
+                            >
+                              <span>Lihat Invoice</span>
+                              <ExternalLink size={12} />
+                            </Link>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={7} style={{ padding: '36px 16px', textAlign: 'center', color: '#86868B', fontSize: '13px' }}>
+                          Belum ada transaksi rujukan klien. Bagikan kode atau tautan referral Anda kepada klien untuk mulai menghasilkan komisi.
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>

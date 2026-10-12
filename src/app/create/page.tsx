@@ -913,7 +913,7 @@ function CreateEventForm() {
             <FrameCustomizer
               initialFrameId={frameId}
               initialCustomFrameUrl={customFrameUrl}
-              initialCoupleName={coupleOrHost || 'Sarah & Dimas'}
+              initialCoupleName={coupleOrHost || 'Nama Acara'}
               initialEventDate={eventDate}
               initialTagline="The Beginning of Forever"
               initialAllowGuestToggle={allowGuestFrameToggle}
