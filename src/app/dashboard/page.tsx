@@ -104,15 +104,32 @@ export default function BrideDashboardPage() {
   const selectActiveEvent = async (selected: EventData) => {
     setEvent(selected);
     const tierKey = (selected.packageTier && PACKAGE_TIERS[selected.packageTier as EventPackageTier]) ? (selected.packageTier as EventPackageTier) : 'starter';
-    const maxAllowedShots = PACKAGE_TIERS[tierKey]?.shotsPerGuest || 10;
+    const tierConfig = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.starter;
+    const maxAllowedShots = tierConfig.shotsPerGuest || 10;
+    const maxAllowedPresets = tierConfig.maxPresets || 1;
     const safeShots = Math.min(selected.shotsPerGuest || maxAllowedShots, maxAllowedShots);
+    const safePreset = selected.preset || 'portra';
+
     setPackageTier(tierKey);
     setShotsPerGuest(safeShots);
     setRevealMode(selected.revealMode || 'instant');
     setRevealTime(selected.revealTime || '');
-    setPreset(selected.preset || 'portra');
-    setAllowedPresets(selected.allowedPresets && selected.allowedPresets.length > 0 ? selected.allowedPresets : [selected.preset || 'portra']);
-    setAllowGuestPresetSwitch(selected.allowGuestPresetSwitch || false);
+    setPreset(safePreset);
+
+    // Enforce maxPresets quota on event load
+    if (maxAllowedPresets <= 1) {
+      setAllowedPresets([safePreset]);
+      setAllowGuestPresetSwitch(false);
+    } else {
+      let safeAllowed = (selected.allowedPresets && selected.allowedPresets.length > 0)
+        ? selected.allowedPresets.slice(0, maxAllowedPresets)
+        : [safePreset];
+      if (!safeAllowed.includes(safePreset)) {
+        safeAllowed = [safePreset, ...safeAllowed.slice(0, maxAllowedPresets - 1)];
+      }
+      setAllowedPresets(safeAllowed);
+      setAllowGuestPresetSwitch(selected.allowGuestPresetSwitch || false);
+    }
     setFrameId(selected.frameId || 'minimal-gold');
     setCustomFrameUrl(selected.customFrameUrl || '');
     setFrameText(selected.frameText || '');
@@ -384,7 +401,13 @@ export default function BrideDashboardPage() {
     if (!event) return;
     setIsSavingSettings(true);
     const maxAllowedShots = PACKAGE_TIERS[packageTier]?.shotsPerGuest || 10;
+    const maxAllowedPresets = PACKAGE_TIERS[packageTier]?.maxPresets || 1;
     const safeShots = Math.min(shotsPerGuest, maxAllowedShots);
+    const safeGuestSwitch = maxAllowedPresets > 1 ? Boolean(allowGuestPresetSwitch) : false;
+    const safeAllowedPresets = maxAllowedPresets <= 1 
+      ? [preset] 
+      : (allowedPresets.includes(preset) ? allowedPresets.slice(0, maxAllowedPresets) : [preset, ...allowedPresets.slice(0, maxAllowedPresets - 1)]);
+
     try {
       const res = await fetch('/api/events', {
         method: 'PATCH',
@@ -395,8 +418,8 @@ export default function BrideDashboardPage() {
           revealMode,
           revealTime: revealMode === 'delayed' ? revealTime : undefined,
           preset,
-          allowedPresets,
-          allowGuestPresetSwitch,
+          allowedPresets: safeAllowedPresets,
+          allowGuestPresetSwitch: safeGuestSwitch,
           frameId,
           customFrameUrl: customFrameUrl || undefined,
           frameText,
@@ -1527,9 +1550,19 @@ export default function BrideDashboardPage() {
                       <div
                         key={id}
                         onClick={() => {
-                          setPreset(id as FilmPresetId);
-                          if (!allowedPresets.includes(id as FilmPresetId)) {
-                            setAllowedPresets([...allowedPresets, id as FilmPresetId]);
+                          const chosenPreset = id as FilmPresetId;
+                          setPreset(chosenPreset);
+                          const maxP = PACKAGE_TIERS[packageTier]?.maxPresets || 1;
+                          if (maxP <= 1) {
+                            setAllowedPresets([chosenPreset]);
+                          } else {
+                            if (!allowedPresets.includes(chosenPreset)) {
+                              if (allowedPresets.length < maxP) {
+                                setAllowedPresets([...allowedPresets, chosenPreset]);
+                              } else {
+                                setAllowedPresets([chosenPreset, ...allowedPresets.slice(1, maxP)]);
+                              }
+                            }
                           }
                         }}
                         style={{
@@ -1594,7 +1627,7 @@ export default function BrideDashboardPage() {
                     </div>
                     <span style={{ fontSize: '11.5px', color: '#86868B' }}>
                       {(PACKAGE_TIERS[packageTier]?.maxPresets || 1) <= 1
-                        ? `Paket ${PACKAGE_TIERS[packageTier]?.name || 'Starter'} hanya menyertakan 1 filter analog aktif. Upgrade paket untuk membuka fitur multi-filter pilihan tamu.`
+                        ? `Paket ${PACKAGE_TIERS[packageTier]?.name || 'Starter'} hanya menyertakan 1 filter analog aktif (${FILM_PRESETS[preset]?.name || 'Signature'}). Tamu otomatis memotret dengan filter ini. Upgrade paket untuk membuka fitur multi-filter pilihan tamu.`
                         : 'Jika aktif, tamu dapat memilih filter analog sendiri di ponsel saat memotret.'}
                     </span>
                   </div>
@@ -1612,7 +1645,21 @@ export default function BrideDashboardPage() {
                   />
                 </div>
 
-                {allowGuestPresetSwitch && (
+                {(PACKAGE_TIERS[packageTier]?.maxPresets || 1) <= 1 && (
+                  <div style={{ marginTop: '12px', padding: '10px 14px', borderRadius: '10px', background: 'rgba(194, 120, 3, 0.08)', border: '1px dashed rgba(194, 120, 3, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                    <span style={{ fontSize: '12px', color: '#6E6E73' }}>
+                      Ingin membebaskan tamu memilih berbagai roll film analog di ponsel mereka?
+                    </span>
+                    <Link 
+                      href={`/invoice/${event?.id}`}
+                      style={{ fontSize: '11.5px', fontWeight: 600, color: '#C27803', textDecoration: 'underline', whiteSpace: 'nowrap' }}
+                    >
+                      Upgrade Paket →
+                    </Link>
+                  </div>
+                )}
+
+                {allowGuestPresetSwitch && (PACKAGE_TIERS[packageTier]?.maxPresets || 1) > 1 && (
                   <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                       <span style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F' }}>

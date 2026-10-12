@@ -12,7 +12,7 @@ import {
 import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { EventData, FilmPresetId } from '@/lib/types';
+import { EventData, FilmPresetId, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 import { FILM_PRESETS, applyAnalogFilterToCanvas, applyPhotoEnhancement } from '@/lib/filters';
 import { playAnalogShutterSound, playFilmWindingSound } from '@/lib/audio';
 import { 
@@ -864,9 +864,17 @@ export default function GuestCameraPage() {
     }
   };
 
-  const availablePresets: FilmPresetId[] = (event?.allowedPresets && event.allowedPresets.length > 0)
-    ? event.allowedPresets
-    : (['portra', 'funsaver', 'quicksnap', 'ektar', 'cinestill', 'ilford', 'agfa', 'trix'] as FilmPresetId[]);
+  const maxTierPresets = (event?.packageTier && PACKAGE_TIERS[event.packageTier as EventPackageTier])
+    ? (PACKAGE_TIERS[event.packageTier as EventPackageTier]?.maxPresets || 1)
+    : (isDemo ? 8 : 1);
+
+  const canSwitchPresets = Boolean(event?.allowGuestPresetSwitch && maxTierPresets > 1);
+
+  const availablePresets: FilmPresetId[] = canSwitchPresets
+    ? (event?.allowedPresets && event.allowedPresets.length > 0
+        ? event.allowedPresets.slice(0, maxTierPresets)
+        : [event?.preset || 'portra'])
+    : [event?.preset || 'portra'];
   const presetInfo = FILM_PRESETS[selectedPreset] || (event ? FILM_PRESETS[event.preset] : FILM_PRESETS.portra) || FILM_PRESETS.portra;
   const remaining = Math.max(0, maxShots - shotCount);
   const activeFrameTemplate = event?.frameId ? FRAME_TEMPLATES[event.frameId] : FRAME_TEMPLATES['minimal-gold'];
@@ -968,7 +976,7 @@ export default function GuestCameraPage() {
         {/* Center Film Canister Pill */}
         <button
           onClick={() => {
-            if (event?.allowGuestPresetSwitch && availablePresets.length > 1) {
+            if (canSwitchPresets && availablePresets.length > 1) {
               const currentIndex = availablePresets.indexOf(selectedPreset);
               const nextIndex = (currentIndex + 1) % availablePresets.length;
               const nextPreset = availablePresets[nextIndex];
@@ -977,26 +985,26 @@ export default function GuestCameraPage() {
               toast.info(`Film: ${FILM_PRESETS[nextPreset]?.name || nextPreset}`);
             }
           }}
-          disabled={!event?.allowGuestPresetSwitch || availablePresets.length <= 1}
+          disabled={!canSwitchPresets || availablePresets.length <= 1}
           style={{
             background: '#1D1B18',
-            border: event?.allowGuestPresetSwitch && availablePresets.length > 1 ? '1px solid rgba(194, 120, 3, 0.65)' : '1px solid rgba(255, 255, 255, 0.12)',
+            border: canSwitchPresets && availablePresets.length > 1 ? '1px solid rgba(194, 120, 3, 0.65)' : '1px solid rgba(255, 255, 255, 0.12)',
             padding: '6px 14px',
             borderRadius: '999px',
             display: 'flex',
             alignItems: 'center',
             gap: '7px',
             color: '#FFFFFF',
-            cursor: event?.allowGuestPresetSwitch && availablePresets.length > 1 ? 'pointer' : 'default',
+            cursor: canSwitchPresets && availablePresets.length > 1 ? 'pointer' : 'default',
             boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)'
           }}
-          title={event?.allowGuestPresetSwitch ? 'Ketuk untuk ganti film analog' : 'Emulasi film acara'}
+          title={canSwitchPresets ? 'Ketuk untuk ganti film analog' : 'Emulasi film acara'}
         >
           <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: presetInfo.accentColor || '#C27803' }} />
           <span className="font-mono-film" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em' }}>
             {presetInfo.name.toUpperCase()}
           </span>
-          {event?.allowGuestPresetSwitch && availablePresets.length > 1 && (
+          {canSwitchPresets && availablePresets.length > 1 && (
             <span style={{ fontSize: '10px', opacity: 0.75, color: '#C27803' }}>⇄</span>
           )}
         </button>

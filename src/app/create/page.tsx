@@ -646,7 +646,10 @@ function CreateEventForm() {
                             type="button"
                             onClick={() => {
                               setSelectedTier(tier.id);
-                              if (allowedPresets.length > tier.maxPresets) {
+                              if (tier.maxPresets <= 1) {
+                                setAllowedPresets([primaryPreset]);
+                                setAllowGuestPresetSwitch(false);
+                              } else if (allowedPresets.length > tier.maxPresets) {
                                 setAllowedPresets(allowedPresets.slice(0, tier.maxPresets));
                               }
                               setShowPackageUpgradeModal(false);
@@ -877,7 +880,7 @@ function CreateEventForm() {
                         {isPrimary ? '✓ Filter Utama Acara' : 'Jadikan Filter Utama'}
                       </button>
 
-                      {allowGuestPresetSwitch && (
+                      {allowGuestPresetSwitch && activeTier.maxPresets > 1 && (
                         <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: '#515154', cursor: 'pointer', padding: '2px 0' }}>
                           <input
                             type="checkbox"
@@ -938,28 +941,43 @@ function CreateEventForm() {
 
                 {/* Mode B: Bebas Berkreasi (Eksplorasi) */}
                 <div
-                  onClick={() => setAllowGuestPresetSwitch(true)}
+                  onClick={() => {
+                    if (activeTier.maxPresets <= 1) {
+                      toast.info(`Paket ${activeTier.name} hanya menyertakan 1 filter analog utama. Silakan pilih paket berbayar untuk mode eksplorasi tamu.`);
+                      setShowPackageUpgradeModal(true);
+                      return;
+                    }
+                    setAllowGuestPresetSwitch(true);
+                  }}
                   style={{
                     padding: '16px',
                     borderRadius: '16px',
-                    border: allowGuestPresetSwitch ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
-                    background: allowGuestPresetSwitch ? 'rgba(194, 120, 3, 0.05)' : '#FFFFFF',
-                    cursor: 'pointer',
+                    border: allowGuestPresetSwitch && activeTier.maxPresets > 1 ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                    background: allowGuestPresetSwitch && activeTier.maxPresets > 1 ? 'rgba(194, 120, 3, 0.05)' : '#FFFFFF',
+                    cursor: activeTier.maxPresets <= 1 ? 'not-allowed' : 'pointer',
+                    opacity: activeTier.maxPresets <= 1 ? 0.65 : 1,
                     transition: 'all 0.2s ease',
-                    boxShadow: allowGuestPresetSwitch ? '0 4px 16px rgba(194,120,3,0.15)' : 'none'
+                    boxShadow: allowGuestPresetSwitch && activeTier.maxPresets > 1 ? '0 4px 16px rgba(194,120,3,0.15)' : 'none'
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: allowGuestPresetSwitch ? '#C27803' : 'rgba(0,0,0,0.05)', color: allowGuestPresetSwitch ? '#FFF' : '#86868B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: allowGuestPresetSwitch && activeTier.maxPresets > 1 ? '#C27803' : 'rgba(0,0,0,0.05)', color: allowGuestPresetSwitch && activeTier.maxPresets > 1 ? '#FFF' : '#86868B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Unlock size={15} />
                       </div>
                       <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>Mode Bebas Eksplorasi</strong>
+                      {activeTier.maxPresets <= 1 && (
+                        <span style={{ fontSize: '10px', background: '#F3F4F6', color: '#6B7280', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                          Upgrade Diperlukan
+                        </span>
+                      )}
                     </div>
-                    {allowGuestPresetSwitch && <Check size={16} color="#C27803" />}
+                    {allowGuestPresetSwitch && activeTier.maxPresets > 1 && <Check size={16} color="#C27803" />}
                   </div>
                   <p style={{ fontSize: '12px', color: '#6E6E73', margin: 0, lineHeight: 1.45 }}>
-                    Bebaskan tamu memutar dan mencoba {allowedPresets.length} filter analog aktif di ponsel mereka. Sangat seru dan interaktif untuk pesta dan momen kasual!
+                    {activeTier.maxPresets <= 1 
+                      ? `Fitur multi-filter tamu membutuhkan paket berbayar (hingga ${activeTier.maxPresets > 1 ? activeTier.maxPresets : 8} filter aktif).`
+                      : `Bebaskan tamu memutar dan mencoba ${allowedPresets.length} filter analog aktif di ponsel mereka. Sangat seru dan interaktif untuk pesta dan momen kasual!`}
                   </p>
                 </div>
               </div>

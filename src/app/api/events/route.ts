@@ -58,6 +58,16 @@ export async function POST(request: Request) {
     const requestedGuests = body.maxGuests !== undefined ? Number(body.maxGuests) : defaultGuests;
     const safeGuests = isAdmin ? requestedGuests : Math.min(requestedGuests, tierConfig.maxGuests + (Number(body.additionalPax) || 0));
 
+    const chosenPreset = body.preset || 'portra';
+    const maxP = tierConfig.maxPresets || 1;
+    const safeAllowGuestSwitch = (isAdmin || maxP > 1) ? (body.allowGuestPresetSwitch !== false) : false;
+    const rawAllowed = (Array.isArray(body.allowedPresets) && body.allowedPresets.length > 0)
+      ? body.allowedPresets
+      : [chosenPreset];
+    const safeAllowed = (isAdmin || maxP > 1)
+      ? rawAllowed.slice(0, maxP)
+      : [chosenPreset];
+
     const newEvent: EventData = {
       id,
       slug: cleanSlug,
@@ -65,9 +75,9 @@ export async function POST(request: Request) {
       coupleOrHost: body.coupleOrHost.trim(),
       eventDate: body.eventDate || new Date().toISOString(),
       location: (body.location || '').trim(),
-      preset: body.preset || 'portra',
-      allowedPresets: body.allowedPresets || ['portra'],
-      allowGuestPresetSwitch: body.allowGuestPresetSwitch !== false,
+      preset: chosenPreset,
+      allowedPresets: safeAllowed,
+      allowGuestPresetSwitch: safeAllowGuestSwitch,
       packageTier: tierKey,
       maxGuests: safeGuests,
       additionalPax: Number(body.additionalPax) || 0,
@@ -154,15 +164,29 @@ export async function PATCH(request: Request) {
       updates.maxGuests = Math.max(1, requestedGuests);
     }
 
-    // 4. Strict allowedPresets check
-    if (body.allowedPresets !== undefined && Array.isArray(body.allowedPresets)) {
-      if (!isCallerAdmin && body.allowedPresets.length > tierConfig.maxPresets) {
+    // 4. Strict allowedPresets and guest preset switch check
+    const maxPresetsAllowed = tierConfig.maxPresets || 1;
+    if (body.allowGuestPresetSwitch !== undefined) {
+      if (!isCallerAdmin && body.allowGuestPresetSwitch === true && maxPresetsAllowed <= 1) {
         return NextResponse.json({
           success: false,
-          error: `Paket ${tierConfig.name} dibatasi maksimal ${tierConfig.maxPresets} filter film.`
+          error: `Paket ${tierConfig.name} hanya mendukung 1 filter utama dan tidak mengizinkan pergantian filter oleh tamu.`
         }, { status: 400 });
       }
-      updates.allowedPresets = body.allowedPresets;
+      updates.allowGuestPresetSwitch = isCallerAdmin ? body.allowGuestPresetSwitch : (maxPresetsAllowed > 1 ? body.allowGuestPresetSwitch : false);
+    }
+
+    if (body.allowedPresets !== undefined && Array.isArray(body.allowedPresets)) {
+      if (!isCallerAdmin && body.allowedPresets.length > maxPresetsAllowed) {
+        return NextResponse.json({
+          success: false,
+          error: `Paket ${tierConfig.name} dibatasi maksimal ${maxPresetsAllowed} filter film.`
+        }, { status: 400 });
+      }
+      updates.allowedPresets = isCallerAdmin ? body.allowedPresets : (maxPresetsAllowed <= 1 ? [body.preset || existingEvent.preset || 'portra'] : body.allowedPresets.slice(0, maxPresetsAllowed));
+    } else if (maxPresetsAllowed <= 1) {
+      updates.allowedPresets = [body.preset || existingEvent.preset || 'portra'];
+      updates.allowGuestPresetSwitch = false;
     }
 
     if (body.slug !== undefined) {
@@ -175,7 +199,6 @@ export async function PATCH(request: Request) {
     if (body.eventDate) updates.eventDate = body.eventDate;
     if (body.location !== undefined) updates.location = body.location.trim();
     if (body.preset) updates.preset = body.preset;
-    if (body.allowGuestPresetSwitch !== undefined) updates.allowGuestPresetSwitch = body.allowGuestPresetSwitch;
     if (body.additionalPax !== undefined) updates.additionalPax = Number(body.additionalPax);
     if (body.revealMode) updates.revealMode = body.revealMode;
     if (body.revealTime !== undefined) updates.revealTime = body.revealTime;
