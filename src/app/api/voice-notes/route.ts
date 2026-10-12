@@ -27,6 +27,7 @@ function ensureVoiceStorage() {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const eventIdParam = searchParams.get('eventId');
+  const guestNameParam = searchParams.get('guestName');
 
   let resolvedEventId = eventIdParam;
   if (eventIdParam) {
@@ -46,6 +47,9 @@ export async function GET(request: Request) {
 
       if (resolvedEventId) {
         query = query.eq('event_id', resolvedEventId);
+      }
+      if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
+        query = query.ilike('guest_name', guestNameParam.trim());
       }
 
       const { data, error } = await query;
@@ -74,6 +78,9 @@ export async function GET(request: Request) {
       if (resolvedEventId) {
         notes = notes.filter((n: any) => n.eventId === resolvedEventId);
       }
+      if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
+        notes = notes.filter((n: any) => n.guestName?.toLowerCase() === guestNameParam.trim().toLowerCase());
+      }
       return NextResponse.json({ success: true, voiceNotes: notes });
     }
   } catch {}
@@ -90,6 +97,44 @@ export async function POST(request: Request) {
 
     const event = await getEventById(eventId);
     const targetEventId = event ? event.id : eventId;
+
+    // Rate Limit / Spam Guard: 1 Voice Note per Named Guest per Event
+    const isNamed = guestName && 
+      guestName.trim().toLowerCase() !== 'tamu' && 
+      guestName.trim().toLowerCase() !== 'tamu undangan';
+
+    if (isNamed) {
+      if (isSupabaseConfigured && supabase) {
+        const { data: existingNotes } = await supabase
+          .from('voice_notes')
+          .select('id')
+          .eq('event_id', targetEventId)
+          .ilike('guest_name', guestName.trim())
+          .limit(1);
+
+        if (existingNotes && existingNotes.length > 0) {
+          return NextResponse.json({
+            success: false,
+            alreadySent: true,
+            error: 'Anda sudah mengirimkan pesan suara untuk acara ini. Terima kasih atas ucapan dan doa terbaik Anda!'
+          }, { status: 400 });
+        }
+      } else {
+        ensureVoiceStorage();
+        if (fs.existsSync(VOICES_JSON)) {
+          const raw = fs.readFileSync(VOICES_JSON, 'utf8');
+          const notes = JSON.parse(raw);
+          const already = notes.some((n: any) => n.eventId === targetEventId && n.guestName?.toLowerCase() === guestName.trim().toLowerCase());
+          if (already) {
+            return NextResponse.json({
+              success: false,
+              alreadySent: true,
+              error: 'Anda sudah mengirimkan pesan suara untuk acara ini. Terima kasih atas ucapan dan doa terbaik Anda!'
+            }, { status: 400 });
+          }
+        }
+      }
+    }
 
     const noteId = `voice-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     const extension = audioFile.type.includes('mp4') ? 'm4a' : 'webm';

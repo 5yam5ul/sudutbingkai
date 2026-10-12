@@ -19,6 +19,7 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get('eventId') || undefined;
+    const guestNameParam = searchParams.get('guestName');
 
     let canonicalEventId = eventId;
     if (eventId) {
@@ -26,7 +27,11 @@ export async function GET(request: Request) {
       if (ev) canonicalEventId = ev.id;
     }
 
-    const wishes = await getVideoWishes(canonicalEventId);
+    let wishes = await getVideoWishes(canonicalEventId);
+    if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
+      wishes = wishes.filter(w => w.guestName && w.guestName.toLowerCase() === guestNameParam.trim().toLowerCase());
+    }
+
     return NextResponse.json({ success: true, wishes, videoWishes: wishes });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
@@ -50,6 +55,23 @@ export async function POST(request: Request) {
     const event = await getEventById(eventIdParam);
     if (!event) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
+    }
+
+    // Rate Limit / Spam Guard: 1 Video Wish per Named Guest per Event
+    const isNamed = guestName && 
+      guestName.trim().toLowerCase() !== 'tamu' && 
+      guestName.trim().toLowerCase() !== 'tamu undangan';
+
+    if (isNamed) {
+      const existingWishes = await getVideoWishes(event.id);
+      const already = existingWishes.some(w => w.guestName && w.guestName.toLowerCase() === guestName.trim().toLowerCase());
+      if (already) {
+        return NextResponse.json({
+          success: false,
+          alreadySent: true,
+          error: 'Anda sudah mengirimkan video ucapan untuk acara ini. Terima kasih atas ucapan dan doa terbaik Anda!'
+        }, { status: 400 });
+      }
     }
 
     const arrayBuffer = await videoFile.arrayBuffer();

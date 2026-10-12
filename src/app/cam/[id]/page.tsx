@@ -202,6 +202,13 @@ export default function GuestCameraPage() {
       }
     }
 
+    if (localStorage.getItem(`sb_has_sent_voice_${eventId}`) === 'true') {
+      setHasSentVoice(true);
+    }
+    if (localStorage.getItem(`sb_has_sent_video_${eventId}`) === 'true') {
+      setHasSentVideoWish(true);
+    }
+
     if (isDemo) {
       setEvent({
         id: 'demo',
@@ -246,6 +253,13 @@ export default function GuestCameraPage() {
             const activeSession = getOrCreateGuestSession(canonicalId, eventId);
             setGuestSessionId(activeSession);
 
+            if (localStorage.getItem(`sb_has_sent_voice_${canonicalId}`) === 'true') {
+              setHasSentVoice(true);
+            }
+            if (localStorage.getItem(`sb_has_sent_video_${canonicalId}`) === 'true') {
+              setHasSentVideoWish(true);
+            }
+
             // Dual-key lookup: check canonical event.id as well
             const canonicalName = localStorage.getItem(`sb_guest_${canonicalId}`);
             if (canonicalName) {
@@ -261,6 +275,36 @@ export default function GuestCameraPage() {
             });
             if (guestIdentifier && guestIdentifier !== 'Tamu') {
               queryParams.set('guestName', guestIdentifier);
+            }
+
+            // Verify if guest already submitted a voice note or video wish
+            if (guestIdentifier && guestIdentifier !== 'Tamu' && guestIdentifier !== 'Tamu Undangan') {
+              fetch(`/api/voice-notes?eventId=${canonicalId}&guestName=${encodeURIComponent(guestIdentifier)}`)
+                .then(res => res.json())
+                .then(vData => {
+                  if (vData.success && Array.isArray(vData.voiceNotes) && vData.voiceNotes.length > 0) {
+                    setHasSentVoice(true);
+                    try {
+                      localStorage.setItem(`sb_has_sent_voice_${canonicalId}`, 'true');
+                      localStorage.setItem(`sb_has_sent_voice_${eventId}`, 'true');
+                    } catch {}
+                  }
+                })
+                .catch(() => {});
+
+              fetch(`/api/video-wishes?eventId=${canonicalId}&guestName=${encodeURIComponent(guestIdentifier)}`)
+                .then(res => res.json())
+                .then(wData => {
+                  const list = wData.videoWishes || wData.wishes || [];
+                  if (wData.success && Array.isArray(list) && list.length > 0) {
+                    setHasSentVideoWish(true);
+                    try {
+                      localStorage.setItem(`sb_has_sent_video_${canonicalId}`, 'true');
+                      localStorage.setItem(`sb_has_sent_video_${eventId}`, 'true');
+                    } catch {}
+                  }
+                })
+                .catch(() => {});
             }
 
             fetch(`/api/photos?${queryParams.toString()}`)
@@ -471,6 +515,37 @@ export default function GuestCameraPage() {
     }
     localStorage.setItem('sb_guest_session', clean);
     setHasEnteredName(true);
+
+    const targetEventId = event?.id || eventId;
+    if (clean && clean !== 'Tamu' && clean !== 'Tamu Undangan') {
+      fetch(`/api/voice-notes?eventId=${targetEventId}&guestName=${encodeURIComponent(clean)}`)
+        .then(res => res.json())
+        .then(vData => {
+          if (vData.success && Array.isArray(vData.voiceNotes) && vData.voiceNotes.length > 0) {
+            setHasSentVoice(true);
+            try {
+              localStorage.setItem(`sb_has_sent_voice_${targetEventId}`, 'true');
+              localStorage.setItem(`sb_has_sent_voice_${eventId}`, 'true');
+            } catch {}
+          }
+        })
+        .catch(() => {});
+
+      fetch(`/api/video-wishes?eventId=${targetEventId}&guestName=${encodeURIComponent(clean)}`)
+        .then(res => res.json())
+        .then(wData => {
+          const list = wData.videoWishes || wData.wishes || [];
+          if (wData.success && Array.isArray(list) && list.length > 0) {
+            setHasSentVideoWish(true);
+            try {
+              localStorage.setItem(`sb_has_sent_video_${targetEventId}`, 'true');
+              localStorage.setItem(`sb_has_sent_video_${eventId}`, 'true');
+            } catch {}
+          }
+        })
+        .catch(() => {});
+    }
+
     toast.success(`Selamat datang, ${clean}! Kamera siap digunakan.`);
   };
 
@@ -967,10 +1042,11 @@ export default function GuestCameraPage() {
   const submitVoiceNote = async () => {
     if (!audioBlob) return;
     setIsUploadingAudio(true);
+    const canonicalId = event?.id || eventId;
     try {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'voice.webm');
-      formData.append('eventId', eventId);
+      formData.append('eventId', canonicalId);
       formData.append('guestName', guestName || 'Tamu');
       formData.append('duration', String(recordDuration));
 
@@ -981,7 +1057,18 @@ export default function GuestCameraPage() {
       const data = await res.json();
       if (data.success) {
         setHasSentVoice(true);
+        try {
+          localStorage.setItem(`sb_has_sent_voice_${canonicalId}`, 'true');
+          localStorage.setItem(`sb_has_sent_voice_${eventId}`, 'true');
+        } catch {}
         toast.success(`Pesan suara dan doa Anda telah tersimpan untuk ${event?.coupleOrHost || 'tuan rumah'}!`);
+      } else if (data.alreadySent) {
+        setHasSentVoice(true);
+        try {
+          localStorage.setItem(`sb_has_sent_voice_${canonicalId}`, 'true');
+          localStorage.setItem(`sb_has_sent_voice_${eventId}`, 'true');
+        } catch {}
+        toast.info(data.error);
       } else {
         toast.error('Gagal mengirim pesan: ' + data.error);
       }
@@ -2304,11 +2391,25 @@ export default function GuestCameraPage() {
               return (
                 <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
                   <VideoWishRecorder
-                    eventId={eventId}
+                    eventId={event?.id || eventId}
                     guestName={guestName}
                     coupleOrHost={event?.coupleOrHost || event?.title || 'Tuan Rumah'}
-                    onSuccess={() => setHasSentVideoWish(true)}
-                    onSkipTextWish={() => setHasSentVideoWish(true)}
+                    onSuccess={() => {
+                      setHasSentVideoWish(true);
+                      const canonicalId = event?.id || eventId;
+                      try {
+                        localStorage.setItem(`sb_has_sent_video_${canonicalId}`, 'true');
+                        localStorage.setItem(`sb_has_sent_video_${eventId}`, 'true');
+                      } catch {}
+                    }}
+                    onSkipTextWish={() => {
+                      setHasSentVideoWish(true);
+                      const canonicalId = event?.id || eventId;
+                      try {
+                        localStorage.setItem(`sb_has_sent_video_${canonicalId}`, 'true');
+                        localStorage.setItem(`sb_has_sent_video_${eventId}`, 'true');
+                      } catch {}
+                    }}
                   />
                 </div>
               );
@@ -2404,8 +2505,22 @@ export default function GuestCameraPage() {
 
             if (hasSentVoice) {
               return (
-                <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22C55E', borderRadius: '14px', padding: '10px 16px', maxWidth: '320px', width: '100%', marginBottom: '20px' }}>
-                  <span style={{ fontSize: '12px', color: '#86EFAC' }}>✓ Pesan suara Anda telah berhasil disimpan untuk {event?.coupleOrHost || 'tuan rumah'}!</span>
+                <div style={{
+                  background: 'rgba(34, 197, 94, 0.12)',
+                  border: '1px solid rgba(34, 197, 94, 0.35)',
+                  borderRadius: '16px',
+                  padding: '14px 18px',
+                  maxWidth: '320px',
+                  width: '100%',
+                  marginBottom: '20px',
+                  textAlign: 'center'
+                }}>
+                  <span style={{ fontSize: '13px', color: '#86EFAC', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                    ✓ Pesan Suara Tersimpan!
+                  </span>
+                  <span style={{ fontSize: '11.5px', color: 'rgba(255,255,255,0.8)', lineHeight: 1.5, display: 'block' }}>
+                    Terima kasih! Pesan suara dan doa spesial Anda telah tersimpan rapi untuk {event?.coupleOrHost || 'tuan rumah'}.
+                  </span>
                 </div>
               );
             }
