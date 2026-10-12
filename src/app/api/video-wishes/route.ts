@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     }
 
     const wishes = await getVideoWishes(canonicalEventId);
-    return NextResponse.json({ success: true, wishes });
+    return NextResponse.json({ success: true, wishes, videoWishes: wishes });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

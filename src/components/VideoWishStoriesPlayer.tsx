@@ -155,7 +155,7 @@ export default function VideoWishStoriesPlayer({
               {currentWish.guestName}
             </strong>
             <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-              {currentWish.tableNumber ? `Meja ${currentWish.tableNumber} • ` : ''}Video Ucapan ({currentIndex + 1} dari {wishes.length})
+              Video Ucapan ({currentIndex + 1} dari {wishes.length})
             </span>
           </div>
 

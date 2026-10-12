@@ -8,10 +8,11 @@ import {
   Wallet, Video, Package, CheckCircle2, AlertCircle, Eye,
   EyeOff, Trash2, Download, ExternalLink, RefreshCw, Plus,
   Sliders, Search, ArrowRight, LogOut, Check, X, Flame, Sparkles,
-  Edit, Pencil, ArrowUpRight, ArrowDownRight, Layers, CreditCard
+  Edit, Pencil, ArrowUpRight, ArrowDownRight, Layers, CreditCard,
+  Mic, Volume2, Film, Play
 } from 'lucide-react';
 import { getClientSession, clearClientSession } from '@/lib/auth';
-import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier } from '@/lib/types';
+import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord } from '@/lib/types';
 import { toast } from 'sonner';
 
 type AdminTab = 'overview' | 'events' | 'moderation' | 'vendors' | 'invoices' | 'payouts' | 'testimonials' | 'addons';
@@ -25,6 +26,8 @@ export default function SuperAdminDashboard() {
   // Data collections
   const [events, setEvents] = useState<EventData[]>([]);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
+  const [videoWishes, setVideoWishes] = useState<VideoWishRecord[]>([]);
+  const [voiceNotes, setVoiceNotes] = useState<any[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [testimonials, setTestimonials] = useState<VideoTestimonialSubmission[]>([]);
@@ -34,6 +37,7 @@ export default function SuperAdminDashboard() {
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
   const [photoFilterEvent, setPhotoFilterEvent] = useState('all');
+  const [moderationMediaType, setModerationMediaType] = useState<'photos' | 'videos' | 'voices'>('photos');
 
   // -------------------------------------------------------------
   // MODAL STATES
@@ -125,14 +129,16 @@ export default function SuperAdminDashboard() {
   const loadAllAdminData = async () => {
     setLoading(true);
     try {
-      const [resE, resP, resI, resPay, resT, resV, resAdd] = await Promise.allSettled([
+      const [resE, resP, resI, resPay, resT, resV, resAdd, resVid, resVoi] = await Promise.allSettled([
         fetch('/api/events').then(r => r.json()),
         fetch('/api/photos?includeHidden=true').then(r => r.json()),
         fetch('/api/invoices').then(r => r.json()),
         fetch('/api/payouts').then(r => r.json()),
         fetch('/api/testimonials').then(r => r.json()),
         fetch('/api/vendors').then(r => r.json()),
-        fetch('/api/addons').then(r => r.json())
+        fetch('/api/addons').then(r => r.json()),
+        fetch('/api/video-wishes').then(r => r.json()),
+        fetch('/api/voice-notes').then(r => r.json())
       ]);
 
       if (resE.status === 'fulfilled' && resE.value?.success) setEvents(resE.value.events || []);
@@ -142,6 +148,8 @@ export default function SuperAdminDashboard() {
       if (resT.status === 'fulfilled' && resT.value?.success) setTestimonials(resT.value.testimonials || []);
       if (resV.status === 'fulfilled' && resV.value?.success) setVendors(resV.value.vendors || []);
       if (resAdd.status === 'fulfilled' && resAdd.value?.success) setAddons(resAdd.value.addons || []);
+      if (resVid.status === 'fulfilled' && resVid.value?.success) setVideoWishes(resVid.value.videoWishes || resVid.value.wishes || []);
+      if (resVoi.status === 'fulfilled' && resVoi.value?.success) setVoiceNotes(resVoi.value.voiceNotes || []);
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -608,6 +616,38 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleDeleteVideoWish = async (wishId: string) => {
+    if (!confirm('Hapus video ucapan ini secara permanen dari server?')) return;
+    try {
+      const res = await fetch(`/api/video-wishes?id=${encodeURIComponent(wishId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Video ucapan berhasil dihapus.');
+        setVideoWishes(prev => prev.filter(w => w.id !== wishId));
+      } else {
+        toast.error(data.error || 'Gagal menghapus video.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleDeleteVoiceNote = async (voiceId: string) => {
+    if (!confirm('Hapus pesan suara ini secara permanen dari server?')) return;
+    try {
+      const res = await fetch(`/api/voice-notes?id=${encodeURIComponent(voiceId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success('Pesan suara berhasil dihapus.');
+        setVoiceNotes(prev => prev.filter(v => v.id !== voiceId));
+      } else {
+        toast.error(data.error || 'Gagal menghapus pesan suara.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
   // -------------------------------------------------------------
   // 6. PAYOUTS & TESTIMONIALS
   // -------------------------------------------------------------
@@ -711,6 +751,18 @@ export default function SuperAdminDashboard() {
     if (photoFilterEvent !== 'all' && p.eventId !== photoFilterEvent) return false;
     if (!searchTerm) return true;
     return p.guestName.toLowerCase().includes(searchTerm.toLowerCase()) || (p.caption && p.caption.toLowerCase().includes(searchTerm.toLowerCase()));
+  });
+
+  const filteredVideos = videoWishes.filter(v => {
+    if (photoFilterEvent !== 'all' && v.eventId !== photoFilterEvent) return false;
+    if (!searchTerm) return true;
+    return v.guestName.toLowerCase().includes(searchTerm.toLowerCase());
+  });
+
+  const filteredVoices = voiceNotes.filter(v => {
+    if (photoFilterEvent !== 'all' && v.eventId !== photoFilterEvent) return false;
+    if (!searchTerm) return true;
+    return v.guestName.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   const filteredVendors = vendors.filter(v =>
@@ -1115,14 +1167,18 @@ export default function SuperAdminDashboard() {
         )}
 
         {/* ======================================================== */}
-        {/* TAB 3: PHOTO MODERATION & CENSOR SHIELD */}
+        {/* TAB 3: MULTI-MEDIA MODERATION & CENSOR SHIELD */}
         {/* ======================================================== */}
         {activeTab === 'moderation' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Moderasi Foto & Sensor ({photos.length} Foto)</h2>
-                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Klik foto untuk melihat resolusi penuh, menyensor atau menghapus foto tidak layak</span>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>
+                  Moderasi Multi-Media ({photos.length} Foto, {videoWishes.length} Video, {voiceNotes.length} Suara)
+                </h2>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>
+                  Inspeksi foto resolusi penuh, video ucapan 15 detik, serta sensor atau hapus konten tidak layak
+                </span>
               </div>
 
               <div style={{ display: 'flex', gap: '10px' }}>
@@ -1140,54 +1196,218 @@ export default function SuperAdminDashboard() {
               </div>
             </div>
 
-            {filteredPhotos.length === 0 ? (
-              <div className="glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#86868B', borderRadius: '20px' }}>
-                <Camera size={44} style={{ opacity: 0.3, marginBottom: '12px' }} />
-                <p>Belum ada foto yang cocok dengan filter ini.</p>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-                {filteredPhotos.map(p => (
-                  <div key={p.id} className="glass-card" style={{ padding: '10px', borderRadius: '16px', position: 'relative', opacity: p.isHidden ? 0.6 : 1 }}>
-                    <div
-                      onClick={() => {
-                        setPhotoToInspect(p);
-                        setInspectPhotoModalOpen(true);
-                      }}
-                      style={{ width: '100%', aspectRatio: '3/4', borderRadius: '12px', overflow: 'hidden', background: '#000', marginBottom: '8px', position: 'relative', cursor: 'pointer' }}
-                    >
-                      <img src={p.imageData} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      {p.isHidden && (
-                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(239, 68, 68, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 700, fontSize: '12px' }}>
-                          DISENSOR
+            {/* Media Type Selector */}
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setModerationMediaType('photos')}
+                className="glass-pill"
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '999px',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: moderationMediaType === 'photos' ? '#1D1D1F' : '#FFFFFF',
+                  color: moderationMediaType === 'photos' ? '#FFFFFF' : '#1D1D1F',
+                  border: '1px solid rgba(0,0,0,0.08)'
+                }}
+              >
+                📸 Foto Tamu ({filteredPhotos.length})
+              </button>
+
+              <button
+                onClick={() => setModerationMediaType('videos')}
+                className="glass-pill"
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '999px',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: moderationMediaType === 'videos' ? '#C27803' : '#FFFFFF',
+                  color: moderationMediaType === 'videos' ? '#FFFFFF' : '#1D1D1F',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Film size={13} />
+                <span>Video Ucapan ({filteredVideos.length})</span>
+              </button>
+
+              <button
+                onClick={() => setModerationMediaType('voices')}
+                className="glass-pill"
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '999px',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: moderationMediaType === 'voices' ? '#C27803' : '#FFFFFF',
+                  color: moderationMediaType === 'voices' ? '#FFFFFF' : '#1D1D1F',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Mic size={13} />
+                <span>Pesan Suara ({filteredVoices.length})</span>
+              </button>
+            </div>
+
+            {/* SUB-VIEW 1: PHOTOS */}
+            {moderationMediaType === 'photos' && (
+              filteredPhotos.length === 0 ? (
+                <div className="glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#86868B', borderRadius: '20px' }}>
+                  <Camera size={44} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                  <p>Belum ada foto yang cocok dengan filter ini.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                  {filteredPhotos.map(p => (
+                    <div key={p.id} className="glass-card" style={{ padding: '10px', borderRadius: '16px', position: 'relative', opacity: p.isHidden ? 0.6 : 1 }}>
+                      <div
+                        onClick={() => {
+                          setPhotoToInspect(p);
+                          setInspectPhotoModalOpen(true);
+                        }}
+                        style={{ width: '100%', aspectRatio: '3/4', borderRadius: '12px', overflow: 'hidden', background: '#000', marginBottom: '8px', position: 'relative', cursor: 'pointer' }}
+                      >
+                        <img src={p.imageData} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        {p.isHidden && (
+                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(239, 68, 68, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 700, fontSize: '12px' }}>
+                            DISENSOR
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: '12px', marginBottom: '8px' }}>
+                        <strong style={{ display: 'block' }}>{p.guestName}</strong>
+                        <span style={{ fontSize: '10.5px', color: '#86868B' }}>Acara: {p.eventId}</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => handleToggleHidePhoto(p.id, !!p.isHidden)}
+                          className="glass-pill"
+                          style={{ flex: 1, padding: '6px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                        >
+                          {p.isHidden ? <Eye size={12} /> : <EyeOff size={12} />}
+                          <span>{p.isHidden ? 'Buka' : 'Sensor'}</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeletePhoto(p.id)}
+                          className="glass-pill"
+                          style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
+                          title="Hapus Permanen"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* SUB-VIEW 2: VIDEO WISHES */}
+            {moderationMediaType === 'videos' && (
+              filteredVideos.length === 0 ? (
+                <div className="glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#86868B', borderRadius: '20px' }}>
+                  <Film size={44} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                  <p>Belum ada video ucapan yang cocok dengan filter ini.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
+                  {filteredVideos.map(v => (
+                    <div key={v.id} className="glass-card" style={{ padding: '12px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ width: '100%', aspectRatio: '9/16', maxHeight: '280px', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
+                        <video
+                          src={v.videoUrl}
+                          controls
+                          preload="metadata"
+                          playsInline
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      </div>
+                      <div style={{ fontSize: '12px' }}>
+                        <strong style={{ display: 'block', color: '#1D1D1F' }}>{v.guestName}</strong>
+                        <span style={{ fontSize: '10.5px', color: '#86868B' }}>Acara: {v.eventId} • {v.durationSeconds} dtk</span>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <a
+                          href={v.videoUrl}
+                          download={`video-${v.guestName}.mp4`}
+                          className="glass-pill"
+                          style={{ flex: 1, padding: '6px', fontSize: '11px', textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                        >
+                          <Download size={12} />
+                          <span>Unduh</span>
+                        </a>
+                        <button
+                          onClick={() => handleDeleteVideoWish(v.id)}
+                          className="glass-pill"
+                          style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
+                          title="Hapus Video Permanen"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+
+            {/* SUB-VIEW 3: VOICE NOTES */}
+            {moderationMediaType === 'voices' && (
+              filteredVoices.length === 0 ? (
+                <div className="glass-card" style={{ padding: '60px 20px', textAlign: 'center', color: '#86868B', borderRadius: '20px' }}>
+                  <Mic size={44} style={{ opacity: 0.3, marginBottom: '12px' }} />
+                  <p>Belum ada pesan suara yang cocok dengan filter ini.</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                  {filteredVoices.map(v => (
+                    <div key={v.id} className="glass-card" style={{ padding: '14px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(194, 120, 3, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          <Volume2 size={16} color="#C27803" />
                         </div>
-                      )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                            {v.guestName}
+                          </strong>
+                          <span style={{ fontSize: '10.5px', color: '#86868B' }}>Acara: {v.eventId} • {v.duration || 15} dtk</span>
+                        </div>
+                      </div>
+
+                      <audio controls src={v.audioUrl} style={{ width: '100%', height: '36px', borderRadius: '8px' }} />
+
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <a
+                          href={v.audioUrl}
+                          download={`suara-${v.guestName}.webm`}
+                          className="glass-pill"
+                          style={{ flex: 1, padding: '6px', fontSize: '11px', textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                        >
+                          <Download size={12} />
+                          <span>Unduh</span>
+                        </a>
+                        <button
+                          onClick={() => handleDeleteVoiceNote(v.id)}
+                          className="glass-pill"
+                          style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
+                          title="Hapus Rekaman Suara"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ fontSize: '12px', marginBottom: '8px' }}>
-                      <strong style={{ display: 'block' }}>{p.guestName}</strong>
-                      <span style={{ fontSize: '10.5px', color: '#86868B' }}>Acara: {p.eventId}</span>
-                    </div>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <button
-                        onClick={() => handleToggleHidePhoto(p.id, !!p.isHidden)}
-                        className="glass-pill"
-                        style={{ flex: 1, padding: '6px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                      >
-                        {p.isHidden ? <Eye size={12} /> : <EyeOff size={12} />}
-                        <span>{p.isHidden ? 'Buka' : 'Sensor'}</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeletePhoto(p.id)}
-                        className="glass-pill"
-                        style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
-                        title="Hapus Permanen"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )
             )}
           </div>
         )}
@@ -1635,7 +1855,7 @@ export default function SuperAdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Katalog Add-on Fisik ({addons.length})</h2>
-                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Kelola item akrilik meja, roll-up banner, dan rental hardware TV slideshow (CRUD Penuh)</span>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Kelola standing akrilik QR tamu, roll-up banner, dan rental hardware TV slideshow (CRUD Penuh)</span>
               </div>
 
               <button
@@ -2755,7 +2975,7 @@ export default function SuperAdminDashboard() {
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
-                    <option value="physical_qr">Akrilik Meja Tamu</option>
+                    <option value="physical_qr">Standing Akrilik QR Tamu</option>
                     <option value="banner">Banner Welcome Gate</option>
                     <option value="hardware_rental">Hardware / Rental TV</option>
                     <option value="custom">Paket Custom</option>
@@ -2871,7 +3091,7 @@ export default function SuperAdminDashboard() {
                 <input
                   type="text"
                   required
-                  placeholder="Contoh: Paket 15 Pcs Akrilik Meja A6 Gold Border"
+                  placeholder="Contoh: Paket 15 Pcs Standing Akrilik QR A6 Gold Border"
                   value={newAddonForm.name}
                   onChange={(e) => setNewAddonForm({ ...newAddonForm, name: e.target.value })}
                   className="glass-input"
@@ -2888,7 +3108,7 @@ export default function SuperAdminDashboard() {
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
-                    <option value="physical_qr">Akrilik Meja Tamu</option>
+                    <option value="physical_qr">Standing Akrilik QR Tamu</option>
                     <option value="banner">Banner Welcome Gate</option>
                     <option value="hardware_rental">Hardware / Rental TV</option>
                     <option value="custom">Paket Custom</option>

@@ -3,14 +3,15 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, CheckCircle2, MessageSquare, X, Heart, Upload } from 'lucide-react';
-import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
+import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play } from 'lucide-react';
+import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord } from '@/lib/types';
 import { getClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FrameId, FRAME_TEMPLATES } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
 import ConfirmModal from '@/components/ConfirmModal';
 import SkeletonLoader from '@/components/SkeletonLoader';
+import VideoWishStoriesPlayer from '@/components/VideoWishStoriesPlayer';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 
@@ -30,9 +31,12 @@ export default function BrideDashboardPage() {
   const [event, setEvent] = useState<EventData | null>(null);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [voiceNotes, setVoiceNotes] = useState<VoiceNoteRecord[]>([]);
+  const [videoWishes, setVideoWishes] = useState<VideoWishRecord[]>([]);
+  const [showStoriesPlayer, setShowStoriesPlayer] = useState(false);
+  const [activeStoryIndex, setActiveStoryIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'photos' | 'settings'>('photos');
-  const [gallerySubTab, setGallerySubTab] = useState<'photos' | 'voices'>('photos');
+  const [gallerySubTab, setGallerySubTab] = useState<'photos' | 'voices' | 'videos'>('photos');
   const [filterTab, setFilterTab] = useState<'all' | 'visible' | 'hidden' | 'wishes'>('all');
   const [activePhoto, setActivePhoto] = useState<PhotoRecord | null>(null);
   const [copied, setCopied] = useState(false);
@@ -138,6 +142,20 @@ export default function BrideDashboardPage() {
     } catch (vErr) {
       console.warn('Gagal memuat pesan suara:', vErr);
       setVoiceNotes([]);
+    }
+
+    // Fetch video wishes
+    try {
+      const resVideos = await fetch(`/api/video-wishes?eventId=${selected.id}`);
+      const dataVideos = await resVideos.json();
+      if (dataVideos.success && (dataVideos.videoWishes || dataVideos.wishes)) {
+        setVideoWishes(dataVideos.videoWishes || dataVideos.wishes || []);
+      } else {
+        setVideoWishes([]);
+      }
+    } catch (vidErr) {
+      console.warn('Gagal memuat video ucapan:', vidErr);
+      setVideoWishes([]);
     }
   };
 
@@ -321,6 +339,26 @@ export default function BrideDashboardPage() {
     });
   };
 
+  const handleDeleteVideoWish = (wishId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Video Ucapan?',
+      description: 'Video ucapan hangat dari tamu ini akan dihapus permanen dari album kenangan acara Anda.',
+      confirmText: 'Hapus Video',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setVideoWishes(prev => prev.filter(w => w.id !== wishId));
+        toast.success('Video ucapan berhasil dihapus.');
+        try {
+          await fetch(`/api/video-wishes?id=${wishId}`, { method: 'DELETE' });
+        } catch (err) {
+          console.error('Gagal menghapus video ucapan:', err);
+        }
+      }
+    });
+  };
+
   const handleUploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -395,7 +433,7 @@ export default function BrideDashboardPage() {
   });
 
   if (loading) {
-    return <SkeletonLoader title="Memuat Dashboard Pengantin..." subtitle="Menyiapkan rol film dan ringkasan foto tamu" />;
+    return <SkeletonLoader title="Memuat Dashboard Tuan Rumah..." subtitle="Menyiapkan rol film dan ringkasan foto tamu" />;
   }
 
   const presetInfo = event ? FILM_PRESETS[event.preset] || FILM_PRESETS.portra : FILM_PRESETS.portra;
@@ -415,7 +453,7 @@ export default function BrideDashboardPage() {
             </Link>
             <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
             <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
-              DASHBOARD PENGANTIN
+              DASHBOARD TUAN RUMAH (HOST)
             </span>
           </div>
 
@@ -488,7 +526,7 @@ export default function BrideDashboardPage() {
                   Selamat! Album digital Anda telah siap dan aktif.
                 </strong>
                 <span style={{ fontSize: '13px', color: '#6E6E73' }}>
-                  Akun dashboard Anda telah terhubung. Anda dapat mencetak barcode meja tamu, menguji kamera, atau membagikan link ke para tamu sekarang.
+                  Akun dashboard Anda telah terhubung. Anda dapat mencetak kartu QR tamu, menguji kamera, atau membagikan link ke para tamu sekarang.
                 </span>
               </div>
             </div>
@@ -699,8 +737,8 @@ export default function BrideDashboardPage() {
         {/* TAB 1: GALERI & MODERASI */}
         {activeTab === 'photos' && (
           <div>
-            {/* Gallery Sub-Tabs: Photos vs Voice Notes */}
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '12px' }}>
+            {/* Gallery Sub-Tabs: Photos vs Voice Notes vs Video Wishes */}
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '12px', flexWrap: 'wrap' }}>
               <button
                 onClick={() => setGallerySubTab('photos')}
                 className="glass-pill"
@@ -735,6 +773,26 @@ export default function BrideDashboardPage() {
               >
                 <Mic size={13} />
                 <span>Pesan Suara Tamu ({voiceNotes.length})</span>
+              </button>
+
+              <button
+                onClick={() => setGallerySubTab('videos')}
+                className="glass-pill"
+                style={{
+                  padding: '7px 16px',
+                  borderRadius: '9999px',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: gallerySubTab === 'videos' ? '#C27803' : 'rgba(255,255,255,0.7)',
+                  color: gallerySubTab === 'videos' ? '#FFFFFF' : '#1D1D1F',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Film size={13} />
+                <span>Video Ucapan Tamu ({videoWishes.length})</span>
               </button>
             </div>
 
@@ -813,7 +871,7 @@ export default function BrideDashboardPage() {
                     <Camera size={44} style={{ color: '#86868B', margin: '0 auto 16px' }} />
                     <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '6px' }}>Tidak ada foto dalam kategori ini</h3>
                     <p style={{ color: '#6E6E73', fontSize: '13.5px' }}>
-                      Buka kamera tamu atau scan kartu meja untuk mengambil foto baru.
+                      Buka kamera tamu atau bagikan kartu QR untuk mengambil foto baru.
                     </p>
                   </div>
                 ) : (
@@ -999,6 +1057,161 @@ export default function BrideDashboardPage() {
                           src={note.audioUrl}
                           style={{ width: '100%', height: '40px', borderRadius: '12px' }}
                         />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Video Wishes Sub-View */}
+            {gallerySubTab === 'videos' && (
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#1D1D1F' }}>
+                      Koleksi Video Ucapan Tamu Undangan
+                    </h3>
+                    <p style={{ color: '#6E6E73', fontSize: '13px', margin: '4px 0 0' }}>
+                      Format vertikal sinematik 9:16 dari para tamu yang menyampaikan doa dan ucapan hangat secara langsung.
+                    </p>
+                  </div>
+
+                  {videoWishes.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setActiveStoryIndex(0);
+                        setShowStoriesPlayer(true);
+                      }}
+                      className="btn-apple-black"
+                      style={{ padding: '9px 18px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                    >
+                      <Play size={14} fill="#FFFFFF" />
+                      <span>Putar Format Stories ({videoWishes.length})</span>
+                    </button>
+                  )}
+                </div>
+
+                {videoWishes.length === 0 ? (
+                  <div className="glass-card" style={{ padding: '64px 24px', textAlign: 'center', borderRadius: '24px' }}>
+                    <Film size={44} style={{ color: '#86868B', margin: '0 auto 16px' }} />
+                    <h3 style={{ fontSize: '18px', fontWeight: 600, marginBottom: '6px' }}>Belum ada video ucapan yang terekam</h3>
+                    <p style={{ color: '#6E6E73', fontSize: '13.5px', maxWidth: '440px', margin: '0 auto', lineHeight: 1.5 }}>
+                      Saat kuota foto tamu selesai, para tamu akan diberikan kesempatan merekam video ucapan 15 detik untuk Anda. Video yang dikirimkan akan otomatis masuk ke sini.
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '20px' }}>
+                    {videoWishes.map((wish, idx) => (
+                      <div
+                        key={wish.id}
+                        className="glass-card"
+                        style={{
+                          borderRadius: '24px',
+                          overflow: 'hidden',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.06)'
+                        }}
+                      >
+                        {/* Video Thumbnail / Preview with Play Overlay */}
+                        <div
+                          onClick={() => {
+                            setActiveStoryIndex(idx);
+                            setShowStoriesPlayer(true);
+                          }}
+                          style={{
+                            position: 'relative',
+                            width: '100%',
+                            aspectRatio: '9/16',
+                            maxHeight: '360px',
+                            background: '#000000',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            overflow: 'hidden'
+                          }}
+                        >
+                          <video
+                            src={wish.videoUrl}
+                            preload="metadata"
+                            playsInline
+                            muted
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                          <div style={{
+                            position: 'absolute',
+                            inset: 0,
+                            background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.2) 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <div style={{
+                              width: '48px',
+                              height: '48px',
+                              borderRadius: '50%',
+                              background: 'rgba(255,255,255,0.9)',
+                              color: '#1D1D1F',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              boxShadow: '0 4px 16px rgba(0,0,0,0.3)'
+                            }}>
+                              <Play size={22} fill="#1D1D1F" style={{ marginLeft: '2px' }} />
+                            </div>
+                          </div>
+
+                          <div style={{
+                            position: 'absolute',
+                            bottom: '10px',
+                            left: '12px',
+                            right: '12px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            color: '#FFFFFF',
+                            fontSize: '11px',
+                            textShadow: '0 1px 4px rgba(0,0,0,0.8)'
+                          }}>
+                            <span style={{ fontWeight: 600 }}>{wish.durationSeconds} Detik</span>
+                            <span style={{ background: 'rgba(0,0,0,0.5)', padding: '2px 8px', borderRadius: '999px' }}>9:16 HD</span>
+                          </div>
+                        </div>
+
+                        {/* Details and Actions */}
+                        <div style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <div style={{ minWidth: 0 }}>
+                            <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              {wish.guestName}
+                            </strong>
+                            <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>
+                              {new Date(wish.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                            <a
+                              href={wish.videoUrl}
+                              download={`video-${wish.guestName}.mp4`}
+                              className="glass-pill"
+                              style={{ padding: '6px 10px', fontSize: '11px', textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center' }}
+                              title="Unduh video ucapan"
+                            >
+                              <Download size={13} />
+                            </a>
+
+                            <button
+                              onClick={() => handleDeleteVideoWish(wish.id)}
+                              className="glass-pill"
+                              style={{ padding: '6px 10px', fontSize: '11px', cursor: 'pointer', color: '#E74C3C' }}
+                              title="Hapus video ucapan"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1773,6 +1986,16 @@ export default function BrideDashboardPage() {
         onConfirm={confirmModal.onConfirm}
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
+
+      {/* Video Wish Stories Player Modal */}
+      {showStoriesPlayer && videoWishes.length > 0 && (
+        <VideoWishStoriesPlayer
+          wishes={videoWishes}
+          initialIndex={activeStoryIndex}
+          coupleOrHost={event?.coupleOrHost || 'Tuan Rumah'}
+          onClose={() => setShowStoriesPlayer(false)}
+        />
+      )}
     </div>
   );
 }

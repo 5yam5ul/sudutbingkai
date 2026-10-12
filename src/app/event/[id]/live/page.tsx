@@ -24,6 +24,10 @@ export default function LiveProjectorWallPage() {
   const [displayMode, setDisplayMode] = useState<SlideshowMode>('polaroid');
   const [cycleSpeed, setCycleSpeed] = useState<number>(5000);
 
+  // Countdown Timer State for Delayed Mode (Anti-Leak Shield)
+  const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
+  const [isDelayedAndLocked, setIsDelayedAndLocked] = useState(false);
+
   // Persistent reference to track previous photo count without stale closure
   const lastCountRef = useRef<number>(-1);
 
@@ -83,6 +87,36 @@ export default function LiveProjectorWallPage() {
       }).then(url => setQrDataUrl(url));
     }
   }, [eventId]);
+
+  // Countdown Timer Effect for Delayed Mode (Anti-Leak Shield)
+  useEffect(() => {
+    if (!event || event.revealMode !== 'delayed' || !event.revealTime) {
+      setIsDelayedAndLocked(false);
+      setTimeLeft(null);
+      return;
+    }
+
+    const checkLock = () => {
+      const targetTime = new Date(event.revealTime!).getTime();
+      const now = Date.now();
+      const diff = targetTime - now;
+
+      if (diff <= 0) {
+        setIsDelayedAndLocked(false);
+        setTimeLeft(null);
+      } else {
+        setIsDelayedAndLocked(true);
+        const hours = Math.floor(diff / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+        setTimeLeft({ hours, minutes, seconds });
+      }
+    };
+
+    checkLock();
+    const timer = setInterval(checkLock, 1000);
+    return () => clearInterval(timer);
+  }, [event]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -231,7 +265,128 @@ export default function LiveProjectorWallPage() {
 
       {/* Main Slideshow Stage */}
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '70px 20px 40px', position: 'relative' }}>
-        {photos.length === 0 ? (
+        {isDelayedAndLocked ? (
+          /* RETRO AMBIENT COUNTDOWN CURTAIN (ANTI-LEAK SHIELD) */
+          <div style={{
+            textAlign: 'center',
+            maxWidth: '680px',
+            width: '100%',
+            background: 'rgba(21, 19, 16, 0.85)',
+            border: '1px solid rgba(194, 120, 3, 0.4)',
+            borderRadius: '32px',
+            padding: '48px 36px',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '24px'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 16px',
+              borderRadius: '999px',
+              background: 'rgba(194, 120, 3, 0.15)',
+              border: '1px solid rgba(194, 120, 3, 0.35)',
+              color: '#F59E0B',
+              fontSize: '12px',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
+            }}>
+              <Sparkles size={14} />
+              <span>Mode Cuci Roll Analog Aktif</span>
+            </div>
+
+            <div style={{ textAlign: 'center' }}>
+              <h1 style={{
+                fontFamily: 'var(--font-display-serif)',
+                fontSize: 'clamp(2rem, 5vw, 2.8rem)',
+                color: '#FAF8F5',
+                margin: '0 0 10px',
+                letterSpacing: '-0.01em'
+              }}>
+                {event?.title || 'Album Kenangan Acara'}
+              </h1>
+              <p style={{ color: '#D4D4D8', fontSize: '15px', margin: 0, lineHeight: 1.6 }}>
+                Foto candid para tamu sedang diproses di kamar gelap digital. Seluruh hasil jepretan akan tayang serentak di videotron ini saat hitung mundur berakhir!
+              </p>
+            </div>
+
+            {/* Retro 7-Segment Digital Countdown Display */}
+            {timeLeft && (
+              <div style={{
+                display: 'flex',
+                gap: '16px',
+                justifyContent: 'center',
+                alignItems: 'center',
+                margin: '8px 0'
+              }}>
+                {[
+                  { val: String(timeLeft.hours).padStart(2, '0'), label: 'JAM' },
+                  { val: String(timeLeft.minutes).padStart(2, '0'), label: 'MENIT' },
+                  { val: String(timeLeft.seconds).padStart(2, '0'), label: 'DETIK' }
+                ].map((item, idx) => (
+                  <React.Fragment key={item.label}>
+                    {idx > 0 && <span style={{ fontSize: '32px', fontWeight: 800, color: '#C27803', marginTop: '-18px' }}>:</span>}
+                    <div style={{
+                      background: 'rgba(0, 0, 0, 0.6)',
+                      border: '1px solid rgba(194, 120, 3, 0.4)',
+                      borderRadius: '20px',
+                      padding: '16px 20px',
+                      minWidth: '96px',
+                      textAlign: 'center',
+                      boxShadow: 'inset 0 2px 10px rgba(0,0,0,0.5)'
+                    }}>
+                      <span style={{
+                        fontFamily: 'var(--font-mono)',
+                        fontSize: 'clamp(2.2rem, 5vw, 3.2rem)',
+                        fontWeight: 800,
+                        color: '#F59E0B',
+                        display: 'block',
+                        lineHeight: 1
+                      }}>
+                        {item.val}
+                      </span>
+                      <span style={{
+                        fontSize: '10px',
+                        fontWeight: 700,
+                        letterSpacing: '0.1em',
+                        color: '#A1A1A6',
+                        display: 'block',
+                        marginTop: '6px'
+                      }}>
+                        {item.label}
+                      </span>
+                    </div>
+                  </React.Fragment>
+                ))}
+              </div>
+            )}
+
+            {/* Live Collection Badge */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.06)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              padding: '10px 20px',
+              borderRadius: '999px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              fontSize: '13.5px',
+              color: '#E4E4E7'
+            }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981' }} />
+              <span><strong>{photos.length} Foto Candid</strong> telah masuk ke rol rahasia</span>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#A1A1A6', margin: 0 }}>
+              Scan QR di sudut layar untuk terus mengabadikan momen sebelum rol dicuci!
+            </p>
+          </div>
+        ) : photos.length === 0 ? (
           <div style={{ textAlign: 'center', maxWidth: '500px' }}>
             <div style={{
               width: '80px',
@@ -250,7 +405,7 @@ export default function LiveProjectorWallPage() {
               {event?.title || 'Live Photo Wall'}
             </h1>
             <p style={{ color: '#A1A1A6', fontSize: '16px', lineHeight: 1.6, marginBottom: '28px' }}>
-              Menunggu jepretan candid pertama dari meja tamu! Pindai kode QR di sudut layar atau kartu meja tamu untuk memotret.
+              Menunggu jepretan candid pertama dari para tamu! Pindai kode QR di sudut layar atau kartu QR tamu untuk mulai memotret.
             </p>
           </div>
         ) : displayMode === 'polaroid' ? (

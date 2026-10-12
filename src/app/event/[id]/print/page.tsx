@@ -20,7 +20,7 @@ export default function PrintTableCardPage() {
   // Customizer State
   const [format, setFormat] = useState<CardFormat>('tent');
   const [theme, setTheme] = useState<CardTheme>('cream');
-  const [customBadge, setCustomBadge] = useState<string>('KAMERA MEJA TAMU');
+  const [customBadge, setCustomBadge] = useState<string>('KAMERA TAMU SPESIAL');
   const [customTitle, setCustomTitle] = useState<string>('');
   const [customSubtitle, setCustomSubtitle] = useState<string>('Sudut Pandangmu, Kenangan Kami');
   const [customHashtag, setCustomHashtag] = useState<string>('');
@@ -35,25 +35,26 @@ export default function PrintTableCardPage() {
       .then(data => {
         if (data.success && data.event) {
           setEvent(data.event);
-          setCustomTitle(data.event.title || 'Pernikahan Spesial');
+          setCustomTitle(data.event.title || 'Momen Spesial');
           const cleanCouple = data.event.coupleOrHost?.replace(/[^a-zA-Z0-9]/g, '') || '';
           setCustomHashtag(cleanCouple ? `#${cleanCouple}Story` : '#SudutBingkai');
+
+          // Generate QR Code with slug preference
+          if (typeof window !== 'undefined') {
+            const slugOrId = data.event.slug || eventId;
+            const guestUrl = `${window.location.origin}/cam/${slugOrId}`;
+            QRCode.toDataURL(guestUrl, {
+              width: 400,
+              margin: 1,
+              color: {
+                dark: '#12100b',
+                light: '#ffffff'
+              }
+            }).then(url => setQrDataUrl(url));
+          }
         }
       })
       .catch(console.error);
-
-    // Generate QR Code
-    if (typeof window !== 'undefined') {
-      const guestUrl = `${window.location.origin}/cam/${eventId}`;
-      QRCode.toDataURL(guestUrl, {
-        width: 400,
-        margin: 1,
-        color: {
-          dark: '#12100b',
-          light: '#ffffff'
-        }
-      }).then(url => setQrDataUrl(url));
-    }
   }, [eventId]);
 
   const handlePrint = () => {

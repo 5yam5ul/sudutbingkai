@@ -133,13 +133,13 @@ export default function LoginPage() {
                 background: role === 'host' ? '#FFFFFF' : 'transparent',
                 color: role === 'host' ? '#1D1D1F' : '#6E6E73',
                 fontWeight: role === 'host' ? 700 : 500,
-                fontSize: '12px',
+                fontSize: '11px',
                 boxShadow: role === 'host' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
                 transition: 'all 0.2s'
               }}
             >
               <Heart size={13} color={role === 'host' ? '#C27803' : 'currentColor'} />
-              <span>Pengantin</span>
+              <span>Host / Klien</span>
             </button>
 
             <button
@@ -157,13 +157,13 @@ export default function LoginPage() {
                 background: role === 'vendor' ? '#FFFFFF' : 'transparent',
                 color: role === 'vendor' ? '#1D1D1F' : '#6E6E73',
                 fontWeight: role === 'vendor' ? 700 : 500,
-                fontSize: '12px',
+                fontSize: '11px',
                 boxShadow: role === 'vendor' ? '0 2px 6px rgba(0,0,0,0.06)' : 'none',
                 transition: 'all 0.2s'
               }}
             >
               <Briefcase size={13} color={role === 'vendor' ? '#C27803' : 'currentColor'} />
-              <span>Mitra WO</span>
+              <span>Mitra Vendor</span>
             </button>
 
             <button
@@ -247,12 +247,12 @@ export default function LoginPage() {
           <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '11.5px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
-                Email {role === 'vendor' ? 'Mitra Vendor' : 'Pengantin'}
+                Email {role === 'vendor' ? 'Mitra Vendor' : role === 'admin' ? 'Super Admin' : 'Host / Penyelenggara'}
               </label>
               <input
                 type="email"
                 required
-                placeholder={role === 'vendor' ? 'vendor@sudutbingkai.id' : 'pengantin@sudutbingkai.id'}
+                placeholder={role === 'vendor' ? 'vendor@sudutbingkai.id' : role === 'admin' ? 'admin@sudutbingkai.id' : 'pengantin@sudutbingkai.id'}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="glass-input"

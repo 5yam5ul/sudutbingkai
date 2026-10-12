@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 interface VideoWishRecorderProps {
   eventId: string;
   guestName: string;
-  tableNumber?: string;
   coupleOrHost: string;
   onSuccess: () => void;
   onSkipTextWish?: (textWish: string) => void;
@@ -17,7 +16,6 @@ interface VideoWishRecorderProps {
 export default function VideoWishRecorder({
   eventId,
   guestName,
-  tableNumber,
   coupleOrHost,
   onSuccess,
   onSkipTextWish
@@ -213,7 +211,6 @@ export default function VideoWishRecorder({
       formData.append('video', recordedBlob, `wish_${eventId}_${Date.now()}.webm`);
       formData.append('eventId', eventId);
       formData.append('guestName', guestName);
-      if (tableNumber) formData.append('tableNumber', tableNumber);
       if (thumbnail) formData.append('thumbnail', thumbnail);
       formData.append('duration', String(Math.max(1, recordSeconds)));
 
@@ -224,7 +221,7 @@ export default function VideoWishRecorder({
 
       const data = await res.json();
       if (data.success) {
-        toast.success(`Video ucapan 15 detik Anda berhasil dikirim ke pengantin! 🎬❤️`);
+        toast.success(`Video ucapan 15 detik Anda berhasil dikirim untuk ${coupleOrHost}! 🎬❤️`);
         if (stream) stream.getTracks().forEach(t => t.stop());
         onSuccess();
       } else {
@@ -340,7 +337,7 @@ export default function VideoWishRecorder({
 
           {/* Bottom Overlay Label */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '10px', fontFamily: 'var(--font-mono)', textShadow: '0 1px 3px rgba(0,0,0,0.8)' }}>
-            <span>TAMU: {guestName.toUpperCase()} {tableNumber ? `(MEJA ${tableNumber})` : ''}</span>
+            <span>TAMU: {guestName.toUpperCase()}</span>
             <span>{new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' }).toUpperCase()}</span>
           </div>
         </div>

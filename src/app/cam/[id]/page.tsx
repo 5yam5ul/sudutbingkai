@@ -78,7 +78,6 @@ export default function GuestCameraPage() {
 
   const [event, setEvent] = useState<EventData | null>(null);
   const [guestName, setGuestName] = useState('');
-  const [tableNumber, setTableNumber] = useState('');
   const [hasEnteredName, setHasEnteredName] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
 
@@ -211,6 +210,13 @@ export default function GuestCameraPage() {
             if (data.event.frameId === 'none') {
               setUseFrame(false);
             }
+
+            // Dual-key lookup: check canonical event.id as well
+            const canonicalName = localStorage.getItem(`sb_guest_${data.event.id}`);
+            if (canonicalName) {
+              setGuestName(canonicalName);
+              setHasEnteredName(true);
+            }
           } else {
             setEventNotFound(true);
           }
@@ -218,7 +224,7 @@ export default function GuestCameraPage() {
         .catch(() => setEventNotFound(true))
         .finally(() => setLoadingEvent(false));
 
-      const savedName = localStorage.getItem(`sb_guest_${eventId}`);
+      const savedName = localStorage.getItem(`sb_guest_${eventId}`) || localStorage.getItem('sb_guest_session');
       if (savedName) {
         setGuestName(savedName);
         setHasEnteredName(true);
@@ -226,10 +232,6 @@ export default function GuestCameraPage() {
     }
 
     try {
-      const savedTable = localStorage.getItem(`sb_table_${eventId}`);
-      if (savedTable) {
-        setTableNumber(savedTable);
-      }
       const savedPhotos = localStorage.getItem(`sb_my_shots_${eventId}`);
       if (savedPhotos) {
         const parsed = JSON.parse(savedPhotos);
@@ -383,12 +385,14 @@ export default function GuestCameraPage() {
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!guestName.trim()) return;
-    localStorage.setItem(`sb_guest_${eventId}`, guestName.trim());
-    if (tableNumber.trim()) {
-      localStorage.setItem(`sb_table_${eventId}`, tableNumber.trim());
+    const clean = guestName.trim();
+    localStorage.setItem(`sb_guest_${eventId}`, clean);
+    if (event?.id) {
+      localStorage.setItem(`sb_guest_${event.id}`, clean);
     }
+    localStorage.setItem('sb_guest_session', clean);
     setHasEnteredName(true);
-    toast.success(`Selamat datang, ${guestName.trim()}! Kamera siap digunakan.`);
+    toast.success(`Selamat datang, ${clean}! Kamera siap digunakan.`);
   };
 
   const flipCamera = async () => {
@@ -549,7 +553,7 @@ export default function GuestCameraPage() {
         shotNumber: newShotNum,
         imageData: highResDataUrl, // <--- FULL HIGH RESOLUTION (QHD) FOR LIGHTBOX & DOWNLOAD!
         timestamp: new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
-        caption: currentWish.trim() || (tableNumber ? `Meja ${tableNumber}` : ''),
+        caption: currentWish.trim(),
         aspectRatio,
         frameId: activeFrameId
       };
@@ -573,7 +577,7 @@ export default function GuestCameraPage() {
       setTimeout(() => setShowToast(false), 3200);
 
       // Point 5: Send high-res photo to server or store in offline queue if offline
-      const displayName = tableNumber ? `${guestName} (${tableNumber})` : guestName;
+      const displayName = guestName;
 
       if (isDemo) {
         // PURE LOCAL SIMULATION DEMO!
@@ -1469,7 +1473,6 @@ export default function GuestCameraPage() {
               <strong>{guestName || 'UNDANGAN'}</strong> ✎
             </button>
           </span>
-          {tableNumber && <span>• MEJA {tableNumber}</span>}
         </div>
       </footer>
 
@@ -2156,7 +2159,7 @@ export default function GuestCameraPage() {
                       ✓ Video Ucapan 15 Detik Tersimpan!
                     </span>
                     <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)' }}>
-                      Video kenangan Anda telah terkirim untuk dinikmati pengantin di galeri aftermovie spesial.
+                      Video kenangan Anda telah terkirim untuk dinikmati {event?.coupleOrHost || 'tuan rumah'} di galeri video spesial.
                     </span>
                   </div>
                 );
@@ -2167,8 +2170,7 @@ export default function GuestCameraPage() {
                   <VideoWishRecorder
                     eventId={eventId}
                     guestName={guestName}
-                    tableNumber={tableNumber}
-                    coupleOrHost={event?.coupleOrHost || event?.title || 'Pengantin'}
+                    coupleOrHost={event?.coupleOrHost || event?.title || 'Tuan Rumah'}
                     onSuccess={() => setHasSentVideoWish(true)}
                     onSkipTextWish={() => setHasSentVideoWish(true)}
                   />
@@ -2192,7 +2194,7 @@ export default function GuestCameraPage() {
                     PESAN PENUTUP SPESIAL
                   </span>
                   <strong style={{ fontSize: '13px', color: '#FFFFFF', display: 'block', marginBottom: '8px' }}>
-                    Tinggalkan Ucapan Suara untuk Pengantin
+                    Tinggalkan Ucapan Suara untuk {event?.coupleOrHost || 'Tuan Rumah'}
                   </strong>
 
                   {!audioBlob ? (
@@ -2267,7 +2269,7 @@ export default function GuestCameraPage() {
             if (hasSentVoice) {
               return (
                 <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid #22C55E', borderRadius: '14px', padding: '10px 16px', maxWidth: '320px', width: '100%', marginBottom: '20px' }}>
-                  <span style={{ fontSize: '12px', color: '#86EFAC' }}>✓ Pesan suara Anda telah berhasil disimpan untuk pengantin!</span>
+                  <span style={{ fontSize: '12px', color: '#86EFAC' }}>✓ Pesan suara Anda telah berhasil disimpan untuk {event?.coupleOrHost || 'tuan rumah'}!</span>
                 </div>
               );
             }

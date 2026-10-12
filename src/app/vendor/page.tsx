@@ -10,7 +10,7 @@ import {
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
   CreditCard, Sparkles, Wallet, Share2, Video, Film, PlayCircle
 } from 'lucide-react';
-import { UserAccount, VideoTestimonialSubmission } from '@/lib/types';
+import { UserAccount, VideoTestimonialSubmission, PayoutRequest } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
 import ConfirmModal from '@/components/ConfirmModal';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
@@ -42,6 +42,7 @@ export default function VendorPortalPage() {
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState<number>(420000);
   const [isRequestingPayout, setIsRequestingPayout] = useState(false);
+  const [payoutsList, setPayoutsList] = useState<PayoutRequest[]>([]);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -191,7 +192,7 @@ export default function VendorPortalPage() {
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
-  const handleRequestPayout = () => {
+  const handleRequestPayout = async () => {
     if (payoutAmount < 100000) {
       toast.error('Batas minimal penarikan komisi adalah Rp 100.000.');
       return;
@@ -202,14 +203,44 @@ export default function VendorPortalPage() {
     }
 
     setIsRequestingPayout(true);
-    setTimeout(() => {
+    try {
+      const vendorId = vendor.id || 'vendor_vows_co';
+      const res = await fetch('/api/payouts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId,
+          vendorEmail: vendor.email || 'vendor@sudutbingkai.id',
+          vendorName: vendor.name || 'Mitra Vendor',
+          companyName: companyName || vendor.name,
+          amount: Number(payoutAmount),
+          bankDetails: {
+            bankName,
+            accountNumber,
+            accountHolder
+          },
+          notes: `Penarikan komisi mitra ${companyName || vendor.name}`
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setWalletBalance(prev => Math.max(0, prev - payoutAmount));
+        setPayoutModalOpen(false);
+        if (data.payout) {
+          setPayoutsList(prev => [data.payout, ...prev]);
+        }
+        toast.success(
+          `Permintaan penarikan Rp ${payoutAmount.toLocaleString('id-ID')} berhasil diajukan! Dana akan ditransfer ke rekening ${bankName} (${accountNumber} a/n ${accountHolder}) dalam 1x24 jam kerja.`
+        );
+      } else {
+        toast.error(data.error || 'Gagal mengajukan penarikan');
+      }
+    } catch (e: any) {
+      toast.error('Terjadi kesalahan jaringan: ' + (e?.message || 'Gagal terhubung'));
+    } finally {
       setIsRequestingPayout(false);
-      setWalletBalance(prev => prev - payoutAmount);
-      setPayoutModalOpen(false);
-      toast.success(
-        `Permintaan penarikan Rp ${payoutAmount.toLocaleString('id-ID')} berhasil diajukan! Dana akan ditransfer ke rekening ${bankName} (${accountNumber} a/n ${accountHolder}) dalam 1x24 jam kerja.`
-      );
-    }, 1200);
+    }
   };
 
   // Custom Wholesale Calculator State
@@ -217,41 +248,10 @@ export default function VendorPortalPage() {
   const [customPlan, setCustomPlan] = useState<'event' | 'wedding' | 'unlimited'>('wedding');
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
 
-  // Mock Vendor Clients
-  const [clients, setClients] = useState([
-    {
-      id: 'wedding-sarah-dimas',
-      title: 'Dimas & Sarah Wedding',
-      date: '10 Oktober 2026',
-      venue: 'Plataran Hutan Kota, Jakarta',
-      guestCount: 180,
-      photoCount: 42,
-      preset: 'Kodak Portra 400',
-      status: 'Aktif'
-    },
-    {
-      id: 'wedding-budi-jessica',
-      title: 'Budi & Jessica Reception',
-      date: '24 Oktober 2026',
-      venue: 'The Dharmawangsa, Jakarta',
-      guestCount: 250,
-      photoCount: 0,
-      preset: 'CineStill 800T',
-      status: 'Mendatang'
-    },
-    {
-      id: 'wedding-kevin-natasya',
-      title: 'Kevin & Natasya Bali Celebration',
-      date: '14 November 2026',
-      venue: 'Ayana Resort, Bali',
-      guestCount: 120,
-      photoCount: 0,
-      preset: 'Fujifilm QuickSnap',
-      status: 'Mendatang'
-    }
-  ]);
+  // Vendor Clients State (Clean real data)
+  const [clients, setClients] = useState<any[]>([]);
 
-  // Load existing vendor data & events if exists
+  // Load existing vendor data, payouts & events if exists
   useEffect(() => {
     const session = getClientSession();
     if (!session || session.role !== 'vendor') {
@@ -281,18 +281,30 @@ export default function VendorPortalPage() {
     fetch(`/api/events?vendorId=${encodeURIComponent(vendorId)}`)
       .then(res => res.json())
       .then(data => {
-        if (data.success && data.events && data.events.length > 0) {
+        if (data.success && data.events) {
           const realClients = data.events.map((ev: any) => ({
             id: ev.id,
+            slug: ev.slug,
             title: ev.title,
+            coupleOrHost: ev.coupleOrHost,
             date: new Date(ev.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
             venue: ev.location || 'Lokasi Acara',
             guestCount: ev.maxGuests || 150,
             photoCount: 0,
             preset: ev.preset,
-            status: 'Aktif'
+            status: new Date(ev.eventDate) < new Date() ? 'Selesai' : 'Aktif'
           }));
           setClients(realClients);
+        }
+      })
+      .catch(console.error);
+
+    // Fetch vendor payout history
+    fetch(`/api/payouts?vendorId=${encodeURIComponent(vendorId)}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.payouts) {
+          setPayoutsList(data.payouts);
         }
       })
       .catch(console.error);
@@ -551,7 +563,7 @@ export default function VendorPortalPage() {
                 </h1>
 
                 <p style={{ color: '#515154', fontSize: '13.5px' }}>
-                  {instagram} • {city} • Logo aktif di Beranda SudutBingkai, Kartu Meja & Layar Proyektor
+                  {instagram} • {city} • Logo aktif di Beranda SudutBingkai, Kartu QR Tamu & Layar Proyektor
                 </p>
               </div>
             </div>
@@ -919,6 +931,86 @@ export default function VendorPortalPage() {
                 </table>
               </div>
             </div>
+
+            {/* Riwayat Penarikan Saldo Komisi (Payouts) */}
+            <div className="glass-card form-section-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                    Riwayat Penarikan Saldo (Payout) ({payoutsList.length})
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#6E6E73', margin: '4px 0 0' }}>
+                    Daftar pengajuan transfer dana komisi ke rekening bank Anda.
+                  </p>
+                </div>
+              </div>
+
+              {payoutsList.length === 0 ? (
+                <div style={{ padding: '32px 16px', textAlign: 'center', color: '#86868B', fontSize: '13px' }}>
+                  Belum ada riwayat penarikan dana. Klik &ldquo;Ajukan Penarikan Saldo&rdquo; jika saldo komisi Anda telah mencapai minimal Rp 100.000.
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                    <thead>
+                      <tr style={{ borderBottom: '1px solid rgba(0,0,0,0.08)', color: '#86868B', fontSize: '11px', textTransform: 'uppercase' }}>
+                        <th style={{ padding: '10px 12px' }}>Tanggal Pengajuan</th>
+                        <th style={{ padding: '10px 12px' }}>Nominal</th>
+                        <th style={{ padding: '10px 12px' }}>Rekening Tujuan</th>
+                        <th style={{ padding: '10px 12px' }}>Status</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'right' }}>Bukti / Catatan</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payoutsList.map((p) => (
+                        <tr key={p.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                          <td style={{ padding: '14px 12px', color: '#6E6E73' }}>
+                            {new Date(p.requestedAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </td>
+                          <td style={{ padding: '14px 12px', fontWeight: 700, color: '#1D1D1F' }}>
+                            Rp {p.amount.toLocaleString('id-ID')}
+                          </td>
+                          <td style={{ padding: '14px 12px', color: '#515154' }}>
+                            <strong>{p.bankDetails?.bankName || bankName}</strong> - {p.bankDetails?.accountNumber || accountNumber}<br />
+                            <span style={{ fontSize: '11px', color: '#86868B' }}>a/n {p.bankDetails?.accountHolder || accountHolder}</span>
+                          </td>
+                          <td style={{ padding: '14px 12px' }}>
+                            {p.status === 'approved' ? (
+                              <span style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#059669', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+                                ✓ Berhasil Ditransfer
+                              </span>
+                            ) : p.status === 'rejected' ? (
+                              <span style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#DC2626', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+                                ✕ Ditolak
+                              </span>
+                            ) : (
+                              <span style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#D97706', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
+                                ⏳ Menunggu Transfer Admin
+                              </span>
+                            )}
+                          </td>
+                          <td style={{ padding: '14px 12px', textAlign: 'right' }}>
+                            {p.proofUrl ? (
+                              <a
+                                href={p.proofUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#C27803', fontSize: '12px', fontWeight: 600, textDecoration: 'none' }}
+                              >
+                                <ExternalLink size={12} />
+                                <span>Bukti Transfer</span>
+                              </a>
+                            ) : (
+                              <span style={{ fontSize: '11.5px', color: '#86868B' }}>{p.notes || '-'}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -990,7 +1082,7 @@ export default function VendorPortalPage() {
                     <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <li style={{ display: 'flex', gap: '6px' }}>✓ <span>3 Voucher Kuota Wedding (300 Tamu)</span></li>
                       <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Masa aktif kuota 12 bulan</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Co-branding logo WO di kartu meja</span></li>
+                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Co-branding logo WO di kartu QR tamu</span></li>
                     </ul>
                   </div>
 
@@ -1485,7 +1577,7 @@ export default function VendorPortalPage() {
                     </div>
                     <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>1. Durasi Minimal 60 Detik</strong>
                     <span style={{ fontSize: '12px', color: '#6E6E73', lineHeight: 1.5 }}>
-                      Rekam suasana tamu di meja saat scan QR, ekspresi candid, atau tayangan layar videotron.
+                      Rekam suasana para tamu saat scan QR, ekspresi candid, atau tayangan layar videotron.
                     </span>
                   </div>
 
@@ -1592,7 +1684,7 @@ export default function VendorPortalPage() {
                     </label>
                     <textarea
                       rows={3}
-                      placeholder="Contoh: Tamu di meja 4 dan 5 heboh banget gantian foto candid, proyektor live wall bikin suasana ballroom makin hidup."
+                      placeholder="Contoh: Para tamu undangan heboh banget gantian foto candid, proyektor live wall bikin suasana ballroom makin hidup."
                       value={testiCaption}
                       onChange={(e) => setTestiCaption(e.target.value)}
                       className="glass-input"
@@ -1725,7 +1817,7 @@ export default function VendorPortalPage() {
                 Upload Logo Vendor & Tampilkan di Homepage
               </h2>
               <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6 }}>
-                Logo agensi Anda akan otomatis tampil di <strong>section mitra resmi di homepage SudutBingkai</strong>, serta dicetak di kartu meja QR tamu pengantin klien Anda.
+                Logo agensi Anda akan otomatis tampil di <strong>section mitra resmi di homepage SudutBingkai</strong>, serta dicetak di kartu QR tamu pengantin klien Anda.
               </p>
             </div>
 
@@ -1895,10 +1987,10 @@ export default function VendorPortalPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
               <div>
                 <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F' }}>
-                  Semua Acara Pengantin ({clients.length})
+                  Semua Acara Klien ({clients.length})
                 </h3>
                 <p style={{ color: '#6E6E73', fontSize: '13.5px' }}>
-                  Kelola galeri foto, kartu meja QR, dan tayangan proyektor untuk masing-masing pengantin.
+                  Kelola galeri foto, kartu QR tamu, dan tayangan proyektor untuk masing-masing acara.
                 </p>
               </div>
 
@@ -1908,87 +2000,103 @@ export default function VendorPortalPage() {
               </Link>
             </div>
 
-            {clients.map((c) => (
-              <div
-                key={c.id}
-                className="glass-card"
-                style={{
-                  borderRadius: '20px',
-                  padding: '24px 28px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '20px'
-                }}
-              >
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
-                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>{c.title}</h3>
-                    <span style={{
-                      padding: '3px 8px',
-                      borderRadius: '6px',
-                      fontSize: '11px',
-                      fontWeight: 600,
-                      background: c.status === 'Aktif' ? 'rgba(46, 204, 113, 0.12)' : 'rgba(0,0,0,0.06)',
-                      color: c.status === 'Aktif' ? '#27AE60' : '#86868B'
-                    }}>
-                      {c.status}
-                    </span>
-                  </div>
-
-                  <p style={{ fontSize: '13.5px', color: '#6E6E73' }}>
-                    📅 {c.date} • 📍 {c.venue}
-                  </p>
-
-                  <div style={{ display: 'flex', gap: '16px', marginTop: '10px', fontSize: '12.5px', color: '#515154' }}>
-                    <span>🎞️ Preset: <strong>{c.preset}</strong></span>
-                    <span>👥 Tamu: <strong>{c.guestCount} Undangan</strong></span>
-                    <span>📸 Foto: <strong>{c.photoCount} Jepretan</strong></span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  <Link href={`/invoice/${c.id}`} target="_blank" className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
-                    <FileText size={13} />
-                    <span>Invoice Resmi</span>
-                  </Link>
-
-                  <Link href={`/event/${c.id}`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
-                    Galeri Album
-                  </Link>
-
-                  <Link href={`/event/${c.id}/print`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
-                    Cetak QR Meja Tamu
-                  </Link>
-
-                  <Link href={`/cam/${c.id}`} className="btn-apple-black" style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none' }}>
-                    Kamera Tamu
-                  </Link>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteClient(c.id, c.title)}
-                    className="glass-pill"
-                    style={{
-                      padding: '8px 12px',
-                      fontSize: '12.5px',
-                      color: '#EF4444',
-                      border: '1px solid rgba(239, 68, 68, 0.25)',
-                      background: 'rgba(239, 68, 68, 0.05)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px'
-                    }}
-                    title="Hapus Klien Acara"
-                  >
-                    <Trash2 size={13} />
-                    <span>Hapus</span>
-                  </button>
-                </div>
+            {clients.length === 0 ? (
+              <div className="glass-card" style={{ padding: '60px 24px', textAlign: 'center', borderRadius: '24px' }}>
+                <Users size={48} style={{ opacity: 0.25, margin: '0 auto 16px', display: 'block' }} />
+                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', marginBottom: '8px' }}>
+                  Belum Ada Acara Klien
+                </h3>
+                <p style={{ fontSize: '13.5px', color: '#6E6E73', maxWidth: '480px', margin: '0 auto 22px', lineHeight: 1.6 }}>
+                  Gunakan kuota voucher acara Anda atau buat acara baru untuk mulai membagikan kamera analog digital kepada para tamu undangan.
+                </p>
+                <Link href="/create" className="btn-apple-black" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', fontSize: '13.5px', textDecoration: 'none', margin: '0 auto' }}>
+                  <Plus size={15} />
+                  <span>Buat Acara Klien Pertama</span>
+                </Link>
               </div>
-            ))}
+            ) : (
+              clients.map((c) => (
+                <div
+                  key={c.id}
+                  className="glass-card"
+                  style={{
+                    borderRadius: '20px',
+                    padding: '24px 28px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '20px'
+                  }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>{c.title}</h3>
+                      <span style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        background: c.status === 'Aktif' ? 'rgba(46, 204, 113, 0.12)' : 'rgba(0,0,0,0.06)',
+                        color: c.status === 'Aktif' ? '#27AE60' : '#86868B'
+                      }}>
+                        {c.status}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: '13.5px', color: '#6E6E73' }}>
+                      📅 {c.date} • 📍 {c.venue}
+                    </p>
+
+                    <div style={{ display: 'flex', gap: '16px', marginTop: '10px', fontSize: '12.5px', color: '#515154' }}>
+                      <span>🎞️ Preset: <strong>{c.preset}</strong></span>
+                      <span>👥 Tamu: <strong>{c.guestCount} Undangan</strong></span>
+                      <span>📸 Foto: <strong>{c.photoCount} Jepretan</strong></span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <Link href={`/invoice/${c.id}`} target="_blank" className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                      <FileText size={13} />
+                      <span>Invoice Resmi</span>
+                    </Link>
+
+                    <Link href={`/event/${c.id}`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
+                      Galeri Album
+                    </Link>
+
+                    <Link href={`/event/${c.id}/print`} className="glass-pill" style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
+                      Cetak Kartu QR Tamu
+                    </Link>
+
+                    <Link href={`/cam/${c.id}`} className="btn-apple-black" style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none' }}>
+                      Kamera Tamu
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteClient(c.id, c.title)}
+                      className="glass-pill"
+                      style={{
+                        padding: '8px 12px',
+                        fontSize: '12.5px',
+                        color: '#EF4444',
+                        border: '1px solid rgba(239, 68, 68, 0.25)',
+                        background: 'rgba(239, 68, 68, 0.05)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                      title="Hapus Klien Acara"
+                    >
+                      <Trash2 size={13} />
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
 
@@ -1997,13 +2105,13 @@ export default function VendorPortalPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
             <div className="glass-card" style={{ padding: '32px 36px', borderRadius: '24px' }}>
               <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
-                WEDDING ORGANIZER TOOLKIT
+                WEDDING & EVENT ORGANIZER TOOLKIT
               </span>
               <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#1D1D1F', marginBottom: '8px' }}>
                 Marketing Kit, Script MC & Panduan Eksekusi di Hari H
               </h2>
               <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6, maxWidth: '780px' }}>
-                Gunakan materi ini untuk mempermudah kru WO Anda dan Master of Ceremony (MC) dalam mengarahkan ratusan tamu undangan agar aktif memotret momen tak terduga.
+                Gunakan materi ini untuk mempermudah kru EO/WO Anda dan Master of Ceremony (MC) dalam mengarahkan para tamu undangan agar aktif memotret momen tak terduga.
               </p>
             </div>
 
@@ -2012,15 +2120,15 @@ export default function VendorPortalPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
                   <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
-                    1. Script MC: Ajakan Scan QR Meja (Durasi 45 Detik)
+                    1. Script MC: Ajakan Scan QR Kamera Tamu (Durasi 45 Detik)
                   </h3>
                   <span style={{ fontSize: '12.5px', color: '#6E6E73' }}>
-                    Bacakan saat tamu mulai duduk di meja santapan atau setelah prosesi masuk pengantin.
+                    Bacakan saat acara dimulai atau setelah prosesi pembuka berlangsung.
                   </span>
                 </div>
 
                 <button
-                  onClick={() => copyToClipboard(`"Bapak, Ibu, dan teman-teman semuanya, perhatikan kartu kecil yang ada di tengah meja masing-masing! Hari ini ${companyName} bersama pengantin menyiapkan kamera analog sekali pakai digital SudutBingkai untuk kalian semua. Cukup buka kamera HP, scan QR barcode di kartu meja, dan langsung motret tanpa perlu download aplikasi apapun! Semua momen candid seru kalian akan langsung terabadikan di album rahasia pengantin. Yuk scan sekarang dan jepret momen terindah kalian!"`, 'mc1')}
+                  onClick={() => copyToClipboard(`"Bapak, Ibu, dan teman-teman semuanya, perhatikan kartu QR yang telah dibagikan! Hari ini ${companyName} bersama tuan rumah menyiapkan kamera analog sekali pakai digital SudutBingkai untuk kalian semua. Cukup buka kamera HP, scan kartu QR, isi nama Anda, dan langsung motret tanpa perlu download aplikasi apapun! Semua momen candid seru kalian akan langsung terabadikan di album rahasia tuan rumah. Yuk scan sekarang dan jepret momen terindah kalian!"`, 'mc1')}
                   className="glass-pill"
                   style={{ padding: '8px 14px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
                 >
@@ -2030,23 +2138,23 @@ export default function VendorPortalPage() {
               </div>
 
               <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', fontStyle: 'italic', fontSize: '14px', color: '#333336', lineHeight: 1.7 }}>
-                &ldquo;Bapak, Ibu, dan teman-teman semuanya, perhatikan kartu kecil yang ada di tengah meja masing-masing! Hari ini <strong>{companyName}</strong> bersama pengantin menyiapkan kamera analog sekali pakai digital SudutBingkai untuk kalian semua. Cukup buka kamera HP, scan QR barcode di kartu meja, dan langsung motret tanpa perlu download aplikasi apapun! Semua momen candid seru kalian akan langsung terabadikan di album kenangan pengantin. Yuk scan sekarang dan jepret momen terindah kalian!&rdquo;
+                &ldquo;Bapak, Ibu, dan teman-teman semuanya, perhatikan kartu QR yang telah dibagikan! Hari ini <strong>{companyName}</strong> bersama tuan rumah menyiapkan kamera analog sekali pakai digital SudutBingkai untuk kalian semua. Cukup buka kamera HP, scan kartu QR, isi nama Anda, dan langsung motret tanpa perlu download aplikasi apapun! Semua momen candid seru kalian akan langsung terabadikan di album kenangan. Yuk scan sekarang dan jepret momen terindah kalian!&rdquo;
               </div>
             </div>
 
             {/* Checklist Kru WO di Hari H */}
             <div className="glass-card" style={{ padding: '32px 36px', borderRadius: '24px' }}>
               <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', marginBottom: '16px' }}>
-                2. Checklist Operasional Kru WO di Lokasi Resepsi
+                2. Checklist Operasional Kru di Lokasi Acara
               </h3>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
                 <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)' }}>
                   <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-                    H-3 Acara: Cetak Kartu Meja
+                    H-3 Acara: Cetak Kartu QR Tamu
                   </strong>
                   <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: 0, lineHeight: 1.5 }}>
-                    Buka tombol &ldquo;Kartu Meja QR&rdquo; di daftar klien, unduh PDF A6 siap cetak, masukkan ke standing frame akrilik meja tamu.
+                    Buka tombol &ldquo;Cetak Kartu QR Tamu&rdquo; di daftar klien, unduh format siap cetak, dan siapkan untuk para tamu undangan.
                   </p>
                 </div>
 
@@ -2055,7 +2163,7 @@ export default function VendorPortalPage() {
                     H-1 Jam: Cek Layar Proyektor
                   </strong>
                   <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: 0, lineHeight: 1.5 }}>
-                    Hubungkan laptop operator WO ke videotron/proyektor ballroom, buka link &ldquo;Layar Proyektor&rdquo; dengan mode Fullscreen (F11).
+                    Hubungkan laptop operator ke videotron/proyektor ballroom, buka link &ldquo;Layar Proyektor&rdquo; dengan mode Fullscreen (F11).
                   </p>
                 </div>
 
@@ -2064,7 +2172,7 @@ export default function VendorPortalPage() {
                     H+1 Acara: Serahkan ZIP Foto
                   </strong>
                   <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: 0, lineHeight: 1.5 }}>
-                    Download seluruh foto resolusi tinggi berstempel tanggal analog via dashboard, kirimkan link Google Drive / flashdisk ke pengantin.
+                    Download seluruh foto resolusi tinggi berstempel tanggal analog via dashboard, kirimkan link Google Drive / flashdisk ke tuan rumah.
                   </p>
                 </div>
               </div>
