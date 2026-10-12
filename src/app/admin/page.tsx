@@ -122,9 +122,13 @@ export default function SuperAdminDashboard() {
   // Load Session and All Data on mount
   useEffect(() => {
     const session = getClientSession();
+    if (!session || session.role !== 'admin') {
+      router.push('/admin/login');
+      return;
+    }
     setCurrentUser(session);
     loadAllAdminData();
-  }, []);
+  }, [router]);
 
   const loadAllAdminData = async () => {
     setLoading(true);
@@ -159,7 +163,7 @@ export default function SuperAdminDashboard() {
 
   const handleLogout = () => {
     clearClientSession();
-    router.push('/login');
+    router.push('/admin/login');
   };
 
   // -------------------------------------------------------------

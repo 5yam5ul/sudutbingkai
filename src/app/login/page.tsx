@@ -4,8 +4,8 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  ArrowLeft, ArrowRight, Shield, Heart, Briefcase, Check, 
-  AlertCircle, UserPlus, LogIn, ChevronDown, ChevronUp, Loader2 
+  ArrowLeft, ArrowRight, UserPlus, LogIn, 
+  AlertCircle, ChevronDown, ChevronUp, Loader2, Sparkles, Heart, Briefcase
 } from 'lucide-react';
 import { authenticateUser, setClientSession, getClientSession } from '@/lib/auth';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
@@ -41,7 +41,6 @@ function LoginFormContent() {
   
   // Auth state
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-  const [role, setRole] = useState<'host' | 'vendor' | 'admin'>('host');
   
   // Form fields
   const [name, setName] = useState('');
@@ -80,7 +79,6 @@ function LoginFormContent() {
   useEffect(() => {
     if (!supabase || !isSupabaseConfigured) return;
 
-    // Check current session from Supabase (e.g. after OAuth redirect)
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         handleSupabaseUserSession(session.user);
@@ -99,31 +97,38 @@ function LoginFormContent() {
   }, [router]);
 
   const handleSupabaseUserSession = (user: any) => {
-    const userEmail = user.email;
+    const userEmail = (user.email || '').trim().toLowerCase();
     if (!userEmail) return;
 
     const fullName = user.user_metadata?.full_name || 
                      user.user_metadata?.name || 
                      userEmail.split('@')[0];
 
+    // Smart role routing
+    let assignedRole: 'host' | 'vendor' | 'admin' = 'host';
+    if (userEmail === 'admin@sudutbingkai.id') {
+      assignedRole = 'admin';
+    } else if (userEmail.includes('vendor') || userEmail.includes('wo')) {
+      assignedRole = 'vendor';
+    }
+
     const sessionUser: UserAccount = {
       id: 'usr_g_' + user.id.substring(0, 10),
       name: fullName,
       email: userEmail,
-      role: 'host'
+      role: assignedRole
     };
 
     setClientSession(sessionUser);
     toast.success(`Selamat datang, ${fullName}!`);
-    router.push('/dashboard');
-  };
-
-  const handleRoleChange = (newRole: 'host' | 'vendor' | 'admin') => {
-    setRole(newRole);
-    setErrorMsg('');
-    setEmail('');
-    setPassword('');
-    setName('');
+    
+    if (assignedRole === 'admin') {
+      router.push('/admin');
+    } else if (assignedRole === 'vendor') {
+      router.push('/vendor');
+    } else {
+      router.push('/dashboard');
+    }
   };
 
   // 1. Google OAuth Sign-In
@@ -156,7 +161,6 @@ function LoginFormContent() {
       if (error) {
         throw error;
       }
-      // Browser will redirect to Google login screen
     } catch (err: any) {
       console.error('Google Sign-In Error:', err);
       setErrorMsg(err.message || 'Gagal memproses login Google. Silakan coba kembali.');
@@ -188,7 +192,6 @@ function LoginFormContent() {
       }
 
       try {
-        // Sign up with Supabase if configured
         if (supabase && isSupabaseConfigured) {
           await supabase.auth.signUp({
             email: cleanEmail,
@@ -199,22 +202,16 @@ function LoginFormContent() {
           });
         }
 
-        // Set local session for instant access
         const newUser: UserAccount = {
           id: 'usr_' + Date.now().toString(36),
           name: name.trim(),
           email: cleanEmail,
-          role: role === 'vendor' ? 'vendor' : 'host'
+          role: 'host'
         };
 
         setClientSession(newUser);
         toast.success(`Akun berhasil dibuat! Selamat datang, ${name.trim()}.`);
-        
-        if (role === 'vendor') {
-          router.push('/vendor');
-        } else {
-          router.push('/dashboard');
-        }
+        router.push('/dashboard');
       } catch (err: any) {
         console.error('Registration Error:', err);
         setErrorMsg(err.message || 'Gagal mendaftarkan akun. Silakan coba kembali.');
@@ -222,33 +219,49 @@ function LoginFormContent() {
         setLoading(false);
       }
     } else {
-      // LOGIN FLOW
+      // LOGIN FLOW WITH SMART ROLE DETECTION
       setTimeout(() => {
-        const user = authenticateUser(cleanEmail, cleanPassword, role);
+        // If typing admin credentials, smartly route to admin
+        if (cleanEmail === 'admin@sudutbingkai.id') {
+          const adminUser = authenticateUser(cleanEmail, cleanPassword, 'admin');
+          if (adminUser) {
+            setClientSession(adminUser);
+            toast.success('Masuk sebagai Super Admin');
+            router.push('/admin');
+            setLoading(false);
+            return;
+          }
+        }
+
+        // If typing vendor credentials
+        if (cleanEmail.includes('vendor') || cleanEmail === 'vendor@sudutbingkai.id') {
+          const vendorUser = authenticateUser(cleanEmail, cleanPassword, 'vendor');
+          if (vendorUser) {
+            setClientSession(vendorUser);
+            toast.success(`Selamat datang, ${vendorUser.name}`);
+            router.push('/vendor');
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Default Host / Client authentication
+        const user = authenticateUser(cleanEmail, cleanPassword, 'host');
         if (user) {
           setClientSession(user);
           toast.success(`Berhasil masuk sebagai ${user.name}`);
-          if (user.role === 'admin') {
-            router.push('/admin');
-          } else if (user.role === 'vendor') {
-            router.push('/vendor');
-          } else {
-            router.push('/dashboard');
-          }
+          router.push('/dashboard');
         } else {
-          setErrorMsg('Email atau kata sandi tidak cocok. Silakan periksa kembali atau gunakan login Google.');
+          setErrorMsg('Email atau kata sandi tidak cocok. Silakan periksa kembali atau gunakan Masuk dengan Google.');
         }
         setLoading(false);
       }, 350);
     }
   };
 
-  const handleFillCredentials = () => {
+  const handleFillDemo = (type: 'host' | 'vendor') => {
     setErrorMsg('');
-    if (role === 'admin') {
-      setEmail('admin@sudutbingkai.id');
-      setPassword('admin123');
-    } else if (role === 'host') {
+    if (type === 'host') {
       setEmail('pengantin@sudutbingkai.id');
       setPassword('pengantin123');
     } else {
@@ -280,16 +293,16 @@ function LoginFormContent() {
       </header>
 
       {/* Main Container */}
-      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '28px 16px 60px' }}>
-        <div className="glass-card form-section-card" style={{ maxWidth: '440px', width: '100%' }}>
+      <main style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px 64px' }}>
+        <div className="glass-card form-section-card" style={{ maxWidth: '420px', width: '100%' }}>
           
           {/* Header Title */}
           <div style={{ textAlign: 'center', marginBottom: '22px' }}>
             <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
-              PORTAL AKUN SUDUTBINGKAI
+              PORTAL KELUARGA & PENYELENGGARA
             </span>
             <h1 className="font-display-serif" style={{ fontSize: 'clamp(1.5rem, 4vw, 1.85rem)', fontWeight: 700, color: '#1D1D1F' }}>
-              {authMode === 'login' ? 'Masuk ke Dashboard' : 'Daftar Akun Baru'}
+              {authMode === 'login' ? 'Masuk ke SudutBingkai' : 'Daftar Akun Baru'}
             </h1>
             <p style={{ color: '#6E6E73', fontSize: '13px', marginTop: '6px' }}>
               {authMode === 'login' 
@@ -298,7 +311,7 @@ function LoginFormContent() {
             </p>
           </div>
 
-          {/* Mode Switcher Tab (Masuk vs Daftar) */}
+          {/* Single Segmented Control (Masuk vs Daftar) */}
           <div style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
@@ -306,7 +319,7 @@ function LoginFormContent() {
             background: 'rgba(0, 0, 0, 0.05)',
             padding: '4px',
             borderRadius: '12px',
-            marginBottom: '18px'
+            marginBottom: '20px'
           }}>
             <button
               type="button"
@@ -316,7 +329,7 @@ function LoginFormContent() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                padding: '9px 12px',
+                padding: '10px 12px',
                 borderRadius: '9px',
                 border: 'none',
                 cursor: 'pointer',
@@ -334,17 +347,13 @@ function LoginFormContent() {
 
             <button
               type="button"
-              onClick={() => { 
-                setAuthMode('register'); 
-                setErrorMsg('');
-                if (role === 'admin') setRole('host');
-              }}
+              onClick={() => { setAuthMode('register'); setErrorMsg(''); }}
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                padding: '9px 12px',
+                padding: '10px 12px',
                 borderRadius: '9px',
                 border: 'none',
                 cursor: 'pointer',
@@ -361,144 +370,57 @@ function LoginFormContent() {
             </button>
           </div>
 
-          {/* Role Switcher Tabs */}
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: authMode === 'register' ? '1fr 1fr' : 'repeat(3, 1fr)',
-            gap: '6px',
-            background: 'rgba(0, 0, 0, 0.03)',
-            padding: '4px',
-            borderRadius: '12px',
-            marginBottom: '20px'
-          }}>
+          {/* GOOGLE SIGN-IN BUTTON */}
+          <div style={{ marginBottom: '18px' }}>
             <button
               type="button"
-              onClick={() => handleRoleChange('host')}
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
               style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                background: '#FFFFFF',
+                color: '#1D1D1F',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                cursor: googleLoading ? 'wait' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '5px',
-                padding: '8px 6px',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                background: role === 'host' ? '#FFFFFF' : 'transparent',
-                color: role === 'host' ? '#1D1D1F' : '#6E6E73',
-                fontWeight: role === 'host' ? 700 : 500,
-                fontSize: '11.5px',
-                boxShadow: role === 'host' ? '0 1px 4px rgba(0,0,0,0.05)' : 'none',
-                transition: 'all 0.2s'
+                gap: '10px',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                transition: 'all 0.15s ease'
               }}
             >
-              <Heart size={13} color={role === 'host' ? '#C27803' : 'currentColor'} />
-              <span>Host / Klien</span>
+              {googleLoading ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" color="#C27803" />
+                  <span>Menghubungkan ke Google...</span>
+                </>
+              ) : (
+                <>
+                  <GoogleIcon />
+                  <span>{authMode === 'login' ? 'Masuk dengan Google' : 'Daftar dengan Google'}</span>
+                </>
+              )}
             </button>
 
-            <button
-              type="button"
-              onClick={() => handleRoleChange('vendor')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '5px',
-                padding: '8px 6px',
-                borderRadius: '8px',
-                border: 'none',
-                cursor: 'pointer',
-                background: role === 'vendor' ? '#FFFFFF' : 'transparent',
-                color: role === 'vendor' ? '#1D1D1F' : '#6E6E73',
-                fontWeight: role === 'vendor' ? 700 : 500,
-                fontSize: '11.5px',
-                boxShadow: role === 'vendor' ? '0 1px 4px rgba(0,0,0,0.05)' : 'none',
-                transition: 'all 0.2s'
-              }}
-            >
-              <Briefcase size={13} color={role === 'vendor' ? '#C27803' : 'currentColor'} />
-              <span>Mitra Vendor</span>
-            </button>
-
-            {authMode === 'login' && (
-              <button
-                type="button"
-                onClick={() => handleRoleChange('admin')}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '5px',
-                  padding: '8px 6px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: role === 'admin' ? '#1D1D1F' : 'transparent',
-                  color: role === 'admin' ? '#FFFFFF' : '#6E6E73',
-                  fontWeight: role === 'admin' ? 700 : 500,
-                  fontSize: '11.5px',
-                  boxShadow: role === 'admin' ? '0 1px 4px rgba(0,0,0,0.15)' : 'none',
-                  transition: 'all 0.2s'
-                }}
-              >
-                <Shield size={13} color={role === 'admin' ? '#F59E0B' : 'currentColor'} />
-                <span>Admin</span>
-              </button>
-            )}
-          </div>
-
-          {/* GOOGLE SIGN-IN BUTTON (For Host / Vendor) */}
-          {role !== 'admin' && (
-            <div style={{ marginBottom: '18px' }}>
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={googleLoading}
-                style={{
-                  width: '100%',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  border: '1px solid rgba(0, 0, 0, 0.12)',
-                  background: '#FFFFFF',
-                  color: '#1D1D1F',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  cursor: googleLoading ? 'wait' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '10px',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                  transition: 'all 0.15s ease'
-                }}
-              >
-                {googleLoading ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" color="#C27803" />
-                    <span>Menghubungkan ke Google...</span>
-                  </>
-                ) : (
-                  <>
-                    <GoogleIcon />
-                    <span>{authMode === 'login' ? 'Masuk dengan Google' : 'Daftar dengan Google'}</span>
-                  </>
-                )}
-              </button>
-
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                margin: '18px 0 14px',
-                color: '#86868B',
-                fontSize: '11.5px'
-              }}>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(0, 0, 0, 0.08)' }} />
-                <span style={{ padding: '0 12px' }}>
-                  {authMode === 'login' ? 'atau masuk dengan email' : 'atau daftar dengan email'}
-                </span>
-                <div style={{ flex: 1, height: '1px', background: 'rgba(0, 0, 0, 0.08)' }} />
-              </div>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              margin: '18px 0 14px',
+              color: '#86868B',
+              fontSize: '11.5px'
+            }}>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(0, 0, 0, 0.08)' }} />
+              <span style={{ padding: '0 12px' }}>
+                {authMode === 'login' ? 'atau masuk dengan email' : 'atau daftar dengan email'}
+              </span>
+              <div style={{ flex: 1, height: '1px', background: 'rgba(0, 0, 0, 0.08)' }} />
             </div>
-          )}
+          </div>
 
           {/* Error Message Alert */}
           {errorMsg && (
@@ -526,12 +448,12 @@ function LoginFormContent() {
             {authMode === 'register' && (
               <div>
                 <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '5px' }}>
-                  {role === 'vendor' ? 'Nama Agensi / Vendor WO' : 'Nama Penyelenggara / Pengantin'}
+                  Nama Lengkap / Pasangan Pengantin
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder={role === 'vendor' ? 'Contoh: Vows & Co. Organizer' : 'Contoh: Sarah & Dimas'}
+                  placeholder="Contoh: Kevin & Cindy"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="glass-input"
@@ -543,12 +465,12 @@ function LoginFormContent() {
             {/* Field Email */}
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '5px' }}>
-                Email {role === 'vendor' ? 'Mitra Vendor' : role === 'admin' ? 'Super Admin' : 'Host / Penyelenggara'}
+                Alamat Email
               </label>
               <input
                 type="email"
                 required
-                placeholder={role === 'vendor' ? 'vendor@sudutbingkai.id' : role === 'admin' ? 'admin@sudutbingkai.id' : 'pengantin@sudutbingkai.id'}
+                placeholder="nama@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="glass-input"
@@ -590,7 +512,7 @@ function LoginFormContent() {
             </button>
           </form>
 
-          {/* Toggle Helper Under Form */}
+          {/* Frictionless Helper Under Form */}
           <div style={{ marginTop: '18px', textAlign: 'center', fontSize: '12.5px', color: '#6E6E73' }}>
             {authMode === 'login' ? (
               <>
@@ -600,12 +522,12 @@ function LoginFormContent() {
                   onClick={() => { setAuthMode('register'); setErrorMsg(''); }}
                   style={{ background: 'none', border: 'none', color: '#C27803', fontWeight: 600, cursor: 'pointer', padding: 0 }}
                 >
-                  Daftar Akun Baru
+                  Daftar di sini
                 </button>
               </>
             ) : (
               <>
-                Sudah memiliki akun?{' '}
+                Sudah punya akun?{' '}
                 <button
                   type="button"
                   onClick={() => { setAuthMode('login'); setErrorMsg(''); }}
@@ -617,71 +539,101 @@ function LoginFormContent() {
             )}
           </div>
 
-          <div style={{ marginTop: '8px', textAlign: 'center', fontSize: '12px', color: '#86868B' }}>
-            Belum punya album acara?{' '}
+          <div style={{ marginTop: '10px', textAlign: 'center', fontSize: '12px', color: '#86868B' }}>
+            Mau buat album langsung tanpa daftar?{' '}
             <Link href="/create" style={{ color: '#1D1D1F', fontWeight: 600, textDecoration: 'underline' }}>
-              Buat langsung (Gratis)
+              Buat Album Acara (Gratis)
             </Link>
           </div>
 
-          {/* Collapsible Demo / Tester Credentials */}
-          <div style={{ marginTop: '22px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px' }}>
-            <button
-              type="button"
-              onClick={() => setShowDemoBox(!showDemoBox)}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                background: 'none',
-                border: 'none',
-                padding: '4px 0',
-                cursor: 'pointer',
-                color: '#86868B',
-                fontSize: '11px',
-                fontWeight: 600
-              }}
-            >
-              <span>{showDemoBox ? 'Sembunyikan Akun Pengujian (Demo)' : 'Buka Akun Pengujian (Demo Tester)'}</span>
-              {showDemoBox ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-            </button>
+          {/* Footer Area: Vendor link & Tester Shortcut */}
+          <div style={{ marginTop: '22px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            
+            <div style={{ textAlign: 'center', fontSize: '11.5px', color: '#86868B' }}>
+              Mitra Vendor atau Wedding Organizer?{' '}
+              <Link href="/vendor" style={{ color: '#C27803', fontWeight: 600, textDecoration: 'none' }}>
+                Portal Kemitraan WO →
+              </Link>
+            </div>
 
-            {showDemoBox && (
-              <div style={{
-                marginTop: '10px',
-                background: role === 'admin' ? 'rgba(30, 27, 75, 0.04)' : 'rgba(194, 120, 3, 0.05)',
-                border: role === 'admin' ? '1px solid rgba(79, 70, 229, 0.25)' : '1px solid rgba(194, 120, 3, 0.2)',
-                borderRadius: '12px',
-                padding: '10px 12px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span className="font-mono-film" style={{ fontSize: '9.5px', color: role === 'admin' ? '#4F46E5' : '#C27803' }}>
-                    {role === 'admin' ? 'KREDENSIAL SUPER ADMIN' : 'KREDENSIAL DEMO'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleFillCredentials}
-                    style={{
-                      background: '#FFFFFF',
-                      border: '1px solid rgba(0,0,0,0.1)',
-                      borderRadius: '6px',
-                      padding: '3px 8px',
-                      fontSize: '10.5px',
-                      fontWeight: 600,
-                      color: role === 'admin' ? '#4F46E5' : '#C27803',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Gunakan Akun Ini
-                  </button>
+            {/* Collapsible Demo / Tester Credentials */}
+            <div style={{ marginTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => setShowDemoBox(!showDemoBox)}
+                style={{
+                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  background: 'none',
+                  border: 'none',
+                  padding: '4px 0',
+                  cursor: 'pointer',
+                  color: '#A1A1A6',
+                  fontSize: '11px',
+                  fontWeight: 500
+                }}
+              >
+                <span>{showDemoBox ? 'Sembunyikan Akun Coba' : 'Gunakan Akun Uji Coba (Demo)'}</span>
+                {showDemoBox ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
+
+              {showDemoBox && (
+                <div style={{
+                  marginTop: '8px',
+                  background: 'rgba(194, 120, 3, 0.05)',
+                  border: '1px solid rgba(194, 120, 3, 0.18)',
+                  borderRadius: '12px',
+                  padding: '10px 12px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#C27803' }}>
+                      PILIH AKUN UJI COBA
+                    </span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <button
+                        type="button"
+                        onClick={() => handleFillDemo('host')}
+                        style={{
+                          background: '#FFFFFF',
+                          border: '1px solid rgba(0,0,0,0.1)',
+                          borderRadius: '6px',
+                          padding: '3px 7px',
+                          fontSize: '10.5px',
+                          fontWeight: 600,
+                          color: '#C27803',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Host Pengantin
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFillDemo('vendor')}
+                        style={{
+                          background: '#FFFFFF',
+                          border: '1px solid rgba(0,0,0,0.1)',
+                          borderRadius: '6px',
+                          padding: '3px 7px',
+                          fontSize: '10.5px',
+                          fontWeight: 600,
+                          color: '#515154',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Mitra WO
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '11px', color: '#515154', lineHeight: 1.4 }}>
+                    Klik tombol di atas untuk mengisi form otomatis saat pengujian fitur.
+                  </div>
                 </div>
-                <div style={{ fontSize: '11.5px', color: '#1D1D1F', display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <div>Email: <strong>{role === 'admin' ? 'admin@sudutbingkai.id' : role === 'host' ? 'pengantin@sudutbingkai.id' : 'vendor@sudutbingkai.id'}</strong></div>
-                  <div>Password: <strong>{role === 'admin' ? 'admin123' : role === 'host' ? 'pengantin123' : 'vendor123'}</strong></div>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
+
           </div>
 
         </div>
