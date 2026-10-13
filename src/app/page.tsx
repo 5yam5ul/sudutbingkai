@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Play, Camera, Check, ChevronDown, ChevronRight, Tv, Shield, Download, QrCode, Menu, X, Mic, LogOut, Star, Zap } from 'lucide-react';
+import { ArrowRight, Play, Camera, Check, ChevronDown, ChevronRight, Tv, Shield, Download, QrCode, Menu, X, Mic, LogOut, Star, Zap, Award, DollarSign, Heart } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FilmPresetId, UserAccount } from '@/lib/types';
 import { getClientSession, clearClientSession } from '@/lib/auth';
@@ -946,10 +946,10 @@ export default function HomePage() {
             KOLABORASI & KEMITRAAN AGENSI
           </span>
           <h3 className="font-display-serif" style={{ fontSize: 'clamp(24px, 3.5vw, 32px)', fontWeight: 700, color: '#1D1D1F' }}>
-            Dirancang untuk Melengkapi Layanan <em>Wedding Organizer & Event Planner</em>
+            Beri Nilai Tambah untuk Klien, Raih Komisi Pasif untuk Agensi Anda
           </h3>
-          <p style={{ color: '#6E6E73', fontSize: '14.5px', maxWidth: '620px', margin: '10px auto 0', lineHeight: 1.5 }}>
-            Beri nilai tambah interaktif untuk calon pengantin dan klien Anda tanpa modal alat fisik, tanpa instalasi aplikasi, dan tanpa beban operasional.
+          <p style={{ color: '#6E6E73', fontSize: '14.5px', maxWidth: '640px', margin: '10px auto 0', lineHeight: 1.55 }}>
+            Sertakan kamera analog digital instan dalam portofolio layanan wedding Anda. Dapatkan komisi pasif hingga 20% per acara tanpa modal, tanpa instalasi aplikasi, dan tanpa beban kru di hari-H.
           </p>
         </div>
 
@@ -983,10 +983,10 @@ export default function HomePage() {
               <QrCode size={22} />
             </div>
             <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-              Add-On Eksklusif untuk Klien
+              Add-On Berkelas untuk Klien
             </strong>
-            <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
-              Sertakan kamera analog digital ini sebagai bonus atau fasilitas paket wedding premium Anda. Calon pengantin mendapatkan kenangan spontan dari sudut pandang para tamu.
+            <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
+              Jadikan kamera analog digital ini sebagai fasilitas unggulan dalam paket pernikahan Anda. Berikan pengalaman interaktif yang otentik dan berkesan bagi calon pengantin dan seluruh tamu undangan.
             </p>
           </div>
 
@@ -1012,10 +1012,10 @@ export default function HomePage() {
               <Camera size={22} />
             </div>
             <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-              100% Bebas Ribet di Hari-H
+              100% Zero-Friction di Hari-H
             </strong>
-            <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
-              Tamu tidak perlu antre instal aplikasi apa pun di App Store atau Play Store. Cukup letakkan kartu barcode QR tamu di meja atau area resepsi, tamu scan dengan kamera HP bawaan dan langsung memotret.
+            <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
+              Tamu cukup scan barcode QR dengan kamera ponsel bawaan tanpa instal aplikasi. Sistem berjalan mandiri tanpa perlu sewa kamera fisik ataupun menugaskan kru khusus di venue acara.
             </p>
           </div>
 
@@ -1038,13 +1038,13 @@ export default function HomePage() {
               marginBottom: '14px',
               color: '#C27803'
             }}>
-              <Shield size={22} />
+              <Award size={22} />
             </div>
             <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-              Tarif Mitra & Branding Agensi
+              Komisi Pasif 15%–20% & Co-Branding
             </strong>
-            <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
-              Dapatkan harga khusus agensi untuk margin usaha Anda. Nama & logo Wedding Organizer / Event Planner Anda dapat disematkan langsung pada template kartu cetak barcode dan album digital.
+            <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
+              Raih komisi hingga 20% langsung cair ke rekening bank Anda untuk setiap rekomendasi, lengkap dengan penyematan logo resmi agensi WO Anda di kartu cetak QR dan kamera tamu.
             </p>
           </div>
         </div>
@@ -1305,16 +1305,23 @@ export default function HomePage() {
                   top: '-13px',
                   left: '50%',
                   transform: 'translateX(-50%)',
-                  background: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)',
+                  background: 'linear-gradient(135deg, #C27803 0%, #9A5E02 100%)',
                   color: '#FFFFFF',
-                  fontSize: '11px',
+                  fontSize: '10.5px',
                   fontWeight: 700,
-                  padding: '4px 14px',
+                  padding: '5px 14px',
                   borderRadius: '999px',
-                  letterSpacing: '0.05em',
-                  boxShadow: '0 4px 12px rgba(194, 120, 3, 0.35)'
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 4px 14px rgba(194, 120, 3, 0.35)',
+                  zIndex: 2
                 }}>
-                  ⭐ PALING POPULER
+                  <Star size={11} fill="#FFFFFF" strokeWidth={0} />
+                  <span>Paling Populer</span>
                 </div>
               )}
 

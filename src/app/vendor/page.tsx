@@ -15,7 +15,6 @@ import {
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
 import ConfirmModal from '@/components/ConfirmModal';
-import MayarPaymentModal from '@/components/MayarPaymentModal';
 import { toast } from 'sonner';
 
 const CURATED_PARTNERS = [
@@ -67,7 +66,7 @@ export default function VendorPortalPage() {
     email: '',
     role: 'vendor'
   });
-  const [activeTab, setActiveTab] = useState<'wallet' | 'wholesale' | 'testimonials' | 'branding' | 'clients' | 'marketing'>('wallet');
+  const [activeTab, setActiveTab] = useState<'wallet' | 'clients' | 'branding' | 'testimonials' | 'marketing'>('wallet');
 
   // Partner Testimonial Rewards State
   const [testimonials, setTestimonials] = useState<VideoTestimonialSubmission[]>([]);
@@ -120,77 +119,6 @@ export default function VendorPortalPage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [isSaving, setIsSaving] = useState(false);
   const [isBrandingSaved, setIsBrandingSaved] = useState(false);
-
-  // Mayar Payment State for Wholesale Packages
-  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [pendingPaymentData, setPendingPaymentData] = useState<{
-    amount: number;
-    title: string;
-    description: string;
-    isSimulation: boolean;
-    paymentUrl?: string;
-    eventsCount: number;
-  } | null>(null);
-  const [purchasingPlan, setPurchasingPlan] = useState<string | null>(null);
-  const [voucherQuota, setVoucherQuota] = useState<number>(0);
-
-  const handleBuyWholesalePackage = async (packageTitle: string, eventsCount: number, price: number) => {
-    setPurchasingPlan(packageTitle);
-    try {
-      const payRes = await fetch('/api/payment/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          isWholesale: true,
-          amount: price,
-          wholesaleTitle: packageTitle,
-          eventsCount,
-          name: companyName || vendor.name,
-          email: vendor.email || 'vendor@sudutbingkai.id',
-          vendorId: vendor.id || 'vendor_vows_co'
-        })
-      });
-
-      const payData = await payRes.json();
-      if (payData.success) {
-        if (!payData.isSimulation && payData.paymentUrl && !payData.paymentUrl.startsWith('/')) {
-          window.location.href = payData.paymentUrl;
-          return;
-        }
-
-        setPendingPaymentData({
-          amount: payData.amount || price,
-          title: `Paket Grosir ${packageTitle}`,
-          description: `Voucher Kuota ${eventsCount} Acara untuk ${companyName}`,
-          isSimulation: payData.isSimulation ?? true,
-          paymentUrl: payData.paymentUrl,
-          eventsCount
-        });
-        setPaymentModalOpen(true);
-      } else {
-        toast.error('Gagal memproses pembayaran: ' + (payData.error || 'Terjadi kesalahan'));
-      }
-    } catch (e: any) {
-      toast.error('Error memulai pembayaran: ' + e.message);
-    } finally {
-      setPurchasingPlan(null);
-    }
-  };
-
-  const handlePaymentSuccess = () => {
-    setPaymentModalOpen(false);
-    const addedCount = pendingPaymentData?.eventsCount || 0;
-    setVoucherQuota(prev => prev + addedCount);
-    
-    // Update vendor session clientCount
-    const updatedVendor = { ...vendor, clientCount: (vendor.clientCount || 0) + addedCount };
-    setVendor(updatedVendor);
-    setClientSession(updatedVendor);
-
-    toast.success(`Pembayaran Berhasil! +${addedCount} Kuota Acara telah aktif di akun ${companyName}.`, {
-      duration: 5000
-    });
-  };
 
   const handleCopyReferralCode = () => {
     navigator.clipboard.writeText(referralCode);
@@ -258,7 +186,7 @@ export default function VendorPortalPage() {
     }
   };
 
-  // Custom Wholesale Calculator State
+  // Partner Commission Calculator State
   const [customEvents, setCustomEvents] = useState<number>(5);
   const [customPlan, setCustomPlan] = useState<'event' | 'wedding' | 'unlimited'>('wedding');
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
@@ -297,29 +225,18 @@ export default function VendorPortalPage() {
 
     setIsPartnerLanding(false);
     setVendor(session);
-    setVoucherQuota(session.clientCount ?? 0);
     if (session.companyName) setCompanyName(session.companyName);
     else if (session.name) setCompanyName(session.name);
     if (session.instagram) setInstagram(session.instagram);
     if (session.phone) setPhone(session.phone);
 
-    // Check payment return from Mayar wholesale checkout
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('paid') === 'true') {
-        toast.success('Pembayaran Paket Grosir Berhasil! Kuota voucher acara Anda telah aktif.');
-      }
-    }
-
-    // Refresh live vendor quota & balance from database
+    // Refresh live vendor balance from database
     fetch('/api/vendors')
       .then(res => res.json())
       .then(data => {
         if (data.success && data.vendors) {
           const fresh = data.vendors.find((v: any) => v.id === session.id || (session.email && v.email === session.email));
           if (fresh) {
-            const count = fresh.wholesaleTokens || fresh.clientCount || 0;
-            if (count > 0) setVoucherQuota(count);
             if (fresh.walletBalance !== undefined) setWalletBalance(fresh.walletBalance);
             if (fresh.totalEarnings !== undefined) setTotalEarnings(fresh.totalEarnings);
           }
@@ -680,7 +597,7 @@ export default function VendorPortalPage() {
     }
   };
 
-  // Custom Wholesale Calculator Mathematics
+  // Partner Commission Calculator Mathematics
   const planDetails = {
     event: { name: 'Paket Event (150 Tamu)', basePrice: 269000 },
     wedding: { name: 'Paket Wedding (300 Tamu)', basePrice: 499000 },
@@ -689,27 +606,10 @@ export default function VendorPortalPage() {
 
   const currentPlanInfo = planDetails[customPlan];
   const normalTotalPrice = customEvents * currentPlanInfo.basePrice;
-
-  // Tiered discount based on quantity
-  let discountPercent = 0;
-  if (customEvents >= 20) {
-    discountPercent = 45;
-  } else if (customEvents >= 10) {
-    discountPercent = 40;
-  } else if (customEvents >= 5) {
-    discountPercent = 30;
-  } else if (customEvents >= 3) {
-    discountPercent = 25;
-  } else if (customEvents >= 2) {
-    discountPercent = 15;
-  } else {
-    discountPercent = 0;
-  }
-
-  const wholesaleTotalPrice = Math.round(normalTotalPrice * (1 - discountPercent / 100));
-  const savingsAmount = normalTotalPrice - wholesaleTotalPrice;
-  const costPerEvent = customEvents > 0 ? Math.round(wholesaleTotalPrice / customEvents) : 0;
-  const profitMarginPercent = costPerEvent > 0 ? Math.round((savingsAmount / wholesaleTotalPrice) * 100) : 0;
+  const commissionRatePercent = customEvents >= 10 ? 20 : 15;
+  const partnerTierName = customEvents >= 10 ? 'Mitra Elite (20%)' : 'Mitra Pro (15%)';
+  const commissionEarned = Math.round(normalTotalPrice * (commissionRatePercent / 100));
+  const commissionPerEvent = customEvents > 0 ? Math.round(commissionEarned / customEvents) : 0;
 
   const formatRp = (num: number) => {
     return new Intl.NumberFormat('id-ID').format(num);
@@ -750,7 +650,7 @@ export default function VendorPortalPage() {
               {/* Navigation Anchors */}
               <div className="desktop-only" style={{ display: 'flex', gap: '24px', fontSize: '13px', color: '#515154' }}>
                 <a href="#keuntungan" style={{ color: 'inherit', textDecoration: 'none' }}>Keuntungan</a>
-                <a href="#simulasi" style={{ color: 'inherit', textDecoration: 'none' }}>Simulasi Grosir</a>
+                <a href="#simulasi" style={{ color: 'inherit', textDecoration: 'none' }}>Simulasi Komisi</a>
                 <a href="#cara-kerja" style={{ color: 'inherit', textDecoration: 'none' }}>Cara Kerja</a>
                 <a href="#faq" style={{ color: 'inherit', textDecoration: 'none' }}>FAQ</a>
               </div>
@@ -905,7 +805,7 @@ export default function VendorPortalPage() {
               </h1>
 
               <p style={{ color: '#6E6E73', fontSize: '15.5px', lineHeight: 1.6, margin: '0 auto 28px', maxWidth: '680px' }}>
-                Solusi kamera sekali pakai digital untuk hari pernikahan: tanpa instalasi aplikasi di HP tamu, tanpa modal kamera fisik, dan tanpa beban kru operasional di lokasi. Dapatkan komisi pasif hingga 20% atau nikmati harga grosir hemat s/d 45%.
+                Solusi kamera sekali pakai digital untuk hari pernikahan: tanpa instalasi aplikasi di HP tamu, tanpa modal kamera fisik, dan tanpa beban kru operasional di lokasi. Dapatkan komisi pasif hingga 20% per acara klien, 100% tanpa modal, dan tanpa beli kuota.
               </p>
 
               <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '36px' }}>
@@ -936,7 +836,7 @@ export default function VendorPortalPage() {
                   style={{ padding: '13px 24px', fontSize: '14px', textDecoration: 'none', color: '#1D1D1F', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
                 >
                   <Calculator size={15} color="#C27803" />
-                  <span>Simulasi Keuntungan Grosir</span>
+                  <span>Simulasi Potensi Komisi</span>
                 </a>
               </div>
 
@@ -946,7 +846,7 @@ export default function VendorPortalPage() {
                   <DollarSign size={13} color="#C27803" /> Komisi 15% - 20% Dicairkan Cepat
                 </span>
                 <span className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', color: '#515154' }}>
-                  <Award size={13} color="#C27803" /> Diskon Grosir Bertingkat s/d 45%
+                  <Award size={13} color="#C27803" /> Tanpa Modal & Tanpa Kuota
                 </span>
                 <span className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', color: '#515154' }}>
                   <Camera size={13} color="#C27803" /> Branding Logo WO di Kamera Tamu
@@ -987,13 +887,13 @@ export default function VendorPortalPage() {
 
                 <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.88)' }}>
                   <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803', marginBottom: '16px' }}>
-                    <Building size={20} />
+                    <ShieldCheck size={20} />
                   </div>
                   <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '8px' }}>
-                    Paket Grosir untuk Bundle Layanan WO
+                    100% Tanpa Modal & Tanpa Kuota
                   </strong>
                   <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
-                    Beli kuota voucher acara secara grosir dengan potongan harga hingga 45%. Sertakan sebagai fasilitas add-on bernilai tinggi dalam proposal penawaran pernikahan Anda untuk margin usaha ekstra.
+                    Tidak perlu menyetok kuota voucher atau menanggung risiko modal. Cukup rekomendasikan kode promo unik Anda kepada calon pengantin. Komisi 15%–20% otomatis masuk ke dompet digital Anda.
                   </p>
                 </div>
 
@@ -1023,17 +923,17 @@ export default function VendorPortalPage() {
               </div>
             </div>
 
-            {/* Interactive Wholesale Calculator */}
+            {/* Interactive Commission Calculator */}
             <div id="simulasi" className="glass-card" style={{ padding: '36px', borderRadius: '24px', marginBottom: '64px', scrollMarginTop: '80px', background: 'rgba(255, 255, 255, 0.92)', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 12px 36px rgba(0,0,0,0.04)' }}>
               <div style={{ textAlign: 'center', maxWidth: '640px', margin: '0 auto 28px' }}>
                 <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px' }}>
-                  KALKULATOR KEUNTUNGAN
+                  KALKULATOR POTENSI KOMISI
                 </span>
                 <h3 className="font-display-serif" style={{ fontSize: '26px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 8px' }}>
-                  Hitung Simulasi Diskon & Margin Paket Grosir
+                  Simulasi Komisi Pasif Agensi Anda
                 </h3>
                 <p style={{ fontSize: '13.5px', color: '#6E6E73', margin: 0 }}>
-                  Pilih estimasi jumlah acara klien Anda dalam setahun untuk melihat potensi penghematan dan margin usaha yang Anda peroleh.
+                  Pilih estimasi jumlah acara klien pernikahan yang Anda tangani untuk melihat potensi pendapatan bersih yang langsung cair ke rekening bank Anda.
                 </p>
               </div>
 
@@ -1100,24 +1000,29 @@ export default function VendorPortalPage() {
                 {/* Calculation Summary Card */}
                 <div style={{ background: '#FBFBFA', borderRadius: '18px', padding: '24px', border: '1px solid rgba(0,0,0,0.07)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#6E6E73' }}>
-                    <span>Harga Normal ({customEvents} Acara):</span>
-                    <span style={{ textDecoration: 'line-through' }}>Rp {formatRp(normalTotalPrice)}</span>
+                    <span>Nilai Transaksi Klien ({customEvents} Acara):</span>
+                    <span style={{ fontWeight: 600, color: '#1D1D1F' }}>Rp {formatRp(normalTotalPrice)}</span>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', fontSize: '13px', color: '#27AE60', fontWeight: 600 }}>
-                    <span>Diskon Grosir Agensi ({discountPercent}%):</span>
-                    <span>- Rp {formatRp(savingsAmount)}</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', fontSize: '13px', color: '#C27803', fontWeight: 600 }}>
+                    <span>Tingkat Komisi Agensi:</span>
+                    <span>{partnerTierName}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', fontSize: '12.5px', color: '#10B981', fontWeight: 600 }}>
+                    <span>Modal & Risiko WO:</span>
+                    <span>Rp 0 (100% Bebas Risiko)</span>
                   </div>
 
                   <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '14px', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#1D1D1F' }}>Total Biaya Grosir:</span>
-                      <strong style={{ fontSize: '24px', fontWeight: 800, color: '#C27803' }}>
-                        Rp {formatRp(wholesaleTotalPrice)}
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#1D1D1F' }}>Potensi Komisi Bersih:</span>
+                      <strong style={{ fontSize: '24px', fontWeight: 800, color: '#10B981' }}>
+                        Rp {formatRp(commissionEarned)}
                       </strong>
                     </div>
                     <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '4px' }}>
-                      Hanya Rp {formatRp(costPerEvent)} per acara (Potensi margin margin usaha Rp {formatRp(savingsAmount)})
+                      Rata-rata Rp {formatRp(commissionPerEvent)} per acara • Otomatis masuk dompet digital & siap ditarik ke bank
                     </span>
                   </div>
 
@@ -1128,7 +1033,7 @@ export default function VendorPortalPage() {
                       className="btn-apple-black"
                       style={{ width: '100%', padding: '12px', fontSize: '13.5px', cursor: 'pointer', textAlign: 'center', borderRadius: '12px' }}
                     >
-                      Daftar Agensi WO untuk Ambil Penawaran Ini
+                      Daftar Agensi WO untuk Klaim Komisi Ini
                     </button>
                   ) : (
                     <Link
@@ -1136,7 +1041,7 @@ export default function VendorPortalPage() {
                       className="btn-apple-black"
                       style={{ width: '100%', padding: '12px', fontSize: '13.5px', textDecoration: 'none', display: 'block', textAlign: 'center', borderRadius: '12px' }}
                     >
-                      Daftar Jadi Mitra untuk Klaim Grosir
+                      Daftar Jadi Mitra untuk Klaim Komisi
                     </Link>
                   )}
                 </div>
@@ -1254,8 +1159,8 @@ export default function VendorPortalPage() {
                     a: 'Komisi 15% - 20% otomatis masuk ke saldo dompet mitra Anda segera setelah klien menyelesaikan transaksi. Anda dapat mencairkan saldo kapan saja setelah mencapai batas minimum penarikan Rp 100.000 ke seluruh rekening bank di Indonesia.'
                   },
                   {
-                    q: 'Apakah kuota voucher grosir memiliki masa kedaluwarsa?',
-                    a: 'Tidak. Kuota voucher acara yang dibeli dengan harga grosir berlaku selamanya tanpa kedaluwarsa. Anda dapat menggunakannya kapan pun klien Anda membutuhkannya.'
+                    q: 'Apakah saya wajib membeli kuota atau deposit modal terlebih dahulu?',
+                    a: 'Sama sekali tidak! Program kemitraan ini 100% tanpa modal awal dan tanpa beban beli kuota grosir. Anda cukup merekomendasikan kode promo unik Anda kepada calon pengantin. Setiap transaksi berhasil, komisi 15%–20% langsung otomatis masuk ke saldo dompet mitra Anda dan siap ditarik ke rekening bank Anda.'
                   },
                   {
                     q: 'Bagaimana jika saya calon pengantin dan tidak sengaja membuka halaman ini?',
@@ -1500,8 +1405,8 @@ export default function VendorPortalPage() {
             </div>
 
             <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>SISA KUOTA GROSIR</span>
-              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{voucherQuota} Kuota Siap</strong>
+              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>TOTAL ACARA KLIEN</span>
+              <strong style={{ fontSize: '20px', color: '#1D1D1F' }}>{clients.length} Acara Terdaftar</strong>
             </div>
 
             <div>
@@ -1537,11 +1442,11 @@ export default function VendorPortalPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('wholesale')}
+            onClick={() => setActiveTab('clients')}
             className="glass-pill"
             style={{
-              background: activeTab === 'wholesale' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
-              color: activeTab === 'wholesale' ? '#FFFFFF' : '#1D1D1F',
+              background: activeTab === 'clients' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
+              color: activeTab === 'clients' ? '#FFFFFF' : '#1D1D1F',
               padding: '10px 18px',
               fontSize: '13px',
               fontWeight: 600,
@@ -1552,31 +1457,9 @@ export default function VendorPortalPage() {
               whiteSpace: 'nowrap'
             }}
           >
-            <Calculator size={14} />
-            <span className="desktop-only">Beli Kuota Reseller (Grosir)</span>
-            <span className="mobile-only">Beli Kuota</span>
-          </button>
-
-          <button
-            onClick={() => setActiveTab('testimonials')}
-            className="glass-pill"
-            style={{
-              background: activeTab === 'testimonials' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
-              color: activeTab === 'testimonials' ? '#FFFFFF' : '#1D1D1F',
-              padding: '10px 18px',
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              whiteSpace: 'nowrap',
-              border: activeTab === 'testimonials' ? '1px solid #F59E0B' : '1px solid rgba(245, 158, 11, 0.3)'
-            }}
-          >
-            <Video size={14} color="#F59E0B" />
-            <span className="desktop-only">Bonus Video Testimoni (+Rp 50k)</span>
-            <span className="mobile-only">Bonus Video (+50k)</span>
+            <Users size={14} />
+            <span className="desktop-only">Daftar Klien Acara ({clients.length})</span>
+            <span className="mobile-only">Klien ({clients.length})</span>
           </button>
 
           <button
@@ -1601,11 +1484,11 @@ export default function VendorPortalPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('clients')}
+            onClick={() => setActiveTab('testimonials')}
             className="glass-pill"
             style={{
-              background: activeTab === 'clients' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
-              color: activeTab === 'clients' ? '#FFFFFF' : '#1D1D1F',
+              background: activeTab === 'testimonials' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
+              color: activeTab === 'testimonials' ? '#FFFFFF' : '#1D1D1F',
               padding: '10px 18px',
               fontSize: '13px',
               fontWeight: 600,
@@ -1613,12 +1496,13 @@ export default function VendorPortalPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              whiteSpace: 'nowrap'
+              whiteSpace: 'nowrap',
+              border: activeTab === 'testimonials' ? '1px solid #F59E0B' : '1px solid rgba(245, 158, 11, 0.3)'
             }}
           >
-            <Users size={14} />
-            <span className="desktop-only">Daftar Klien Acara ({clients.length})</span>
-            <span className="mobile-only">Klien ({clients.length})</span>
+            <Video size={14} color="#F59E0B" />
+            <span className="desktop-only">Bonus Video Testimoni (+Rp 50k)</span>
+            <span className="mobile-only">Bonus Video (+50k)</span>
           </button>
 
           <button
@@ -1928,521 +1812,6 @@ export default function VendorPortalPage() {
                   </table>
                 </div>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* TAB: PAKET GROSIR & CUSTOM CALCULATOR */}
-        {activeTab === 'wholesale' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '36px' }}>
-            {/* Top Wholesale Intro */}
-            <div className="glass-card form-section-card" style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(246, 240, 230, 0.6) 100%)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
-                <div>
-                  <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
-                    PROGRAM RESELLER & MITRA WEDDING ORGANIZER
-                  </span>
-                  <h2 style={{ fontSize: '28px', fontWeight: 700, color: '#1D1D1F', marginBottom: '8px' }}>
-                    Hemat hingga 45% dengan Paket Grosir & Kuota Fleksibel
-                  </h2>
-                  <p style={{ color: '#515154', fontSize: '14.5px', maxWidth: '720px', lineHeight: 1.6 }}>
-                    Dapatkan modal jauh lebih murah dibanding harga eceran. Masukkan SudutBingkai ke dalam proposal paket wedding Anda dan nikmati <strong>margin keuntungan 50% - 100%+</strong> setiap ada klien yang menikah!
-                  </p>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <div style={{ background: '#FFFFFF', padding: '12px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
-                    <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Masa Berlaku Kuota</span>
-                    <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>Fleksibel s/d 2 Tahun</strong>
-                  </div>
-                  <div style={{ background: '#FFFFFF', padding: '12px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
-                    <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Logo Vendor</span>
-                    <strong style={{ fontSize: '14px', color: '#C27803' }}>Co-Branding 100% Gratis</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* SECTION 1: FIXED WHOLESALE PACKAGES */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '18px' }}>
-                <div>
-                  <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F' }}>
-                    Pilihan Paket Grosir Siap Pakai
-                  </h3>
-                  <p style={{ color: '#6E6E73', fontSize: '13px' }}>
-                    Paket instan terpopuler untuk wedding organizer skala studio hingga agensi besar.
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(225px, 1fr))', gap: '16px' }}>
-                {/* 3 Acara */}
-                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <span className="font-mono-film" style={{ color: '#86868B', fontSize: '10.5px' }}>STARTER WO (3 ACARA)</span>
-                    <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '6px 0 2px' }}>Paket 3 Acara</h4>
-                    <span style={{ fontSize: '11.5px', color: '#6E6E73' }}>Kapasitas 300 tamu/acara</span>
-
-                    <div style={{ margin: '14px 0 8px' }}>
-                      <span style={{ textDecoration: 'line-through', color: '#86868B', fontSize: '13px', display: 'block' }}>
-                        Rp 1.497.000
-                      </span>
-                      <strong style={{ fontSize: '24px', fontWeight: 800, color: '#1D1D1F' }}>
-                        Rp 1.120.000
-                      </strong>
-                    </div>
-
-                    <div style={{ display: 'inline-block', padding: '3px 8px', borderRadius: '6px', background: 'rgba(39, 174, 96, 0.1)', color: '#27AE60', fontSize: '11px', fontWeight: 600, marginBottom: '16px' }}>
-                      Hemat 25% • Rp 373rb/acara
-                    </div>
-
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>3 Voucher Kuota Wedding (300 Tamu)</span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Masa aktif kuota 12 bulan</span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Co-branding logo WO di kartu QR tamu</span></li>
-                    </ul>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleBuyWholesalePackage('3 Acara', 3, 1120000)}
-                    disabled={purchasingPlan === '3 Acara'}
-                    className="glass-pill"
-                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', fontWeight: 600, width: '100%', cursor: 'pointer' }}
-                  >
-                    {purchasingPlan === '3 Acara' ? 'Menyiapkan...' : 'Beli Paket 3 Acara'}
-                  </button>
-                </div>
-
-                {/* 5 Acara */}
-                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <span className="font-mono-film" style={{ color: '#86868B', fontSize: '10.5px' }}>STUDIO WO (5 ACARA)</span>
-                    <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '6px 0 2px' }}>Paket 5 Acara</h4>
-                    <span style={{ fontSize: '11.5px', color: '#6E6E73' }}>Kapasitas 300 tamu/acara</span>
-
-                    <div style={{ margin: '14px 0 8px' }}>
-                      <span style={{ textDecoration: 'line-through', color: '#86868B', fontSize: '13px', display: 'block' }}>
-                        Rp 2.495.000
-                      </span>
-                      <strong style={{ fontSize: '24px', fontWeight: 800, color: '#1D1D1F' }}>
-                        Rp 1.745.000
-                      </strong>
-                    </div>
-
-                    <div style={{ display: 'inline-block', padding: '3px 8px', borderRadius: '6px', background: 'rgba(39, 174, 96, 0.1)', color: '#27AE60', fontSize: '11px', fontWeight: 600, marginBottom: '16px' }}>
-                      Hemat 30% • Rp 349rb/acara
-                    </div>
-
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>5 Voucher Kuota Wedding (300 Tamu)</span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Masa aktif kuota 18 bulan</span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Logo WO tayang di homepage SudutBingkai</span></li>
-                    </ul>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleBuyWholesalePackage('5 Acara', 5, 1745000)}
-                    disabled={purchasingPlan === '5 Acara'}
-                    className="glass-pill"
-                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', fontWeight: 600, width: '100%', cursor: 'pointer' }}
-                  >
-                    {purchasingPlan === '5 Acara' ? 'Menyiapkan...' : 'Beli Paket 5 Acara'}
-                  </button>
-                </div>
-
-                {/* 10 Acara (HIGHLIGHTED / POPULER) */}
-                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', border: '2px solid #C27803', background: '#FFFFFF', position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxShadow: '0 8px 32px rgba(194, 120, 3, 0.08)' }}>
-                  <div style={{ position: 'absolute', top: '-11px', left: '50%', transform: 'translateX(-50%)', background: '#C27803', color: '#FFFFFF', padding: '2px 10px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, letterSpacing: '0.04em' }}>
-                    PALING LARIS • HEMAT 40%
-                  </div>
-
-                  <div>
-                    <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>AGENCY PRO (10 ACARA)</span>
-                    <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '6px 0 2px' }}>Paket 10 Acara</h4>
-                    <span style={{ fontSize: '11.5px', color: '#6E6E73' }}>Kapasitas 300 tamu/acara</span>
-
-                    <div style={{ margin: '14px 0 8px' }}>
-                      <span style={{ textDecoration: 'line-through', color: '#86868B', fontSize: '13px', display: 'block' }}>
-                        Rp 4.990.000
-                      </span>
-                      <strong style={{ fontSize: '24px', fontWeight: 800, color: '#C27803' }}>
-                        Rp 2.990.000
-                      </strong>
-                    </div>
-
-                    <div style={{ display: 'inline-block', padding: '3px 8px', borderRadius: '6px', background: 'rgba(194, 120, 3, 0.12)', color: '#C27803', fontSize: '11px', fontWeight: 600, marginBottom: '16px' }}>
-                      Hanya Rp 299rb/acara (Cuan 67%+)
-                    </div>
-
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>10 Voucher Kuota Wedding (300 Tamu)</span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Masa aktif 24 bulan (2 tahun penuh)</span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Prioritas Bantuan CS WhatsApp 24/7</span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Featured badge di halaman Beranda</span></li>
-                    </ul>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleBuyWholesalePackage('10 Acara', 10, 2990000)}
-                    disabled={purchasingPlan === '10 Acara'}
-                    className="btn-apple-black"
-                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', background: '#C27803', color: '#FFFFFF', width: '100%', cursor: 'pointer' }}
-                  >
-                    {purchasingPlan === '10 Acara' ? 'Menyiapkan...' : 'Beli Paket 10 Acara'}
-                  </button>
-                </div>
-
-                {/* 20 Acara (ENTERPRISE) */}
-                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <span className="font-mono-film" style={{ color: '#86868B', fontSize: '10.5px' }}>ENTERPRISE (20 ACARA)</span>
-                    <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '6px 0 2px' }}>Paket 20 Acara</h4>
-                    <span style={{ fontSize: '11.5px', color: '#6E6E73' }}>Kapasitas 300 tamu/acara</span>
-
-                    <div style={{ margin: '14px 0 8px' }}>
-                      <span style={{ textDecoration: 'line-through', color: '#86868B', fontSize: '13px', display: 'block' }}>
-                        Rp 9.980.000
-                      </span>
-                      <strong style={{ fontSize: '24px', fontWeight: 800, color: '#1D1D1F' }}>
-                        Rp 5.490.000
-                      </strong>
-                    </div>
-
-                    <div style={{ display: 'inline-block', padding: '3px 8px', borderRadius: '6px', background: 'rgba(39, 174, 96, 0.1)', color: '#27AE60', fontSize: '11px', fontWeight: 600, marginBottom: '16px' }}>
-                      Diskon 45% • Rp 274rb/acara
-                    </div>
-
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>20 Voucher Kuota Wedding (300 Tamu)</span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span><strong>Masa aktif selamanya (No Expiry)</strong></span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Custom branding di live proyektor</span></li>
-                    </ul>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleBuyWholesalePackage('20 Acara', 20, 5490000)}
-                    disabled={purchasingPlan === '20 Acara'}
-                    className="glass-pill"
-                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', fontWeight: 600, width: '100%', cursor: 'pointer' }}
-                  >
-                    {purchasingPlan === '20 Acara' ? 'Menyiapkan...' : 'Beli Paket 20 Acara'}
-                  </button>
-                </div>
-
-                {/* UNLIMITED ANNUAL */}
-                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', background: 'linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(235, 235, 237, 0.7) 100%)' }}>
-                  <div>
-                    <span className="font-mono-film" style={{ color: '#1D1D1F', fontSize: '10.5px' }}>VIP ANNUAL PASS</span>
-                    <h4 style={{ fontSize: '18px', fontWeight: 700, margin: '6px 0 2px' }}>Unlimited 1 Tahun</h4>
-                    <span style={{ fontSize: '11.5px', color: '#6E6E73' }}>Acara Tanpa Batas</span>
-
-                    <div style={{ margin: '14px 0 8px' }}>
-                      <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block' }}>
-                        Berlaku 365 Hari
-                      </span>
-                      <strong style={{ fontSize: '24px', fontWeight: 800, color: '#1D1D1F' }}>
-                        Rp 8.900.000
-                      </strong>
-                    </div>
-
-                    <div style={{ display: 'inline-block', padding: '3px 8px', borderRadius: '6px', background: 'rgba(0, 0, 0, 0.08)', color: '#1D1D1F', fontSize: '11px', fontWeight: 600, marginBottom: '16px' }}>
-                      Bebas Ratusan Wedding
-                    </div>
-
-                    <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Unlimited kuota acara selama 1 tahun</span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Maksimal 300 tamu per event</span></li>
-                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Dedicated Account Manager</span></li>
-                    </ul>
-                  </div>
-
-                  <a
-                    href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo SudutBingkai, saya dari WO ${companyName} tertarik dengan Paket VIP Unlimited 1 Tahun (Rp 8.900.000). Mohon info lengkap dan pendaftarannya.`)}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="glass-pill"
-                    style={{ textAlign: 'center', padding: '10px', fontSize: '12.5px', textDecoration: 'none', fontWeight: 600 }}
-                  >
-                    Konsultasi VIP Unlimited
-                  </a>
-                </div>
-              </div>
-
-              {/* B2B Corporate Helper Banner */}
-              <div style={{
-                marginTop: '20px',
-                padding: '14px 18px',
-                background: 'rgba(0, 0, 0, 0.03)',
-                borderRadius: '14px',
-                border: '1px solid rgba(0, 0, 0, 0.06)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                flexWrap: 'wrap'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: '#515154' }}>
-                  <ShieldCheck size={16} color="#C27803" />
-                  <span>
-                    <strong>Kebutuhan Korporat:</strong> Memerlukan Faktur Pajak PT, PKS Resmi, atau Pembayaran via Giro Perusahaan?
-                  </span>
-                </div>
-                <a
-                  href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Tim SudutBingkai, saya dari ${companyName} ingin konsultasi kebutuhan paket B2B / Faktur Pajak PT / PKS resmi.`)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="glass-pill"
-                  style={{ fontSize: '11.5px', padding: '6px 12px', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <MessageCircle size={13} color="#27AE60" />
-                  <span>Hubungi Tim Sales via WhatsApp</span>
-                </a>
-              </div>
-            </div>
-
-            {/* SECTION 2: KALKULATOR GROSIR CUSTOM (INTERAKTIF & FLEKSIBEL) */}
-            <div className="glass-card" style={{ padding: '36px', borderRadius: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803' }}>
-                  <Calculator size={20} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '22px', fontWeight: 700, color: '#1D1D1F' }}>
-                    Kalkulator Paket Grosir Custom
-                  </h3>
-                  <span style={{ fontSize: '13px', color: '#6E6E73' }}>
-                    Tentukan sendiri jumlah kuota acara sesuai jadwal wedding WO Anda. Diskon dihitung otomatis!
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '32px', marginTop: '28px' }}>
-                {/* Left Controls */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  {/* Select Capacity Type */}
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11.5px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '8px' }}>
-                      Pilih Kapasitas Tamu Rata-Rata Acara
-                    </label>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                      <button
-                        type="button"
-                        onClick={() => setCustomPlan('event')}
-                        className="glass-card"
-                        style={{
-                          padding: '12px 10px',
-                          borderRadius: '12px',
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          border: customPlan === 'event' ? '2px solid #1D1D1F' : '1px solid rgba(0,0,0,0.08)',
-                          background: customPlan === 'event' ? '#FFFFFF' : 'rgba(255,255,255,0.5)'
-                        }}
-                      >
-                        <strong style={{ display: 'block', fontSize: '13px', color: '#1D1D1F' }}>150 Tamu</strong>
-                        <span style={{ fontSize: '11px', color: '#86868B' }}>Rp 269rb/acara</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setCustomPlan('wedding')}
-                        className="glass-card"
-                        style={{
-                          padding: '12px 10px',
-                          borderRadius: '12px',
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          border: customPlan === 'wedding' ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
-                          background: customPlan === 'wedding' ? '#FFFFFF' : 'rgba(255,255,255,0.5)'
-                        }}
-                      >
-                        <strong style={{ display: 'block', fontSize: '13px', color: '#C27803' }}>300 Tamu</strong>
-                        <span style={{ fontSize: '11px', color: '#86868B' }}>Rp 499rb/acara</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setCustomPlan('unlimited')}
-                        className="glass-card"
-                        style={{
-                          padding: '12px 10px',
-                          borderRadius: '12px',
-                          textAlign: 'center',
-                          cursor: 'pointer',
-                          border: customPlan === 'unlimited' ? '2px solid #1D1D1F' : '1px solid rgba(0,0,0,0.08)',
-                          background: customPlan === 'unlimited' ? '#FFFFFF' : 'rgba(255,255,255,0.5)'
-                        }}
-                      >
-                        <strong style={{ display: 'block', fontSize: '13px', color: '#1D1D1F' }}>Unlimited</strong>
-                        <span style={{ fontSize: '11px', color: '#86868B' }}>Rp 999rb/acara</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Quantity Slider */}
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <label style={{ fontSize: '11.5px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B' }}>
-                        Berapa Jumlah Acara yang Ingin Dibeli?
-                      </label>
-                      <span className="font-mono-film" style={{ fontSize: '18px', fontWeight: 800, color: '#1D1D1F' }}>
-                        {customEvents} Acara
-                      </span>
-                    </div>
-
-                    <input
-                      type="range"
-                      min="1"
-                      max="40"
-                      value={customEvents}
-                      onChange={(e) => setCustomEvents(parseInt(e.target.value) || 1)}
-                      style={{
-                        width: '100%',
-                        accentColor: '#C27803',
-                        height: '6px',
-                        cursor: 'pointer'
-                      }}
-                    />
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#86868B', marginTop: '6px' }}>
-                      <span>1 Acara (Normal)</span>
-                      <span>5 Acara (-30%)</span>
-                      <span>10 Acara (-40%)</span>
-                      <span>20+ Acara (-45%)</span>
-                    </div>
-
-                    {/* Quick Button Presets */}
-                    <div style={{ display: 'flex', gap: '6px', marginTop: '12px', flexWrap: 'wrap' }}>
-                      {[2, 4, 7, 12, 15, 25].map(qty => (
-                        <button
-                          key={qty}
-                          type="button"
-                          onClick={() => setCustomEvents(qty)}
-                          className="glass-pill"
-                          style={{
-                            padding: '4px 10px',
-                            fontSize: '11.5px',
-                            background: customEvents === qty ? '#1D1D1F' : 'transparent',
-                            color: customEvents === qty ? '#FFFFFF' : '#1D1D1F',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          +{qty} Acara
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Tier Progress Indicator */}
-                  <div style={{ background: 'rgba(0,0,0,0.02)', padding: '14px 16px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.05)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '4px' }}>
-                      <span style={{ color: '#515154' }}>Status Diskon Grosir:</span>
-                      <strong style={{ color: discountPercent > 0 ? '#27AE60' : '#86868B' }}>
-                        {discountPercent > 0 ? `Aktif Diskon ${discountPercent}%` : 'Belum Ada Diskon (Minimal 2 acara)'}
-                      </strong>
-                    </div>
-                    {discountPercent < 45 && (
-                      <span style={{ fontSize: '11px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
-                        <Lightbulb size={12} color="#C27803" /> Tambah {customEvents < 5 ? 5 - customEvents : customEvents < 10 ? 10 - customEvents : 20 - customEvents} acara lagi untuk membuka diskon {customEvents < 5 ? '30%' : customEvents < 10 ? '40%' : '45%'}!
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Right Results & Profit Projection */}
-                <div style={{
-                  background: '#FFFFFF',
-                  borderRadius: '20px',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  padding: '24px 28px',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between'
-                }}>
-                  <div>
-                    <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '4px', fontSize: '11px' }}>
-                      RINGKASAN BIAYA & LABA KOTOR
-                    </span>
-                    <h4 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', marginBottom: '16px' }}>
-                      Kalkulasi Grosir {customEvents} Acara
-                    </h4>
-
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px', borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '16px', marginBottom: '16px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#6E6E73' }}>Harga Normal Eceran:</span>
-                        <span style={{ textDecoration: 'line-through', color: '#86868B' }}>
-                          Rp {formatRp(normalTotalPrice)}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#6E6E73' }}>Diskon Grosir Kemitraan:</span>
-                        <span style={{ color: '#27AE60', fontWeight: 600 }}>
-                          -Rp {formatRp(savingsAmount)} ({discountPercent}%)
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '6px', borderTop: '1px dashed rgba(0,0,0,0.08)' }}>
-                        <strong style={{ color: '#1D1D1F', fontSize: '15px' }}>Total Biaya Grosir:</strong>
-                        <strong style={{ color: '#1D1D1F', fontSize: '20px', fontWeight: 800 }}>
-                          Rp {formatRp(wholesaleTotalPrice)}
-                        </strong>
-                      </div>
-
-                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ color: '#86868B', fontSize: '12px' }}>Biaya Netto per Acara:</span>
-                        <span style={{ color: '#C27803', fontWeight: 700, fontSize: '13px' }}>
-                          Rp {formatRp(costPerEvent)} / acara
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Profit Margin Projection Card */}
-                    <div style={{ background: 'rgba(39, 174, 96, 0.08)', borderRadius: '14px', padding: '14px 16px', border: '1px solid rgba(39, 174, 96, 0.2)', marginBottom: '20px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                        <Flame size={16} color="#27AE60" />
-                        <strong style={{ fontSize: '13px', color: '#27AE60' }}>
-                          Potensi Keuntungan WO: Rp {formatRp(savingsAmount)}
-                        </strong>
-                      </div>
-                      <p style={{ fontSize: '12px', color: '#515154', lineHeight: 1.5, margin: 0 }}>
-                        Jika Anda tawarkan fasilitas kamera digital ini ke klien dengan tarif normal, Anda mengantongi <strong>margin keuntungan {profitMarginPercent}%</strong> bersih!
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleBuyWholesalePackage(`Custom ${customEvents} Acara (${currentPlanInfo.name})`, customEvents, wholesaleTotalPrice)}
-                      disabled={purchasingPlan?.startsWith('Custom')}
-                      className="btn-apple-black"
-                      style={{ textAlign: 'center', padding: '12px', fontSize: '13.5px', width: '100%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                    >
-                      <CreditCard size={16} />
-                      <span>{purchasingPlan?.startsWith('Custom') ? 'Menyiapkan Checkout...' : `Beli Paket Custom Sekarang (Rp ${formatRp(wholesaleTotalPrice)})`}</span>
-                    </button>
-
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', fontSize: '11px', color: '#86868B', marginTop: '2px' }}>
-                      <span>Masa aktif: 24 Bulan • Kuota tidak hangus</span>
-                      <a
-                        href={`https://wa.me/6281234567890?text=${encodeURIComponent(`Halo Tim SudutBingkai, saya dari WO ${companyName}. Saya ingin konsultasi / invoice resmi untuk Paket Grosir Custom ${customEvents} Acara (${currentPlanInfo.name}) total Rp ${formatRp(wholesaleTotalPrice)}.`)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ color: '#C27803', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <MessageCircle size={12} />
-                        Minta Invoice Manual via WA
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         )}
@@ -3294,17 +2663,6 @@ export default function VendorPortalPage() {
         variant={confirmModal.variant}
         onConfirm={confirmModal.onConfirm}
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-      />
-
-      {/* Mayar Payment Modal for Wholesale Quota */}
-      <MayarPaymentModal
-        isOpen={paymentModalOpen}
-        onClose={() => setPaymentModalOpen(false)}
-        onSuccess={handlePaymentSuccess}
-        title={pendingPaymentData?.title || 'Paket Grosir Vendor'}
-        description={pendingPaymentData?.description || ''}
-        amount={pendingPaymentData?.amount || 1120000}
-        isSimulation={pendingPaymentData?.isSimulation}
       />
 
       {/* Payout Request Modal */}

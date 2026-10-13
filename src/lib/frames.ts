@@ -362,7 +362,7 @@ export async function applyFrameToCanvas(
       ctx.fillStyle = '#2D4432';
       ctx.font = `700 ${Math.max(13, Math.floor(plaqueH * 0.40))}px "Georgia", serif`;
       ctx.textAlign = 'center';
-      ctx.fillText(`🌿  ${coupleOrTitle}  🌿`, width / 2, height - m - plaqueH * 0.48);
+      ctx.fillText(`✦  ${coupleOrTitle}  ✦`, width / 2, height - m - plaqueH * 0.48);
 
       ctx.fillStyle = '#78716C';
       ctx.font = `italic 500 ${Math.max(10, Math.floor(plaqueH * 0.25))}px "Georgia", serif`;
