@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Camera } from 'lucide-react';
 
 interface SkeletonLoaderProps {
   title?: string;
@@ -30,31 +29,41 @@ export default function SkeletonLoader({
       />
 
       <div style={{ maxWidth: '1060px', margin: '0 auto', padding: '40px 20px 80px', position: 'relative', zIndex: 1 }}>
-        {/* Shutter Iris & Analog Aperture Animation Centerpiece */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0 48px', textAlign: 'center' }}>
-          {/* Animated Aperture Shutter Circle */}
-          <div className="aperture-shutter-container">
-            <div className="aperture-iris-ring">
-              {/* 8 Aperture Blades */}
-              <div className="aperture-blade blade-1" />
-              <div className="aperture-blade blade-2" />
-              <div className="aperture-blade blade-3" />
-              <div className="aperture-blade blade-4" />
-              <div className="aperture-blade blade-5" />
-              <div className="aperture-blade blade-6" />
-              <div className="aperture-blade blade-7" />
-              <div className="aperture-blade blade-8" />
+        {/* Animated Sudut Bingkai Brand Logo Centerpiece */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '36px 0 44px', textAlign: 'center' }}>
+          <div className="brand-loader-wrap">
+            {/* Viewfinder Frame with 4 Sudut Bingkai Corners */}
+            <div className="brand-logo-frame">
+              <span className="brand-frame-corner corner-tl" />
+              <span className="brand-frame-corner corner-tr" />
+              <span className="brand-frame-corner corner-bl" />
+              <span className="brand-frame-corner corner-br" />
+
+              {/* Pulsing Warm Radial Aura */}
+              <div className="brand-logo-aura" />
+
+              {/* Official Brand Logo */}
+              <img
+                src="/sudut-bingkai-logo.png"
+                alt="Sudut Bingkai"
+                width={105}
+                height={75}
+                className="brand-loader-img"
+              />
+
+              {/* Light Sheen Sweep */}
+              <div className="brand-logo-sheen" />
             </div>
 
-            {/* Center Shutter Glass & Icon */}
-            <div className="aperture-lens-core">
-              <Camera size={26} color="#C27803" className="aperture-camera-icon" />
+            {/* Smooth Indeterminate Progress Track */}
+            <div className="brand-loader-track">
+              <div className="brand-loader-bar" />
             </div>
           </div>
 
-          <div style={{ marginTop: '20px' }}>
+          <div style={{ marginTop: '22px' }}>
             <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', display: 'inline-block', letterSpacing: '0.12em', marginBottom: '6px' }}>
-              • ROLL DEVELOPING PROCESS •
+              • MEMUAT ROL ANALOG •
             </span>
             <h2 className="font-display-serif" style={{ fontSize: '22px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
               {title}
