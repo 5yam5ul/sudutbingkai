@@ -32,27 +32,19 @@ export default function SkeletonLoader({
         {/* Animated Sudut Bingkai Brand Logo Centerpiece */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '36px 0 44px', textAlign: 'center' }}>
           <div className="brand-loader-wrap">
-            {/* Viewfinder Frame with 4 Sudut Bingkai Corners */}
-            <div className="brand-logo-frame">
-              <span className="brand-frame-corner corner-tl" />
-              <span className="brand-frame-corner corner-tr" />
-              <span className="brand-frame-corner corner-bl" />
-              <span className="brand-frame-corner corner-br" />
-
+            {/* Pure Brand Logo with Animation (No Card Behind) */}
+            <div className="brand-logo-container">
               {/* Pulsing Warm Radial Aura */}
               <div className="brand-logo-aura" />
 
-              {/* Official Brand Logo */}
+              {/* Official Brand Logo with Breathing Animation */}
               <img
                 src="/sudut-bingkai-logo.png"
                 alt="Sudut Bingkai"
-                width={105}
-                height={75}
+                width={124}
+                height={78}
                 className="brand-loader-img"
               />
-
-              {/* Light Sheen Sweep */}
-              <div className="brand-logo-sheen" />
             </div>
 
             {/* Smooth Indeterminate Progress Track */}
