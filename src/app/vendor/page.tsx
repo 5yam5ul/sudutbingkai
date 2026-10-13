@@ -9,13 +9,53 @@ import {
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
   CreditCard, Wallet, Share2, Video, Film, PlayCircle,
-  Printer, Tv, Eye, Award, X, AlertTriangle, Calendar, MapPin, Mail, Lightbulb, Clock
+  Printer, Tv, Eye, Award, X, AlertTriangle, Calendar, MapPin, Mail, Lightbulb, Clock,
+  Heart, ChevronDown, ChevronUp, Shield
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
 import ConfirmModal from '@/components/ConfirmModal';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
 import { toast } from 'sonner';
+
+const CURATED_PARTNERS = [
+  {
+    name: 'Vows & Co. Wedding Planner',
+    city: 'Jakarta Selatan',
+    instagram: '@vowsandco.wo',
+    logoUrl: '/images/vendors/vows.jpg'
+  },
+  {
+    name: 'Merajut Kisah Organizer',
+    city: 'Bandung',
+    instagram: '@merajutkisah.wo',
+    logoUrl: '/images/vendors/merajut.jpg'
+  },
+  {
+    name: 'Kirana Signature Wedding',
+    city: 'Denpasar & Ubud, Bali',
+    instagram: '@kiranaweddingbali',
+    logoUrl: '/images/vendors/kirana.jpg'
+  },
+  {
+    name: 'Cerita Kita Planner',
+    city: 'Surabaya',
+    instagram: '@ceritakitaplanner',
+    logoUrl: '/images/vendors/cerita.jpg'
+  },
+  {
+    name: 'Kinasih Wedding Organizer',
+    city: 'Yogyakarta',
+    instagram: '@kinasih.wo',
+    logoUrl: '/images/vendors/kinasih.jpg'
+  },
+  {
+    name: 'Lensa Cerita Cinema & Studio',
+    city: 'Jakarta Pusat',
+    instagram: '@lensacerita.id',
+    logoUrl: '/images/vendors/lensa.jpg'
+  }
+];
 
 export default function VendorPortalPage() {
   const router = useRouter();
@@ -226,14 +266,36 @@ export default function VendorPortalPage() {
   // Vendor Clients State (Clean real data)
   const [clients, setClients] = useState<any[]>([]);
 
+  // User session & landing view state
+  const [currentSession, setCurrentSession] = useState<UserAccount | null>(null);
+  const [isPartnerLanding, setIsPartnerLanding] = useState<boolean>(false);
+  const [showRegisterModal, setShowRegisterModal] = useState<boolean>(false);
+  const [regPicName, setRegPicName] = useState<string>('');
+  const [regCompanyName, setRegCompanyName] = useState<string>('');
+  const [regPhone, setRegPhone] = useState<string>('');
+  const [regCity, setRegCity] = useState<string>('Jakarta');
+  const [isRegistering, setIsRegistering] = useState<boolean>(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
+
   // Load existing vendor data, payouts & events if exists
   useEffect(() => {
     const session = getClientSession();
+    setCurrentSession(session);
+    if (session?.name) setRegPicName(session.name);
+
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('view') === 'landing') {
+        setIsPartnerLanding(true);
+      }
+    }
+
     if (!session || (session.role !== 'vendor' && session.role !== 'admin')) {
-      router.push('/login?role=vendor');
+      setIsPartnerLanding(true);
       return;
     }
 
+    setIsPartnerLanding(false);
     setVendor(session);
     setVoucherQuota(session.clientCount ?? 0);
     if (session.companyName) setCompanyName(session.companyName);
@@ -459,6 +521,80 @@ export default function VendorPortalPage() {
     router.push('/login');
   };
 
+  const handleSwitchToHost = () => {
+    const session = getClientSession();
+    const updated: UserAccount = {
+      ...(session || vendor),
+      role: 'host'
+    };
+    setClientSession(updated);
+    toast.success('Beralih ke mode Pengantin / Penyelenggara.');
+    router.push('/dashboard');
+  };
+
+  const handleExplicitRegisterVendor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!regCompanyName.trim()) {
+      toast.error('Silakan masukkan nama agensi Wedding Organizer Anda.');
+      return;
+    }
+
+    setIsRegistering(true);
+    try {
+      const email = currentSession?.email || vendor.email || '';
+      const name = regPicName.trim() || currentSession?.name || vendor.name || 'Mitra WO';
+      const cleanCompany = regCompanyName.trim();
+      const generatedRef = cleanCompany.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || `WO${Date.now().toString().slice(-4)}`;
+
+      const res = await fetch('/api/vendors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          companyName: cleanCompany,
+          email,
+          phone: regPhone.trim(),
+          city: regCity.trim() || 'Jakarta',
+          referralCode: generatedRef,
+          partnerTier: 'regular',
+          tier: 'starter',
+          commissionRate: 0.15
+        })
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || 'Gagal mendaftarkan agensi.');
+      }
+
+      const newVendorSession: UserAccount = {
+        id: data.vendor?.id || `vendor_${Date.now()}`,
+        name,
+        companyName: cleanCompany,
+        email,
+        role: 'vendor',
+        phone: regPhone.trim(),
+        city: regCity.trim() || 'Jakarta',
+        partnerTier: 'regular',
+        referralCode: generatedRef,
+        walletBalance: 0,
+        totalEarnings: 0
+      };
+
+      setClientSession(newVendorSession);
+      setVendor(newVendorSession);
+      setCompanyName(cleanCompany);
+      setCurrentSession(newVendorSession);
+      setIsPartnerLanding(false);
+      setShowRegisterModal(false);
+      toast.success(`Selamat datang di Kemitraan SudutBingkai, ${cleanCompany}! Portal kemitraan Anda telah aktif.`);
+    } catch (err: any) {
+      toast.error(err.message || 'Terjadi kesalahan saat pendaftaran.');
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -587,46 +723,718 @@ export default function VendorPortalPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FBFBFA', color: '#1D1D1F' }}>
-      {/* Top Navigation */}
-      <header className="glass-nav" style={{ padding: 'calc(12px + env(safe-area-inset-top, 0px)) 20px 12px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', position: 'sticky', top: 0, zIndex: 50 }}>
-        <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-            <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-              <img 
-                src="/sudut-bingkai-logo.png" 
-                alt="Sudut Bingkai" 
-                width={130}
-                height={32}
-                fetchPriority="high"
-                decoding="async"
-                style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }} 
-              />
-            </Link>
-            <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
-            <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
-              PORTAL MITRA VENDOR & WO
-            </span>
-          </div>
+      {isPartnerLanding ? (
+        /* PARTNER PROGRAM LANDING PAGE VIEW */
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+          {/* Landing Header Navigation */}
+          <header className="glass-nav" style={{ padding: 'calc(12px + env(safe-area-inset-top, 0px)) 20px 12px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', position: 'sticky', top: 0, zIndex: 50 }}>
+            <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                  <img 
+                    src="/sudut-bingkai-logo.png" 
+                    alt="Sudut Bingkai" 
+                    width={130}
+                    height={32}
+                    fetchPriority="high"
+                    decoding="async"
+                    style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }} 
+                  />
+                </Link>
+                <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
+                <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
+                  PROGRAM KEMITRAAN WO
+                </span>
+              </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ textAlign: 'right' }} className="desktop-only">
-              <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>{companyName}</strong>
-              <span style={{ fontSize: '11.5px', color: '#86868B' }}>Mitra Terverifikasi • {clients.length} Klien Aktif</span>
+              {/* Navigation Anchors */}
+              <div className="desktop-only" style={{ display: 'flex', gap: '24px', fontSize: '13px', color: '#515154' }}>
+                <a href="#keuntungan" style={{ color: 'inherit', textDecoration: 'none' }}>Keuntungan</a>
+                <a href="#simulasi" style={{ color: 'inherit', textDecoration: 'none' }}>Simulasi Grosir</a>
+                <a href="#cara-kerja" style={{ color: 'inherit', textDecoration: 'none' }}>Cara Kerja</a>
+                <a href="#faq" style={{ color: 'inherit', textDecoration: 'none' }}>FAQ</a>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                {currentSession?.role === 'host' ? (
+                  <>
+                    <Link
+                      href="/dashboard"
+                      className="btn-apple-black"
+                      style={{
+                        padding: '8px 16px',
+                        fontSize: '12.5px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        textDecoration: 'none'
+                      }}
+                    >
+                      <Heart size={13} color="#FFFFFF" />
+                      <span>Dashboard Acara</span>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterModal(true)}
+                      className="glass-pill"
+                      style={{
+                        padding: '8px 14px',
+                        fontSize: '12.5px',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        color: '#C27803',
+                        background: 'rgba(194, 120, 3, 0.08)',
+                        border: '1px solid rgba(194, 120, 3, 0.3)'
+                      }}
+                    >
+                      Daftar Mitra WO
+                    </button>
+                  </>
+                ) : currentSession?.role === 'vendor' ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsPartnerLanding(false)}
+                    className="btn-apple-black"
+                    style={{ padding: '8px 16px', fontSize: '12.5px', cursor: 'pointer' }}
+                  >
+                    Buka Dashboard Vendor
+                  </button>
+                ) : (
+                  <>
+                    <Link
+                      href="/login?role=vendor&mode=login"
+                      className="glass-pill"
+                      style={{ padding: '8px 14px', fontSize: '12.5px', textDecoration: 'none', color: '#1D1D1F' }}
+                    >
+                      Masuk Portal Mitra
+                    </Link>
+                    <Link
+                      href="/login?role=vendor&mode=register"
+                      className="btn-apple-black"
+                      style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none' }}
+                    >
+                      Daftar Menjadi Mitra
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="glass-pill"
-              style={{ padding: '8px 14px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-            >
-              <LogOut size={13} />
-              <span>Keluar</span>
-            </button>
-          </div>
-        </div>
-      </header>
+          </header>
 
-      {/* Main Vendor Dashboard */}
-      <main className="dashboard-main">
+          <main style={{ flex: 1, padding: '40px 20px 80px', maxWidth: '1120px', margin: '0 auto', width: '100%' }}>
+            {/* Host Alert Banner */}
+            {currentSession?.role === 'host' && (
+              <div className="glass-card" style={{
+                padding: '16px 20px',
+                borderRadius: '16px',
+                background: 'linear-gradient(135deg, rgba(194, 120, 3, 0.1) 0%, rgba(255, 255, 255, 0.95) 100%)',
+                border: '1.5px solid rgba(194, 120, 3, 0.35)',
+                marginBottom: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '14px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{
+                    width: '38px',
+                    height: '38px',
+                    borderRadius: '10px',
+                    background: 'rgba(194, 120, 3, 0.15)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#C27803',
+                    flexShrink: 0
+                  }}>
+                    <Heart size={18} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>
+                      Halo, {currentSession.name || 'Pengantin'}! Anda saat ini masuk dengan akun Pengantin.
+                    </strong>
+                    <span style={{ fontSize: '12.5px', color: '#6E6E73' }}>
+                      Ini adalah halaman informasi Program Kemitraan Agensi & Wedding Organizer. Seluruh data acara Anda tetap aman.
+                    </span>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <Link
+                    href="/dashboard"
+                    className="btn-apple-black"
+                    style={{ padding: '8px 14px', fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <span>Dashboard Acara Saya</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterModal(true)}
+                    className="glass-pill"
+                    style={{ padding: '8px 14px', fontSize: '12px', cursor: 'pointer', color: '#C27803', fontWeight: 600, border: '1px solid rgba(194, 120, 3, 0.3)' }}
+                  >
+                    Daftar Agensi WO
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Landing Hero */}
+            <div style={{ textAlign: 'center', maxWidth: '820px', margin: '0 auto 60px' }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 14px',
+                borderRadius: '999px',
+                background: 'rgba(194, 120, 3, 0.1)',
+                color: '#C27803',
+                fontSize: '11.5px',
+                fontWeight: 600,
+                marginBottom: '16px',
+                letterSpacing: '0.04em'
+              }}>
+                <Building size={13} />
+                <span>PROGRAM KEMITRAAN RESMI WO & EVENT PLANNER</span>
+              </div>
+
+              <h1 className="font-display-serif" style={{ fontSize: 'clamp(2rem, 4.5vw, 3rem)', fontWeight: 700, color: '#1D1D1F', lineHeight: 1.2, marginBottom: '18px' }}>
+                Beri Nilai Tambah Eksklusif untuk Klien dengan Pengalaman Foto Analog Tamu
+              </h1>
+
+              <p style={{ color: '#6E6E73', fontSize: '15.5px', lineHeight: 1.6, margin: '0 auto 28px', maxWidth: '680px' }}>
+                Solusi kamera sekali pakai digital untuk hari pernikahan: tanpa instalasi aplikasi di HP tamu, tanpa modal kamera fisik, dan tanpa beban kru operasional di lokasi. Dapatkan komisi pasif hingga 20% atau nikmati harga grosir hemat s/d 45%.
+              </p>
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap', marginBottom: '36px' }}>
+                {currentSession?.role === 'host' ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterModal(true)}
+                    className="btn-apple-black"
+                    style={{ padding: '13px 28px', fontSize: '14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                  >
+                    <span>Daftarkan Agensi WO Anda</span>
+                    <ArrowRight size={15} />
+                  </button>
+                ) : (
+                  <Link
+                    href="/login?role=vendor&mode=register"
+                    className="btn-apple-black"
+                    style={{ padding: '13px 28px', fontSize: '14px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
+                  >
+                    <span>Daftar Kemitraan Gratis</span>
+                    <ArrowRight size={15} />
+                  </Link>
+                )}
+
+                <a
+                  href="#simulasi"
+                  className="glass-pill"
+                  style={{ padding: '13px 24px', fontSize: '14px', textDecoration: 'none', color: '#1D1D1F', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+                >
+                  <Calculator size={15} color="#C27803" />
+                  <span>Simulasi Keuntungan Grosir</span>
+                </a>
+              </div>
+
+              {/* 4 Feature Badges */}
+              <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                <span className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', color: '#515154' }}>
+                  <DollarSign size={13} color="#C27803" /> Komisi 15% - 20% Dicairkan Cepat
+                </span>
+                <span className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', color: '#515154' }}>
+                  <Award size={13} color="#C27803" /> Diskon Grosir Bertingkat s/d 45%
+                </span>
+                <span className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', color: '#515154' }}>
+                  <Camera size={13} color="#C27803" /> Branding Logo WO di Kamera Tamu
+                </span>
+                <span className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', color: '#515154' }}>
+                  <ShieldCheck size={13} color="#C27803" /> 0 Aplikasi untuk Tamu Undangan
+                </span>
+              </div>
+            </div>
+
+            {/* 4 Core Pillars Grid */}
+            <div id="keuntungan" style={{ marginBottom: '64px', scrollMarginTop: '80px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+                <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px' }}>
+                  KEUNTUNGAN MITRA
+                </span>
+                <h2 className="font-display-serif" style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.3rem)', fontWeight: 700, color: '#1D1D1F' }}>
+                  Mengapa Wedding Organizer Memilih SudutBingkai?
+                </h2>
+              </div>
+
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                gap: '20px'
+              }}>
+                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.88)' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803', marginBottom: '16px' }}>
+                    <DollarSign size={20} />
+                  </div>
+                  <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '8px' }}>
+                    Penghasilan Tambahan (Komisi Pasif)
+                  </strong>
+                  <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
+                    Raih komisi 15% - 20% untuk setiap calon pengantin yang memesan paket melalui tautan referral atau kode promo agensi Anda. Komisi masuk otomatis ke dompet digital mitra.
+                  </p>
+                </div>
+
+                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.88)' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803', marginBottom: '16px' }}>
+                    <Building size={20} />
+                  </div>
+                  <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '8px' }}>
+                    Paket Grosir untuk Bundle Layanan WO
+                  </strong>
+                  <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
+                    Beli kuota voucher acara secara grosir dengan potongan harga hingga 45%. Sertakan sebagai fasilitas add-on bernilai tinggi dalam proposal penawaran pernikahan Anda untuk margin usaha ekstra.
+                  </p>
+                </div>
+
+                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.88)' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803', marginBottom: '16px' }}>
+                    <Award size={20} />
+                  </div>
+                  <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '8px' }}>
+                    Identitas & Branding Agensi Anda
+                  </strong>
+                  <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
+                    Logo dan nama Wedding Organizer Anda tampil elegan di template barcode cetak meja dan antarmuka kamera web tamu, memperkuat citra profesional agensi Anda di hadapan ratusan tamu undangan.
+                  </p>
+                </div>
+
+                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.88)' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803', marginBottom: '16px' }}>
+                    <Camera size={20} />
+                  </div>
+                  <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '8px' }}>
+                    100% Bebas Ribet di Hari-H
+                  </strong>
+                  <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
+                    Tamu memotret langsung lewat kamera browser ponsel tanpa instal aplikasi apa pun. Anda tidak perlu menyewa alat kamera tambahan ataupun menugaskan kru khusus di venue acara.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Wholesale Calculator */}
+            <div id="simulasi" className="glass-card" style={{ padding: '36px', borderRadius: '24px', marginBottom: '64px', scrollMarginTop: '80px', background: 'rgba(255, 255, 255, 0.92)', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 12px 36px rgba(0,0,0,0.04)' }}>
+              <div style={{ textAlign: 'center', maxWidth: '640px', margin: '0 auto 28px' }}>
+                <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px' }}>
+                  KALKULATOR KEUNTUNGAN
+                </span>
+                <h3 className="font-display-serif" style={{ fontSize: '26px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 8px' }}>
+                  Hitung Simulasi Diskon & Margin Paket Grosir
+                </h3>
+                <p style={{ fontSize: '13.5px', color: '#6E6E73', margin: 0 }}>
+                  Pilih estimasi jumlah acara klien Anda dalam setahun untuk melihat potensi penghematan dan margin usaha yang Anda peroleh.
+                </p>
+              </div>
+
+              {/* Calculator Controls */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '28px', alignItems: 'center' }}>
+                <div>
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '8px' }}>
+                    Jumlah Acara Klien WO Anda:
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '20px' }}>
+                    {[3, 5, 10, 20].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setCustomEvents(num)}
+                        style={{
+                          padding: '10px 6px',
+                          borderRadius: '12px',
+                          border: customEvents === num ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                          background: customEvents === num ? 'rgba(194, 120, 3, 0.08)' : '#FFFFFF',
+                          color: customEvents === num ? '#C27803' : '#1D1D1F',
+                          fontWeight: 700,
+                          fontSize: '13px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {num} Acara
+                      </button>
+                    ))}
+                  </div>
+
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '8px' }}>
+                    Tipe Paket Acara Rekomendasi:
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {[
+                      { id: 'event', label: 'Paket Event (150 Tamu)', price: 'Rp 269.000' },
+                      { id: 'wedding', label: 'Paket Wedding (300 Tamu)', price: 'Rp 499.000' },
+                      { id: 'unlimited', label: 'Paket Unlimited Tamu', price: 'Rp 999.000' }
+                    ].map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setCustomPlan(p.id as any)}
+                        style={{
+                          padding: '12px 14px',
+                          borderRadius: '12px',
+                          border: customPlan === p.id ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
+                          background: customPlan === p.id ? 'rgba(194, 120, 3, 0.05)' : '#FFFFFF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          cursor: 'pointer',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <span style={{ fontSize: '13px', fontWeight: customPlan === p.id ? 700 : 500, color: '#1D1D1F' }}>{p.label}</span>
+                        <span style={{ fontSize: '12px', color: '#86868B' }}>{p.price} / acara</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Calculation Summary Card */}
+                <div style={{ background: '#FBFBFA', borderRadius: '18px', padding: '24px', border: '1px solid rgba(0,0,0,0.07)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#6E6E73' }}>
+                    <span>Harga Normal ({customEvents} Acara):</span>
+                    <span style={{ textDecoration: 'line-through' }}>Rp {formatRp(normalTotalPrice)}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', fontSize: '13px', color: '#27AE60', fontWeight: 600 }}>
+                    <span>Diskon Grosir Agensi ({discountPercent}%):</span>
+                    <span>- Rp {formatRp(savingsAmount)}</span>
+                  </div>
+
+                  <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)', paddingTop: '14px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                      <span style={{ fontSize: '14px', fontWeight: 700, color: '#1D1D1F' }}>Total Biaya Grosir:</span>
+                      <strong style={{ fontSize: '24px', fontWeight: 800, color: '#C27803' }}>
+                        Rp {formatRp(wholesaleTotalPrice)}
+                      </strong>
+                    </div>
+                    <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '4px' }}>
+                      Hanya Rp {formatRp(costPerEvent)} per acara (Potensi margin margin usaha Rp {formatRp(savingsAmount)})
+                    </span>
+                  </div>
+
+                  {currentSession?.role === 'host' ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowRegisterModal(true)}
+                      className="btn-apple-black"
+                      style={{ width: '100%', padding: '12px', fontSize: '13.5px', cursor: 'pointer', textAlign: 'center', borderRadius: '12px' }}
+                    >
+                      Daftar Agensi WO untuk Ambil Penawaran Ini
+                    </button>
+                  ) : (
+                    <Link
+                      href="/login?role=vendor&mode=register"
+                      className="btn-apple-black"
+                      style={{ width: '100%', padding: '12px', fontSize: '13.5px', textDecoration: 'none', display: 'block', textAlign: 'center', borderRadius: '12px' }}
+                    >
+                      Daftar Jadi Mitra untuk Klaim Grosir
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Cara Kerja 3 Langkah */}
+            <div id="cara-kerja" style={{ marginBottom: '64px', scrollMarginTop: '80px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '36px' }}>
+                <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px' }}>
+                  ALUR KERJA MUDAH
+                </span>
+                <h2 className="font-display-serif" style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.3rem)', fontWeight: 700, color: '#1D1D1F' }}>
+                  3 Langkah Memulai Kemitraan Agensi
+                </h2>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
+                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.88)' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#1D1D1F', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '14px', marginBottom: '14px' }}>
+                    1
+                  </div>
+                  <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+                    Daftar Agensi Anda
+                  </strong>
+                  <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
+                    Buat akun mitra resmi dalam 1 menit tanpa dipungut biaya. Anda langsung mendapatkan kode promo referral dan akses ke portal mitra.
+                  </p>
+                </div>
+
+                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.88)' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#1D1D1F', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '14px', marginBottom: '14px' }}>
+                    2
+                  </div>
+                  <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+                    Tawarkan ke Calon Pengantin
+                  </strong>
+                  <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
+                    Sertakan fitur kamera tamu analog ini sebagai bonus paket WO Anda atau bagikan tautan referral Anda kepada klien.
+                  </p>
+                </div>
+
+                <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', background: 'rgba(255, 255, 255, 0.88)' }}>
+                  <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: '#1D1D1F', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '14px', marginBottom: '14px' }}>
+                    3
+                  </div>
+                  <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+                    Pantau & Cairkan Komisi
+                  </strong>
+                  <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
+                    Setiap pembayaran klien otomatis tercatat transparan. Anda dapat menarik saldo komisi langsung ke rekening bank lokal Anda kapan saja.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Verified Partners Marquee */}
+            <div style={{ marginBottom: '64px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#86868B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Dipercaya oleh Agensi Wedding Organizer di Seluruh Indonesia
+                </span>
+              </div>
+              <div className="vendor-marquee-container">
+                <div className="vendor-marquee-track">
+                  {[...CURATED_PARTNERS, ...CURATED_PARTNERS].map((p, idx) => (
+                    <div
+                      key={`${p.name}-${idx}`}
+                      className="glass-card"
+                      style={{
+                        borderRadius: '16px',
+                        padding: '10px 18px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        background: 'rgba(255, 255, 255, 0.94)',
+                        boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                        border: '1px solid rgba(0,0,0,0.06)',
+                        flexShrink: 0,
+                        minWidth: '260px'
+                      }}
+                    >
+                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803', flexShrink: 0 }}>
+                        <Building size={16} />
+                      </div>
+                      <div style={{ textAlign: 'left' }}>
+                        <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', whiteSpace: 'nowrap' }}>{p.name}</strong>
+                        <span style={{ fontSize: '11px', color: '#86868B', whiteSpace: 'nowrap' }}>{p.city} • {p.instagram}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* FAQ Kemitraan */}
+            <div id="faq" style={{ maxWidth: '780px', margin: '0 auto 64px', scrollMarginTop: '80px' }}>
+              <div style={{ textAlign: 'center', marginBottom: '28px' }}>
+                <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px' }}>
+                  TANYA JAWAB
+                </span>
+                <h2 className="font-display-serif" style={{ fontSize: '26px', fontWeight: 700, color: '#1D1D1F' }}>
+                  Pertanyaan Seputar Program Kemitraan
+                </h2>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {[
+                  {
+                    q: 'Apakah pendaftaran Mitra Vendor dipungut biaya?',
+                    a: 'Pendaftaran kemitraan 100% gratis. Tidak ada biaya pendaftaran, biaya keanggotaan bulanan, ataupun target minimum acara.'
+                  },
+                  {
+                    q: 'Kapan dan bagaimana komisi dapat dicairkan?',
+                    a: 'Komisi 15% - 20% otomatis masuk ke saldo dompet mitra Anda segera setelah klien menyelesaikan transaksi. Anda dapat mencairkan saldo kapan saja setelah mencapai batas minimum penarikan Rp 100.000 ke seluruh rekening bank di Indonesia.'
+                  },
+                  {
+                    q: 'Apakah kuota voucher grosir memiliki masa kedaluwarsa?',
+                    a: 'Tidak. Kuota voucher acara yang dibeli dengan harga grosir berlaku selamanya tanpa kedaluwarsa. Anda dapat menggunakannya kapan pun klien Anda membutuhkannya.'
+                  },
+                  {
+                    q: 'Bagaimana jika saya calon pengantin dan tidak sengaja membuka halaman ini?',
+                    a: 'Tidak perlu khawatir! Akun dan data acara pernikahan Anda tetap aman di sistem kami. Cukup klik tombol "Dashboard Acara Saya" di atas untuk kembali mengelola acara pernikahan Anda.'
+                  }
+                ].map((item, idx) => {
+                  const isOpen = openFaqIndex === idx;
+                  return (
+                    <div
+                      key={idx}
+                      className="glass-card"
+                      style={{
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                        background: 'rgba(255, 255, 255, 0.88)',
+                        border: '1px solid rgba(0,0,0,0.06)'
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setOpenFaqIndex(isOpen ? null : idx)}
+                        style={{
+                          width: '100%',
+                          padding: '16px 20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          fontSize: '14px',
+                          fontWeight: 600,
+                          color: '#1D1D1F'
+                        }}
+                      >
+                        <span>{item.q}</span>
+                        {isOpen ? <ChevronUp size={16} color="#86868B" /> : <ChevronDown size={16} color="#86868B" />}
+                      </button>
+                      {isOpen && (
+                        <div style={{ padding: '0 20px 16px', fontSize: '13px', color: '#6E6E73', lineHeight: 1.55 }}>
+                          {item.a}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Bottom CTA Banner */}
+            <div style={{
+              background: 'linear-gradient(135deg, #1D1D1F 0%, #2C2C2E 100%)',
+              color: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '40px 24px',
+              textAlign: 'center',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.12)'
+            }}>
+              <h3 className="font-display-serif" style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2rem)', fontWeight: 700, marginBottom: '12px' }}>
+                Siap Memberikan Pengalaman Berbeda untuk Calon Pengantin Anda?
+              </h3>
+              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px', maxWidth: '540px', margin: '0 auto 24px' }}>
+                Bergabunglah bersama puluhan Wedding Organizer dan nikmati komisi pasif serta kemudahan operasional foto candid tamu.
+              </p>
+              {currentSession?.role === 'host' ? (
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterModal(true)}
+                  style={{
+                    padding: '12px 28px',
+                    borderRadius: '12px',
+                    background: '#C27803',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Daftarkan Agensi WO Anda Sekarang
+                </button>
+              ) : (
+                <Link
+                  href="/login?role=vendor&mode=register"
+                  style={{
+                    padding: '12px 28px',
+                    borderRadius: '12px',
+                    background: '#C27803',
+                    color: '#FFFFFF',
+                    textDecoration: 'none',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    display: 'inline-block'
+                  }}
+                >
+                  Daftar Kemitraan Gratis Sekarang
+                </Link>
+              )}
+            </div>
+          </main>
+        </div>
+      ) : (
+        /* VENDOR PORTAL DASHBOARD VIEW */
+        <>
+          {/* Top Navigation */}
+          <header className="glass-nav" style={{ padding: 'calc(12px + env(safe-area-inset-top, 0px)) 20px 12px', borderBottom: '1px solid rgba(0, 0, 0, 0.06)', position: 'sticky', top: 0, zIndex: 50 }}>
+            <div style={{ maxWidth: '1240px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
+                  <img 
+                    src="/sudut-bingkai-logo.png" 
+                    alt="Sudut Bingkai" 
+                    width={130}
+                    height={32}
+                    fetchPriority="high"
+                    decoding="async"
+                    style={{ height: '32px', width: 'auto', objectFit: 'contain', display: 'block' }} 
+                  />
+                </Link>
+                <span style={{ color: 'rgba(0,0,0,0.15)' }}>/</span>
+                <span className="font-mono-film" style={{ color: '#C27803', fontSize: '10.5px' }}>
+                  PORTAL MITRA VENDOR & WO
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleSwitchToHost}
+                  className="glass-pill"
+                  style={{
+                    padding: '8px 14px',
+                    fontSize: '12.5px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    background: 'rgba(194, 120, 3, 0.08)',
+                    border: '1px solid rgba(194, 120, 3, 0.25)',
+                    color: '#C27803',
+                    fontWeight: 600
+                  }}
+                  title="Beralih ke mode Pengantin / Penyelenggara Acara"
+                >
+                  <Heart size={13} />
+                  <span>Mode Pengantin</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsPartnerLanding(true)}
+                  className="glass-pill desktop-only"
+                  style={{ padding: '8px 14px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                  title="Lihat Halaman Info Program Kemitraan"
+                >
+                  <Building size={13} />
+                  <span>Info Program</span>
+                </button>
+
+                <div style={{ textAlign: 'right' }} className="desktop-only">
+                  <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>{companyName}</strong>
+                  <span style={{ fontSize: '11.5px', color: '#86868B' }}>Mitra Terverifikasi • {clients.length} Klien Aktif</span>
+                </div>
+
+                <button
+                  onClick={handleLogout}
+                  className="glass-pill"
+                  style={{ padding: '8px 14px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                >
+                  <LogOut size={13} />
+                  <span>Keluar</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Main Vendor Dashboard */}
+          <main className="dashboard-main">
         {/* Vendor Header Hero */}
         <div className="glass-card form-section-card" style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
@@ -2474,6 +3282,8 @@ export default function VendorPortalPage() {
           </div>
         )}
       </main>
+      </>
+      )}
 
       {/* Sleek Custom Confirm Modal */}
       <ConfirmModal
@@ -2602,6 +3412,126 @@ export default function VendorPortalPage() {
                 {isRequestingPayout ? 'Memproses...' : 'Konfirmasi Tarik'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Explicit Registration Modal for Logged-In Hosts */}
+      {showRegisterModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.45)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '16px'
+        }}>
+          <div className="glass-card" style={{
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            padding: '32px',
+            maxWidth: '460px',
+            width: '100%',
+            boxShadow: '0 20px 48px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Building size={18} color="#C27803" />
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
+                  Daftar Kemitraan Agensi WO
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowRegisterModal(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#86868B' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, marginBottom: '20px' }}>
+              Silakan lengkapi profil agensi Anda. Data akun dan acara pernikahan Anda yang ada saat ini tetap tersimpan aman.
+            </p>
+
+            <form onSubmit={handleExplicitRegisterVendor} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '5px' }}>
+                  Nama PIC / Pengelola Agensi:
+                </label>
+                <input
+                  type="text"
+                  value={regPicName}
+                  onChange={(e) => setRegPicName(e.target.value)}
+                  placeholder="Contoh: Sarah Pramono"
+                  required
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.15)', fontSize: '13px', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '5px' }}>
+                  Nama Brand Agensi Wedding Organizer:
+                </label>
+                <input
+                  type="text"
+                  value={regCompanyName}
+                  onChange={(e) => setRegCompanyName(e.target.value)}
+                  placeholder="Contoh: Vows & Co. Wedding Planner"
+                  required
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.15)', fontSize: '13px', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '5px' }}>
+                  Kota Domisili Agensi:
+                </label>
+                <input
+                  type="text"
+                  value={regCity}
+                  onChange={(e) => setRegCity(e.target.value)}
+                  placeholder="Contoh: Jakarta / Bandung / Bali"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.15)', fontSize: '13px', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '5px' }}>
+                  Nomor WhatsApp Agensi:
+                </label>
+                <input
+                  type="text"
+                  value={regPhone}
+                  onChange={(e) => setRegPhone(e.target.value)}
+                  placeholder="Contoh: 08123456789"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1px solid rgba(0,0,0,0.15)', fontSize: '13px', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setShowRegisterModal(false)}
+                  disabled={isRegistering}
+                  className="glass-pill"
+                  style={{ padding: '10px', fontSize: '13px', cursor: 'pointer', textAlign: 'center' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRegistering}
+                  className="btn-apple-black"
+                  style={{ padding: '10px', fontSize: '13px', cursor: 'pointer', textAlign: 'center' }}
+                >
+                  {isRegistering ? 'Mendaftarkan...' : 'Aktifkan Kemitraan'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

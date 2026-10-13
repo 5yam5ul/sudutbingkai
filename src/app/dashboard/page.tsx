@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
-import { getClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
+import { getClientSession, setClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FrameId, FRAME_TEMPLATES } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
@@ -80,6 +80,7 @@ export default function BrideDashboardPage() {
   const [isZipping, setIsZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState('');
   const [showCreatedBanner, setShowCreatedBanner] = useState(false);
+  const [isHostMismatched, setIsHostMismatched] = useState(false);
 
   useEffect(() => {
     const current = getClientSession();
@@ -100,6 +101,19 @@ export default function BrideDashboardPage() {
 
     fetchData(current, requestedEventId || undefined);
   }, []);
+
+  const handleRestoreHostRole = () => {
+    if (!user) return;
+    const restoredUser: UserAccount = {
+      ...user,
+      role: 'host'
+    };
+    setUser(restoredUser);
+    setClientSession(restoredUser);
+    setIsHostMismatched(false);
+    toast.success('Peran akun Anda berhasil dikembalikan sebagai Pengantin / Penyelenggara!');
+    fetchData(restoredUser);
+  };
 
   const selectActiveEvent = async (selected: EventData) => {
     setEvent(selected);
@@ -191,7 +205,19 @@ export default function BrideDashboardPage() {
         : `/api/events?hostEmail=${encodeURIComponent(email)}`;
 
       const resEvents = await fetch(queryUrl);
-      const dataEvents = await resEvents.json();
+      let dataEvents = await resEvents.json();
+
+      // Smart recovery: If active role is 'vendor' but 0 vendor events, check if host events exist under this email
+      if (activeRole === 'vendor' && (!dataEvents.events || dataEvents.events.length === 0) && email) {
+        try {
+          const fallbackRes = await fetch(`/api/events?hostEmail=${encodeURIComponent(email)}`);
+          const fallbackData = await fallbackRes.json();
+          if (fallbackData.success && fallbackData.events && fallbackData.events.length > 0) {
+            dataEvents = fallbackData;
+            setIsHostMismatched(true);
+          }
+        } catch {}
+      }
       let selected: EventData | null = null;
 
       if (dataEvents.success && dataEvents.events && dataEvents.events.length > 0) {
@@ -502,24 +528,48 @@ export default function BrideDashboardPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {user?.role === 'vendor' && (
-              <Link
-                href="/vendor?tab=clients"
-                className="glass-pill"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '7px 12px',
-                  fontSize: '12px',
-                  color: '#C27803',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  border: '1px solid rgba(194, 120, 3, 0.3)'
-                }}
-              >
-                <ArrowLeft size={13} />
-                <span>Portal Mitra</span>
-              </Link>
+              <>
+                <button
+                  type="button"
+                  onClick={handleRestoreHostRole}
+                  className="glass-pill"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 12px',
+                    fontSize: '12px',
+                    color: '#C27803',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    border: '1px solid rgba(194, 120, 3, 0.3)',
+                    background: 'rgba(194, 120, 3, 0.08)'
+                  }}
+                  title="Kembalikan peran ke Pengantin / Penyelenggara"
+                >
+                  <Heart size={13} />
+                  <span>Mode Pengantin</span>
+                </button>
+
+                <Link
+                  href="/vendor?tab=clients"
+                  className="glass-pill"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 12px',
+                    fontSize: '12px',
+                    color: '#515154',
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                    border: '1px solid rgba(0, 0, 0, 0.08)'
+                  }}
+                >
+                  <ArrowLeft size={13} />
+                  <span>Portal Mitra</span>
+                </Link>
+              </>
             )}
 
             <div style={{ textAlign: 'right' }} className="desktop-only">
@@ -541,6 +591,37 @@ export default function BrideDashboardPage() {
 
       {/* Main Content */}
       <main className="dashboard-main">
+        {/* Role Recovery Alert Banner if User was Mutated */}
+        {isHostMismatched && (
+          <div style={{
+            background: 'linear-gradient(135deg, rgba(194, 120, 3, 0.12), rgba(255, 255, 255, 0.95))',
+            border: '1.5px solid rgba(194, 120, 3, 0.35)',
+            borderRadius: '16px',
+            padding: '14px 18px',
+            marginBottom: '24px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '14px',
+            flexWrap: 'wrap'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <AlertCircle size={18} color="#C27803" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: '13px', color: '#1D1D1F' }}>
+                Peran akun Anda saat ini terdeteksi sebagai <strong>Mitra Vendor</strong>. Kami telah memuat data acara pernikahan Anda di bawah.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={handleRestoreHostRole}
+              className="btn-apple-black"
+              style={{ padding: '8px 16px', fontSize: '12px', borderRadius: '10px', cursor: 'pointer' }}
+            >
+              Kembalikan ke Akun Pengantin
+            </button>
+          </div>
+        )}
+
         {/* New Album Created Welcome Banner */}
         {showCreatedBanner && (
           <div style={{

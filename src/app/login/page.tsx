@@ -116,9 +116,18 @@ function LoginFormContent() {
     }
   }, [router, searchParams]);
 
-  // Listen to Supabase Google OAuth callback
+  // Listen to Supabase Google OAuth callback ONLY when an OAuth redirect return is taking place
   useEffect(() => {
     if (!supabase || !isSupabaseConfigured) return;
+
+    const isOAuthReturn = typeof window !== 'undefined' && (
+      window.location.hash.includes('access_token=') ||
+      window.location.search.includes('code=') ||
+      sessionStorage.getItem('sb_oauth_pending') !== null
+    );
+
+    // If NOT an active OAuth return, NEVER auto-process session on page mount
+    if (!isOAuthReturn) return;
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -127,7 +136,8 @@ function LoginFormContent() {
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED')) {
+      const isPending = typeof window !== 'undefined' && sessionStorage.getItem('sb_oauth_pending') !== null;
+      if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED') && isPending) {
         handleSupabaseUserSession(session.user);
       }
     });
@@ -141,20 +151,34 @@ function LoginFormContent() {
     const userEmail = (user.email || '').trim().toLowerCase();
     if (!userEmail) return;
 
+    const pendingRole = typeof window !== 'undefined' ? sessionStorage.getItem('sb_oauth_pending') : null;
+    const pendingMode = typeof window !== 'undefined' ? sessionStorage.getItem('sb_oauth_mode') : null;
+
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('sb_oauth_pending');
+      sessionStorage.removeItem('sb_oauth_mode');
+      localStorage.removeItem('sb_auth_role');
+    }
+
     const fullName = user.user_metadata?.full_name || 
                      user.user_metadata?.name || 
                      userEmail.split('@')[0];
 
-    // Read roleParam directly from current URL searchParams or saved role in localStorage
-    const roleParam = searchParams.get('role');
-    const savedRole = typeof window !== 'undefined' ? localStorage.getItem('sb_auth_role') : null;
-    let assignedRole: 'host' | 'vendor' | 'admin' = (roleParam === 'vendor' || savedRole === 'vendor' || portalRole === 'vendor') ? 'vendor' : 'host';
+    // Priority: pendingRole (from explicit user click) > portalRole (current tab)
+    const roleParam = pendingRole || searchParams.get('role');
+    let assignedRole: 'host' | 'vendor' | 'admin' = (roleParam === 'vendor' || portalRole === 'vendor') ? 'vendor' : 'host';
     if (userEmail === 'admin@sudutbingkai.id') {
       assignedRole = 'admin';
     }
 
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('sb_auth_role');
+    // Protection: If user already has an active host session and did NOT explicitly ask to register as vendor
+    const currentSession = getClientSession();
+    if (currentSession && currentSession.role === 'host' && assignedRole === 'vendor') {
+      if (pendingMode !== 'register' && authMode !== 'register') {
+        toast.info(`Anda saat ini masuk sebagai Pengantin (${currentSession.name}). Mengarahkan ke Dashboard Acara.`);
+        router.push(resolveRedirectDestination('/dashboard', 'host'));
+        return;
+      }
     }
 
     if (assignedRole === 'admin') {
@@ -208,55 +232,41 @@ function LoginFormContent() {
         router.push(resolveRedirectDestination('/vendor', 'vendor'));
         return;
       } else {
-        // 2. Auto-register new vendor using Google account metadata
-        const defaultCompanyName = `${fullName} Planner`;
-        const generatedRef = (fullName.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8) || 'WO') + Date.now().toString().slice(-4);
+        // Vendor NOT found in DB. Check if user has host events under this email first:
         try {
-          const regRes = await fetch('/api/vendors', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: 'vendor_g_' + user.id.substring(0, 10),
+          const evRes = await fetch(`/api/events?hostEmail=${encodeURIComponent(userEmail)}`);
+          const evData = await evRes.json();
+          if (evData.success && evData.events && evData.events.length > 0) {
+            // User is an existing host! DO NOT mutate to vendor!
+            const hostSession: UserAccount = {
+              id: 'usr_g_' + user.id.substring(0, 10),
               name: fullName,
-              companyName: defaultCompanyName,
               email: userEmail,
-              city: 'Jakarta',
-              referralCode: generatedRef,
-              partnerTier: 'regular',
-              tier: 'starter',
-              commissionRate: 0.12
-            })
-          });
-          const regData = await regRes.json();
-          const newV = regData.vendor || {};
-          const sessionUser: UserAccount = {
-            id: newV.id || ('vendor_g_' + user.id.substring(0, 10)),
-            name: fullName,
-            companyName: newV.companyName || defaultCompanyName,
-            email: userEmail,
-            role: 'vendor',
-            partnerTier: 'regular',
-            referralCode: generatedRef,
-            walletBalance: 0,
-            totalEarnings: 0
-          };
-          setClientSession(sessionUser);
-          toast.success(`Selamat datang di Kemitraan SudutBingkai, ${sessionUser.companyName}! Anda dapat melengkapi profil brand di menu Pengaturan.`);
-          router.push(resolveRedirectDestination('/vendor', 'vendor'));
+              role: 'host'
+            };
+            setClientSession(hostSession);
+            toast.info(`Email Anda terdaftar sebagai Pengantin. Mengarahkan ke Dashboard Acara Anda...`);
+            router.push(resolveRedirectDestination('/dashboard', 'host'));
+            return;
+          }
+        } catch {}
+
+        // If explicitly registering as vendor (user selected 'Daftar' tab or mode=register):
+        if (pendingMode === 'register' || authMode === 'register') {
+          // Pre-fill vendor registration form so user can provide Agency Name & Phone cleanly
+          setAuthMode('register');
+          setPortalRole('vendor');
+          setVendorPicName(fullName);
+          setEmail(userEmail);
+          toast.info('Akun Google terhubung. Lengkapi nama agensi WO Anda untuk menyelesaikan pendaftaran.');
           return;
-        } catch (err) {
-          console.warn('Auto vendor creation fallback:', err);
-          const fallbackUser: UserAccount = {
-            id: 'vendor_g_' + user.id.substring(0, 10),
-            name: fullName,
-            companyName: defaultCompanyName,
-            email: userEmail,
-            role: 'vendor',
-            referralCode: generatedRef
-          };
-          setClientSession(fallbackUser);
-          toast.success(`Selamat datang di Portal Mitra, ${fullName}!`);
-          router.push(resolveRedirectDestination('/vendor', 'vendor'));
+        } else {
+          // In login mode, but no vendor found:
+          setAuthMode('register');
+          setPortalRole('vendor');
+          setVendorPicName(fullName);
+          setEmail(userEmail);
+          toast.error('Akun Google ini belum terdaftar sebagai Mitra Vendor. Silakan daftarkan nama agensi WO Anda.');
           return;
         }
       }
@@ -288,6 +298,8 @@ function LoginFormContent() {
 
     try {
       if (typeof window !== 'undefined') {
+        sessionStorage.setItem('sb_oauth_pending', portalRole);
+        sessionStorage.setItem('sb_oauth_mode', authMode);
         localStorage.setItem('sb_auth_role', portalRole);
       }
 
