@@ -9,7 +9,8 @@ import { toast } from 'sonner';
 import {
   Printer, ArrowLeft, Camera, Sliders, Palette, Layout, Type, Check, Scissors,
   Download, Share2, Sparkles, Box, Upload, X, ChevronLeft, ChevronRight,
-  Send, Layers, Table as TableIcon, FileImage, ShieldCheck
+  Send, Layers, Table as TableIcon, FileImage, ShieldCheck, CheckCircle2,
+  Trash2, RefreshCw, Eye
 } from 'lucide-react';
 import { EventData } from '@/lib/types';
 
@@ -18,6 +19,7 @@ type CardTheme = 'cream' | 'kraft' | 'charcoal';
 type CardFont = 'serif' | 'sans' | 'mono';
 type CardBorder = 'dashed' | 'double' | 'arch' | 'viewfinder';
 type ViewMode = 'sheet' | '3d-fold';
+type SidebarTab = 'design' | 'content' | 'table';
 
 interface TableNumberConfig {
   enabled: boolean;
@@ -78,6 +80,9 @@ export default function PrintTableCardPage() {
   const [event, setEvent] = useState<EventData | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [guestCameraUrl, setGuestCameraUrl] = useState<string>('');
+
+  // Sidebar Tab Navigation
+  const [activeTab, setActiveTab] = useState<SidebarTab>('design');
 
   // Primary Customizer State
   const [format, setFormat] = useState<CardFormat>('tent');
@@ -675,6 +680,107 @@ export default function PrintTableCardPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F2EB', color: '#1A1815' }}>
+      {/* Dynamic CSS Styling for Refined Apple-grade Studio Inputs */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+        .studio-input {
+          width: 100%;
+          padding: 10px 13px;
+          font-size: 13px;
+          border-radius: 12px;
+          border: 1px solid rgba(0, 0, 0, 0.12);
+          background: #FFFFFF;
+          color: #1D1D1F;
+          outline: none;
+          transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+          box-sizing: border-box;
+          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+          font-family: inherit;
+        }
+        .studio-input:focus {
+          border-color: #C27803 !important;
+          box-shadow: 0 0 0 3px rgba(194, 120, 3, 0.14) !important;
+          background: #FFFFFF !important;
+        }
+        .studio-tab-btn {
+          flex: 1;
+          padding: 8px 10px;
+          border-radius: 9px;
+          border: none;
+          cursor: pointer;
+          font-size: 12px;
+          font-weight: 600;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          transition: all 0.18s ease;
+        }
+        .studio-choice-btn {
+          border-radius: 12px;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          background: #FFFFFF;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          text-align: left;
+        }
+        .studio-choice-btn:hover {
+          border-color: #C27803;
+        }
+        .studio-choice-btn.active {
+          border: 2px solid #C27803;
+          background: rgba(194, 120, 3, 0.07);
+        }
+        @media print {
+          @page {
+            size: A4 portrait;
+            margin: 8mm 6mm;
+          }
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
+          html, body {
+            background: #ffffff !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .print-workspace-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+            max-width: 100% !important;
+          }
+          .print-card-wrapper {
+            box-shadow: none !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .print-page-break {
+            page-break-after: always !important;
+            break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 0 !important;
+          }
+          .fold-guide-line {
+            display: flex !important;
+          }
+          .tent-back-panel {
+            transform: rotate(180deg) !important;
+            transform-origin: center center !important;
+          }
+        }
+      `
+        }}
+      />
+
       {/* Top Non-print Bar */}
       <div
         className="no-print"
@@ -704,7 +810,7 @@ export default function PrintTableCardPage() {
           </Link>
           <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#FBFBFA' }}>
-            Editor & Cetak Kartu Meja Tamu
+            Studio Desain & Cetak Kartu Meja
           </span>
         </div>
 
@@ -841,667 +947,613 @@ export default function PrintTableCardPage() {
             }}
           >
             <Printer size={15} />
-            <span>{tableConfig.enabled ? `Cetak ${tableList.length} Kartu PDF` : 'Cetak / Simpan PDF'}</span>
+            <span>{tableConfig.enabled ? `Cetak ${tableList.length} Meja PDF` : 'Cetak / Simpan PDF'}</span>
           </button>
         </div>
       </div>
 
-      {/* Print CSS Rules */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 8mm 6mm;
-          }
-          * {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-            color-adjust: exact !important;
-          }
-          html, body {
-            background: #ffffff !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            width: 100% !important;
-          }
-          .no-print {
-            display: none !important;
-          }
-          .print-workspace-container {
-            padding: 0 !important;
-            margin: 0 !important;
-            display: block !important;
-            max-width: 100% !important;
-          }
-          .print-card-wrapper {
-            box-shadow: none !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-          .print-page-break {
-            page-break-after: always !important;
-            break-after: page !important;
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            margin-bottom: 0 !important;
-          }
-          .fold-guide-line {
-            display: flex !important;
-          }
-          .tent-back-panel {
-            transform: rotate(180deg) !important;
-            transform-origin: center center !important;
-          }
-        }
-      `
-        }}
-      />
-
-      {/* Workspace Grid (Editor Controls + Live Preview) */}
+      {/* Main Workspace Layout (Sidebar Controls + Live Preview) */}
       <div
         className="print-workspace-container"
         style={{
-          maxWidth: '1280px',
+          maxWidth: '1300px',
           margin: '0 auto',
-          padding: '28px 20px 80px',
+          padding: '24px 20px 80px',
           display: 'grid',
-          gridTemplateColumns: '380px 1fr',
+          gridTemplateColumns: '400px 1fr',
           gap: '32px',
           alignItems: 'start'
         }}
       >
-        {/* LEFT COLUMN: Customizer Controls (Hidden when printing) */}
+        {/* LEFT COLUMN: Modern Studio Sidebar with 3 Clean Tabs */}
         <aside
           className="no-print glass-card"
           style={{
             borderRadius: '24px',
-            padding: '24px 20px',
-            background: 'rgba(255, 255, 255, 0.94)',
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.06)',
+            padding: '20px',
+            background: 'rgba(255, 255, 255, 0.95)',
+            boxShadow: '0 16px 40px rgba(0, 0, 0, 0.05)',
             position: 'sticky',
             top: '80px',
             maxHeight: 'calc(100vh - 100px)',
             overflowY: 'auto'
           }}
         >
-          {/* Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px', borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '12px' }}>
-            <Sliders size={18} color="#C27803" />
-            <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#1D1D1F' }}>
-              Pengaturan Desain Kartu
-            </h2>
-          </div>
-
-          {/* Quick Presets Carousel */}
-          <div style={{ marginBottom: '22px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <Sparkles size={14} color="#C27803" />
-              <span>Preset Cepat Gaya Acara</span>
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
-              {EVENT_PRESETS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => applyPreset(p)}
-                  style={{
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    border: '1px solid rgba(0,0,0,0.08)',
-                    background: '#FFFFFF',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    transition: 'all 0.15s ease'
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#C27803')}
-                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)')}
-                >
-                  <strong style={{ fontSize: '11.5px', color: '#1D1D1F', display: 'block' }}>{p.name}</strong>
-                  <span style={{ fontSize: '10px', color: '#86868B' }}>{p.theme} • {p.font}</span>
-                </button>
-              ))}
+          {/* Studio Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+            <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803' }}>
+              <Sliders size={16} />
+            </div>
+            <div>
+              <h2 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#1D1D1F' }}>
+                Studio Kartu Meja
+              </h2>
+              <span style={{ fontSize: '11px', color: '#86868B' }}>
+                Kustomisasi tampilan, teks, dan penomoran meja
+              </span>
             </div>
           </div>
 
-          {/* 1. Format Card Options */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <Layout size={14} color="#C27803" />
-              <span>1. Format Bentuk Kartu</span>
-            </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
-              <button
-                type="button"
-                onClick={() => setFormat('tent')}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: '12px',
-                  border: format === 'tent' ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
-                  background: format === 'tent' ? 'rgba(194, 120, 3, 0.08)' : '#FFFFFF',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <div>
-                  <strong style={{ fontSize: '12.5px', color: '#1D1D1F', display: 'block' }}>Tent Card (Lipat Dua Tenda)</strong>
-                  <span style={{ fontSize: '10.5px', color: '#86868B' }}>Dapat berdiri langsung di meja tanpa bingkai akrilik.</span>
-                </div>
-                {format === 'tent' && <Check size={15} color="#C27803" />}
-              </button>
+          {/* Segmented Control 3 Tabs */}
+          <div style={{ display: 'flex', background: 'rgba(0, 0, 0, 0.05)', padding: '4px', borderRadius: '12px', marginBottom: '20px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('design')}
+              className="studio-tab-btn"
+              style={{
+                background: activeTab === 'design' ? '#FFFFFF' : 'transparent',
+                color: activeTab === 'design' ? '#1D1D1F' : '#6E6E73',
+                boxShadow: activeTab === 'design' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+              }}
+            >
+              <Palette size={13} color={activeTab === 'design' ? '#C27803' : '#6E6E73'} />
+              <span>Desain & Vibe</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setFormat('standing')}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: '12px',
-                  border: format === 'standing' ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
-                  background: format === 'standing' ? 'rgba(194, 120, 3, 0.08)' : '#FFFFFF',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <div>
-                  <strong style={{ fontSize: '12.5px', color: '#1D1D1F', display: 'block' }}>Standing A6 Frame</strong>
-                  <span style={{ fontSize: '10.5px', color: '#86868B' }}>Ukuran standar 10x15cm untuk display acrylic frame.</span>
-                </div>
-                {format === 'standing' && <Check size={15} color="#C27803" />}
-              </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('content')}
+              className="studio-tab-btn"
+              style={{
+                background: activeTab === 'content' ? '#FFFFFF' : 'transparent',
+                color: activeTab === 'content' ? '#1D1D1F' : '#6E6E73',
+                boxShadow: activeTab === 'content' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+              }}
+            >
+              <Type size={13} color={activeTab === 'content' ? '#C27803' : '#6E6E73'} />
+              <span>Teks & Logo</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setFormat('mini')}
-                style={{
-                  padding: '9px 12px',
-                  borderRadius: '12px',
-                  border: format === 'mini' ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
-                  background: format === 'mini' ? 'rgba(194, 120, 3, 0.08)' : '#FFFFFF',
-                  cursor: 'pointer',
-                  textAlign: 'left',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}
-              >
-                <div>
-                  <strong style={{ fontSize: '12.5px', color: '#1D1D1F', display: 'block' }}>Mini Card Ringkas</strong>
-                  <span style={{ fontSize: '10.5px', color: '#86868B' }}>Ukuran compact untuk souvenir atau amplop ucapan.</span>
-                </div>
-                {format === 'mini' && <Check size={15} color="#C27803" />}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('table')}
+              className="studio-tab-btn"
+              style={{
+                background: activeTab === 'table' ? '#FFFFFF' : 'transparent',
+                color: activeTab === 'table' ? '#1D1D1F' : '#6E6E73',
+                boxShadow: activeTab === 'table' ? '0 2px 8px rgba(0,0,0,0.06)' : 'none'
+              }}
+            >
+              <TableIcon size={13} color={activeTab === 'table' ? '#C27803' : '#6E6E73'} />
+              <span>Nomor Meja</span>
+            </button>
+          </div>
 
-            {/* Sub-selector for Mini Card Count */}
-            {format === 'mini' && (
-              <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: '10px' }}>
-                <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#1D1D1F', display: 'block', marginBottom: '5px' }}>
-                  Jumlah Kartu per Lembar A4:
-                </span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
-                  {[
-                    { count: 6, label: '6 Kartu' },
-                    { count: 4, label: '4 Kartu' },
-                    { count: 2, label: '2 Kartu' }
-                  ].map(opt => (
+          {/* TAB 1: DESAIN & VIBE */}
+          {activeTab === 'design' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Quick Event Presets */}
+              <div>
+                <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <Sparkles size={13} color="#C27803" />
+                  <span>Preset Cepat Gaya Acara</span>
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '7px' }}>
+                  {EVENT_PRESETS.map((p) => (
                     <button
-                      key={opt.count}
+                      key={p.id}
                       type="button"
-                      onClick={() => setMiniCount(opt.count)}
-                      style={{
-                        padding: '5px 4px',
-                        borderRadius: '6px',
-                        fontSize: '10.5px',
-                        fontWeight: miniCount === opt.count ? 700 : 500,
-                        background: miniCount === opt.count ? '#1D1D1F' : '#FFFFFF',
-                        color: miniCount === opt.count ? '#FFFFFF' : '#1D1D1F',
-                        border: miniCount === opt.count ? 'none' : '1px solid rgba(0,0,0,0.1)',
-                        cursor: 'pointer'
-                      }}
+                      onClick={() => applyPreset(p)}
+                      className="studio-choice-btn"
+                      style={{ padding: '9px 11px' }}
                     >
-                      {opt.label}
+                      <strong style={{ fontSize: '12px', color: '#1D1D1F', display: 'block' }}>{p.name}</strong>
+                      <span style={{ fontSize: '10px', color: '#86868B' }}>{p.theme} • {p.font}</span>
                     </button>
                   ))}
                 </div>
               </div>
-            )}
 
-            {/* Sub-selector for Standing A6 Count */}
-            {format === 'standing' && (
-              <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: '10px' }}>
-                <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#1D1D1F', display: 'block', marginBottom: '5px' }}>
-                  Jumlah Kartu per Lembar A4:
-                </span>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+              {/* Format Bentuk Kartu */}
+              <div>
+                <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <Layout size={13} color="#C27803" />
+                  <span>Format Bentuk Kartu</span>
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
                   {[
-                    { count: 2, label: '2 Kartu (Pasangan)' },
-                    { count: 1, label: '1 Kartu (Tunggal)' }
-                  ].map(opt => (
+                    { id: 'tent', name: 'Tent Card (Lipat Tenda Meja)', desc: 'Dapat berdiri langsung tanpa bingkai akrilik.' },
+                    { id: 'standing', name: 'Standing A6 Frame', desc: 'Ukuran standar 10x15cm untuk standing frame akrilik.' },
+                    { id: 'mini', name: 'Mini Card Ringkas', desc: 'Ukuran hemat untuk souvenir atau amplop ucapan.' }
+                  ].map(fmt => (
                     <button
-                      key={opt.count}
+                      key={fmt.id}
                       type="button"
-                      onClick={() => setStandingCount(opt.count)}
-                      style={{
-                        padding: '5px 4px',
-                        borderRadius: '6px',
-                        fontSize: '10.5px',
-                        fontWeight: standingCount === opt.count ? 700 : 500,
-                        background: standingCount === opt.count ? '#1D1D1F' : '#FFFFFF',
-                        color: standingCount === opt.count ? '#FFFFFF' : '#1D1D1F',
-                        border: standingCount === opt.count ? 'none' : '1px solid rgba(0,0,0,0.1)',
-                        cursor: 'pointer'
-                      }}
+                      onClick={() => setFormat(fmt.id as CardFormat)}
+                      className={`studio-choice-btn ${format === fmt.id ? 'active' : ''}`}
+                      style={{ padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
                     >
-                      {opt.label}
+                      <div>
+                        <strong style={{ fontSize: '12px', color: '#1D1D1F', display: 'block' }}>{fmt.name}</strong>
+                        <span style={{ fontSize: '10.5px', color: '#86868B' }}>{fmt.desc}</span>
+                      </div>
+                      {format === fmt.id && <CheckCircle2 size={16} color="#C27803" />}
                     </button>
                   ))}
                 </div>
-              </div>
-            )}
-          </div>
 
-          {/* 2. Style Tipografi & Bingkai */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <Type size={14} color="#C27803" />
-              <span>2. Tipografi & Bingkai Kartu</span>
-            </label>
-
-            {/* Font Style */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '10px' }}>
-              {[
-                { id: 'serif', label: 'Serif Elegan' },
-                { id: 'sans', label: 'Modern Sans' },
-                { id: 'mono', label: 'Mono Film' }
-              ].map(f => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setFont(f.id as CardFont)}
-                  style={{
-                    padding: '6px 4px',
-                    borderRadius: '8px',
-                    fontSize: '10.5px',
-                    fontWeight: font === f.id ? 700 : 500,
-                    border: font === f.id ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
-                    background: font === f.id ? 'rgba(194,120,3,0.08)' : '#FFFFFF',
-                    color: '#1D1D1F',
-                    cursor: 'pointer'
-                  }}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Border Style */}
-            <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '5px' }}>Style Ornamen Bingkai:</span>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
-              {[
-                { id: 'dashed', label: 'Garis Potong Putus' },
-                { id: 'double', label: 'Double Gold Line' },
-                { id: 'arch', label: 'Modern Arch' },
-                { id: 'viewfinder', label: 'Fokus Viewfinder' }
-              ].map(b => (
-                <button
-                  key={b.id}
-                  type="button"
-                  onClick={() => setBorderStyle(b.id as CardBorder)}
-                  style={{
-                    padding: '6px 8px',
-                    borderRadius: '8px',
-                    fontSize: '10.5px',
-                    fontWeight: borderStyle === b.id ? 700 : 500,
-                    border: borderStyle === b.id ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
-                    background: borderStyle === b.id ? 'rgba(194,120,3,0.08)' : '#FFFFFF',
-                    color: '#1D1D1F',
-                    cursor: 'pointer',
-                    textAlign: 'left'
-                  }}
-                >
-                  {b.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* 3. Aesthetic Theme Options */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <Palette size={14} color="#C27803" />
-              <span>3. Tema Warna & Kertas</span>
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
-              {[
-                { id: 'cream', name: 'Cream Gold', bg: '#FFFFFF', border: '#D4AF37' },
-                { id: 'kraft', name: 'Rustic Kraft', bg: '#F3EDE2', border: '#BFA892' },
-                { id: 'charcoal', name: 'Charcoal', bg: '#181715', border: '#444' }
-              ].map(t => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setTheme(t.id as CardTheme)}
-                  style={{
-                    padding: '8px 4px',
-                    borderRadius: '10px',
-                    border: theme === t.id ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
-                    background: t.bg,
-                    color: t.id === 'charcoal' ? '#FFFFFF' : '#1D1D1F',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textAlign: 'center',
-                    boxShadow: theme === t.id ? '0 0 0 2px rgba(194, 120, 3, 0.2)' : 'none'
-                  }}
-                >
-                  {t.name}
-                </button>
-              ))}
-            </div>
-
-            {/* Ink Saver Checkbox */}
-            <div style={{ marginTop: '8px' }}>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '11px', color: '#1D1D1F', cursor: 'pointer', background: 'rgba(0,0,0,0.03)', padding: '7px 9px', borderRadius: '10px' }}>
-                <input
-                  type="checkbox"
-                  checked={inkSaver}
-                  onChange={(e) => setInkSaver(e.target.checked)}
-                  style={{ accentColor: '#C27803', marginTop: '2px' }}
-                />
-                <div>
-                  <span style={{ fontWeight: 600, display: 'block' }}>Mode Hemat Tinta (Latar Putih)</span>
-                  <span style={{ fontSize: '9.5px', color: '#86868B', lineHeight: 1.3, display: 'block' }}>
-                    Menjaga latar putih bersih untuk printer inkjet rumahan.
-                  </span>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          {/* 4. Batch Table Numbering Module */}
-          <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(194, 120, 3, 0.06)', borderRadius: '14px', border: '1px solid rgba(194, 120, 3, 0.2)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-              <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={tableConfig.enabled}
-                  onChange={(e) => setTableConfig({ ...tableConfig, enabled: e.target.checked })}
-                  style={{ accentColor: '#C27803' }}
-                />
-                <TableIcon size={14} color="#C27803" />
-                <span>Cetak Nomor Meja Otomatis</span>
-              </label>
-              {tableConfig.enabled && (
-                <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#C27803', background: 'rgba(194,120,3,0.12)', padding: '2px 8px', borderRadius: '999px' }}>
-                  {tableList.length} Meja
-                </span>
-              )}
-            </div>
-
-            {tableConfig.enabled && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setTableConfig({ ...tableConfig, mode: 'range' })}
-                    style={{
-                      padding: '5px',
-                      borderRadius: '6px',
-                      fontSize: '10.5px',
-                      fontWeight: tableConfig.mode === 'range' ? 700 : 500,
-                      background: tableConfig.mode === 'range' ? '#1D1D1F' : '#FFFFFF',
-                      color: tableConfig.mode === 'range' ? '#FFFFFF' : '#1D1D1F',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Nomor Urut (1 s/d N)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTableConfig({ ...tableConfig, mode: 'custom' })}
-                    style={{
-                      padding: '5px',
-                      borderRadius: '6px',
-                      fontSize: '10.5px',
-                      fontWeight: tableConfig.mode === 'custom' ? 700 : 500,
-                      background: tableConfig.mode === 'custom' ? '#1D1D1F' : '#FFFFFF',
-                      color: tableConfig.mode === 'custom' ? '#FFFFFF' : '#1D1D1F',
-                      border: 'none',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Daftar Nama Custom
-                  </button>
-                </div>
-
-                {tableConfig.mode === 'range' ? (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '6px' }}>
-                    <div>
-                      <span style={{ fontSize: '10px', color: '#86868B', display: 'block' }}>Awalan:</span>
-                      <input
-                        type="text"
-                        value={tableConfig.prefix}
-                        onChange={(e) => setTableConfig({ ...tableConfig, prefix: e.target.value })}
-                        placeholder="Meja "
-                        className="input-field"
-                        style={{ padding: '6px 8px', fontSize: '11px' }}
-                      />
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '10px', color: '#86868B', display: 'block' }}>Dari:</span>
-                      <input
-                        type="number"
-                        min={1}
-                        value={tableConfig.startNum}
-                        onChange={(e) => setTableConfig({ ...tableConfig, startNum: parseInt(e.target.value) || 1 })}
-                        className="input-field"
-                        style={{ padding: '6px 8px', fontSize: '11px' }}
-                      />
-                    </div>
-                    <div>
-                      <span style={{ fontSize: '10px', color: '#86868B', display: 'block' }}>Sampai:</span>
-                      <input
-                        type="number"
-                        min={tableConfig.startNum}
-                        max={60}
-                        value={tableConfig.endNum}
-                        onChange={(e) => setTableConfig({ ...tableConfig, endNum: parseInt(e.target.value) || 1 })}
-                        className="input-field"
-                        style={{ padding: '6px 8px', fontSize: '11px' }}
-                      />
+                {/* Sub-selector for Standing / Mini */}
+                {format === 'mini' && (
+                  <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: '10px' }}>
+                    <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#1D1D1F', display: 'block', marginBottom: '5px' }}>
+                      Jumlah Kartu per Lembar A4:
+                    </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                      {[
+                        { count: 6, label: '6 Kartu' },
+                        { count: 4, label: '4 Kartu' },
+                        { count: 2, label: '2 Kartu' }
+                      ].map(opt => (
+                        <button
+                          key={opt.count}
+                          type="button"
+                          onClick={() => setMiniCount(opt.count)}
+                          style={{
+                            padding: '6px 4px',
+                            borderRadius: '7px',
+                            fontSize: '11px',
+                            fontWeight: miniCount === opt.count ? 700 : 500,
+                            background: miniCount === opt.count ? '#1D1D1F' : '#FFFFFF',
+                            color: miniCount === opt.count ? '#FFFFFF' : '#1D1D1F',
+                            border: miniCount === opt.count ? 'none' : '1px solid rgba(0,0,0,0.1)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
                     </div>
                   </div>
-                ) : (
-                  <div>
-                    <span style={{ fontSize: '10px', color: '#86868B', display: 'block', marginBottom: '3px' }}>
-                      Pisahkan nama meja dengan tanda koma atau baris baru:
+                )}
+
+                {format === 'standing' && (
+                  <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: '10px' }}>
+                    <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#1D1D1F', display: 'block', marginBottom: '5px' }}>
+                      Jumlah Kartu per Lembar A4:
                     </span>
-                    <textarea
-                      rows={3}
-                      value={tableConfig.customListText}
-                      onChange={(e) => setTableConfig({ ...tableConfig, customListText: e.target.value })}
-                      placeholder="VIP 1, VIP 2, Meja Keluarga, Meja 1, Meja 2"
-                      className="input-field"
-                      style={{ padding: '6px 8px', fontSize: '11px', width: '100%', resize: 'vertical' }}
-                    />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                      {[
+                        { count: 2, label: '2 Kartu (Pasangan)' },
+                        { count: 1, label: '1 Kartu (Tunggal)' }
+                      ].map(opt => (
+                        <button
+                          key={opt.count}
+                          type="button"
+                          onClick={() => setStandingCount(opt.count)}
+                          style={{
+                            padding: '6px 4px',
+                            borderRadius: '7px',
+                            fontSize: '11px',
+                            fontWeight: standingCount === opt.count ? 700 : 500,
+                            background: standingCount === opt.count ? '#1D1D1F' : '#FFFFFF',
+                            color: standingCount === opt.count ? '#FFFFFF' : '#1D1D1F',
+                            border: standingCount === opt.count ? 'none' : '1px solid rgba(0,0,0,0.1)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
-            )}
-          </div>
 
-          {/* 5. Co-Branding Logo Uploader */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <Upload size={14} color="#C27803" />
-              <span>4. Logo Co-Branding WO / Sponsor</span>
-            </label>
-
-            {customLogoUrl ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: '10px' }}>
-                <img src={customLogoUrl} alt="Logo" style={{ maxHeight: '28px', maxWidth: '100px', objectFit: 'contain' }} />
-                <button
-                  type="button"
-                  onClick={() => setCustomLogoUrl('')}
-                  style={{ background: 'transparent', border: 'none', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}
-                >
-                  <X size={14} />
-                  <span>Hapus</span>
-                </button>
-              </div>
-            ) : (
+              {/* Tipografi & Bingkai */}
               <div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleLogoUpload}
-                  accept="image/png, image/jpeg, image/webp"
-                  style={{ display: 'none' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    borderRadius: '10px',
-                    border: '1px dashed rgba(194, 120, 3, 0.4)',
-                    background: 'rgba(194, 120, 3, 0.04)',
-                    color: '#C27803',
-                    fontSize: '11.5px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px'
-                  }}
-                >
-                  <Upload size={14} />
-                  <span>Unggah Logo (PNG Transparan / JPEG)</span>
-                </button>
+                <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <Type size={13} color="#C27803" />
+                  <span>Gaya Font & Bingkai</span>
+                </label>
+
+                {/* Font Choices */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '8px' }}>
+                  {[
+                    { id: 'serif', label: 'Serif Elegan' },
+                    { id: 'sans', label: 'Modern Sans' },
+                    { id: 'mono', label: 'Mono Film' }
+                  ].map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFont(f.id as CardFont)}
+                      className={`studio-choice-btn ${font === f.id ? 'active' : ''}`}
+                      style={{ padding: '7px 4px', textAlign: 'center', fontSize: '11px', fontWeight: font === f.id ? 700 : 500 }}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Border Frame Choices */}
+                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '4px' }}>Ornamen Garis Bingkai:</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                  {[
+                    { id: 'dashed', label: 'Garis Potong Putus' },
+                    { id: 'double', label: 'Double Gold Line' },
+                    { id: 'arch', label: 'Modern Arch' },
+                    { id: 'viewfinder', label: 'Fokus Viewfinder' }
+                  ].map(b => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => setBorderStyle(b.id as CardBorder)}
+                      className={`studio-choice-btn ${borderStyle === b.id ? 'active' : ''}`}
+                      style={{ padding: '7px 8px', fontSize: '11px', fontWeight: borderStyle === b.id ? 700 : 500 }}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
-          </div>
 
-          {/* 6. Text Customizer Inputs */}
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <Type size={14} color="#C27803" />
-              <span>5. Kustomisasi Tulisan</span>
-            </label>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+              {/* Tema Warna & Kertas */}
               <div>
-                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '3px' }}>Badge Atas:</span>
+                <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <Palette size={13} color="#C27803" />
+                  <span>Tema Warna & Kertas</span>
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                  {[
+                    { id: 'cream', name: 'Cream Gold', bg: '#FAF3E0', color: '#C27803' },
+                    { id: 'kraft', name: 'Rustic Kraft', bg: '#F3EDE2', color: '#8C673B' },
+                    { id: 'charcoal', name: 'Charcoal Dark', bg: '#181715', color: '#FFFFFF' }
+                  ].map(t => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => setTheme(t.id as CardTheme)}
+                      className={`studio-choice-btn ${theme === t.id ? 'active' : ''}`}
+                      style={{ padding: '8px 6px', textAlign: 'center' }}
+                    >
+                      <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: t.bg, border: '1px solid rgba(0,0,0,0.15)', margin: '0 auto 4px' }} />
+                      <span style={{ fontSize: '11px', fontWeight: 600, color: '#1D1D1F', display: 'block' }}>{t.name}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Ink Saver Toggle */}
+                <div style={{ marginTop: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '11px', color: '#1D1D1F', cursor: 'pointer', background: 'rgba(0,0,0,0.025)', padding: '8px 10px', borderRadius: '10px' }}>
+                    <input
+                      type="checkbox"
+                      checked={inkSaver}
+                      onChange={(e) => setInkSaver(e.target.checked)}
+                      style={{ accentColor: '#C27803', marginTop: '2px' }}
+                    />
+                    <div>
+                      <span style={{ fontWeight: 600, display: 'block' }}>Mode Hemat Tinta (Latar Putih)</span>
+                      <span style={{ fontSize: '10px', color: '#86868B', lineHeight: 1.3, display: 'block' }}>
+                        Menjaga latar putih bersih untuk menghemat tinta printer rumah.
+                      </span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: KONTEN & LOGO */}
+          {activeTab === 'content' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Co-Branding Logo Uploader */}
+              <div>
+                <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                  <Upload size={13} color="#C27803" />
+                  <span>Logo Mitra WO / Sponsor</span>
+                </label>
+
+                {customLogoUrl ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                    <img src={customLogoUrl} alt="Logo" style={{ maxHeight: '28px', maxWidth: '110px', objectFit: 'contain' }} />
+                    <button
+                      type="button"
+                      onClick={() => setCustomLogoUrl('')}
+                      style={{ background: 'transparent', border: 'none', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', fontWeight: 600 }}
+                    >
+                      <Trash2 size={13} />
+                      <span>Hapus</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleLogoUpload}
+                      accept="image/png, image/jpeg, image/webp"
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: '12px',
+                        border: '1.5px dashed rgba(194, 120, 3, 0.4)',
+                        background: 'rgba(194, 120, 3, 0.04)',
+                        color: '#C27803',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <Upload size={14} />
+                      <span>Unggah Logo (PNG Transparan / JPEG)</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Badge Atas */}
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#6E6E73', display: 'block', marginBottom: '4px' }}>
+                  Badge Atas:
+                </label>
                 <input
                   type="text"
                   value={customBadge}
                   onChange={(e) => setCustomBadge(e.target.value)}
                   placeholder="KAMERA TAMU SPESIAL"
-                  className="input-field"
-                  style={{ padding: '7px 10px', fontSize: '12px' }}
+                  className="studio-input"
                 />
               </div>
 
+              {/* Nama Acara / Tuan Rumah */}
               <div>
-                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '3px' }}>Nama Acara / Tuan Rumah:</span>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#6E6E73', display: 'block', marginBottom: '4px' }}>
+                  Nama Acara / Pasangan:
+                </label>
                 <input
                   type="text"
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
                   placeholder="Contoh: Kevin & Cindy"
-                  className="input-field"
-                  style={{ padding: '7px 10px', fontSize: '12px' }}
+                  className="studio-input"
                 />
               </div>
 
+              {/* Tagline / Kalimat Sambut */}
               <div>
-                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '3px' }}>Tagline / Kalimat Sambut:</span>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#6E6E73', display: 'block', marginBottom: '4px' }}>
+                  Tagline / Kalimat Sambut:
+                </label>
                 <input
                   type="text"
                   value={customSubtitle}
                   onChange={(e) => setCustomSubtitle(e.target.value)}
                   placeholder="Sudut Pandangmu, Kenangan Kami"
-                  className="input-field"
-                  style={{ padding: '7px 10px', fontSize: '12px' }}
+                  className="studio-input"
                 />
               </div>
 
+              {/* Hashtag Acara */}
               <div>
-                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '3px' }}>Hashtag Acara:</span>
+                <label style={{ fontSize: '11px', fontWeight: 600, color: '#6E6E73', display: 'block', marginBottom: '4px' }}>
+                  Hashtag Acara:
+                </label>
                 <input
                   type="text"
                   value={customHashtag}
                   onChange={(e) => setCustomHashtag(e.target.value)}
                   placeholder="#SarahDimasStory"
-                  className="input-field"
-                  style={{ padding: '7px 10px', fontSize: '12px' }}
+                  className="studio-input"
                 />
               </div>
+
+              {/* Toggles */}
+              <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#1D1D1F', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={showSteps}
+                    onChange={(e) => setShowSteps(e.target.checked)}
+                    style={{ accentColor: '#C27803' }}
+                  />
+                  <span>Tampilkan Panduan 3 Langkah (1-2-3)</span>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#1D1D1F', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={showHashtag}
+                    onChange={(e) => setShowHashtag(e.target.checked)}
+                    style={{ accentColor: '#C27803' }}
+                  />
+                  <span>Tampilkan Hashtag Acara</span>
+                </label>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* 7. Display Toggles */}
-          <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#1D1D1F', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={showSteps}
-                onChange={(e) => setShowSteps(e.target.checked)}
-                style={{ accentColor: '#C27803' }}
-              />
-              <span>Tampilkan Panduan 3 Langkah (1-2-3)</span>
-            </label>
+          {/* TAB 3: NOMOR MEJA & CETAK */}
+          {activeTab === 'table' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Batch Table Numbering Card */}
+              <div style={{ padding: '14px', background: 'rgba(194, 120, 3, 0.05)', borderRadius: '16px', border: '1px solid rgba(194, 120, 3, 0.2)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={tableConfig.enabled}
+                      onChange={(e) => setTableConfig({ ...tableConfig, enabled: e.target.checked })}
+                      style={{ accentColor: '#C27803' }}
+                    />
+                    <TableIcon size={14} color="#C27803" />
+                    <span>Cetak Nomor Meja Otomatis</span>
+                  </label>
+                  {tableConfig.enabled && (
+                    <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#C27803', background: 'rgba(194,120,3,0.12)', padding: '2px 8px', borderRadius: '999px' }}>
+                      {tableList.length} Meja
+                    </span>
+                  )}
+                </div>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#1D1D1F', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={showHashtag}
-                onChange={(e) => setShowHashtag(e.target.checked)}
-                style={{ accentColor: '#C27803' }}
-              />
-              <span>Tampilkan Hashtag Acara</span>
-            </label>
-          </div>
+                {tableConfig.enabled ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setTableConfig({ ...tableConfig, mode: 'range' })}
+                        style={{
+                          padding: '6px',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          fontWeight: tableConfig.mode === 'range' ? 700 : 500,
+                          background: tableConfig.mode === 'range' ? '#1D1D1F' : '#FFFFFF',
+                          color: tableConfig.mode === 'range' ? '#FFFFFF' : '#1D1D1F',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Nomor Urut (1 s/d N)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTableConfig({ ...tableConfig, mode: 'custom' })}
+                        style={{
+                          padding: '6px',
+                          borderRadius: '8px',
+                          fontSize: '11px',
+                          fontWeight: tableConfig.mode === 'custom' ? 700 : 500,
+                          background: tableConfig.mode === 'custom' ? '#1D1D1F' : '#FFFFFF',
+                          color: tableConfig.mode === 'custom' ? '#FFFFFF' : '#1D1D1F',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Daftar Nama Custom
+                      </button>
+                    </div>
 
-          {/* Print Guidance Callout */}
-          <div
-            style={{
-              background: 'rgba(194, 120, 3, 0.08)',
-              border: '1px solid rgba(194, 120, 3, 0.25)',
-              borderRadius: '12px',
-              padding: '12px',
-              marginTop: '16px',
-              fontSize: '11px',
-              color: '#8C6D16',
-              lineHeight: 1.5
-            }}
-          >
-            <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px', color: '#B45309' }}>
-              <Printer size={14} color="#B45309" />
-              <span>Tips Cetak Sempurna:</span>
-            </strong>
-            <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-              <li>
-                Di jendela print browser, <b>centang "Background graphics"</b> agar warna tema tercetak solid.
-              </li>
-              <li>
-                <b>Hilangkan centang "Headers and footers"</b> agar tanggal dan URL browser tidak ikut tercetak di tepi kertas.
-              </li>
-              <li>
-                Gunakan kertas tebal (Art Paper 260/310gsm atau Samson Kraft) agar kartu kokoh saat berdiri.
-              </li>
-            </ul>
-          </div>
+                    {tableConfig.mode === 'range' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div>
+                          <label style={{ fontSize: '10.5px', color: '#6E6E73', display: 'block', marginBottom: '3px' }}>
+                            Awalan Teks Meja:
+                          </label>
+                          <input
+                            type="text"
+                            value={tableConfig.prefix}
+                            onChange={(e) => setTableConfig({ ...tableConfig, prefix: e.target.value })}
+                            placeholder="Contoh: Meja "
+                            className="studio-input"
+                          />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                          <div>
+                            <label style={{ fontSize: '10.5px', color: '#6E6E73', display: 'block', marginBottom: '3px' }}>
+                              Nomor Awal:
+                            </label>
+                            <input
+                              type="number"
+                              min={1}
+                              value={tableConfig.startNum}
+                              onChange={(e) => setTableConfig({ ...tableConfig, startNum: parseInt(e.target.value) || 1 })}
+                              className="studio-input"
+                            />
+                          </div>
+                          <div>
+                            <label style={{ fontSize: '10.5px', color: '#6E6E73', display: 'block', marginBottom: '3px' }}>
+                              Nomor Akhir:
+                            </label>
+                            <input
+                              type="number"
+                              min={tableConfig.startNum}
+                              max={60}
+                              value={tableConfig.endNum}
+                              onChange={(e) => setTableConfig({ ...tableConfig, endNum: parseInt(e.target.value) || 1 })}
+                              className="studio-input"
+                            />
+                          </div>
+                        </div>
+
+                        <p style={{ margin: 0, fontSize: '10.5px', color: '#8C6D16', lineHeight: 1.4 }}>
+                          Sistem akan mencetak {tableList.length} halaman A4 berurutan ({tableList[0]} s/d {tableList[tableList.length - 1]}) dalam 1 dokumen PDF.
+                        </p>
+                      </div>
+                    ) : (
+                      <div>
+                        <label style={{ fontSize: '10.5px', color: '#6E6E73', display: 'block', marginBottom: '3px' }}>
+                          Pisahkan nama meja dengan koma atau baris baru:
+                        </label>
+                        <textarea
+                          rows={3}
+                          value={tableConfig.customListText}
+                          onChange={(e) => setTableConfig({ ...tableConfig, customListText: e.target.value })}
+                          placeholder="VIP 1, VIP 2, Meja Keluarga, Meja 1, Meja 2"
+                          className="studio-input"
+                          style={{ resize: 'vertical' }}
+                        />
+                        <p style={{ margin: '4px 0 0', fontSize: '10.5px', color: '#8C6D16' }}>
+                          Total {tableList.length} kartu meja terdaftar.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p style={{ margin: 0, fontSize: '11px', color: '#86868B', lineHeight: 1.4 }}>
+                    Aktifkan untuk mencetak kartu meja dengan nomor urut atau nama meja custom tanpa harus mengedit satu per satu.
+                  </p>
+                )}
+              </div>
+
+              {/* Print Guidance Tips Callout */}
+              <div
+                style={{
+                  background: 'rgba(0, 0, 0, 0.03)',
+                  border: '1px solid rgba(0, 0, 0, 0.06)',
+                  borderRadius: '14px',
+                  padding: '12px 14px',
+                  fontSize: '11px',
+                  color: '#555555',
+                  lineHeight: 1.5
+                }}
+              >
+                <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px', color: '#1D1D1F' }}>
+                  <Printer size={13} color="#C27803" />
+                  <span>Tips Cetak Sempurna:</span>
+                </strong>
+                <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <li>
+                    Di jendela browser print, <b>centang "Background graphics"</b> agar warna tema tercetak solid.
+                  </li>
+                  <li>
+                    <b>Hilangkan centang "Headers and footers"</b> agar URL browser tidak ikut tercetak di tepi kertas.
+                  </li>
+                  <li>
+                    Rekomendasi kertas: <b>Art Paper 260/310gsm</b> atau <b>Samson Kraft</b> agar kartu kokoh saat berdiri.
+                  </li>
+                </ul>
+              </div>
+            </div>
+          )}
         </aside>
 
         {/* RIGHT COLUMN: Live Print Preview / 3D Simulation */}
@@ -1516,7 +1568,7 @@ export default function PrintTableCardPage() {
                 marginBottom: '16px',
                 padding: '8px 14px',
                 borderRadius: '12px',
-                background: 'rgba(255, 255, 255, 0.92)',
+                background: 'rgba(255, 255, 255, 0.95)',
                 boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
                 border: '1px solid rgba(0,0,0,0.06)',
                 display: 'flex',
@@ -1556,7 +1608,8 @@ export default function PrintTableCardPage() {
                     borderRadius: '6px',
                     border: '1px solid rgba(0,0,0,0.1)',
                     fontSize: '11.5px',
-                    background: '#FFFFFF'
+                    background: '#FFFFFF',
+                    outline: 'none'
                   }}
                 >
                   {tableList.map((tbl, idx) => (
@@ -1610,7 +1663,7 @@ export default function PrintTableCardPage() {
                   Simulasi Lipatan Meja (3D Tent Card)
                 </span>
                 <p style={{ margin: 0, fontSize: '12px', color: '#555' }}>
-                  Begini tampilan kartu saat ditekuk dan berdiri di atas meja tamu.
+                  Begini tampilan kartu saat ditekuk dan berdiri di atas meja perjamuan.
                 </p>
               </div>
 
