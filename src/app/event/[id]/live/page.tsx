@@ -1463,32 +1463,6 @@ export default function LiveProjectorWallPage() {
                     </div>
                   </div>
 
-                  {/* Right: Direct "Scan & Ikut Tampil" QR Button */}
-                  <button
-                    onClick={() => setShowQrSpotlight(true)}
-                    title="Scan untuk ikut tampil di Reels ini (Shortcut: Q)"
-                    style={{
-                      background: 'rgba(0, 0, 0, 0.55)',
-                      backdropFilter: 'blur(10px)',
-                      WebkitBackdropFilter: 'blur(10px)',
-                      border: '1px solid rgba(245, 158, 11, 0.45)',
-                      borderRadius: '999px',
-                      padding: '5px 12px 5px 6px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '7px',
-                      cursor: 'pointer',
-                      boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
-                      transition: 'transform 0.2s ease'
-                    }}
-                  >
-                    {qrDataUrl && (
-                      <img src={qrDataUrl} alt="" style={{ width: '22px', height: '22px', borderRadius: '4px', background: '#FFF' }} />
-                    )}
-                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#F59E0B', letterSpacing: '0.04em' }}>
-                      Ikut Tampil
-                    </span>
-                  </button>
                 </div>
 
                 {/* Right Action Rail & Floating Hearts Reaction */}
