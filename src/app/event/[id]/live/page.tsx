@@ -50,6 +50,9 @@ export default function LiveProjectorWallPage() {
   const [displayMode, setDisplayMode] = useState<SlideshowMode>('polaroid');
   const [cycleSpeed, setCycleSpeed] = useState<number>(5000);
   const [isAutoMix, setIsAutoMix] = useState(false);
+  // Smart Random Shuffle Mode (Default ON so photos are randomized dynamically)
+  const [isShuffle, setIsShuffle] = useState(true);
+  const shuffleQueueRef = useRef<number[]>([]);
 
   // Orientation State: Horizontal Widescreen vs Vertical Standing Totem / Kiosk
   const [isVertical, setIsVertical] = useState(false);
@@ -78,6 +81,30 @@ export default function LiveProjectorWallPage() {
     hideTimerRef.current = setTimeout(() => {
       setIsHeaderVisible(false);
     }, 3500);
+  }, []);
+
+  // Generate smart shuffled deck preventing same photo back-to-back
+  const getNextShuffledIndex = useCallback((currentIdx: number, total: number) => {
+    if (total <= 1) return 0;
+
+    // Refill and shuffle deck when empty
+    if (shuffleQueueRef.current.length === 0) {
+      const indices = Array.from({ length: total }, (_, i) => i);
+      // Fisher-Yates shuffle algorithm
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+      }
+      // Ensure the first photo of the new deck is not identical to current photo
+      if (indices[0] === currentIdx && indices.length > 1) {
+        const swapTarget = 1 + Math.floor(Math.random() * (indices.length - 1));
+        [indices[0], indices[swapTarget]] = [indices[swapTarget], indices[0]];
+      }
+      shuffleQueueRef.current = indices;
+    }
+
+    const next = shuffleQueueRef.current.shift();
+    return next !== undefined ? next : (currentIdx + 1) % total;
   }, []);
 
   // Auto-detect screen orientation on mount
@@ -147,13 +174,19 @@ export default function LiveProjectorWallPage() {
     return () => clearInterval(interval);
   }, [eventId]);
 
-  // Slideshow cycle respecting cycleSpeed, Pause, and Auto-Mix mode
+  // Slideshow cycle respecting cycleSpeed, Pause, Shuffle, and Auto-Mix mode
   useEffect(() => {
     if (photos.length <= 1 || isPaused || isDelayedAndLocked || showQrSpotlight) return;
 
     const slideTimer = setInterval(() => {
       setCurrentIndex((prev) => {
-        const nextIdx = (prev + 1) % photos.length;
+        let nextIdx: number;
+        if (isShuffle) {
+          nextIdx = getNextShuffledIndex(prev, photos.length);
+        } else {
+          nextIdx = (prev + 1) % photos.length;
+        }
+
         if (isAutoMix && nextIdx % 3 === 0) {
           const rotationModes: SlideshowMode[] = isVertical
             ? ['vertical-waterfall', 'vertical-polaroid', 'vertical-split', 'vertical-stories']
@@ -168,7 +201,7 @@ export default function LiveProjectorWallPage() {
     }, cycleSpeed);
 
     return () => clearInterval(slideTimer);
-  }, [photos.length, cycleSpeed, isAutoMix, isPaused, isDelayedAndLocked, showQrSpotlight, isVertical]);
+  }, [photos.length, cycleSpeed, isAutoMix, isPaused, isDelayedAndLocked, showQrSpotlight, isVertical, isShuffle, getNextShuffledIndex]);
 
   // Auto-hide toolbar listeners
   useEffect(() => {
@@ -234,6 +267,14 @@ export default function LiveProjectorWallPage() {
       } else if (e.key === 'm' || e.key === 'M') {
         e.preventDefault();
         setIsAutoMix(p => !p);
+        resetHeaderTimer();
+      } else if (e.key === 's' || e.key === 'S') {
+        e.preventDefault();
+        setIsShuffle(p => {
+          const next = !p;
+          if (next) shuffleQueueRef.current = [];
+          return next;
+        });
         resetHeaderTimer();
       } else if (e.key === 'Escape') {
         if (showQrSpotlight) {
@@ -568,6 +609,37 @@ export default function LiveProjectorWallPage() {
             ))}
           </div>
 
+          {/* Smart Shuffle Button (Acak Foto) */}
+          <button
+            onClick={() => {
+              setIsShuffle(prev => {
+                const next = !prev;
+                if (next) shuffleQueueRef.current = [];
+                return next;
+              });
+            }}
+            title="Acak urutan foto agar dinamis & tidak bosan (Shortcut: S)"
+            style={{
+              padding: '5px 10px',
+              borderRadius: '11px',
+              border: isShuffle ? '1px solid #10B981' : '1px solid rgba(255, 255, 255, 0.15)',
+              background: isShuffle ? 'linear-gradient(135deg, #059669 0%, #10B981 100%)' : 'rgba(255, 255, 255, 0.08)',
+              color: '#FFFFFF',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              boxShadow: isShuffle ? '0 0 16px rgba(16, 185, 129, 0.4)' : 'none',
+              transition: 'all 0.2s',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <Shuffle size={12} />
+            <span>{isShuffle ? 'Acak Foto: ON' : 'Urut'}</span>
+          </button>
+
           {/* Auto-Mix Button */}
           <button
             onClick={() => setIsAutoMix(prev => !prev)}
@@ -589,7 +661,7 @@ export default function LiveProjectorWallPage() {
               whiteSpace: 'nowrap'
             }}
           >
-            <Shuffle size={12} />
+            <Layers size={12} />
             <span>{isAutoMix ? 'Auto-Mix: ON' : 'Auto-Mix'}</span>
           </button>
 
