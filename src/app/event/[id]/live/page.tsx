@@ -8,7 +8,7 @@ import confetti from 'canvas-confetti';
 import { 
   Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw, Layout, Film, Grid, 
   SplitSquareVertical, Clock, Building, Disc, Layers, Copy, Shuffle, MessageSquare,
-  Play, Pause, QrCode as QrCodeIcon, Smartphone, Monitor, ChevronLeft, ChevronRight, X, Sliders
+  Play, Pause, QrCode as QrCodeIcon, Smartphone, Monitor, ChevronLeft, ChevronRight, X, Sliders, Heart
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventData, PhotoRecord } from '@/lib/types';
@@ -1250,88 +1250,310 @@ export default function LiveProjectorWallPage() {
             </div>
           </div>
         ) : displayMode === 'vertical-stories' ? (
-          /* VERTICAL MODE 4: REELS & STORIES 9:16 FULL-BLEED */
-          <div style={{
-            width: '100%',
-            maxWidth: '430px',
-            height: 'calc(100vh - 120px)',
-            borderRadius: '28px',
-            overflow: 'hidden',
-            position: 'relative',
-            background: '#0D0C0A',
-            boxShadow: '0 30px 90px rgba(0,0,0,0.95), 0 0 50px rgba(245, 158, 11, 0.25)',
-            border: '2px solid rgba(245, 158, 11, 0.35)'
-          }}>
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={currentPhoto.id}
-                initial={{ opacity: 0, scale: 1.05 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.6 }}
-                style={{
+          /* VERTICAL MODE 4: REELS & STORIES 9:16 PRO - WITH ANIMATED PROGRESS, FLOATING HEARTS & GLASSMORPHIC DOCK */
+          (() => {
+            const totalSegments = Math.min(photos.length, 12);
+            const activeSegmentIndex = totalSegments > 0 ? currentIndex % totalSegments : 0;
+
+            return (
+              <div style={{
+                width: '100%',
+                maxWidth: '430px',
+                height: 'calc(100vh - 110px)',
+                maxHeight: '840px',
+                borderRadius: '32px',
+                overflow: 'hidden',
+                position: 'relative',
+                background: '#0D0C0A',
+                boxShadow: '0 30px 90px rgba(0,0,0,0.95), 0 0 55px rgba(245, 158, 11, 0.28)',
+                border: '2px solid rgba(245, 158, 11, 0.45)'
+              }}>
+                {/* Photo Transition with Cinematic Ken-Burns Pan */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentPhoto.id}
+                    initial={{ opacity: 0, scale: 1.06, x: 15 }}
+                    animate={{ opacity: 1, scale: 1, x: 0 }}
+                    exit={{ opacity: 0, scale: 0.96, x: -15 }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      backgroundImage: `url(${currentPhoto.imageData})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      filter: 'brightness(0.96)'
+                    }}
+                  />
+                </AnimatePresence>
+
+                {/* Top & Bottom Cinematic Vignette Scrim */}
+                <div style={{
                   position: 'absolute',
                   inset: 0,
-                  backgroundImage: `url(${currentPhoto.imageData})`,
-                  backgroundSize: 'cover',
-                  backgroundPosition: 'center',
-                  filter: 'brightness(0.95)'
-                }}
-              />
-            </AnimatePresence>
+                  background: 'linear-gradient(to bottom, rgba(0,0,0,0.78) 0%, transparent 26%, transparent 62%, rgba(0,0,0,0.92) 100%)',
+                  pointerEvents: 'none',
+                  zIndex: 5
+                }} />
 
-            {/* Gradient Scrim */}
-            <div style={{
-              position: 'absolute',
-              inset: 0,
-              background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 25%, transparent 65%, rgba(0,0,0,0.9) 100%)'
-            }} />
-
-            {/* Top Stories Progress Bar */}
-            <div style={{ position: 'absolute', top: '16px', left: '16px', right: '16px', display: 'flex', gap: '4px', zIndex: 10 }}>
-              {photos.slice(0, 15).map((_, i) => (
-                <div
-                  key={i}
-                  style={{
-                    flex: 1,
-                    height: '3px',
-                    borderRadius: '2px',
-                    background: i === currentIndex % 15 ? '#F59E0B' : 'rgba(255,255,255,0.3)',
-                    transition: 'all 0.3s ease'
-                  }}
-                />
-              ))}
-            </div>
-
-            {/* Top Left Stories User Badge */}
-            <div style={{ position: 'absolute', top: '32px', left: '16px', display: 'flex', alignItems: 'center', gap: '10px', zIndex: 10 }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #F59E0B, #C27803)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 800, fontSize: '14px' }}>
-                {currentPhoto.guestName.charAt(0).toUpperCase()}
-              </div>
-              <div>
-                <span style={{ fontSize: '14px', fontWeight: 700, color: '#FFF', display: 'block' }}>
-                  @{currentPhoto.guestName}
-                </span>
-                <span style={{ fontSize: '11px', color: '#D4D4D8' }}>
-                  {new Date(currentPhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-              </div>
-            </div>
-
-            {/* Bottom Stories Caption Capsule */}
-            <div style={{ position: 'absolute', bottom: '24px', left: '16px', right: '16px', zIndex: 10 }}>
-              {currentPhoto.caption && (
-                <div style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(10px)', padding: '12px 18px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.15)', marginBottom: '12px' }}>
-                  <p style={{ margin: 0, fontSize: '14px', color: '#FDE68A', fontStyle: 'italic', lineHeight: 1.4 }}>
-                    &ldquo;{currentPhoto.caption}&rdquo;
-                  </p>
+                {/* Top Instagram Stories Segmented Progress Bar (Animated Fill) */}
+                <div style={{
+                  position: 'absolute',
+                  top: '14px',
+                  left: '14px',
+                  right: '14px',
+                  display: 'flex',
+                  gap: '4px',
+                  zIndex: 25
+                }}>
+                  {Array.from({ length: totalSegments }).map((_, i) => (
+                    <div
+                      key={i}
+                      style={{
+                        flex: 1,
+                        height: '3.5px',
+                        borderRadius: '2px',
+                        background: 'rgba(255, 255, 255, 0.28)',
+                        overflow: 'hidden',
+                        position: 'relative'
+                      }}
+                    >
+                      {i < activeSegmentIndex ? (
+                        <div style={{ width: '100%', height: '100%', background: '#F59E0B', borderRadius: '2px' }} />
+                      ) : i === activeSegmentIndex ? (
+                        <motion.div
+                          key={`${currentPhoto.id}-${isPaused}`}
+                          initial={{ width: '0%' }}
+                          animate={{ width: isPaused ? '0%' : '100%' }}
+                          transition={{ duration: cycleSpeed / 1000, ease: 'linear' }}
+                          style={{ height: '100%', background: '#F59E0B', borderRadius: '2px' }}
+                        />
+                      ) : (
+                        <div style={{ width: '0%', height: '100%' }} />
+                      )}
+                    </div>
+                  ))}
                 </div>
-              )}
-              <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#A1A1A6', letterSpacing: '0.08em' }}>
-                SUDUT BINGKAI REELS • FRAME #{currentPhoto.shotNumber}
-              </span>
-            </div>
-          </div>
+
+                {/* Top Header Row: User Profile & Mini QR Badge */}
+                <div style={{
+                  position: 'absolute',
+                  top: '28px',
+                  left: '14px',
+                  right: '14px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  zIndex: 25
+                }}>
+                  {/* Left: User Avatar with Instagram Story Gradient Ring */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '50%',
+                      padding: '2.5px',
+                      background: 'linear-gradient(45deg, #F59E0B 0%, #EC4899 50%, #8B5CF6 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexShrink: 0,
+                      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.4)'
+                    }}>
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        background: '#12100B',
+                        border: '2px solid #000',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#FFF',
+                        fontWeight: 800,
+                        fontSize: '15px'
+                      }}>
+                        {currentPhoto.guestName.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '14.5px', fontWeight: 800, color: '#FFF' }}>
+                          @{currentPhoto.guestName}
+                        </span>
+                        <span style={{ fontSize: '10px', background: 'rgba(245, 158, 11, 0.25)', border: '1px solid rgba(245, 158, 11, 0.5)', color: '#FCD34D', padding: '1px 6px', borderRadius: '999px', fontWeight: 700 }}>
+                          Live
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '11px', color: '#D4D4D8' }}>
+                        {new Date(currentPhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right: Direct "Scan & Ikut Tampil" QR Button */}
+                  <button
+                    onClick={() => setShowQrSpotlight(true)}
+                    title="Scan untuk ikut tampil di Reels ini (Shortcut: Q)"
+                    style={{
+                      background: 'rgba(0, 0, 0, 0.55)',
+                      backdropFilter: 'blur(10px)',
+                      WebkitBackdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(245, 158, 11, 0.45)',
+                      borderRadius: '999px',
+                      padding: '5px 12px 5px 6px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 14px rgba(0,0,0,0.4)',
+                      transition: 'transform 0.2s ease'
+                    }}
+                  >
+                    {qrDataUrl && (
+                      <img src={qrDataUrl} alt="" style={{ width: '22px', height: '22px', borderRadius: '4px', background: '#FFF' }} />
+                    )}
+                    <span style={{ fontSize: '11px', fontWeight: 800, color: '#F59E0B', letterSpacing: '0.04em' }}>
+                      Ikut Tampil
+                    </span>
+                  </button>
+                </div>
+
+                {/* Right Action Rail & Floating Hearts Reaction */}
+                <div style={{
+                  position: 'absolute',
+                  right: '12px',
+                  bottom: '120px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '16px',
+                  zIndex: 20
+                }}>
+                  {/* Floating Hearts Particles */}
+                  <div style={{ position: 'absolute', bottom: '60px', right: '4px', width: '32px', height: '140px', pointerEvents: 'none', overflow: 'hidden' }}>
+                    <div className="floating-heart heart-1">
+                      <Heart size={16} fill="#EF4444" color="#EF4444" />
+                    </div>
+                    <div className="floating-heart heart-2">
+                      <Heart size={14} fill="#F59E0B" color="#F59E0B" />
+                    </div>
+                    <div className="floating-heart heart-3">
+                      <Heart size={18} fill="#EC4899" color="#EC4899" />
+                    </div>
+                  </div>
+
+                  {/* Love Button with Dynamic Likes */}
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '3px'
+                  }}>
+                    <div style={{
+                      width: '42px',
+                      height: '42px',
+                      borderRadius: '50%',
+                      background: 'rgba(0, 0, 0, 0.55)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 15px rgba(239, 68, 68, 0.35)'
+                    }}>
+                      <Heart size={20} fill="#EF4444" color="#EF4444" />
+                    </div>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#FFF' }}>
+                      {Math.floor(18 + (currentIndex * 7) % 85)}
+                    </span>
+                  </div>
+
+                  {/* Comment Bubble */}
+                  {currentPhoto.caption && (
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '3px'
+                    }}>
+                      <div style={{
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        background: 'rgba(0, 0, 0, 0.55)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        <MessageSquare size={19} color="#FFF" />
+                      </div>
+                      <span style={{ fontSize: '11px', fontWeight: 700, color: '#FFF' }}>1</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom Glassmorphic Caption Card & Audio Equalizer Ticker */}
+                <div style={{
+                  position: 'absolute',
+                  bottom: '16px',
+                  left: '14px',
+                  right: '14px',
+                  zIndex: 20,
+                  background: 'rgba(15, 13, 10, 0.78)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.16)',
+                  borderRadius: '20px',
+                  padding: '14px 16px',
+                  boxShadow: '0 12px 36px rgba(0,0,0,0.6)'
+                }}>
+                  {/* Guest Caption / Quote */}
+                  {currentPhoto.caption ? (
+                    <div style={{ marginBottom: '8px' }}>
+                      <p style={{ margin: 0, fontSize: '14px', color: '#FDE68A', fontStyle: 'italic', fontWeight: 600, lineHeight: 1.4 }}>
+                        &ldquo;{currentPhoto.caption}&rdquo;
+                      </p>
+                    </div>
+                  ) : (
+                    <div style={{ marginBottom: '8px' }}>
+                      <span style={{ fontSize: '13px', color: '#FFFFFF', fontWeight: 600 }}>
+                        Momen candid persembahan @{currentPhoto.guestName}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Audio Equalizer & Frame Code Ticker */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    paddingTop: '8px',
+                    borderTop: '1px solid rgba(255,255,255,0.1)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {/* Animated Equalizer Bars */}
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '2px', height: '14px' }}>
+                        <span className="eq-bar eq-bar-1" />
+                        <span className="eq-bar eq-bar-2" />
+                        <span className="eq-bar eq-bar-3" />
+                        <span className="eq-bar eq-bar-4" />
+                      </div>
+                      <span className="font-mono-film" style={{ fontSize: '11px', color: '#D4D4D8', letterSpacing: '0.04em' }}>
+                        {event?.title || 'Suasana Acara'} • Live Story
+                      </span>
+                    </div>
+
+                    <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#F59E0B' }}>
+                      FRAME #{currentPhoto.shotNumber}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()
         ) : displayMode === 'polaroid' ? (
           /* HORIZONTAL MODE 1: POLAROID SPOTLIGHT */
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '900px', width: '100%' }}>
@@ -1993,7 +2215,7 @@ export default function LiveProjectorWallPage() {
         </div>
       )}
 
-      {/* Ken Burns Keyframe CSS */}
+      {/* Keyframe Animations for Reels Live Effects & Ken Burns */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -2008,6 +2230,49 @@ export default function LiveProjectorWallPage() {
             transform: scale(1.04) translate(1%, 0.5%);
           }
         }
+
+        @keyframes eqBounce {
+          0%, 100% { height: 3px; }
+          50% { height: 13px; }
+        }
+        .eq-bar {
+          width: 2.5px;
+          background: #F59E0B;
+          border-radius: 1px;
+          display: inline-block;
+        }
+        .eq-bar-1 { animation: eqBounce 0.75s ease-in-out infinite; }
+        .eq-bar-2 { animation: eqBounce 0.55s ease-in-out infinite 0.2s; }
+        .eq-bar-3 { animation: eqBounce 0.95s ease-in-out infinite 0.4s; }
+        .eq-bar-4 { animation: eqBounce 0.65s ease-in-out infinite 0.15s; }
+
+        @keyframes floatHeartUp1 {
+          0% { transform: translateY(100px) scale(0.6) rotate(0deg); opacity: 0; }
+          20% { opacity: 0.95; transform: translateY(70px) scale(1) rotate(-8deg); }
+          65% { opacity: 0.85; transform: translateY(25px) scale(1.1) rotate(12deg); }
+          100% { transform: translateY(-15px) scale(0.7) rotate(-14deg); opacity: 0; }
+        }
+        @keyframes floatHeartUp2 {
+          0% { transform: translateY(110px) scale(0.5) rotate(0deg); opacity: 0; }
+          25% { opacity: 0.9; transform: translateY(65px) scale(1) rotate(10deg); }
+          70% { opacity: 0.8; transform: translateY(20px) scale(1.05) rotate(-10deg); }
+          100% { transform: translateY(-20px) scale(0.6) rotate(15deg); opacity: 0; }
+        }
+        @keyframes floatHeartUp3 {
+          0% { transform: translateY(120px) scale(0.7) rotate(0deg); opacity: 0; }
+          15% { opacity: 1; transform: translateY(80px) scale(1.15) rotate(-12deg); }
+          65% { opacity: 0.85; transform: translateY(30px) scale(1.2) rotate(8deg); }
+          100% { transform: translateY(-25px) scale(0.8) rotate(-16deg); opacity: 0; }
+        }
+        .floating-heart {
+          position: absolute;
+          bottom: 0;
+          right: 6px;
+          pointer-events: none;
+        }
+        .heart-1 { animation: floatHeartUp1 2.8s ease-in-out infinite; }
+        .heart-2 { animation: floatHeartUp2 3.4s ease-in-out infinite 0.9s; }
+        .heart-3 { animation: floatHeartUp3 3.1s ease-in-out infinite 1.8s; }
       `
         }}
       />
