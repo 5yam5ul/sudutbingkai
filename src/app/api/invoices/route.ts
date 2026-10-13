@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getInvoice, createInvoice, getEventById, getAllInvoices, updateInvoice, deleteInvoice } from '@/lib/db';
 import { PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
+import { getServerSession } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -9,11 +10,20 @@ export async function GET(request: Request) {
     const eventId = searchParams.get('eventId');
     const query = id || eventId;
 
-    // If no specific query is provided, return all invoices (for Admin Dashboard)
+    // If no specific query is provided, return all invoices strictly for Super Admin Dashboard
     if (!query) {
+      const session = getServerSession(request);
+      if (!session || session.role !== 'admin') {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Parameter query faktur (id, eventId) atau sesi Admin diperlukan.'
+        }, { status: 403 });
+      }
+
       const invoices = await getAllInvoices();
       return NextResponse.json({ success: true, invoices });
     }
+
 
     let invoice = await getInvoice(query);
 
@@ -142,6 +152,11 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat menghapus invoice' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {
@@ -158,3 +173,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
   }
 }
+

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent } from '@/lib/db';
 import { EventData, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
+import { getServerSession } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -9,12 +10,27 @@ export async function GET(request: Request) {
     const hostEmail = searchParams.get('hostEmail');
     const vendorId = searchParams.get('vendorId');
 
+    // 1. Single event query (Used by guests / live slideshow / dashboard)
     if (id) {
       const event = await getEventById(id);
       if (!event) {
         return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
       }
       return NextResponse.json({ success: true, event });
+    }
+
+    // 2. Unparameterized query: Strictly restricted to Super Admin
+    if (!hostEmail && !vendorId) {
+      const session = getServerSession(request);
+      if (!session || session.role !== 'admin') {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Parameter identitas acara (id, hostEmail, vendorId) atau sesi Admin diperlukan.'
+        }, { status: 403 });
+      }
+
+      const allEvents = await getAllEvents();
+      return NextResponse.json({ success: true, events: allEvents });
     }
 
     let events = await getAllEvents();
@@ -31,6 +47,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
   }
 }
+
 
 export async function POST(request: Request) {
   try {
@@ -233,6 +250,21 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Parameter id diperlukan' }, { status: 400 });
     }
 
+    const existing = await getEventById(id);
+    if (!existing) {
+      return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
+    }
+
+    const session = getServerSession(request);
+    if (session) {
+      const isOwner = session.role === 'admin' ||
+        (session.role === 'host' && (session.email?.toLowerCase() === existing.hostEmail?.toLowerCase() || session.id === existing.hostEmail)) ||
+        (session.role === 'vendor' && session.id === existing.vendorId);
+      if (!isOwner) {
+        return NextResponse.json({ success: false, error: 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus acara ini' }, { status: 403 });
+      }
+    }
+
     const success = await deleteEvent(id);
     if (!success) {
       return NextResponse.json({ success: false, error: 'Gagal menghapus acara' }, { status: 400 });
@@ -243,4 +275,5 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
   }
 }
+
 

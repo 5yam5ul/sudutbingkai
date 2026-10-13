@@ -1,15 +1,55 @@
 import { NextResponse } from 'next/server';
 import { getAllVendors, saveVendor, updateVendor, deleteVendor } from '@/lib/db';
+import { getServerSession } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const session = getServerSession(req);
     const vendors = await getAllVendors();
     const cleanVendors = vendors.filter(v => v.id !== 'admin_sudutbingkai' && !v.email?.toLowerCase().includes('admin'));
-    return NextResponse.json({ success: true, vendors: cleanVendors });
+
+    // 1. Super Admin: full access to all vendors
+    if (session?.role === 'admin') {
+      return NextResponse.json({ success: true, vendors: cleanVendors });
+    }
+
+    // 2. Logged-in Vendor: full access to their own account, masked for others
+    if (session?.role === 'vendor') {
+      const sanitized = cleanVendors.map(v => {
+        const isSelf = v.id === session.id || (session.email && v.email?.toLowerCase() === session.email.toLowerCase());
+        if (isSelf) return v;
+        return {
+          id: v.id,
+          name: v.name,
+          companyName: v.companyName,
+          instagram: v.instagram,
+          logoUrl: v.logoUrl,
+          tier: v.tier,
+          partnerTier: v.partnerTier,
+          city: v.city
+        };
+      });
+      return NextResponse.json({ success: true, vendors: sanitized });
+    }
+
+    // 3. Public / Anonymous: Strictly strip all sensitive financial & bank details
+    const publicVendors = cleanVendors.map(v => ({
+      id: v.id,
+      name: v.name,
+      companyName: v.companyName,
+      instagram: v.instagram,
+      logoUrl: v.logoUrl,
+      tier: v.tier,
+      partnerTier: v.partnerTier,
+      city: v.city
+    }));
+
+    return NextResponse.json({ success: true, vendors: publicVendors });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+
 
 export async function POST(req: Request) {
   try {
@@ -117,6 +157,11 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const session = getServerSession(req);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat menghapus akun mitra vendor' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) {
@@ -133,3 +178,4 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

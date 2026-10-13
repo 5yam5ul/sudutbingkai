@@ -1,10 +1,36 @@
 import { NextResponse } from 'next/server';
 import { getPayoutRequests, createPayoutRequest, updatePayoutStatus, deletePayout } from '@/lib/db';
+import { getServerSession } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const vendorId = searchParams.get('vendorId') || undefined;
+    const session = getServerSession(request);
+
+    // If no vendorId specified, strictly require Super Admin session
+    if (!vendorId) {
+      if (!session || session.role !== 'admin') {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Parameter vendorId atau sesi Admin diperlukan.'
+        }, { status: 403 });
+      }
+
+      const allPayouts = await getPayoutRequests();
+      return NextResponse.json({ success: true, payouts: allPayouts });
+    }
+
+    // If vendorId is specified, ensure caller is the matching vendor or Super Admin
+    if (session && session.role === 'vendor') {
+      const isSelf = session.id === vendorId || (session.email && session.email.toLowerCase() === vendorId.toLowerCase());
+      if (!isSelf) {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Anda tidak memiliki akses ke riwayat penarikan vendor lain.'
+        }, { status: 403 });
+      }
+    }
 
     const payouts = await getPayoutRequests(vendorId);
     return NextResponse.json({ success: true, payouts });
@@ -44,6 +70,11 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat memproses penarikan komisi' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { id, status, proofUrl, notes } = body;
 
@@ -64,19 +95,26 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat menghapus permintaan penarikan' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+
     if (!id) {
       return NextResponse.json({ success: false, error: 'Parameter id penarikan diperlukan' }, { status: 400 });
     }
 
     const success = await deletePayout(id);
     if (!success) {
-      return NextResponse.json({ success: false, error: 'Gagal menghapus data penarikan' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Gagal menghapus permintaan penarikan' }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, message: 'Data penarikan berhasil dihapus' });
+    return NextResponse.json({ success: true, message: 'Permintaan penarikan berhasil dihapus' });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
+

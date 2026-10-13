@@ -133,17 +133,24 @@ export default function SuperAdminDashboard() {
   const loadAllAdminData = async () => {
     setLoading(true);
     try {
+      const session = getClientSession();
+      const adminHeaders: HeadersInit = {
+        'x-user-session': session ? encodeURIComponent(JSON.stringify(session)) : '',
+        'Authorization': 'Bearer admin_sudutbingkai'
+      };
+
       const [resE, resP, resI, resPay, resT, resV, resAdd, resVid, resVoi] = await Promise.allSettled([
-        fetch('/api/events').then(r => r.json()),
-        fetch('/api/photos?includeHidden=true').then(r => r.json()),
-        fetch('/api/invoices').then(r => r.json()),
-        fetch('/api/payouts').then(r => r.json()),
-        fetch('/api/testimonials').then(r => r.json()),
-        fetch('/api/vendors').then(r => r.json()),
-        fetch('/api/addons').then(r => r.json()),
-        fetch('/api/video-wishes').then(r => r.json()),
-        fetch('/api/voice-notes').then(r => r.json())
+        fetch('/api/events', { headers: adminHeaders }).then(r => r.json()),
+        fetch('/api/photos?includeHidden=true', { headers: adminHeaders }).then(r => r.json()),
+        fetch('/api/invoices', { headers: adminHeaders }).then(r => r.json()),
+        fetch('/api/payouts', { headers: adminHeaders }).then(r => r.json()),
+        fetch('/api/testimonials', { headers: adminHeaders }).then(r => r.json()),
+        fetch('/api/vendors', { headers: adminHeaders }).then(r => r.json()),
+        fetch('/api/addons', { headers: adminHeaders }).then(r => r.json()),
+        fetch('/api/video-wishes', { headers: adminHeaders }).then(r => r.json()),
+        fetch('/api/voice-notes', { headers: adminHeaders }).then(r => r.json())
       ]);
+
 
       if (resE.status === 'fulfilled' && resE.value?.success) setEvents(resE.value.events || []);
       if (resP.status === 'fulfilled' && resP.value?.success) setPhotos(resP.value.photos || []);

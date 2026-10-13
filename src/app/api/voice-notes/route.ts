@@ -4,6 +4,7 @@ import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getEventById } from '@/lib/db';
 import { uploadBufferToR2, isR2Configured } from '@/lib/r2';
+import { getServerSession } from '@/lib/auth';
 
 const VOICES_DIR = path.join(process.cwd(), 'public', 'uploads', 'voices');
 const VOICES_JSON = path.join(process.cwd(), 'data', 'voice_notes.json');
@@ -28,6 +29,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const eventIdParam = searchParams.get('eventId');
   const guestNameParam = searchParams.get('guestName');
+  const session = getServerSession(request);
 
   let resolvedEventId = eventIdParam;
   if (eventIdParam) {
@@ -36,6 +38,17 @@ export async function GET(request: Request) {
       resolvedEventId = event.id;
     }
   }
+
+  // If no eventId is provided, strictly require Super Admin session
+  if (!resolvedEventId) {
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Parameter eventId atau sesi Admin diperlukan.'
+      }, { status: 403 });
+    }
+  }
+
 
   // 1. Supabase
   if (isSupabaseConfigured && supabase) {

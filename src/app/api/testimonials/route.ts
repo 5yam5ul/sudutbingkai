@@ -8,20 +8,48 @@ import {
   deleteTestimonial,
   getEventById
 } from '@/lib/db';
+import { getServerSession } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const vendorId = searchParams.get('vendorId');
     const eventId = searchParams.get('eventId');
+    const session = getServerSession(request);
 
     let testimonials = [];
     if (vendorId) {
+      if (session && session.role === 'vendor') {
+        const isSelf = session.id === vendorId || (session.email && session.email.toLowerCase() === vendorId.toLowerCase());
+        if (!isSelf) {
+          return NextResponse.json({
+            success: false,
+            error: 'Akses ditolak: Anda tidak memiliki akses ke testimoni vendor lain.'
+          }, { status: 403 });
+        }
+      }
       testimonials = await getTestimonialsByVendor(vendorId);
     } else if (eventId) {
       testimonials = await getTestimonialsByEvent(eventId);
     } else {
-      testimonials = await getAllTestimonials();
+      // If no filters provided: Admin sees all, public only sees approved social proof
+      const all = await getAllTestimonials();
+      if (session?.role === 'admin') {
+        testimonials = all;
+      } else {
+        testimonials = all
+          .filter(t => t.status === 'approved')
+          .map(t => ({
+            id: t.id,
+            eventTitle: t.eventTitle,
+            submitterName: t.submitterName,
+            videoUrl: t.videoUrl,
+            caption: t.caption,
+            durationSeconds: t.durationSeconds,
+            status: t.status,
+            submittedAt: t.submittedAt
+          }));
+      }
     }
 
     return NextResponse.json({ success: true, testimonials });
@@ -32,6 +60,7 @@ export async function GET(request: Request) {
     );
   }
 }
+
 
 export async function POST(request: Request) {
   try {
@@ -94,6 +123,11 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat memvalidasi video testimoni' }, { status: 403 });
+    }
+
     const body = await request.json();
     const { id, status, adminNotes } = body;
 
@@ -127,6 +161,11 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat menghapus video testimoni' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {
@@ -155,3 +194,4 @@ export async function DELETE(request: Request) {
     );
   }
 }
+

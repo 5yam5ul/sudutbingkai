@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { getVideoWishes, saveVideoWish, deleteVideoWish, getEventById } from '@/lib/db';
 import { uploadBufferToR2, isR2Configured } from '@/lib/r2';
+import { getServerSession } from '@/lib/auth';
 
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 const VIDEOS_DIR = path.join(UPLOADS_DIR, 'videos');
@@ -20,6 +21,17 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get('eventId') || undefined;
     const guestNameParam = searchParams.get('guestName');
+    const session = getServerSession(request);
+
+    // If no eventId is provided, strictly require Super Admin session
+    if (!eventId) {
+      if (!session || session.role !== 'admin') {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Parameter eventId atau sesi Admin diperlukan.'
+        }, { status: 403 });
+      }
+    }
 
     let canonicalEventId = eventId;
     if (eventId) {
@@ -37,6 +49,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
+
 
 export async function POST(request: Request) {
   try {

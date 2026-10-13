@@ -1,25 +1,55 @@
 import { NextResponse } from 'next/server';
 import { getAllPhotos, savePhoto, updatePhoto, deletePhoto, getEventById } from '@/lib/db';
 import { PhotoRecord } from '@/lib/types';
+import { getServerSession } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const eventIdParam = searchParams.get('eventId') || undefined;
-    const includeHidden = searchParams.get('includeHidden') === 'true';
+    const requestedIncludeHidden = searchParams.get('includeHidden') === 'true';
+    const session = getServerSession(request);
+
+    // If no eventId is provided, strictly require Super Admin session
+    if (!eventIdParam) {
+      if (!session || session.role !== 'admin') {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Parameter eventId atau sesi Admin diperlukan.'
+        }, { status: 403 });
+      }
+
+      const allPhotos = await getAllPhotos(undefined, true);
+      return NextResponse.json({ success: true, photos: allPhotos, count: allPhotos.length });
+    }
 
     let resolvedEventId = eventIdParam;
-    if (eventIdParam) {
-      const event = await getEventById(eventIdParam);
-      if (event) {
-        resolvedEventId = event.id;
+    let targetEvent = await getEventById(eventIdParam);
+    if (targetEvent) {
+      resolvedEventId = targetEvent.id;
+    }
+
+    // Only host of this event, vendor of this event, or admin can view hidden photos
+    let safeIncludeHidden = false;
+    if (requestedIncludeHidden) {
+      if (session) {
+        const isAuthorizedHost = session.role === 'host' && (
+          session.email?.toLowerCase() === targetEvent?.hostEmail?.toLowerCase() ||
+          session.id === targetEvent?.hostEmail
+        );
+        const isAuthorizedVendor = session.role === 'vendor' && session.id === targetEvent?.vendorId;
+        const isAdmin = session.role === 'admin';
+
+        if (isAdmin || isAuthorizedHost || isAuthorizedVendor) {
+          safeIncludeHidden = true;
+        }
       }
     }
 
     const sessionId = searchParams.get('sessionId');
     const guestName = searchParams.get('guestName');
 
-    let photos = await getAllPhotos(resolvedEventId, includeHidden);
+    let photos = await getAllPhotos(resolvedEventId, safeIncludeHidden);
 
     if (sessionId || (guestName && guestName.trim() !== 'Tamu')) {
       photos = photos.filter(p => 
@@ -36,6 +66,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
   }
 }
+
 
 export async function POST(request: Request) {
   try {
