@@ -700,7 +700,7 @@ export default function EventDashboardPage() {
             {isHost && (
               <>
                 <Link
-                  href={`/event/${eventId}/print`}
+                  href={`/event/${event?.slug || eventId}/print`}
                   className="glass-pill desktop-only"
                   style={{ padding: '7px 11px', fontSize: '12px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                   title="Cetak Barcode Meja Tamu"
@@ -710,7 +710,7 @@ export default function EventDashboardPage() {
                 </Link>
 
                 <Link
-                  href={`/dashboard?eventId=${eventId}`}
+                  href={`/dashboard?eventId=${event?.slug || eventId}`}
                   className="glass-pill"
                   style={{
                     padding: '7px 10px',

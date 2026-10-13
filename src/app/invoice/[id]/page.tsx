@@ -414,7 +414,7 @@ export default function InvoicePage() {
       <div className="no-print" style={{ maxWidth: '820px', margin: '24px auto 0', textAlign: 'center' }}>
         {invoice.eventId && (
           <Link
-            href={`/event/${invoice.eventId}`}
+            href={`/event/${(invoice as any).eventSlug || invoice.eventId}`}
             style={{
               fontSize: '13px',
               color: '#C27803',

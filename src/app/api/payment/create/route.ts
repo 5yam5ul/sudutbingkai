@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createMayarInvoice, isMayarConfigured } from '@/lib/mayar';
 import { EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
+import { getEventById } from '@/lib/db';
 
 // Price map in IDR
 const TIER_PRICES: Record<EventPackageTier, number> = {
@@ -65,9 +66,17 @@ export async function POST(request: Request) {
     }
 
     const hostUrl = request.headers.get('origin') || 'http://localhost:3000';
+    let targetEventSlugOrId = eventId;
+    if (eventId) {
+      try {
+        const ev = await getEventById(eventId);
+        if (ev?.slug) targetEventSlugOrId = ev.slug;
+      } catch {}
+    }
+
     const finalRedirectUrl = redirectUrl || (
       isWholesale ? `${hostUrl}/vendor?paid=true` :
-      eventId ? `${hostUrl}/event/${eventId}?paid=true` : 
+      targetEventSlugOrId ? `${hostUrl}/event/${targetEventSlugOrId}?paid=true` : 
       `${hostUrl}/create?tier=${packageTier}&paid=true`
     );
 

@@ -214,7 +214,7 @@ export async function PATCH(request: Request) {
     if (body.commissionAmount !== undefined) updates.commissionAmount = body.commissionAmount;
     if (body.commissionStatus !== undefined) updates.commissionStatus = body.commissionStatus;
 
-    const updated = await updateEvent(body.id, updates);
+    const updated = await updateEvent(existingEvent.id, updates);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
     }

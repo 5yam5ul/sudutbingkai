@@ -822,7 +822,7 @@ export default function PrintTableCardPage() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <Link
-            href={`/event/${eventId}`}
+            href={`/event/${event?.slug || eventId}`}
             style={{ color: '#86868B', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}
           >
             <ArrowLeft size={16} />

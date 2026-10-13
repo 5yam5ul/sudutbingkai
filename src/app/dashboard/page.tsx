@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play } from 'lucide-react';
+import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play, Link2, Globe, Copy } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
@@ -75,6 +75,7 @@ export default function BrideDashboardPage() {
   const [isUploadingCover, setIsUploadingCover] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [eventSlug, setEventSlug] = useState<string>('');
 
   // Real ZIP state
   const [isZipping, setIsZipping] = useState(false);
@@ -150,6 +151,7 @@ export default function BrideDashboardPage() {
     setAllowGuestFrameToggle(selected.allowGuestFrameToggle !== false);
     setAllowVoiceNote(selected.allowVoiceNote !== false);
     setCoverUrl(selected.coverUrl || '');
+    setEventSlug(selected.slug || '');
 
     // Fetch all photos including hidden for host moderation
     try {
@@ -258,9 +260,11 @@ export default function BrideDashboardPage() {
 
   const copyGuestLink = () => {
     if (!event) return;
-    const url = `${window.location.origin}/cam/${event.id}`;
+    const slugOrId = event.slug || event.id;
+    const url = `${window.location.origin}/cam/${slugOrId}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
+    toast.success('Tautan kamera tamu berhasil disalin!');
     setTimeout(() => setCopied(false), 2500);
   };
 
@@ -441,12 +445,15 @@ export default function BrideDashboardPage() {
       ? [preset] 
       : (allowedPresets.includes(preset) ? allowedPresets.slice(0, maxAllowedPresets) : [preset, ...allowedPresets.slice(0, maxAllowedPresets - 1)]);
 
+    const cleanSlug = eventSlug.trim().toLowerCase().replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+
     try {
       const res = await fetch('/api/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: event.id,
+          slug: cleanSlug || undefined,
           shotsPerGuest: safeShots,
           revealMode,
           revealTime: revealMode === 'delayed' ? revealTime : undefined,
@@ -464,8 +471,9 @@ export default function BrideDashboardPage() {
       const data = await res.json();
       if (data.success && data.event) {
         setEvent(data.event);
+        if (data.event.slug) setEventSlug(data.event.slug);
         setSaveSuccess(true);
-        toast.success('Pengaturan album berhasil disimpan!');
+        toast.success('Pengaturan album & tautan berhasil disimpan!');
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
         toast.error('Gagal menyimpan: ' + (data.error || 'Terjadi kesalahan'));
@@ -765,7 +773,7 @@ export default function BrideDashboardPage() {
               </Link>
 
               <Link
-                href={`/event/${event?.id}/print`}
+                href={`/event/${event?.slug || event?.id}/print`}
                 className="glass-pill"
                 style={{ padding: '9px 12px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
@@ -774,7 +782,7 @@ export default function BrideDashboardPage() {
               </Link>
 
               <Link
-                href={`/cam/${event?.id}`}
+                href={`/cam/${event?.slug || event?.id}`}
                 className="btn-apple-black"
                 style={{ padding: '9px 12px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
@@ -783,7 +791,7 @@ export default function BrideDashboardPage() {
               </Link>
 
               <Link
-                href={`/event/${event?.id}/live`}
+                href={`/event/${event?.slug || event?.id}/live`}
                 className="glass-pill"
                 style={{ padding: '9px 12px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
@@ -1400,6 +1408,149 @@ export default function BrideDashboardPage() {
         {/* TAB 2: PENGATURAN ACARA & BINGKAI */}
         {activeTab === 'settings' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* Section: Kustomisasi Tautan URL Album (Slug) */}
+            <div className="glass-card form-section-card">
+              <div style={{ marginBottom: '20px' }}>
+                <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
+                  KUSTOMISASI TAUTAN URL ALBUM (CUSTOM SLUG)
+                </span>
+                <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
+                  Tautan Elegan & Unik Acara Anda
+                </h2>
+                <p style={{ color: '#6E6E73', fontSize: '13.5px' }}>
+                  Gunakan nama panggilan Anda dan pasangan atau nama acara (huruf kecil, angka, dan tanda strip). Tautan ini mempermudah tamu membuka kamera dan melihat galeri acara secara personal.
+                </p>
+              </div>
+
+              <div style={{ maxWidth: '640px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '8px' }}>
+                  Slug / URL Khusus Acara
+                </label>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  borderRadius: '12px', 
+                  border: '1px solid rgba(0,0,0,0.12)', 
+                  background: '#FFFFFF', 
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                }}>
+                  <div style={{ 
+                    padding: '12px 14px', 
+                    background: '#F5F5F7', 
+                    color: '#86868B', 
+                    fontSize: '13.5px', 
+                    fontFamily: 'var(--font-mono)', 
+                    borderRight: '1px solid rgba(0,0,0,0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap'
+                  }}>
+                    <Globe size={14} color="#C27803" />
+                    <span>sudutbingkai.id/event/</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={eventSlug}
+                    onChange={(e) => {
+                      const clean = e.target.value.toLowerCase().replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-');
+                      setEventSlug(clean);
+                    }}
+                    placeholder={event?.coupleOrHost ? event.coupleOrHost.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'sarah-dimas'}
+                    style={{
+                      flex: 1,
+                      border: 'none',
+                      outline: 'none',
+                      padding: '12px 14px',
+                      fontSize: '14px',
+                      fontFamily: 'var(--font-mono)',
+                      color: '#1D1D1F',
+                      fontWeight: 600,
+                      background: 'transparent'
+                    }}
+                  />
+                </div>
+
+                {/* Live Preview Links */}
+                <div style={{ marginTop: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    padding: '10px 14px', 
+                    borderRadius: '10px', 
+                    background: 'rgba(194, 120, 3, 0.05)', 
+                    border: '1px solid rgba(194, 120, 3, 0.2)' 
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                      <Camera size={14} color="#C27803" />
+                      <span style={{ fontSize: '11px', color: '#86868B', fontWeight: 600, textTransform: 'uppercase' }}>Kamera Tamu:</span>
+                      <span style={{ fontSize: '12.5px', fontFamily: 'var(--font-mono)', color: '#1D1D1F', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        {typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.id'}/cam/{eventSlug || event?.slug || event?.id}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.id'}/cam/${eventSlug || event?.slug || event?.id}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success('Tautan kamera tamu disalin!');
+                      }}
+                      className="glass-pill"
+                      style={{ padding: '4px 10px', fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                    >
+                      <Copy size={12} />
+                      <span>Salin</span>
+                    </button>
+                  </div>
+
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between', 
+                    padding: '10px 14px', 
+                    borderRadius: '10px', 
+                    background: 'rgba(0, 0, 0, 0.03)', 
+                    border: '1px solid rgba(0, 0, 0, 0.06)' 
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                      <Eye size={14} color="#6E6E73" />
+                      <span style={{ fontSize: '11px', color: '#86868B', fontWeight: 600, textTransform: 'uppercase' }}>Galeri Acara:</span>
+                      <span style={{ fontSize: '12.5px', fontFamily: 'var(--font-mono)', color: '#1D1D1F', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                        {typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.id'}/event/{eventSlug || event?.slug || event?.id}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.id'}/event/${eventSlug || event?.slug || event?.id}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success('Tautan galeri album disalin!');
+                      }}
+                      className="glass-pill"
+                      style={{ padding: '4px 10px', fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}
+                    >
+                      <Copy size={12} />
+                      <span>Salin</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ marginTop: '16px' }}>
+                  <button 
+                    onClick={handleSaveSettings} 
+                    disabled={isSavingSettings}
+                    className="btn-apple-black" 
+                    style={{ padding: '9px 20px', fontSize: '13px', cursor: isSavingSettings ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    {saveSuccess && <Check size={14} />}
+                    <span>{isSavingSettings ? 'Menyimpan...' : saveSuccess ? 'Tersimpan!' : 'Simpan Tautan'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Section 0: Hero Cover Banner Tamu */}
             <div className="glass-card form-section-card">
               <div style={{ marginBottom: '20px' }}>
@@ -1785,7 +1936,7 @@ export default function BrideDashboardPage() {
                       Ingin membebaskan tamu memilih berbagai roll film analog di ponsel mereka?
                     </span>
                     <Link 
-                      href={`/invoice/${event?.id}`}
+                      href={`/invoice/${event?.slug || event?.id}`}
                       style={{ fontSize: '11.5px', fontWeight: 600, color: '#C27803', textDecoration: 'underline', whiteSpace: 'nowrap' }}
                     >
                       Upgrade Paket →
@@ -1912,7 +2063,7 @@ export default function BrideDashboardPage() {
                         Butuh jatah foto lebih banyak atau kuota tamu lebih besar?
                       </span>
                       <Link 
-                        href={`/invoice/${event?.id}`}
+                        href={`/invoice/${event?.slug || event?.id}`}
                         style={{ fontSize: '11.5px', fontWeight: 600, color: '#C27803', textDecoration: 'underline', whiteSpace: 'nowrap' }}
                       >
                         Upgrade Paket →

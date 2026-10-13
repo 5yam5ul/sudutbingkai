@@ -57,6 +57,15 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Invoice tidak ditemukan' }, { status: 404 });
     }
 
+    if (invoice.eventId) {
+      try {
+        const ev = await getEventById(invoice.eventId);
+        if (ev?.slug) {
+          (invoice as any).eventSlug = ev.slug;
+        }
+      } catch {}
+    }
+
     return NextResponse.json({ success: true, invoice });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });

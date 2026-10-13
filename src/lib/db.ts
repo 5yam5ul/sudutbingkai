@@ -88,8 +88,19 @@ function saveImageToLocalFile(photoId: string, base64OrPath: string): string {
 // Supabase Data Transformers
 // ---------------------------------------------------------------------------
 
+function cleanSlugString(text?: string): string | undefined {
+  if (!text) return undefined;
+  const clean = text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return clean || undefined;
+}
+
 function rowToEvent(row: any): EventData {
-  const derivedSlug = row.slug || (row.id ? row.id.replace(/^wedding-|^event-|^sb-/, '') : undefined);
+  const derivedSlug = row.slug || cleanSlugString(row.couple_or_host) || cleanSlugString(row.title) || (row.id ? row.id.replace(/^wedding-|^event-|^sb-/, '') : undefined);
   return {
     id: row.id,
     slug: derivedSlug,
@@ -299,6 +310,7 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
   if (isSupabaseConfigured && supabase) {
     try {
       const dbUpdates: Record<string, any> = {};
+      if (updates.slug !== undefined) dbUpdates.slug = updates.slug;
       if (updates.title !== undefined) dbUpdates.title = updates.title;
       if (updates.coupleOrHost !== undefined) dbUpdates.couple_or_host = updates.coupleOrHost;
       if (updates.eventDate !== undefined) dbUpdates.event_date = updates.eventDate;
@@ -828,15 +840,26 @@ export async function getInvoice(idOrNumber: string): Promise<InvoiceRecord | nu
     const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
     const invoices: InvoiceRecord[] = JSON.parse(raw);
     const lower = cleanQuery.toLowerCase();
-    return invoices.find(inv => 
+    const result = invoices.find(inv => 
       inv.id.toLowerCase() === lower ||
       inv.invoiceNumber.toLowerCase() === lower ||
       (inv.eventId && inv.eventId.toLowerCase() === lower) ||
       inv.orderId.toLowerCase() === lower
     ) || null;
+    if (result) return result;
   } catch {
-    return null;
+    // ignore
   }
+
+  // 3. Fallback: check if cleanQuery is an event slug
+  try {
+    const matchedEvent = await getEventById(cleanQuery);
+    if (matchedEvent && matchedEvent.id !== cleanQuery) {
+      return getInvoice(matchedEvent.id);
+    }
+  } catch {}
+
+  return null;
 }
 
 export async function getInvoicesByEmail(email: string): Promise<InvoiceRecord[]> {

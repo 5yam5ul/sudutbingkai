@@ -2453,7 +2453,7 @@ export default function VendorPortalPage() {
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                     {/* Setting Album Host Dashboard */}
                     <Link
-                      href={`/dashboard?eventId=${c.id}`}
+                      href={`/dashboard?eventId=${c.slug || c.id}`}
                       className="glass-pill"
                       style={{
                         padding: '8px 14px',
@@ -2473,7 +2473,7 @@ export default function VendorPortalPage() {
 
                     {/* Cetak Barcode Meja */}
                     <Link
-                      href={`/event/${c.id}/print`}
+                      href={`/event/${c.slug || c.id}/print`}
                       target="_blank"
                       className="glass-pill"
                       style={{
@@ -2491,7 +2491,7 @@ export default function VendorPortalPage() {
 
                     {/* Live Proyektor Videotron */}
                     <Link
-                      href={`/event/${c.id}/live`}
+                      href={`/event/${c.slug || c.id}/live`}
                       target="_blank"
                       className="glass-pill"
                       style={{
@@ -2509,7 +2509,7 @@ export default function VendorPortalPage() {
 
                     {/* Galeri Tamu */}
                     <Link
-                      href={`/event/${c.id}`}
+                      href={`/event/${c.slug || c.id}`}
                       target="_blank"
                       className="glass-pill"
                       style={{
@@ -2529,7 +2529,7 @@ export default function VendorPortalPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/event/${c.id}` : `https://sudutbingkai.id/event/${c.id}`;
+                        const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/event/${c.slug || c.id}` : `https://sudutbingkai.id/event/${c.slug || c.id}`;
                         navigator.clipboard.writeText(shareUrl);
                         toast.success(`Tautan galeri acara "${c.title}" berhasil disalin! Bagikan ke klien atau tuan rumah.`);
                       }}
@@ -2552,7 +2552,7 @@ export default function VendorPortalPage() {
 
                     {/* Tes Kamera */}
                     <Link
-                      href={`/cam/${c.id}`}
+                      href={`/cam/${c.slug || c.id}`}
                       target="_blank"
                       className="btn-apple-black"
                       style={{

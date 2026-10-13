@@ -300,14 +300,14 @@ export default function LiveProjectorWallPage() {
   // Generate Corner & Spotlight QR Codes
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const guestUrl = `${window.location.origin}/cam/${eventId}`;
+      const guestUrl = `${window.location.origin}/cam/${event?.slug || eventId}`;
       QRCode.toDataURL(guestUrl, {
         width: 320,
         margin: 1,
         color: { dark: '#000000', light: '#ffffff' }
       }).then(url => setQrDataUrl(url));
     }
-  }, [eventId]);
+  }, [eventId, event?.slug]);
 
   // Countdown Timer Effect for Delayed Mode (Anti-Leak Shield)
   useEffect(() => {
@@ -427,7 +427,7 @@ export default function LiveProjectorWallPage() {
         {/* Left: Navigation & Live Event Stats */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
           <Link 
-            href={`/event/${eventId}`} 
+            href={`/event/${event?.slug || eventId}`} 
             style={{ 
               color: '#86868B', 
               textDecoration: 'none', 

@@ -402,7 +402,8 @@ export default function GuestCameraPage() {
     window.addEventListener('online', handleOnline);
 
     if (typeof window !== 'undefined') {
-      const url = `${window.location.origin}/cam/${eventId}`;
+      const slugOrId = event?.slug || eventId;
+      const url = `${window.location.origin}/cam/${slugOrId}`;
       QRCode.toDataURL(url, {
         width: 320,
         margin: 1,
@@ -413,7 +414,7 @@ export default function GuestCameraPage() {
     return () => {
       window.removeEventListener('online', handleOnline);
     };
-  }, [eventId]);
+  }, [eventId, event?.slug]);
 
   const attachStreamToVideo = (element: HTMLVideoElement | null, stream: MediaStream | null) => {
     if (!element || !stream) return;
@@ -2194,7 +2195,7 @@ export default function GuestCameraPage() {
                   </button>
 
                   <Link
-                    href={`/event/${eventId}`}
+                    href={`/event/${event?.slug || eventId}`}
                     className="glass-pill"
                     style={{ padding: '11px 16px', fontSize: '13px', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
@@ -2818,7 +2819,7 @@ export default function GuestCameraPage() {
               </button>
 
               <Link
-                href={`/event/${eventId}`}
+                href={`/event/${event?.slug || eventId}`}
                 style={{
                   color: 'rgba(255, 255, 255, 0.75)',
                   padding: '9px',
@@ -3095,7 +3096,7 @@ export default function GuestCameraPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Link href={`/event/${eventId}`} className="btn-apple-black" style={{ fontSize: '13px', padding: '8px 18px', textDecoration: 'none' }}>
+            <Link href={`/event/${event?.slug || eventId}`} className="btn-apple-black" style={{ fontSize: '13px', padding: '8px 18px', textDecoration: 'none' }}>
               <Eye size={14} />
               <span>Buka Galeri Acara</span>
             </Link>
