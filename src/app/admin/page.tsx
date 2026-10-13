@@ -449,16 +449,36 @@ export default function SuperAdminDashboard() {
     }
 
     try {
+      const payload = {
+        ...newInvoiceForm,
+        buyerType: 'client',
+        originalPrice: Number(newInvoiceForm.originalPrice || newInvoiceForm.finalAmount || 499000),
+        finalAmount: Number(newInvoiceForm.finalAmount || newInvoiceForm.originalPrice || 499000),
+        orderId: `ord_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`
+      };
+
       const res = await fetch('/api/invoices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newInvoiceForm)
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (data.success) {
         toast.success(`Invoice baru "${data.invoice.invoiceNumber}" berhasil diterbitkan!`);
         setInvoices(prev => [data.invoice, ...prev]);
         setCreateInvoiceModalOpen(false);
+        setNewInvoiceForm({
+          buyerName: '',
+          buyerEmail: '',
+          buyerPhone: '',
+          tierId: 'wedding',
+          tierName: 'Wedding (300 Tamu)',
+          originalPrice: 499000,
+          discountAmount: 0,
+          finalAmount: 499000,
+          paymentMethod: 'qris',
+          status: 'paid'
+        });
       } else {
         toast.error(data.error || 'Gagal menerbitkan invoice.');
       }
@@ -737,6 +757,38 @@ export default function SuperAdminDashboard() {
       }
     } catch {
       toast.error('Gagal menolak video.');
+    }
+  };
+
+  const handleDeletePayout = async (payoutId: string, vendorName: string, amount: number) => {
+    if (!confirm(`Hapus data penarikan komisi Rp ${amount.toLocaleString('id-ID')} untuk ${vendorName}? Data akan dihapus permanen.`)) return;
+    try {
+      const res = await fetch(`/api/payouts?id=${encodeURIComponent(payoutId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Data penarikan ${vendorName} berhasil dihapus.`);
+        setPayouts(prev => prev.filter(p => p.id !== payoutId));
+      } else {
+        toast.error(data.error || 'Gagal menghapus penarikan.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleDeleteTestimonial = async (testiId: string, submitterName: string) => {
+    if (!confirm(`Hapus video testimoni dari ${submitterName}?`)) return;
+    try {
+      const res = await fetch(`/api/testimonials?id=${encodeURIComponent(testiId)}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Video testimoni dari ${submitterName} berhasil dihapus.`);
+        setTestimonials(prev => prev.filter(t => t.id !== testiId));
+      } else {
+        toast.error(data.error || 'Gagal menghapus video testimoni.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
     }
   };
 
@@ -1769,28 +1821,39 @@ export default function SuperAdminDashboard() {
                           )}
                         </td>
                         <td style={{ padding: '16px 18px' }}>
-                          {p.status === 'pending' ? (
-                            <div style={{ display: 'flex', gap: '6px' }}>
-                              <button
-                                onClick={() => handleApprovePayout(p.id, p.vendorName, p.amount)}
-                                className="btn-apple-black"
-                                style={{ padding: '6px 12px', fontSize: '11.5px', borderRadius: '8px' }}
-                              >
-                                Setujui Transfer
-                              </button>
-                              <button
-                                onClick={() => handleRejectPayout(p.id)}
-                                className="glass-pill"
-                                style={{ padding: '6px 10px', fontSize: '11.5px', color: '#E11D48', cursor: 'pointer' }}
-                              >
-                                Tolak
-                              </button>
-                            </div>
-                          ) : (
-                            <span style={{ fontSize: '11.5px', color: '#86868B' }}>
-                              {p.processedAt ? new Date(p.processedAt).toLocaleDateString('id-ID') : '-'}
-                            </span>
-                          )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {p.status === 'pending' && (
+                              <>
+                                <button
+                                  onClick={() => handleApprovePayout(p.id, p.vendorName, p.amount)}
+                                  className="btn-apple-black"
+                                  style={{ padding: '6px 12px', fontSize: '11.5px', borderRadius: '8px' }}
+                                >
+                                  Setujui Transfer
+                                </button>
+                                <button
+                                  onClick={() => handleRejectPayout(p.id)}
+                                  className="glass-pill"
+                                  style={{ padding: '6px 10px', fontSize: '11.5px', color: '#E11D48', cursor: 'pointer' }}
+                                >
+                                  Tolak
+                                </button>
+                              </>
+                            )}
+                            {p.status !== 'pending' && (
+                              <span style={{ fontSize: '11.5px', color: '#86868B', marginRight: '4px' }}>
+                                {p.processedAt ? new Date(p.processedAt).toLocaleDateString('id-ID') : '-'}
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handleDeletePayout(p.id, p.vendorName, p.amount)}
+                              className="glass-pill"
+                              style={{ padding: '6px 8px', fontSize: '11.5px', cursor: 'pointer', color: '#E11D48' }}
+                              title="Hapus Data Penarikan"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1856,28 +1919,38 @@ export default function SuperAdminDashboard() {
                     </div>
                   </div>
 
-                  {t.status === 'pending' ? (
-                    <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '14px' }}>
-                      <button
-                        onClick={() => handleApproveTestimonial(t.id, t.submitterName)}
-                        className="btn-apple-black"
-                        style={{ flex: 1, padding: '8px', fontSize: '12px', borderRadius: '10px' }}
-                      >
-                        Approve (+Rp 50k)
-                      </button>
-                      <button
-                        onClick={() => handleRejectTestimonial(t.id)}
-                        className="glass-pill"
-                        style={{ padding: '8px 14px', fontSize: '12px', color: '#E11D48', cursor: 'pointer' }}
-                      >
-                        Tolak
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: '11px', color: '#86868B', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '10px' }}>
-                      Catatan: {t.adminNotes || 'Selesai diproses.'}
-                    </div>
-                  )}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '14px', marginTop: 'auto', gap: '8px' }}>
+                    {t.status === 'pending' ? (
+                      <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                        <button
+                          onClick={() => handleApproveTestimonial(t.id, t.submitterName)}
+                          className="btn-apple-black"
+                          style={{ flex: 1, padding: '8px', fontSize: '12px', borderRadius: '10px' }}
+                        >
+                          Approve (+Rp 50k)
+                        </button>
+                        <button
+                          onClick={() => handleRejectTestimonial(t.id)}
+                          className="glass-pill"
+                          style={{ padding: '8px 14px', fontSize: '12px', color: '#E11D48', cursor: 'pointer' }}
+                        >
+                          Tolak
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={{ fontSize: '11px', color: '#86868B', flex: 1 }}>
+                        Catatan: {t.adminNotes || 'Selesai diproses.'}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => handleDeleteTestimonial(t.id, t.submitterName)}
+                      className="glass-pill"
+                      style={{ padding: '8px 10px', fontSize: '12px', color: '#E11D48', cursor: 'pointer' }}
+                      title="Hapus Video Testimoni"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>

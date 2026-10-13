@@ -5,6 +5,7 @@ import {
   getTestimonialsByVendor,
   getTestimonialsByEvent,
   updateTestimonialStatus,
+  deleteTestimonial,
   getEventById
 } from '@/lib/db';
 
@@ -119,6 +120,37 @@ export async function PATCH(request: Request) {
   } catch (error: any) {
     return NextResponse.json(
       { success: false, error: error.message || 'Gagal memperbarui status testimoni' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get('id');
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: 'Parameter id testimoni diperlukan' },
+        { status: 400 }
+      );
+    }
+
+    const success = await deleteTestimonial(id);
+    if (!success) {
+      return NextResponse.json(
+        { success: false, error: 'Gagal menghapus data testimoni' },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Video testimoni berhasil dihapus'
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, error: error.message || 'Gagal menghapus video testimoni' },
       { status: 500 }
     );
   }

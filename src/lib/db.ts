@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem, VideoWishRecord } from './types';
+import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem, VideoWishRecord, PACKAGE_TIERS, EventPackageTier } from './types';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { uploadBufferToR2, isR2Configured, deleteFromR2 } from './r2';
 
@@ -307,6 +307,9 @@ export async function saveEvent(event: EventData): Promise<EventData> {
 }
 
 export async function updateEvent(id: string, updates: Partial<EventData>): Promise<EventData | null> {
+  const existing = await getEventById(id);
+  const canonicalId = existing?.id || id;
+
   if (isSupabaseConfigured && supabase) {
     try {
       const dbUpdates: Record<string, any> = {};
@@ -320,6 +323,7 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
       if (updates.allowGuestPresetSwitch !== undefined) dbUpdates.allow_guest_preset_switch = updates.allowGuestPresetSwitch;
       if (updates.packageTier !== undefined) dbUpdates.package_tier = updates.packageTier;
       if (updates.maxGuests !== undefined) dbUpdates.max_guests = updates.maxGuests;
+      if (updates.additionalPax !== undefined) dbUpdates.additional_pax = updates.additionalPax;
       if (updates.shotsPerGuest !== undefined) dbUpdates.shots_per_guest = updates.shotsPerGuest;
       if (updates.revealMode !== undefined) dbUpdates.reveal_mode = updates.revealMode;
       if (updates.revealTime !== undefined) dbUpdates.reveal_time = updates.revealTime;
@@ -330,18 +334,42 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
       if (updates.closingWishType !== undefined) dbUpdates.closing_wish_type = updates.closingWishType;
       if (updates.allowGuestFrameToggle !== undefined) dbUpdates.allow_guest_frame_toggle = updates.allowGuestFrameToggle;
       if (updates.coverUrl !== undefined) dbUpdates.cover_url = updates.coverUrl;
+      if (updates.paymentStatus !== undefined) dbUpdates.payment_status = updates.paymentStatus;
+      if (updates.hostEmail !== undefined) dbUpdates.host_email = updates.hostEmail;
+      if (updates.referralCodeUsed !== undefined) dbUpdates.referral_code_used = updates.referralCodeUsed;
+      if (updates.commissionAmount !== undefined) dbUpdates.commission_amount = updates.commissionAmount;
+      if (updates.commissionStatus !== undefined) dbUpdates.commission_status = updates.commissionStatus;
+      if (updates.vendorId !== undefined) dbUpdates.vendor_id = updates.vendorId;
+      if (updates.vendorName !== undefined) dbUpdates.vendor_name = updates.vendorName;
+      if (updates.vendorLogo !== undefined) dbUpdates.vendor_logo = updates.vendorLogo;
+      if (updates.vendorInstagram !== undefined) dbUpdates.vendor_instagram = updates.vendorInstagram;
 
       const { data, error } = await supabase
         .from('events')
         .update(dbUpdates)
-        .eq('id', id)
+        .eq('id', canonicalId)
         .select()
         .single();
 
       if (!error && data) {
-        return rowToEvent(data);
+        const updated = rowToEvent(data);
+        // Also sync local cache safely
+        try {
+          ensureLocalDataFiles();
+          const raw = fs.existsSync(EVENTS_FILE) ? fs.readFileSync(EVENTS_FILE, 'utf8') : '[]';
+          const events: EventData[] = JSON.parse(raw);
+          const idx = events.findIndex(e => e.id === canonicalId || e.slug === canonicalId);
+          if (idx >= 0) {
+            events[idx] = updated;
+          } else {
+            events.unshift(updated);
+          }
+          fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf8');
+        } catch {}
+
+        return updated;
       }
-      console.warn(`Supabase updateEvent(${id}) error, falling back to local:`, error?.message);
+      console.warn(`Supabase updateEvent(${canonicalId}) error, falling back to local:`, error?.message);
     } catch (err) {
       console.warn('Supabase updateEvent exception:', err);
     }
@@ -352,7 +380,7 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
   try {
     const raw = fs.existsSync(EVENTS_FILE) ? fs.readFileSync(EVENTS_FILE, 'utf8') : '[]';
     const events: EventData[] = JSON.parse(raw);
-    const existingIdx = events.findIndex(e => e.id === id);
+    const existingIdx = events.findIndex(e => e.id === canonicalId || e.slug === canonicalId);
     if (existingIdx < 0) return null;
 
     events[existingIdx] = { ...events[existingIdx], ...updates };
@@ -364,9 +392,12 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
+  const existing = await getEventById(id);
+  const canonicalId = existing?.id || id;
+
   // 1. Cascade cleanup: delete all photo files from Cloudflare R2, Supabase Storage, and local uploads
   try {
-    const eventPhotos = await getAllPhotos(id, true);
+    const eventPhotos = await getAllPhotos(canonicalId, true);
     for (const p of eventPhotos) {
       if (p.imageData) {
         // Cloudflare R2 cleanup
@@ -394,12 +425,12 @@ export async function deleteEvent(id: string): Promise<boolean> {
       }
     }
   } catch (cleanErr) {
-    console.warn(`Error cleaning photo files for event ${id}:`, cleanErr);
+    console.warn(`Error cleaning photo files for event ${canonicalId}:`, cleanErr);
   }
 
   // 2. Cascade cleanup for video wishes and voice notes
   try {
-    const wishes = await getVideoWishes(id);
+    const wishes = await getVideoWishes(canonicalId);
     for (const w of wishes) {
       if (w.videoUrl && w.videoUrl.startsWith('/uploads/')) {
         try {
@@ -412,7 +443,7 @@ export async function deleteEvent(id: string): Promise<boolean> {
     if (fs.existsSync(VOICES_FILE)) {
       const rawV = fs.readFileSync(VOICES_FILE, 'utf8');
       const allVoices: any[] = JSON.parse(rawV);
-      const eventVoices = allVoices.filter(v => v.eventId === id);
+      const eventVoices = allVoices.filter(v => v.eventId === canonicalId);
       for (const v of eventVoices) {
         if (v.audioUrl && v.audioUrl.startsWith('/uploads/')) {
           try {
@@ -421,7 +452,7 @@ export async function deleteEvent(id: string): Promise<boolean> {
           } catch {}
         }
       }
-      const keptVoices = allVoices.filter(v => v.eventId !== id);
+      const keptVoices = allVoices.filter(v => v.eventId !== canonicalId);
       fs.writeFileSync(VOICES_FILE, JSON.stringify(keptVoices, null, 2), 'utf8');
     }
   } catch {}
@@ -429,12 +460,36 @@ export async function deleteEvent(id: string): Promise<boolean> {
   // 3. Supabase row deletion
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('photos').delete().eq('event_id', id);
-      await supabase.from('video_wishes').delete().eq('event_id', id);
-      await supabase.from('voice_notes').delete().eq('event_id', id);
-      const { error } = await supabase.from('events').delete().eq('id', id);
-      if (!error) return true;
-      console.warn(`Supabase deleteEvent(${id}) error:`, error.message);
+      await supabase.from('photos').delete().eq('event_id', canonicalId);
+      await supabase.from('video_wishes').delete().eq('event_id', canonicalId);
+      await supabase.from('voice_notes').delete().eq('event_id', canonicalId);
+      const { error } = await supabase.from('events').delete().eq('id', canonicalId);
+      if (!error) {
+        // Also sync local fallback cleanup
+        ensureLocalDataFiles();
+        try {
+          if (fs.existsSync(EVENTS_FILE)) {
+            const raw = fs.readFileSync(EVENTS_FILE, 'utf8');
+            let events: EventData[] = JSON.parse(raw);
+            events = events.filter(e => e.id !== canonicalId && e.slug !== canonicalId);
+            fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf8');
+          }
+          if (fs.existsSync(PHOTOS_FILE)) {
+            const rawPhotos = fs.readFileSync(PHOTOS_FILE, 'utf8');
+            let photos: PhotoRecord[] = JSON.parse(rawPhotos);
+            photos = photos.filter(p => p.eventId !== canonicalId);
+            fs.writeFileSync(PHOTOS_FILE, JSON.stringify(photos, null, 2), 'utf8');
+          }
+          if (fs.existsSync(VIDEO_WISHES_FILE)) {
+            const rawWishes = fs.readFileSync(VIDEO_WISHES_FILE, 'utf8');
+            let wishes: VideoWishRecord[] = JSON.parse(rawWishes);
+            wishes = wishes.filter(w => w.eventId !== canonicalId);
+            fs.writeFileSync(VIDEO_WISHES_FILE, JSON.stringify(wishes, null, 2), 'utf8');
+          }
+        } catch {}
+        return true;
+      }
+      console.warn(`Supabase deleteEvent(${canonicalId}) error:`, error.message);
     } catch (err) {
       console.warn('Supabase deleteEvent exception:', err);
     }
@@ -446,19 +501,19 @@ export async function deleteEvent(id: string): Promise<boolean> {
     if (fs.existsSync(EVENTS_FILE)) {
       const raw = fs.readFileSync(EVENTS_FILE, 'utf8');
       let events: EventData[] = JSON.parse(raw);
-      events = events.filter(e => e.id !== id);
+      events = events.filter(e => e.id !== canonicalId && e.slug !== canonicalId);
       fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf8');
     }
     if (fs.existsSync(PHOTOS_FILE)) {
       const rawPhotos = fs.readFileSync(PHOTOS_FILE, 'utf8');
       let photos: PhotoRecord[] = JSON.parse(rawPhotos);
-      photos = photos.filter(p => p.eventId !== id);
+      photos = photos.filter(p => p.eventId !== canonicalId);
       fs.writeFileSync(PHOTOS_FILE, JSON.stringify(photos, null, 2), 'utf8');
     }
     if (fs.existsSync(VIDEO_WISHES_FILE)) {
       const rawWishes = fs.readFileSync(VIDEO_WISHES_FILE, 'utf8');
       let wishes: VideoWishRecord[] = JSON.parse(rawWishes);
-      wishes = wishes.filter(w => w.eventId !== id);
+      wishes = wishes.filter(w => w.eventId !== canonicalId);
       fs.writeFileSync(VIDEO_WISHES_FILE, JSON.stringify(wishes, null, 2), 'utf8');
     }
     return true;
@@ -639,7 +694,18 @@ export async function updatePhoto(id: string, updates: Partial<PhotoRecord>): Pr
         .single();
 
       if (!error && data) {
-        return rowToPhoto(data);
+        const photo = rowToPhoto(data);
+        try {
+          ensureLocalDataFiles();
+          const raw = fs.existsSync(PHOTOS_FILE) ? fs.readFileSync(PHOTOS_FILE, 'utf8') : '[]';
+          const photos: PhotoRecord[] = JSON.parse(raw);
+          const idx = photos.findIndex(p => p.id === id);
+          if (idx >= 0) {
+            photos[idx] = photo;
+            fs.writeFileSync(PHOTOS_FILE, JSON.stringify(photos, null, 2), 'utf8');
+          }
+        } catch {}
+        return photo;
       }
     } catch (err) {
       console.warn('Supabase updatePhoto exception:', err);
@@ -693,6 +759,16 @@ export async function deletePhoto(id: string): Promise<boolean> {
             } catch {}
           }
         }
+        // Also sync local cache
+        try {
+          ensureLocalDataFiles();
+          if (fs.existsSync(PHOTOS_FILE)) {
+            const raw = fs.readFileSync(PHOTOS_FILE, 'utf8');
+            let photos: PhotoRecord[] = JSON.parse(raw);
+            photos = photos.filter(p => p.id !== id);
+            fs.writeFileSync(PHOTOS_FILE, JSON.stringify(photos, null, 2), 'utf8');
+          }
+        } catch {}
         return true;
       }
     } catch (err) {
@@ -745,18 +821,33 @@ export async function createInvoice(data: Omit<InvoiceRecord, 'id' | 'createdAt'
   const invoiceNumber = data.invoiceNumber || `INV/SB/${year}/${month}/${String(count).padStart(4, '0')}`;
   const id = data.id || `inv_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const createdAt = data.createdAt || now.toISOString();
+  const orderId = data.orderId || `ord_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`;
+  const buyerType = data.buyerType || 'client';
+  const tierKey = (data.tierId || 'wedding') as EventPackageTier;
+  const tierName = data.tierName || (PACKAGE_TIERS[tierKey]?.name || data.tierId || 'Wedding');
+  const originalPrice = Number(data.originalPrice ?? data.finalAmount ?? 0);
+  const finalAmount = Number(data.finalAmount ?? data.originalPrice ?? 0);
+  const status = data.status || 'paid';
+  const paidAt = data.paidAt || (status === 'paid' ? createdAt : undefined);
 
   const newInvoice: InvoiceRecord = {
     ...data,
     id,
     invoiceNumber,
+    orderId,
+    buyerType,
+    tierName,
+    originalPrice,
+    finalAmount,
+    status,
+    paidAt,
     createdAt
   };
 
   // 1. Try Supabase insert
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('invoices').insert({
+      const { data: insertedData, error: insertError } = await supabase.from('invoices').insert({
         id: newInvoice.id,
         invoice_number: newInvoice.invoiceNumber,
         event_id: newInvoice.eventId || null,
@@ -776,7 +867,19 @@ export async function createInvoice(data: Omit<InvoiceRecord, 'id' | 'createdAt'
         status: newInvoice.status,
         paid_at: newInvoice.paidAt || null,
         created_at: newInvoice.createdAt
-      });
+      }).select().maybeSingle();
+
+      if (!insertError && insertedData) {
+        // Also sync local cache
+        invoices.unshift(newInvoice);
+        try {
+          fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
+        } catch {}
+        return newInvoice;
+      }
+      if (insertError) {
+        console.warn('Supabase invoice insert error, falling back:', insertError.message);
+      }
     } catch (e) {
       console.warn('Supabase invoice insert skipped/fallback:', e);
     }
@@ -921,12 +1024,61 @@ export async function updateInvoiceStatus(idOrNumber: string, status: 'pending' 
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('invoices')
         .update({ status, paid_at: effectivePaidAt || null })
-        .or(`id.eq.${cleanQuery},invoice_number.eq.${cleanQuery},order_id.eq.${cleanQuery}`);
+        .or(`id.eq.${cleanQuery},invoice_number.eq.${cleanQuery},order_id.eq.${cleanQuery}`)
+        .select()
+        .maybeSingle();
+
+      if (!error && data) {
+        const updatedInvoice: InvoiceRecord = {
+          id: data.id,
+          invoiceNumber: data.invoice_number,
+          eventId: data.event_id || undefined,
+          orderId: data.order_id,
+          buyerType: data.buyer_type,
+          buyerName: data.buyer_name,
+          buyerEmail: data.buyer_email,
+          buyerPhone: data.buyer_phone || undefined,
+          companyName: data.company_name || undefined,
+          tierId: data.tier_id,
+          tierName: data.tier_name,
+          originalPrice: Number(data.original_price),
+          discountAmount: Number(data.discount_amount || 0),
+          discountCode: data.discount_code || undefined,
+          finalAmount: Number(data.final_amount),
+          paymentMethod: data.payment_method || 'qris',
+          status: data.status,
+          paidAt: data.paid_at || undefined,
+          createdAt: data.created_at
+        };
+
+        // Also safely sync local cache
+        try {
+          ensureLocalDataFiles();
+          const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
+          const invoices: InvoiceRecord[] = JSON.parse(raw);
+          const lower = cleanQuery.toLowerCase();
+          const idx = invoices.findIndex(inv => 
+            inv.id.toLowerCase() === lower ||
+            inv.invoiceNumber.toLowerCase() === lower ||
+            (inv.eventId && inv.eventId.toLowerCase() === lower) ||
+            inv.orderId.toLowerCase() === lower ||
+            inv.id === data.id
+          );
+          if (idx >= 0) {
+            invoices[idx] = updatedInvoice;
+          } else {
+            invoices.unshift(updatedInvoice);
+          }
+          fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
+        } catch {}
+
+        return updatedInvoice;
+      }
     } catch (e) {
-      // Fallback
+      console.warn('Supabase updateInvoiceStatus exception:', e);
     }
   }
 
@@ -1017,10 +1169,55 @@ export async function updateInvoice(id: string, updates: Partial<InvoiceRecord>)
       if (updates.paymentMethod !== undefined) dbUpdates.payment_method = updates.paymentMethod;
       if (updates.paidAt !== undefined) dbUpdates.paid_at = updates.paidAt;
 
-      await supabase
+      const { data, error } = await supabase
         .from('invoices')
         .update(dbUpdates)
-        .eq('id', id);
+        .or(`id.eq.${id},invoice_number.eq.${id}`)
+        .select()
+        .maybeSingle();
+
+      if (!error && data) {
+        const updatedInvoice: InvoiceRecord = {
+          id: data.id,
+          invoiceNumber: data.invoice_number,
+          eventId: data.event_id || undefined,
+          orderId: data.order_id,
+          buyerType: data.buyer_type,
+          buyerName: data.buyer_name,
+          buyerEmail: data.buyer_email,
+          buyerPhone: data.buyer_phone || undefined,
+          companyName: data.company_name || undefined,
+          tierId: data.tier_id,
+          tierName: data.tier_name,
+          originalPrice: Number(data.original_price),
+          discountAmount: Number(data.discount_amount || 0),
+          discountCode: data.discount_code || undefined,
+          finalAmount: Number(data.final_amount),
+          paymentMethod: data.payment_method || 'qris',
+          status: data.status,
+          paidAt: data.paid_at || undefined,
+          createdAt: data.created_at
+        };
+
+        // Also safely sync local cache
+        try {
+          ensureLocalDataFiles();
+          const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
+          const invoices: InvoiceRecord[] = JSON.parse(raw);
+          const idx = invoices.findIndex(i => i.id === id || i.invoiceNumber === id || i.id === data.id);
+          if (idx >= 0) {
+            invoices[idx] = updatedInvoice;
+          } else {
+            invoices.unshift(updatedInvoice);
+          }
+          fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
+        } catch {}
+
+        return updatedInvoice;
+      }
+      if (error) {
+        console.warn('Supabase updateInvoice error:', error.message);
+      }
     } catch (e) {
       console.warn('Supabase updateInvoice exception:', e);
     }
@@ -1046,8 +1243,21 @@ export async function deleteInvoice(id: string): Promise<boolean> {
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('invoices').delete().eq('id', id);
-    } catch (e) {}
+      const { error } = await supabase.from('invoices').delete().or(`id.eq.${id},invoice_number.eq.${id}`);
+      if (!error) {
+        // Also sync local cache safely
+        ensureLocalDataFiles();
+        try {
+          const raw = fs.existsSync(INVOICES_FILE) ? fs.readFileSync(INVOICES_FILE, 'utf8') : '[]';
+          let invoices: InvoiceRecord[] = JSON.parse(raw);
+          invoices = invoices.filter(i => i.id !== id && i.invoiceNumber !== id);
+          fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
+        } catch {}
+        return true;
+      }
+    } catch (e) {
+      console.warn('Supabase deleteInvoice exception:', e);
+    }
   }
 
   // 2. Local fallback
@@ -1170,7 +1380,7 @@ export async function updatePayoutStatus(
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('payout_requests')
         .update({
           status,
@@ -1178,9 +1388,44 @@ export async function updatePayoutStatus(
           notes: notes || null,
           processed_at: processedAt
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+
+      if (!error && data) {
+        const updatedPayout: PayoutRequest = {
+          id: data.id,
+          vendorId: data.vendor_id,
+          vendorEmail: data.vendor_email,
+          vendorName: data.vendor_name,
+          companyName: data.company_name || undefined,
+          amount: Number(data.amount),
+          bankDetails: data.bank_details || { bankName: 'BCA', accountNumber: '', accountHolder: '' },
+          status: data.status,
+          proofUrl: data.proof_url || undefined,
+          notes: data.notes || undefined,
+          requestedAt: data.requested_at,
+          processedAt: data.processed_at || undefined
+        };
+
+        // Also sync local cache safely
+        try {
+          ensureLocalDataFiles();
+          const raw = fs.existsSync(PAYOUTS_FILE) ? fs.readFileSync(PAYOUTS_FILE, 'utf8') : '[]';
+          const payouts: PayoutRequest[] = JSON.parse(raw);
+          const index = payouts.findIndex(p => p.id === id);
+          if (index >= 0) {
+            payouts[index] = updatedPayout;
+          } else {
+            payouts.unshift(updatedPayout);
+          }
+          fs.writeFileSync(PAYOUTS_FILE, JSON.stringify(payouts, null, 2), 'utf8');
+        } catch {}
+
+        return updatedPayout;
+      }
     } catch (e) {
-      // Fallback
+      console.warn('Supabase updatePayoutStatus exception:', e);
     }
   }
 
@@ -1201,6 +1446,40 @@ export async function updatePayoutStatus(
     return payouts[index];
   } catch {
     return null;
+  }
+}
+
+export async function deletePayout(id: string): Promise<boolean> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase.from('payout_requests').delete().eq('id', id);
+      if (!error) {
+        // Also sync local cache
+        ensureLocalDataFiles();
+        try {
+          const raw = fs.existsSync(PAYOUTS_FILE) ? fs.readFileSync(PAYOUTS_FILE, 'utf8') : '[]';
+          let payouts: PayoutRequest[] = JSON.parse(raw);
+          payouts = payouts.filter(p => p.id !== id);
+          fs.writeFileSync(PAYOUTS_FILE, JSON.stringify(payouts, null, 2), 'utf8');
+        } catch {}
+        return true;
+      }
+    } catch (e) {
+      console.warn('Supabase deletePayout exception:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(PAYOUTS_FILE) ? fs.readFileSync(PAYOUTS_FILE, 'utf8') : '[]';
+    let payouts: PayoutRequest[] = JSON.parse(raw);
+    payouts = payouts.filter(p => p.id !== id);
+    fs.writeFileSync(PAYOUTS_FILE, JSON.stringify(payouts, null, 2), 'utf8');
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -1326,16 +1605,72 @@ export async function updateTestimonialStatus(
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('testimonials')
         .update({
           status,
           admin_notes: adminNotes || null,
           reward_paid_at: rewardPaidAt || null
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+
+      if (!error && data) {
+        const updatedTesti: VideoTestimonialSubmission = {
+          id: data.id,
+          eventId: data.event_id,
+          eventTitle: data.event_title,
+          submitterType: data.submitter_type,
+          submitterId: data.submitter_id,
+          submitterName: data.submitter_name,
+          submitterEmail: data.submitter_email || undefined,
+          videoType: data.video_type || 'link',
+          videoUrl: data.video_url,
+          durationSeconds: Number(data.duration_seconds),
+          caption: data.caption || undefined,
+          rewardAmount: Number(data.reward_amount || 50000),
+          status: data.status,
+          adminNotes: data.admin_notes || undefined,
+          rewardPaidAt: data.reward_paid_at || undefined,
+          submittedAt: data.submitted_at || data.created_at || new Date().toISOString()
+        };
+
+        // If approved and submitter is a vendor, disburse the reward to vendor wallet
+        if (status === 'approved' && updatedTesti.submitterType === 'vendor' && updatedTesti.submitterId) {
+          try {
+            const vendors = await getAllVendors();
+            const matchedVendor = vendors.find(v => v.id === updatedTesti.submitterId || (updatedTesti.submitterEmail && v.email === updatedTesti.submitterEmail));
+            if (matchedVendor) {
+              const reward = updatedTesti.rewardAmount || 50000;
+              await updateVendor(matchedVendor.id, {
+                walletBalance: (matchedVendor.walletBalance || 0) + reward,
+                totalEarnings: (matchedVendor.totalEarnings || 0) + reward
+              });
+            }
+          } catch (rewardErr) {
+            console.warn('Failed to auto-disburse testimonial reward to vendor wallet:', rewardErr);
+          }
+        }
+
+        // Also safely sync local cache
+        try {
+          ensureLocalDataFiles();
+          const raw = fs.existsSync(TESTIMONIALS_FILE) ? fs.readFileSync(TESTIMONIALS_FILE, 'utf8') : '[]';
+          const list: VideoTestimonialSubmission[] = JSON.parse(raw);
+          const index = list.findIndex(t => t.id === id);
+          if (index >= 0) {
+            list[index] = updatedTesti;
+          } else {
+            list.unshift(updatedTesti);
+          }
+          fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(list, null, 2), 'utf8');
+        } catch {}
+
+        return updatedTesti;
+      }
     } catch (e) {
-      // Fallback
+      console.warn('Supabase updateTestimonialStatus exception:', e);
     }
   }
 
@@ -1376,6 +1711,40 @@ export async function updateTestimonialStatus(
     return list[index];
   } catch {
     return null;
+  }
+}
+
+export async function deleteTestimonial(id: string): Promise<boolean> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { error } = await supabase.from('testimonials').delete().eq('id', id);
+      if (!error) {
+        // Also sync local cache
+        ensureLocalDataFiles();
+        try {
+          const raw = fs.existsSync(TESTIMONIALS_FILE) ? fs.readFileSync(TESTIMONIALS_FILE, 'utf8') : '[]';
+          let list: VideoTestimonialSubmission[] = JSON.parse(raw);
+          list = list.filter(t => t.id !== id);
+          fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(list, null, 2), 'utf8');
+        } catch {}
+        return true;
+      }
+    } catch (e) {
+      console.warn('Supabase deleteTestimonial exception:', e);
+    }
+  }
+
+  // 2. Local fallback
+  ensureLocalDataFiles();
+  try {
+    const raw = fs.existsSync(TESTIMONIALS_FILE) ? fs.readFileSync(TESTIMONIALS_FILE, 'utf8') : '[]';
+    let list: VideoTestimonialSubmission[] = JSON.parse(raw);
+    list = list.filter(t => t.id !== id);
+    fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(list, null, 2), 'utf8');
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -1508,13 +1877,63 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       if (updates.totalEarnings !== undefined) dbUpdates.total_earnings = updates.totalEarnings;
       if (updates.wholesaleTokens !== undefined) dbUpdates.wholesale_tokens = updates.wholesaleTokens;
       if (updates.clientCount !== undefined) dbUpdates.client_count = updates.clientCount;
+      if (updates.city !== undefined) dbUpdates.city = updates.city;
       if (updates.bankDetails) {
         if (updates.bankDetails.bankName) dbUpdates.bank_name = updates.bankDetails.bankName;
         if (updates.bankDetails.accountNumber) dbUpdates.bank_account_number = updates.bankDetails.accountNumber;
         if (updates.bankDetails.accountHolder) dbUpdates.bank_account_holder = updates.bankDetails.accountHolder;
       }
 
-      await supabase.from('vendors').update(dbUpdates).eq('id', id);
+      const { data, error } = await supabase
+        .from('vendors')
+        .update(dbUpdates)
+        .eq('id', id)
+        .select()
+        .maybeSingle();
+
+      if (!error && data) {
+        const updatedVendor = {
+          id: data.id,
+          name: data.name,
+          companyName: data.company_name || data.name,
+          email: data.email,
+          phone: data.phone || '',
+          instagram: data.instagram || '',
+          logoUrl: data.logo_url || '',
+          tier: data.tier || 'pro',
+          partnerTier: data.partner_tier || 'regular',
+          referralCode: data.referral_code || '',
+          commissionRate: Number(data.commission_rate ?? 0.12),
+          walletBalance: Number(data.wallet_balance ?? 0),
+          totalEarnings: Number(data.total_earnings ?? 0),
+          wholesaleTokens: Number(data.wholesale_tokens ?? 0),
+          bankDetails: {
+            bankName: data.bank_name || 'BCA',
+            accountNumber: data.bank_account_number || '',
+            accountHolder: data.bank_account_holder || data.name
+          },
+          clientCount: Number(data.client_count ?? 0),
+          city: data.city || '',
+          createdAt: data.created_at,
+          updatedAt: new Date().toISOString()
+        };
+
+        // Also sync local cache safely
+        try {
+          ensureLocalDataFiles();
+          const raw = fs.existsSync(VENDORS_FILE) ? fs.readFileSync(VENDORS_FILE, 'utf8') : '[]';
+          const vendors: any[] = JSON.parse(raw);
+          const idx = vendors.findIndex(v => v.id === id);
+          if (idx >= 0) {
+            vendors[idx] = updatedVendor;
+          } else {
+            vendors.unshift(updatedVendor);
+          }
+          fs.writeFileSync(VENDORS_FILE, JSON.stringify(vendors, null, 2), 'utf8');
+        } catch {}
+
+        return updatedVendor;
+      }
     } catch (e) {
       console.warn('Supabase updateVendor exception:', e);
     }
@@ -1540,8 +1959,21 @@ export async function deleteVendor(id: string): Promise<boolean> {
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('vendors').delete().eq('id', id);
-    } catch (e) {}
+      const { error } = await supabase.from('vendors').delete().eq('id', id);
+      if (!error) {
+        // Also sync local cache safely
+        ensureLocalDataFiles();
+        try {
+          const raw = fs.existsSync(VENDORS_FILE) ? fs.readFileSync(VENDORS_FILE, 'utf8') : '[]';
+          let vendors: any[] = JSON.parse(raw);
+          vendors = vendors.filter(v => v.id !== id);
+          fs.writeFileSync(VENDORS_FILE, JSON.stringify(vendors, null, 2), 'utf8');
+        } catch {}
+        return true;
+      }
+    } catch (e) {
+      console.warn('Supabase deleteVendor exception:', e);
+    }
   }
 
   // 2. Local fallback
@@ -1874,11 +2306,45 @@ export async function getVideoWishes(eventId?: string): Promise<VideoWishRecord[
 }
 
 export async function deleteVideoWish(id: string): Promise<boolean> {
+  // Clean up media file from R2 or local uploads
+  try {
+    const all = await getVideoWishes();
+    const target = all.find(w => w.id === id);
+    if (target?.videoUrl) {
+      if (isR2Configured && (target.videoUrl.includes('.r2.dev') || target.videoUrl.includes('r2.cloudflarestorage.com') || target.videoUrl.includes('/videos/'))) {
+        try {
+          const urlObj = new URL(target.videoUrl);
+          const r2Key = urlObj.pathname.replace(/^\/+/, '');
+          await deleteFromR2(r2Key);
+        } catch {}
+      }
+      if (target.videoUrl.startsWith('/uploads/')) {
+        try {
+          const localPath = path.join(process.cwd(), 'public', target.videoUrl.replace(/^\//, ''));
+          if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+        } catch {}
+      }
+    }
+  } catch {}
+
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('video_wishes').delete().eq('id', id);
-    } catch (e) {}
+      const { error } = await supabase.from('video_wishes').delete().eq('id', id);
+      if (!error) {
+        // Also sync local cache safely
+        ensureLocalDataFiles();
+        try {
+          const raw = fs.existsSync(VIDEO_WISHES_FILE) ? fs.readFileSync(VIDEO_WISHES_FILE, 'utf8') : '[]';
+          let list: VideoWishRecord[] = JSON.parse(raw);
+          list = list.filter(w => w.id !== id);
+          fs.writeFileSync(VIDEO_WISHES_FILE, JSON.stringify(list, null, 2), 'utf8');
+        } catch {}
+        return true;
+      }
+    } catch (e) {
+      console.warn('Supabase deleteVideoWish exception:', e);
+    }
   }
 
   // 2. Local fallback

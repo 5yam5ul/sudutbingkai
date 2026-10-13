@@ -75,11 +75,30 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    if (!body.buyerName || !body.tierId || !body.finalAmount) {
+    if (!body.buyerName || !body.tierId || body.finalAmount === undefined) {
       return NextResponse.json({ success: false, error: 'Data invoice tidak lengkap' }, { status: 400 });
     }
 
-    const invoice = await createInvoice(body);
+    const tierKey = (body.tierId || 'wedding') as EventPackageTier;
+    const tierInfo = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.wedding;
+
+    const payload = {
+      ...body,
+      buyerName: body.buyerName.trim(),
+      buyerEmail: (body.buyerEmail || 'pengantin@sudutbingkai.id').trim(),
+      buyerPhone: body.buyerPhone ? body.buyerPhone.trim() : undefined,
+      buyerType: body.buyerType || 'client',
+      tierId: tierKey,
+      tierName: body.tierName || `${tierInfo.name} (${tierInfo.guestsLabel})`,
+      originalPrice: Number(body.originalPrice ?? body.finalAmount ?? 0),
+      discountAmount: Number(body.discountAmount || 0),
+      finalAmount: Number(body.finalAmount ?? body.originalPrice ?? 0),
+      paymentMethod: body.paymentMethod || 'qris',
+      status: body.status || 'paid',
+      orderId: body.orderId || `ord_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`
+    };
+
+    const invoice = await createInvoice(payload);
     return NextResponse.json({ success: true, invoice });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
