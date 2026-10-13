@@ -8,7 +8,7 @@ import { toPng } from 'html-to-image';
 import { toast } from 'sonner';
 import {
   Printer, ArrowLeft, Camera, Sliders, Palette, Layout, Type, Check, Scissors,
-  Download, Share2, Sparkles, Box, Upload, X, ChevronLeft, ChevronRight,
+  Download, Share2, Box, Upload, X, ChevronLeft, ChevronRight,
   Send, Layers, Table as TableIcon, FileImage, ShieldCheck, CheckCircle2,
   Trash2, RefreshCw, Eye
 } from 'lucide-react';
@@ -389,11 +389,13 @@ export default function PrintTableCardPage() {
     }
   };
 
-  // Helper render for single card content
+  // Helper render for single card content (calibrated carefully for Tent Card and Standing frames)
   const renderCardBody = (isBackSide = false, isCompact = false, tableLabel?: string) => {
+    const isTent = format === 'tent';
+    // Perfectly proportioned QR size: 116px for Tent cards prevents vertical truncation
     const qrSize = isCompact
-      ? 105
-      : (format === 'mini' ? (miniCount === 4 ? 125 : 140) : (format === 'standing' ? 170 : 185));
+      ? 96
+      : (isTent ? 116 : (format === 'mini' ? (miniCount === 4 ? 115 : 125) : 150));
 
     const activeTable = tableLabel !== undefined ? tableLabel : currentTableLabel;
 
@@ -405,7 +407,9 @@ export default function PrintTableCardPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           height: '100%',
-          padding: isCompact ? '16px 12px' : (format === 'mini' ? '22px 16px' : '34px 26px'),
+          padding: isCompact
+            ? '12px 10px'
+            : (isTent ? '16px 20px' : (format === 'mini' ? '18px 14px' : '26px 22px')),
           textAlign: 'center',
           position: 'relative',
           boxSizing: 'border-box',
@@ -426,13 +430,13 @@ export default function PrintTableCardPage() {
         <div style={{ width: '100%' }}>
           {/* Custom Logo (if uploaded) */}
           {customLogoUrl && (
-            <div style={{ marginBottom: isCompact ? '6px' : '10px', display: 'flex', justifyContent: 'center' }}>
+            <div style={{ marginBottom: isCompact ? '4px' : (isTent ? '6px' : '8px'), display: 'flex', justifyContent: 'center' }}>
               <img
                 src={customLogoUrl}
                 alt="Logo Mitra"
                 style={{
-                  maxHeight: isCompact ? '24px' : '34px',
-                  maxWidth: '120px',
+                  maxHeight: isCompact ? '22px' : (isTent ? '26px' : '32px'),
+                  maxWidth: '110px',
                   objectFit: 'contain'
                 }}
               />
@@ -446,18 +450,18 @@ export default function PrintTableCardPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '5px',
-                padding: isCompact ? '2px 8px' : '4px 12px',
+                padding: isCompact ? '2px 8px' : (isTent ? '3px 10px' : '4px 12px'),
                 borderRadius: '8px',
                 background: ts.accentColor,
                 color: theme === 'charcoal' && !inkSaver ? '#181715' : '#FFFFFF',
-                fontSize: isCompact ? '10px' : '12.5px',
+                fontSize: isCompact ? '9.5px' : (isTent ? '11px' : '12px'),
                 fontWeight: 800,
                 letterSpacing: '0.06em',
-                marginBottom: isCompact ? '6px' : '8px',
+                marginBottom: isCompact ? '4px' : (isTent ? '5px' : '8px'),
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
               }}
             >
-              <TableIcon size={isCompact ? 10 : 12} />
+              <TableIcon size={isCompact ? 9 : (isTent ? 11 : 12)} />
               <span>{activeTable.toUpperCase()}</span>
             </div>
           )}
@@ -469,36 +473,36 @@ export default function PrintTableCardPage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '5px',
-                padding: isCompact ? '3px 10px' : '4px 12px',
+                padding: isCompact ? '2px 8px' : (isTent ? '3px 10px' : '4px 12px'),
                 borderRadius: '999px',
                 background: ts.badgeBg,
                 border: `1px solid ${ts.badgeBorder}`,
                 color: ts.badgeText,
-                fontSize: isCompact ? '8.5px' : (format === 'mini' ? '9.5px' : '11px'),
+                fontSize: isCompact ? '8px' : (isTent ? '9px' : '10.5px'),
                 fontWeight: 800,
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
-                marginBottom: isCompact ? '5px' : '10px'
+                marginBottom: isCompact ? '4px' : (isTent ? '5px' : '8px')
               }}
             >
-              <Camera size={isCompact ? 11 : 13} />
+              <Camera size={isCompact ? 10 : (isTent ? 11 : 12)} />
               <span>{customBadge || 'KAMERA TAMU SPESIAL'}</span>
             </div>
           </div>
 
           <h1
             style={{
-              fontSize: isCompact ? '15px' : (format === 'mini' ? '18px' : '24px'),
+              fontSize: isCompact ? '14px' : (isTent ? '20px' : (format === 'mini' ? '17px' : '23px')),
               color: ts.textColor,
               lineHeight: 1.2,
-              marginBottom: isCompact ? '3px' : '5px',
+              marginBottom: isCompact ? '2px' : '4px',
               fontWeight: 700
             }}
           >
             {customTitle || event?.title || 'SudutBingkai Acara'}
           </h1>
 
-          <p style={{ fontSize: isCompact ? '9px' : (format === 'mini' ? '10.5px' : '12.5px'), color: ts.mutedColor, fontWeight: 500, margin: 0 }}>
+          <p style={{ fontSize: isCompact ? '8.5px' : (isTent ? '10.5px' : (format === 'mini' ? '10px' : '12px')), color: ts.mutedColor, fontWeight: 500, margin: 0, lineHeight: 1.3 }}>
             {customSubtitle}
           </p>
 
@@ -506,8 +510,8 @@ export default function PrintTableCardPage() {
             <span
               style={{
                 display: 'inline-block',
-                marginTop: isCompact ? '3px' : '5px',
-                fontSize: isCompact ? '8.5px' : (format === 'mini' ? '9.5px' : '11px'),
+                marginTop: isCompact ? '2px' : '4px',
+                fontSize: isCompact ? '8px' : (isTent ? '9.5px' : (format === 'mini' ? '9px' : '11px')),
                 fontFamily: 'var(--font-mono), monospace',
                 color: ts.accentColor,
                 fontWeight: 600
@@ -521,9 +525,9 @@ export default function PrintTableCardPage() {
         {/* QR Code Container */}
         <div
           style={{
-            margin: isCompact ? '6px 0' : (format === 'mini' ? '12px 0' : '18px 0'),
-            padding: isCompact ? '6px' : (format === 'mini' ? '9px' : '12px'),
-            borderRadius: isCompact ? '12px' : '16px',
+            margin: isCompact ? '4px 0' : (isTent ? '7px 0' : (format === 'mini' ? '10px 0' : '16px 0')),
+            padding: isCompact ? '4px' : (isTent ? '7px' : (format === 'mini' ? '8px' : '12px')),
+            borderRadius: isCompact ? '10px' : '14px',
             background: ts.qrBg,
             border: `2px dashed ${ts.qrBorder}`,
             display: 'inline-block'
@@ -537,7 +541,7 @@ export default function PrintTableCardPage() {
                 width: `${qrSize}px`,
                 height: `${qrSize}px`,
                 display: 'block',
-                borderRadius: '8px'
+                borderRadius: '6px'
               }}
             />
           ) : (
@@ -560,69 +564,69 @@ export default function PrintTableCardPage() {
         {/* Step by step instructions */}
         <div style={{ width: '100%' }}>
           {showSteps && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: isCompact ? '6px' : (format === 'mini' ? '10px' : '14px'), marginBottom: isCompact ? '8px' : '14px' }}>
-              <div style={{ textAlign: 'center', maxWidth: isCompact ? '68px' : '85px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: isCompact ? '6px' : (isTent ? '8px' : '12px'), marginBottom: isCompact ? '6px' : (isTent ? '7px' : '12px') }}>
+              <div style={{ textAlign: 'center', maxWidth: isCompact ? '68px' : (isTent ? '78px' : '85px') }}>
                 <span
                   style={{
                     display: 'inline-block',
-                    width: isCompact ? '16px' : '19px',
-                    height: isCompact ? '16px' : '19px',
+                    width: isCompact ? '15px' : (isTent ? '16px' : '18px'),
+                    height: isCompact ? '15px' : (isTent ? '16px' : '18px'),
                     borderRadius: '50%',
                     background: ts.stepCircleBg,
                     color: ts.stepCircleColor,
-                    fontSize: isCompact ? '8px' : '9.5px',
+                    fontSize: isCompact ? '7.5px' : (isTent ? '8px' : '9px'),
                     fontWeight: 'bold',
-                    lineHeight: isCompact ? '16px' : '19px',
-                    marginBottom: '3px'
+                    lineHeight: isCompact ? '15px' : (isTent ? '16px' : '18px'),
+                    marginBottom: '2px'
                   }}
                 >
                   1
                 </span>
-                <p style={{ fontSize: isCompact ? '7.5px' : (format === 'mini' ? '9px' : '10px'), color: ts.mutedColor, lineHeight: 1.25, margin: 0 }}>
+                <p style={{ fontSize: isCompact ? '7px' : (isTent ? '8px' : '9.5px'), color: ts.mutedColor, lineHeight: 1.2, margin: 0 }}>
                   {steps[0]}
                 </p>
               </div>
 
-              <div style={{ textAlign: 'center', maxWidth: isCompact ? '68px' : '85px' }}>
+              <div style={{ textAlign: 'center', maxWidth: isCompact ? '68px' : (isTent ? '78px' : '85px') }}>
                 <span
                   style={{
                     display: 'inline-block',
-                    width: isCompact ? '16px' : '19px',
-                    height: isCompact ? '16px' : '19px',
+                    width: isCompact ? '15px' : (isTent ? '16px' : '18px'),
+                    height: isCompact ? '15px' : (isTent ? '16px' : '18px'),
                     borderRadius: '50%',
                     background: ts.stepCircleBg,
                     color: ts.stepCircleColor,
-                    fontSize: isCompact ? '8px' : '9.5px',
+                    fontSize: isCompact ? '7.5px' : (isTent ? '8px' : '9px'),
                     fontWeight: 'bold',
-                    lineHeight: isCompact ? '16px' : '19px',
-                    marginBottom: '3px'
+                    lineHeight: isCompact ? '15px' : (isTent ? '16px' : '18px'),
+                    marginBottom: '2px'
                   }}
                 >
                   2
                 </span>
-                <p style={{ fontSize: isCompact ? '7.5px' : (format === 'mini' ? '9px' : '10px'), color: ts.mutedColor, lineHeight: 1.25, margin: 0 }}>
+                <p style={{ fontSize: isCompact ? '7px' : (isTent ? '8px' : '9.5px'), color: ts.mutedColor, lineHeight: 1.2, margin: 0 }}>
                   {steps[1]}
                 </p>
               </div>
 
-              <div style={{ textAlign: 'center', maxWidth: isCompact ? '68px' : '85px' }}>
+              <div style={{ textAlign: 'center', maxWidth: isCompact ? '68px' : (isTent ? '78px' : '85px') }}>
                 <span
                   style={{
                     display: 'inline-block',
-                    width: isCompact ? '16px' : '19px',
-                    height: isCompact ? '16px' : '19px',
+                    width: isCompact ? '15px' : (isTent ? '16px' : '18px'),
+                    height: isCompact ? '15px' : (isTent ? '16px' : '18px'),
                     borderRadius: '50%',
                     background: ts.stepCircleBg,
                     color: ts.stepCircleColor,
-                    fontSize: isCompact ? '8px' : '9.5px',
+                    fontSize: isCompact ? '7.5px' : (isTent ? '8px' : '9px'),
                     fontWeight: 'bold',
-                    lineHeight: isCompact ? '16px' : '19px',
-                    marginBottom: '3px'
+                    lineHeight: isCompact ? '15px' : (isTent ? '16px' : '18px'),
+                    marginBottom: '2px'
                   }}
                 >
                   3
                 </span>
-                <p style={{ fontSize: isCompact ? '7.5px' : (format === 'mini' ? '9px' : '10px'), color: ts.mutedColor, lineHeight: 1.25, margin: 0 }}>
+                <p style={{ fontSize: isCompact ? '7px' : (isTent ? '8px' : '9.5px'), color: ts.mutedColor, lineHeight: 1.2, margin: 0 }}>
                   {steps[2]}
                 </p>
               </div>
@@ -631,11 +635,11 @@ export default function PrintTableCardPage() {
 
           <div
             style={{
-              fontSize: isCompact ? '7.5px' : (format === 'mini' ? '8.5px' : '10px'),
+              fontSize: isCompact ? '7px' : (isTent ? '8px' : '9.5px'),
               color: ts.mutedColor,
               letterSpacing: '0.03em',
               borderTop: `1px solid ${ts.dividerColor}`,
-              paddingTop: isCompact ? '6px' : '9px',
+              paddingTop: isCompact ? '4px' : (isTent ? '6px' : '8px'),
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -643,8 +647,8 @@ export default function PrintTableCardPage() {
             }}
           >
             {event?.vendorName && (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginBottom: '2px' }}>
-                <span style={{ fontWeight: 700, color: ts.textColor, fontSize: isCompact ? '8px' : (format === 'mini' ? '9px' : '10.5px'), letterSpacing: '0.5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginBottom: '1px' }}>
+                <span style={{ fontWeight: 700, color: ts.textColor, fontSize: isCompact ? '7.5px' : (isTent ? '8.5px' : '10px'), letterSpacing: '0.5px' }}>
                   Organized with love by {event.vendorName}
                 </span>
               </div>
@@ -680,7 +684,7 @@ export default function PrintTableCardPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#F5F2EB', color: '#1A1815' }}>
-      {/* Dynamic CSS Styling for Refined Apple-grade Studio Inputs */}
+      {/* Dynamic CSS Styling for Refined Apple-grade Studio Inputs & Precise A4 Print Geometry */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -735,7 +739,7 @@ export default function PrintTableCardPage() {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 8mm 6mm;
+            margin: 6mm 6mm;
           }
           * {
             -webkit-print-color-adjust: exact !important;
@@ -769,8 +773,24 @@ export default function PrintTableCardPage() {
             break-inside: avoid !important;
             margin-bottom: 0 !important;
           }
+          .tent-card-sheet {
+            height: 282mm !important;
+            max-height: 282mm !important;
+            box-sizing: border-box !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .tent-back-panel, .tent-front-panel {
+            height: 136mm !important;
+            max-height: 136mm !important;
+            box-sizing: border-box !important;
+          }
           .fold-guide-line {
+            height: 8mm !important;
             display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-sizing: border-box !important;
           }
           .tent-back-panel {
             transform: rotate(180deg) !important;
@@ -1045,7 +1065,7 @@ export default function PrintTableCardPage() {
               {/* Quick Event Presets */}
               <div>
                 <label style={{ fontSize: '11.5px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                  <Sparkles size={13} color="#C27803" />
+                  <Sliders size={13} color="#C27803" />
                   <span>Preset Cepat Gaya Acara</span>
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '7px' }}>
@@ -1726,12 +1746,12 @@ export default function PrintTableCardPage() {
               {/* SCREEN PREVIEW WRAPPER (Referenced by toPng for HD Export) */}
               <div ref={previewCardRef} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
                 {format === 'tent' ? (
-                  /* TENT CARD: Two panels (front + back) with fold line */
+                  /* TENT CARD: Two panels (front + back) with fold line - Perfectly calibrated to prevent clipping */
                   <div
-                    className="print-card-wrapper"
+                    className="print-card-wrapper tent-card-sheet"
                     style={{
                       width: '100%',
-                      maxWidth: '430px',
+                      maxWidth: '420px',
                       borderRadius: getCardBorderRadius(),
                       overflow: 'hidden',
                       background: ts.cardBg,
@@ -1743,7 +1763,7 @@ export default function PrintTableCardPage() {
                     <div
                       className="tent-back-panel"
                       style={{
-                        height: '410px',
+                        height: '380px',
                         borderBottom: `2px dashed ${ts.dividerColor}`,
                         transform: 'rotate(180deg)',
                         transformOrigin: 'center center'
@@ -1757,7 +1777,7 @@ export default function PrintTableCardPage() {
                       className="fold-guide-line"
                       style={{
                         background: ts.badgeBg,
-                        padding: '7px 14px',
+                        padding: '6px 14px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -1777,7 +1797,7 @@ export default function PrintTableCardPage() {
                     </div>
 
                     {/* Bottom Side (Front Panel when folded) */}
-                    <div style={{ height: '410px' }}>
+                    <div className="tent-front-panel" style={{ height: '380px' }}>
                       {renderCardBody(false, false, currentTableLabel)}
                     </div>
                   </div>
@@ -1847,7 +1867,7 @@ export default function PrintTableCardPage() {
                 )}
               </div>
 
-              {/* PRINT-ONLY MULTI-PAGE CONTAINER (Only active during window.print() when table numbering is active) */}
+              {/* PRINT-ONLY MULTI-PAGE CONTAINER (Active during window.print() when table numbering is active) */}
               {tableConfig.enabled && (
                 <div className="print-only-batch-tables" style={{ display: 'none' }}>
                   <style
@@ -1875,14 +1895,15 @@ export default function PrintTableCardPage() {
                         justifyContent: 'center',
                         alignItems: 'center',
                         minHeight: '94vh',
-                        padding: '10mm 0'
+                        padding: '6mm 0'
                       }}
                     >
                       {format === 'tent' ? (
                         <div
+                          className="tent-card-sheet"
                           style={{
                             width: '100%',
-                            maxWidth: '430px',
+                            maxWidth: '420px',
                             borderRadius: getCardBorderRadius(),
                             overflow: 'hidden',
                             background: ts.cardBg,
@@ -1892,7 +1913,7 @@ export default function PrintTableCardPage() {
                           <div
                             className="tent-back-panel"
                             style={{
-                              height: '410px',
+                              height: '380px',
                               borderBottom: `2px dashed ${ts.dividerColor}`,
                               transform: 'rotate(180deg)',
                               transformOrigin: 'center center'
@@ -1904,7 +1925,7 @@ export default function PrintTableCardPage() {
                             className="fold-guide-line"
                             style={{
                               background: ts.badgeBg,
-                              padding: '7px 14px',
+                              padding: '6px 14px',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -1919,7 +1940,7 @@ export default function PrintTableCardPage() {
                             <span>GARIS LIPAT MEJA ({tblName})</span>
                             <Scissors size={12} />
                           </div>
-                          <div style={{ height: '410px' }}>
+                          <div className="tent-front-panel" style={{ height: '380px' }}>
                             {renderCardBody(false, false, tblName)}
                           </div>
                         </div>
