@@ -169,7 +169,7 @@ export default function LiveProjectorWallPage() {
         top: 0,
         left: 0,
         right: 0,
-        padding: '14px 24px',
+        padding: '12px 20px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -177,9 +177,11 @@ export default function LiveProjectorWallPage() {
         backdropFilter: 'blur(8px)',
         zIndex: 50,
         gap: '12px',
-        flexWrap: 'wrap'
+        flexWrap: 'nowrap',
+        overflowX: 'auto',
+        scrollbarWidth: 'none'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
           <Link href={`/event/${eventId}`} style={{ color: '#86868B', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
             <ArrowLeft size={16} />
             <span>Kembali</span>
@@ -194,7 +196,7 @@ export default function LiveProjectorWallPage() {
         </div>
 
         {/* Presentation Controls Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap', flexShrink: 0 }}>
           {/* Mode Switchers */}
           <div style={{
             display: 'flex',
@@ -481,13 +483,13 @@ export default function LiveProjectorWallPage() {
         ) : displayMode === 'polaroid' ? (
           /* MODE 1: POLAROID SPOTLIGHT */
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '900px', width: '100%' }}>
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode="popLayout">
               <motion.div
                 key={currentPhoto.id}
-                initial={{ opacity: 0, scale: 0.92, rotate: -2, y: 20 }}
+                initial={{ opacity: 0, scale: 0.94, rotate: -2, y: 15 }}
                 animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
-                exit={{ opacity: 0, scale: 1.05, rotate: 2, y: -20 }}
-                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                exit={{ opacity: 0, scale: 1.04, rotate: 2, y: -15 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                 style={{
                   background: '#FAF8F5',
                   padding: '16px 16px 36px 16px',
@@ -603,14 +605,15 @@ export default function LiveProjectorWallPage() {
                   const p = photos[pIdx];
                   if (!p) return null;
                   const isCenter = offset === 0;
+                  const itemKey = photos.length >= 3 ? p.id : `${p.id}-${offset}`;
 
                   return (
                     <div
-                      key={`${p.id}-${offset}`}
+                      key={itemKey}
                       style={{
                         flexShrink: 0,
                         width: isCenter ? '360px' : '260px',
-                        transition: 'all 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+                        transition: 'all 0.65s cubic-bezier(0.22, 1, 0.36, 1)',
                         transform: isCenter ? 'scale(1.05)' : 'scale(0.92)',
                         opacity: isCenter ? 1 : 0.45,
                         filter: isCenter ? 'none' : 'grayscale(35%) brightness(0.6)'
@@ -704,10 +707,11 @@ export default function LiveProjectorWallPage() {
                 const rotY = isCenter ? 0 : offset < 0 ? 38 : -38;
                 const opac = isCenter ? 1 : Math.max(0.35, 1 - Math.abs(offset) * 0.3);
                 const scaleVal = isCenter ? 1.06 : 0.86;
+                const itemKey = photos.length >= 5 ? p.id : `${p.id}-${offset}`;
 
                 return (
                   <div
-                    key={`${p.id}-${offset}`}
+                    key={itemKey}
                     onClick={() => setCurrentIndex(pIdx)}
                     style={{
                       position: 'absolute',
@@ -867,9 +871,10 @@ export default function LiveProjectorWallPage() {
           }}>
             {[currentPhoto, photos[(currentIndex + 1) % photos.length]].map((p, idx) => {
               if (!p) return null;
+              const itemKey = photos.length >= 2 ? p.id : `${p.id}-${idx}`;
               return (
                 <div
-                  key={`${p.id}-${idx}`}
+                  key={itemKey}
                   style={{
                     background: '#FAF8F5',
                     padding: '16px 16px 36px',
@@ -910,18 +915,24 @@ export default function LiveProjectorWallPage() {
             alignItems: 'center',
             justifyContent: 'center'
           }}>
-            <div
-              key={currentPhoto.id}
-              style={{
-                position: 'absolute',
-                inset: '-20px',
-                backgroundImage: `url(${currentPhoto.imageData})`,
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                filter: 'brightness(0.9)',
-                animation: 'kenBurnsMotion 14s ease-in-out infinite alternate'
-              }}
-            />
+            <AnimatePresence>
+              <motion.div
+                key={currentPhoto.id}
+                initial={{ opacity: 0, scale: 1.08 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 1.2, ease: 'easeInOut' }}
+                style={{
+                  position: 'absolute',
+                  inset: '-20px',
+                  backgroundImage: `url(${currentPhoto.imageData})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'brightness(0.9)',
+                  animation: 'kenBurnsMotion 14s ease-in-out infinite alternate'
+                }}
+              />
+            </AnimatePresence>
             {/* Film vignette & dark gradient */}
             <div style={{
               position: 'absolute',

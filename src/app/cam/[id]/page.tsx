@@ -75,16 +75,15 @@ function getOrCreateGuestSession(canonicalId: string, urlId: string): string {
   if (typeof window === 'undefined') return 'sess_' + Date.now();
   const primaryKey = `sb_guest_session_${canonicalId}`;
   const secondaryKey = `sb_guest_session_${urlId}`;
-  let sId = localStorage.getItem(primaryKey) || localStorage.getItem(secondaryKey) || localStorage.getItem('sb_guest_session_global');
+  let sId = localStorage.getItem(primaryKey) || localStorage.getItem(secondaryKey);
   if (!sId) {
     sId = 'sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
-    try {
-      localStorage.setItem('sb_guest_session_global', sId);
-    } catch {}
   }
   try {
     localStorage.setItem(primaryKey, sId);
-    localStorage.setItem(secondaryKey, sId);
+    if (secondaryKey !== primaryKey) {
+      localStorage.setItem(secondaryKey, sId);
+    }
   } catch {}
   return sId;
 }
@@ -135,7 +134,7 @@ export default function GuestCameraPage() {
   const [shotCount, setShotCount] = useState<number>(() => {
     if (typeof window === 'undefined') return 0;
     try {
-      const c = localStorage.getItem(`sb_shot_count_${eventId}`) || localStorage.getItem('sb_shot_count_global');
+      const c = localStorage.getItem(`sb_shot_count_${eventId}`);
       return c ? parseInt(c, 10) || 0 : 0;
     } catch {
       return 0;
@@ -211,7 +210,7 @@ export default function GuestCameraPage() {
     const initialSession = getOrCreateGuestSession(eventId, eventId);
     setGuestSessionId(initialSession);
 
-    const cachedCount = localStorage.getItem(`sb_shot_count_${eventId}`) || localStorage.getItem('sb_shot_count_global');
+    const cachedCount = localStorage.getItem(`sb_shot_count_${eventId}`);
     if (cachedCount) {
       const parsedCount = parseInt(cachedCount, 10);
       if (!isNaN(parsedCount) && parsedCount > 0) {
@@ -347,7 +346,6 @@ export default function GuestCameraPage() {
                     try {
                       localStorage.setItem(`sb_shot_count_${canonicalId}`, String(verifiedCount));
                       localStorage.setItem(`sb_shot_count_${eventId}`, String(verifiedCount));
-                      localStorage.setItem('sb_shot_count_global', String(verifiedCount));
                       const persistentShots = serverPhotos.slice(-50);
                       localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
                       if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(persistentShots));
@@ -532,6 +530,30 @@ export default function GuestCameraPage() {
       stopCameraHardware();
     };
   }, [hasEnteredName, facingMode, remaining]);
+
+  // iOS Safari / Mobile Background Sleep Recovery: Auto-resume camera stream if user locks phone or switches apps
+  useEffect(() => {
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible' && hasEnteredName && remaining > 0) {
+        const track = streamRef.current?.getVideoTracks()[0];
+        const isTrackDead = !track || track.readyState === 'ended' || track.muted;
+        const isVideoPaused = videoRef.current ? (videoRef.current.paused || videoRef.current.ended) : true;
+        if (isTrackDead || isVideoPaused) {
+          startCamera();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    window.addEventListener('pageshow', handleVisibilityOrFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      window.removeEventListener('pageshow', handleVisibilityOrFocus);
+    };
+  }, [hasEnteredName, remaining, facingMode]);
 
   // Hardware Torch Control (Physical LED Flashlight on Back Camera)
   const setHardwareTorch = async (enabled: boolean): Promise<boolean> => {
@@ -730,20 +752,19 @@ export default function GuestCameraPage() {
         });
       }
 
-      // Pristine Studio High-Res output for Lightbox, Fullscreen, and Direct Download (0.92 quality)
-      const highResDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      // Optimized Studio High-Res output (0.85 quality): 50% lighter payload, zero perceptible loss, prevents ballroom timeout
+      const highResDataUrl = canvas.toDataURL('image/jpeg', 0.85);
       const newShotNum = shotCount + 1;
       setShotCount(newShotNum);
       if (newShotNum >= maxShots) {
         stopCameraHardware();
       }
 
-      // Lightweight persistence that NEVER overflows 5MB quota
+      // Lightweight persistence that NEVER overflows 5MB quota (isolated per event)
       const canonicalId = event?.id || eventId;
       try {
         localStorage.setItem(`sb_shot_count_${canonicalId}`, String(newShotNum));
         localStorage.setItem(`sb_shot_count_${eventId}`, String(newShotNum));
-        localStorage.setItem('sb_shot_count_global', String(newShotNum));
       } catch {}
 
       // Create a sharp, balanced storage version (720px width, 0.80 quality, ~45KB)
@@ -914,7 +935,6 @@ export default function GuestCameraPage() {
         try {
           localStorage.setItem(`sb_shot_count_${canonicalId}`, String(updated.length));
           localStorage.setItem(`sb_shot_count_${eventId}`, String(updated.length));
-          localStorage.setItem('sb_shot_count_global', String(updated.length));
           localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(updated.slice(-50)));
           if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(updated.slice(-50)));
         } catch (e) {

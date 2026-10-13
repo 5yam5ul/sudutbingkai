@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyMayarWebhookToken } from '@/lib/mayar';
-import { getEventById, updateEvent, getAllVendors, updateVendor } from '@/lib/db';
+import { getEventById, updateEvent, getAllVendors, updateVendor, isWebhookProcessed, markWebhookProcessed } from '@/lib/db';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 
 export async function POST(request: Request) {
@@ -25,6 +25,16 @@ export async function POST(request: Request) {
 
     const description = payload?.data?.description || payload?.description || '';
     const invoiceId = payload?.data?.id || payload?.id;
+    const txId = payload?.data?.transactionId || payload?.data?.paymentId || invoiceId;
+
+    // Idempotency check: prevent duplicate credit of wholesale tokens or vendor commissions
+    if (txId) {
+      const alreadyProcessed = await isWebhookProcessed(String(txId));
+      if (alreadyProcessed) {
+        console.log(`Mayar Webhook transaction ${txId} already processed (idempotent skipped)`);
+        return NextResponse.json({ received: true, message: 'Already processed (idempotent)' });
+      }
+    }
 
     // 1. Check if webhook relates to Wholesale WO Packages
     if (description.includes('Paket Grosir WO')) {
@@ -98,23 +108,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // Save payment log in Supabase if table exists
-    if (isSupabaseConfigured && supabase) {
-      try {
-        await supabase.from('payment_transactions').insert({
-          id: `tx_${invoiceId || Date.now()}`,
-          provider: 'mayar',
-          amount: payload?.data?.amount || 0,
-          customer_name: payload?.data?.name || payload?.data?.customerName,
-          customer_email: payload?.data?.email,
-          status: 'PAID',
-          description,
-          event_id: eventId || null,
-          created_at: new Date().toISOString()
-        });
-      } catch {
-        // Ignore table missing error
-      }
+    // Record transaction idempotency and save payment log (Supabase + local JSON)
+    if (txId) {
+      await markWebhookProcessed(String(txId), {
+        provider: 'mayar',
+        amount: payload?.data?.amount || 0,
+        customer_name: payload?.data?.name || payload?.data?.customerName,
+        customer_email: payload?.data?.email,
+        description,
+        event_id: eventId || null
+      });
     }
 
     return NextResponse.json({ received: true, success: true });

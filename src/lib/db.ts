@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem, VideoWishRecord } from './types';
 import { supabase, isSupabaseConfigured } from './supabase';
+import { uploadBufferToR2, isR2Configured, deleteFromR2 } from './r2';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
@@ -12,6 +13,8 @@ const VENDORS_FILE = path.join(DATA_DIR, 'vendors.json');
 const TESTIMONIALS_FILE = path.join(DATA_DIR, 'testimonials.json');
 const ADDONS_FILE = path.join(DATA_DIR, 'addons.json');
 const VIDEO_WISHES_FILE = path.join(DATA_DIR, 'video_wishes.json');
+const VOICES_FILE = path.join(DATA_DIR, 'voice_notes.json');
+const PROCESSED_WEBHOOKS_FILE = path.join(DATA_DIR, 'processed_webhooks.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 const VIDEOS_DIR = path.join(UPLOADS_DIR, 'videos');
 
@@ -49,6 +52,10 @@ function ensureLocalDataFiles() {
 
     if (!fs.existsSync(TESTIMONIALS_FILE)) {
       fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify([], null, 2), 'utf8');
+    }
+
+    if (!fs.existsSync(PROCESSED_WEBHOOKS_FILE)) {
+      fs.writeFileSync(PROCESSED_WEBHOOKS_FILE, JSON.stringify([], null, 2), 'utf8');
     }
   } catch {
     // Ignore in read-only environment
@@ -345,9 +352,74 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
 }
 
 export async function deleteEvent(id: string): Promise<boolean> {
+  // 1. Cascade cleanup: delete all photo files from Cloudflare R2, Supabase Storage, and local uploads
+  try {
+    const eventPhotos = await getAllPhotos(id, true);
+    for (const p of eventPhotos) {
+      if (p.imageData) {
+        // Cloudflare R2 cleanup
+        if (isR2Configured && (p.imageData.includes('.r2.dev') || p.imageData.includes('r2.cloudflarestorage.com') || p.imageData.includes('/events/'))) {
+          try {
+            const urlObj = new URL(p.imageData);
+            const r2Key = urlObj.pathname.replace(/^\/+/, '');
+            await deleteFromR2(r2Key);
+          } catch {}
+        }
+        // Supabase storage cleanup
+        if (isSupabaseConfigured && supabase && p.imageData.includes('/photos/')) {
+          try {
+            const pathPart = p.imageData.split('/photos/')[1];
+            if (pathPart) await supabase.storage.from('photos').remove([pathPart]);
+          } catch {}
+        }
+        // Local upload cleanup
+        if (p.imageData.startsWith('/uploads/')) {
+          try {
+            const localPath = path.join(process.cwd(), 'public', p.imageData.replace(/^\//, ''));
+            if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
+          } catch {}
+        }
+      }
+    }
+  } catch (cleanErr) {
+    console.warn(`Error cleaning photo files for event ${id}:`, cleanErr);
+  }
+
+  // 2. Cascade cleanup for video wishes and voice notes
+  try {
+    const wishes = await getVideoWishes(id);
+    for (const w of wishes) {
+      if (w.videoUrl && w.videoUrl.startsWith('/uploads/')) {
+        try {
+          const vPath = path.join(process.cwd(), 'public', w.videoUrl.replace(/^\//, ''));
+          if (fs.existsSync(vPath)) fs.unlinkSync(vPath);
+        } catch {}
+      }
+    }
+    // Delete local voice files if any
+    if (fs.existsSync(VOICES_FILE)) {
+      const rawV = fs.readFileSync(VOICES_FILE, 'utf8');
+      const allVoices: any[] = JSON.parse(rawV);
+      const eventVoices = allVoices.filter(v => v.eventId === id);
+      for (const v of eventVoices) {
+        if (v.audioUrl && v.audioUrl.startsWith('/uploads/')) {
+          try {
+            const aPath = path.join(process.cwd(), 'public', v.audioUrl.replace(/^\//, ''));
+            if (fs.existsSync(aPath)) fs.unlinkSync(aPath);
+          } catch {}
+        }
+      }
+      const keptVoices = allVoices.filter(v => v.eventId !== id);
+      fs.writeFileSync(VOICES_FILE, JSON.stringify(keptVoices, null, 2), 'utf8');
+    }
+  } catch {}
+
+  // 3. Supabase row deletion
   if (isSupabaseConfigured && supabase) {
     try {
       await supabase.from('photos').delete().eq('event_id', id);
+      await supabase.from('video_wishes').delete().eq('event_id', id);
+      await supabase.from('voice_notes').delete().eq('event_id', id);
       const { error } = await supabase.from('events').delete().eq('id', id);
       if (!error) return true;
       console.warn(`Supabase deleteEvent(${id}) error:`, error.message);
@@ -356,7 +428,7 @@ export async function deleteEvent(id: string): Promise<boolean> {
     }
   }
 
-  // Local fallback
+  // 4. Local fallback cleanup
   ensureLocalDataFiles();
   try {
     if (fs.existsSync(EVENTS_FILE)) {
@@ -370,6 +442,12 @@ export async function deleteEvent(id: string): Promise<boolean> {
       let photos: PhotoRecord[] = JSON.parse(rawPhotos);
       photos = photos.filter(p => p.eventId !== id);
       fs.writeFileSync(PHOTOS_FILE, JSON.stringify(photos, null, 2), 'utf8');
+    }
+    if (fs.existsSync(VIDEO_WISHES_FILE)) {
+      const rawWishes = fs.readFileSync(VIDEO_WISHES_FILE, 'utf8');
+      let wishes: VideoWishRecord[] = JSON.parse(rawWishes);
+      wishes = wishes.filter(w => w.eventId !== id);
+      fs.writeFileSync(VIDEO_WISHES_FILE, JSON.stringify(wishes, null, 2), 'utf8');
     }
     return true;
   } catch (err) {
@@ -447,8 +525,6 @@ export async function getPhotoById(id: string): Promise<PhotoRecord | null> {
   const photos = await getAllPhotos(undefined, true);
   return photos.find(p => p.id === id) || null;
 }
-
-import { uploadBufferToR2, isR2Configured, deleteFromR2 } from './r2';
 
 export async function savePhoto(photo: PhotoRecord): Promise<PhotoRecord> {
   let finalImageUrl = photo.imageData;
@@ -1794,6 +1870,89 @@ export async function deleteVideoWish(id: string): Promise<boolean> {
     return false;
   }
 }
+
+// ==========================================
+// PAYMENT WEBHOOK IDEMPOTENCY ENGINE
+// ==========================================
+
+export async function isWebhookProcessed(txId: string): Promise<boolean> {
+  if (!txId) return false;
+  const canonicalId = txId.startsWith('tx_') ? txId : `tx_${txId}`;
+
+  // 1. Check Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('payment_transactions')
+        .select('id')
+        .or(`id.eq.${canonicalId},id.eq.${txId}`)
+        .maybeSingle();
+      if (!error && data) {
+        return true;
+      }
+    } catch (e) {
+      // Fall through to local cache
+    }
+  }
+
+  // 2. Check Local File
+  try {
+    ensureLocalDataFiles();
+    if (fs.existsSync(PROCESSED_WEBHOOKS_FILE)) {
+      const raw = fs.readFileSync(PROCESSED_WEBHOOKS_FILE, 'utf8');
+      const list: string[] = JSON.parse(raw);
+      if (list.includes(canonicalId) || list.includes(txId)) {
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn('isWebhookProcessed read error:', err);
+  }
+
+  return false;
+}
+
+export async function markWebhookProcessed(txId: string, details?: any): Promise<void> {
+  if (!txId) return;
+  const canonicalId = txId.startsWith('tx_') ? txId : `tx_${txId}`;
+
+  // 1. Supabase (upsert into payment_transactions)
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('payment_transactions').upsert({
+        id: canonicalId,
+        provider: details?.provider || 'mayar',
+        amount: details?.amount || 0,
+        customer_name: details?.customer_name || null,
+        customer_email: details?.customer_email || null,
+        status: 'PAID',
+        description: details?.description || null,
+        event_id: details?.event_id || null,
+        created_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+    } catch (e) {
+      console.warn('markWebhookProcessed supabase warning:', e);
+    }
+  }
+
+  // 2. Local File
+  try {
+    ensureLocalDataFiles();
+    let list: string[] = [];
+    if (fs.existsSync(PROCESSED_WEBHOOKS_FILE)) {
+      list = JSON.parse(fs.readFileSync(PROCESSED_WEBHOOKS_FILE, 'utf8'));
+    }
+    if (!list.includes(canonicalId)) {
+      list.push(canonicalId);
+      // Keep to last 5000 IDs to avoid unbounded growth
+      if (list.length > 5000) list = list.slice(-5000);
+      fs.writeFileSync(PROCESSED_WEBHOOKS_FILE, JSON.stringify(list, null, 2), 'utf8');
+    }
+  } catch (err) {
+    console.warn('markWebhookProcessed local write error:', err);
+  }
+}
+
 
 
 
