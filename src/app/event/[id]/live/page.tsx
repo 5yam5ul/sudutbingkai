@@ -1,15 +1,39 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
-import { Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw, Layout, Film, Grid, SplitSquareVertical, Clock, Building, Disc, Layers, Copy, Shuffle, MessageSquare } from 'lucide-react';
+import { 
+  Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw, Layout, Film, Grid, 
+  SplitSquareVertical, Clock, Building, Disc, Layers, Copy, Shuffle, MessageSquare,
+  Play, Pause, QrCode as QrCodeIcon, Smartphone, Monitor, ChevronLeft, ChevronRight, X, Sliders
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventData, PhotoRecord } from '@/lib/types';
 
-type SlideshowMode = 'polaroid' | 'kenburns' | 'filmstrip' | 'coverflow' | 'stack' | 'duo' | 'mosaic' | 'split';
+export type SlideshowMode = 
+  | 'polaroid' 
+  | 'kenburns' 
+  | 'filmstrip' 
+  | 'coverflow' 
+  | 'stack' 
+  | 'duo' 
+  | 'mosaic' 
+  | 'split'
+  | 'vertical-waterfall'
+  | 'vertical-polaroid'
+  | 'vertical-split'
+  | 'vertical-stories';
+
+interface NewPhotoNotification {
+  id: string;
+  guestName: string;
+  imageData: string;
+  caption?: string;
+  timestamp: string;
+}
 
 export default function LiveProjectorWallPage() {
   const params = useParams();
@@ -21,10 +45,24 @@ export default function LiveProjectorWallPage() {
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Slideshow presentation options
+  // Playback & Presentation State
+  const [isPaused, setIsPaused] = useState(false);
   const [displayMode, setDisplayMode] = useState<SlideshowMode>('polaroid');
   const [cycleSpeed, setCycleSpeed] = useState<number>(5000);
   const [isAutoMix, setIsAutoMix] = useState(false);
+
+  // Orientation State: Horizontal Widescreen vs Vertical Standing Totem / Kiosk
+  const [isVertical, setIsVertical] = useState(false);
+
+  // Stage Spotlight QR Modal for MC Callout ("Waktunya Foto Bareng!")
+  const [showQrSpotlight, setShowQrSpotlight] = useState(false);
+
+  // Live Toast for newly arriving photos
+  const [newPhotoToast, setNewPhotoToast] = useState<NewPhotoNotification | null>(null);
+
+  // Auto-Hiding Toolbar on Inactivity (Crucial for Live Stage/Videotron)
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const hideTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Countdown Timer State for Delayed Mode (Anti-Leak Shield)
   const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
@@ -32,6 +70,26 @@ export default function LiveProjectorWallPage() {
 
   // Persistent reference to track previous photo count without stale closure
   const lastCountRef = useRef<number>(-1);
+
+  // Reset toolbar auto-hide timer on mouse interaction
+  const resetHeaderTimer = useCallback(() => {
+    setIsHeaderVisible(true);
+    if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    hideTimerRef.current = setTimeout(() => {
+      setIsHeaderVisible(false);
+    }, 3500);
+  }, []);
+
+  // Auto-detect screen orientation on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const isPortrait = window.innerHeight > window.innerWidth;
+      setIsVertical(isPortrait);
+      if (isPortrait) {
+        setDisplayMode('vertical-waterfall');
+      }
+    }
+  }, []);
 
   // Fetch event and photos
   const fetchData = async () => {
@@ -48,13 +106,33 @@ export default function LiveProjectorWallPage() {
         const newPhotos: PhotoRecord[] = dataP.photos;
         setPhotos(newPhotos);
 
-        // Fire celebration confetti if new photos arrived!
+        // Fire celebration confetti & display real-time live toast if new photos arrived!
         if (lastCountRef.current !== -1 && newPhotos.length > lastCountRef.current) {
           confetti({
-            particleCount: 75,
-            spread: 80,
+            particleCount: 80,
+            spread: 90,
             origin: { y: 0.6 }
           });
+
+          // Most recent photo in chronological array
+          const latestPhoto = newPhotos[newPhotos.length - 1];
+          if (latestPhoto) {
+            setNewPhotoToast({
+              id: latestPhoto.id,
+              guestName: latestPhoto.guestName,
+              imageData: latestPhoto.imageData,
+              caption: latestPhoto.caption,
+              timestamp: latestPhoto.timestamp
+            });
+
+            // Automatically switch to the new photo so the audience sees it live
+            setCurrentIndex(newPhotos.length - 1);
+
+            // Auto-dismiss the toast banner after 6 seconds
+            setTimeout(() => {
+              setNewPhotoToast(null);
+            }, 6000);
+          }
         }
         lastCountRef.current = newPhotos.length;
       }
@@ -69,14 +147,17 @@ export default function LiveProjectorWallPage() {
     return () => clearInterval(interval);
   }, [eventId]);
 
-  // Slideshow cycle respecting cycleSpeed and Auto-Mix mode
+  // Slideshow cycle respecting cycleSpeed, Pause, and Auto-Mix mode
   useEffect(() => {
-    if (photos.length <= 1) return;
+    if (photos.length <= 1 || isPaused || isDelayedAndLocked || showQrSpotlight) return;
+
     const slideTimer = setInterval(() => {
       setCurrentIndex((prev) => {
         const nextIdx = (prev + 1) % photos.length;
         if (isAutoMix && nextIdx % 3 === 0) {
-          const rotationModes: SlideshowMode[] = ['polaroid', 'filmstrip', 'coverflow', 'kenburns', 'stack', 'duo', 'mosaic'];
+          const rotationModes: SlideshowMode[] = isVertical
+            ? ['vertical-waterfall', 'vertical-polaroid', 'vertical-split', 'vertical-stories']
+            : ['polaroid', 'filmstrip', 'coverflow', 'kenburns', 'stack', 'duo', 'mosaic'];
           setDisplayMode((prevMode) => {
             const nextModeIdx = (rotationModes.indexOf(prevMode) + 1) % rotationModes.length;
             return rotationModes[nextModeIdx];
@@ -85,8 +166,85 @@ export default function LiveProjectorWallPage() {
         return nextIdx;
       });
     }, cycleSpeed);
+
     return () => clearInterval(slideTimer);
-  }, [photos.length, cycleSpeed, isAutoMix]);
+  }, [photos.length, cycleSpeed, isAutoMix, isPaused, isDelayedAndLocked, showQrSpotlight, isVertical]);
+
+  // Auto-hide toolbar listeners
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      // If hovering near top edge (y < 70), keep visible continuously
+      if (e.clientY < 70) {
+        setIsHeaderVisible(true);
+        if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+      } else {
+        resetHeaderTimer();
+      }
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    resetHeaderTimer();
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+  }, [resetHeaderTimer]);
+
+  // Keyboard Shortcuts (Essential for Event Operators / VJs)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement)?.tagName)) return;
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        setIsPaused(p => !p);
+        resetHeaderTimer();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        if (photos.length > 0) {
+          setCurrentIndex(p => (p + 1) % photos.length);
+        }
+        resetHeaderTimer();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        if (photos.length > 0) {
+          setCurrentIndex(p => (p - 1 + photos.length) % photos.length);
+        }
+        resetHeaderTimer();
+      } else if (e.key === 'q' || e.key === 'Q') {
+        e.preventDefault();
+        setShowQrSpotlight(p => !p);
+        resetHeaderTimer();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault();
+        setIsVertical(prev => {
+          const next = !prev;
+          if (next) {
+            setDisplayMode('vertical-waterfall');
+          } else {
+            setDisplayMode('polaroid');
+          }
+          return next;
+        });
+        resetHeaderTimer();
+      } else if (e.key === 'm' || e.key === 'M') {
+        e.preventDefault();
+        setIsAutoMix(p => !p);
+        resetHeaderTimer();
+      } else if (e.key === 'Escape') {
+        if (showQrSpotlight) {
+          setShowQrSpotlight(false);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [photos.length, resetHeaderTimer, showQrSpotlight]);
 
   // Auto-scroll active photo card into view in Mosaic Mode
   useEffect(() => {
@@ -98,12 +256,12 @@ export default function LiveProjectorWallPage() {
     }
   }, [currentIndex, displayMode, photos.length]);
 
-  // Generate Corner QR Code
+  // Generate Corner & Spotlight QR Codes
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const guestUrl = `${window.location.origin}/cam/${eventId}`;
       QRCode.toDataURL(guestUrl, {
-        width: 280,
+        width: 320,
         margin: 1,
         color: { dark: '#000000', light: '#ffffff' }
       }).then(url => setQrDataUrl(url));
@@ -152,6 +310,27 @@ export default function LiveProjectorWallPage() {
 
   const currentPhoto = photos[currentIndex];
 
+  // List of Modes adapted to Screen Orientation
+  const horizontalModes = [
+    { id: 'polaroid', label: 'Polaroid', icon: <Film size={12} /> },
+    { id: 'filmstrip', label: 'Rol Film 35mm', icon: <Disc size={12} /> },
+    { id: 'coverflow', label: '3D Coverflow', icon: <Layers size={12} /> },
+    { id: 'kenburns', label: 'Sinematik Zoom', icon: <Camera size={12} /> },
+    { id: 'stack', label: 'Tumpukan Meja', icon: <Copy size={12} /> },
+    { id: 'duo', label: 'Duo Side-by-Side', icon: <Layout size={12} /> },
+    { id: 'mosaic', label: 'Mosaik Wall', icon: <Grid size={12} /> },
+    { id: 'split', label: 'Split Layar QR', icon: <SplitSquareVertical size={12} /> },
+  ];
+
+  const verticalModes = [
+    { id: 'vertical-waterfall', label: 'Kaskade Rol Film', icon: <Disc size={12} /> },
+    { id: 'vertical-polaroid', label: 'Totem Polaroid Kios', icon: <Film size={12} /> },
+    { id: 'vertical-split', label: 'Split Kios & QR', icon: <SplitSquareVertical size={12} /> },
+    { id: 'vertical-stories', label: 'Reels Stories 9:16', icon: <Camera size={12} /> },
+  ];
+
+  const activeModesList = isVertical ? verticalModes : horizontalModes;
+
   return (
     <div style={{
       minHeight: '100vh',
@@ -163,40 +342,192 @@ export default function LiveProjectorWallPage() {
       overflowX: 'hidden',
       overflowY: displayMode === 'mosaic' ? 'auto' : 'hidden'
     }}>
-      {/* Top Bar for Venue Operator (Hover to see) */}
+      {/* Dynamic Ambient Stage Backlight (Banishes Dead Black Space) */}
+      <div
+        style={{
+          position: 'fixed',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: isVertical ? 'min(650px, 95vw)' : 'min(1100px, 90vw)',
+          height: isVertical ? 'min(950px, 95vh)' : 'min(750px, 80vh)',
+          borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(194, 120, 3, 0.22) 0%, rgba(217, 119, 6, 0.10) 45%, rgba(0, 0, 0, 0) 75%)',
+          filter: 'blur(80px)',
+          pointerEvents: 'none',
+          zIndex: 1,
+          transition: 'all 1s ease'
+        }}
+      />
+
+      {/* Auto-Hiding Top Bar for Venue Operator (Hover or Move Mouse to Show) */}
       <header style={{
         position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
-        padding: '12px 20px',
+        padding: '10px 18px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         background: 'linear-gradient(to bottom, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.7) 70%, transparent 100%)',
-        backdropFilter: 'blur(8px)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         zIndex: 50,
-        gap: '12px',
+        gap: '10px',
         flexWrap: 'nowrap',
         overflowX: 'auto',
-        scrollbarWidth: 'none'
+        scrollbarWidth: 'none',
+        opacity: isHeaderVisible ? 1 : 0,
+        transform: isHeaderVisible ? 'translateY(0)' : 'translateY(-100%)',
+        pointerEvents: isHeaderVisible ? 'auto' : 'none',
+        transition: 'opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexShrink: 0 }}>
-          <Link href={`/event/${eventId}`} style={{ color: '#86868B', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px' }}>
-            <ArrowLeft size={16} />
-            <span>Kembali</span>
+        {/* Left: Navigation & Live Event Stats */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
+          <Link 
+            href={`/event/${eventId}`} 
+            style={{ 
+              color: '#86868B', 
+              textDecoration: 'none', 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              fontSize: '12.5px',
+              padding: '5px 10px',
+              borderRadius: '8px',
+              background: 'rgba(255,255,255,0.06)'
+            }}
+          >
+            <ArrowLeft size={14} />
+            <span style={{ display: isVertical ? 'none' : 'inline' }}>Kembali</span>
           </Link>
-          <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
-          <span style={{ fontSize: '13px', fontWeight: 700, color: '#F59E0B' }}>
-            {event?.title || 'Live Photo Wall'}
-          </span>
-          <span style={{ fontSize: '12px', color: '#86868B' }}>
-            ({photos.length > 0 ? currentIndex + 1 : 0} / {photos.length} foto)
-          </span>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ 
+              width: '8px', 
+              height: '8px', 
+              borderRadius: '50%', 
+              background: '#10B981', 
+              boxShadow: '0 0 8px #10B981',
+              display: 'inline-block'
+            }} />
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#F59E0B' }}>
+              {event?.title || 'Live Photo Wall'}
+            </span>
+            <span style={{ fontSize: '11.5px', color: '#A1A1A6' }}>
+              ({photos.length > 0 ? currentIndex + 1 : 0} / {photos.length} foto)
+            </span>
+          </div>
+
+          {/* Quick Play/Pause & Step Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: 'rgba(255,255,255,0.08)', padding: '2px 4px', borderRadius: '10px' }}>
+            <button
+              onClick={() => {
+                if (photos.length > 0) {
+                  setCurrentIndex(p => (p - 1 + photos.length) % photos.length);
+                }
+              }}
+              title="Foto Sebelumnya (Panah Kiri)"
+              style={{ background: 'transparent', border: 'none', color: '#FFF', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            >
+              <ChevronLeft size={13} />
+            </button>
+
+            <button
+              onClick={() => setIsPaused(p => !p)}
+              title="Jeda / Lanjutkan Slideshow (Spasi)"
+              style={{ 
+                background: isPaused ? '#C27803' : 'transparent', 
+                border: 'none', 
+                color: '#FFF', 
+                padding: '4px 8px', 
+                borderRadius: '6px',
+                cursor: 'pointer', 
+                display: 'flex', 
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                fontWeight: 600
+              }}
+            >
+              {isPaused ? <Play size={11} fill="#FFF" /> : <Pause size={11} />}
+              <span>{isPaused ? 'Lanjut' : 'Jeda'}</span>
+            </button>
+
+            <button
+              onClick={() => {
+                if (photos.length > 0) {
+                  setCurrentIndex(p => (p + 1) % photos.length);
+                }
+              }}
+              title="Foto Berikutnya (Panah Kanan)"
+              style={{ background: 'transparent', border: 'none', color: '#FFF', padding: '4px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+            >
+              <ChevronRight size={13} />
+            </button>
+          </div>
         </div>
 
         {/* Presentation Controls Toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'nowrap', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'nowrap', flexShrink: 0 }}>
+          {/* Orientation Mode Switcher (Horizontal 16:9 vs Vertical Standing Totem) */}
+          <div style={{
+            display: 'flex',
+            background: 'rgba(255, 255, 255, 0.08)',
+            padding: '3px',
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.12)'
+          }}>
+            <button
+              onClick={() => {
+                setIsVertical(false);
+                setDisplayMode('polaroid');
+              }}
+              title="Mode Layar Panggung Horizontal (16:9)"
+              style={{
+                padding: '4px 8px',
+                borderRadius: '8px',
+                border: 'none',
+                background: !isVertical ? '#C27803' : 'transparent',
+                color: !isVertical ? '#FFFFFF' : '#A1A1A6',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <Monitor size={12} />
+              <span style={{ display: isVertical ? 'none' : 'inline' }}>Horizontal</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setIsVertical(true);
+                setDisplayMode('vertical-waterfall');
+              }}
+              title="Mode Layar Berdiri / Totem Vertikal (9:16)"
+              style={{
+                padding: '4px 8px',
+                borderRadius: '8px',
+                border: 'none',
+                background: isVertical ? '#C27803' : 'transparent',
+                color: isVertical ? '#FFFFFF' : '#A1A1A6',
+                fontSize: '11px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              <Smartphone size={12} />
+              <span>Vertikal (Totem)</span>
+            </button>
+          </div>
+
           {/* Mode Switchers */}
           <div style={{
             display: 'flex',
@@ -208,16 +539,7 @@ export default function LiveProjectorWallPage() {
             maxWidth: '100%',
             overflowX: 'auto'
           }}>
-            {[
-              { id: 'polaroid', label: 'Polaroid', icon: <Film size={12} /> },
-              { id: 'filmstrip', label: 'Rol Film 35mm', icon: <Disc size={12} /> },
-              { id: 'coverflow', label: '3D Coverflow', icon: <Layers size={12} /> },
-              { id: 'kenburns', label: 'Sinematik Zoom', icon: <Camera size={12} /> },
-              { id: 'stack', label: 'Tumpukan Meja', icon: <Copy size={12} /> },
-              { id: 'duo', label: 'Duo Side-by-Side', icon: <Layout size={12} /> },
-              { id: 'mosaic', label: 'Mosaik Wall', icon: <Grid size={12} /> },
-              { id: 'split', label: 'Split Layar QR', icon: <SplitSquareVertical size={12} /> },
-            ].map(m => (
+            {activeModesList.map(m => (
               <button
                 key={m.id}
                 onClick={() => {
@@ -249,9 +571,9 @@ export default function LiveProjectorWallPage() {
           {/* Auto-Mix Button */}
           <button
             onClick={() => setIsAutoMix(prev => !prev)}
-            title="Otomatis berganti animasi setiap 3 foto"
+            title="Otomatis berganti animasi setiap 3 foto (Shortcut: M)"
             style={{
-              padding: '5px 11px',
+              padding: '5px 10px',
               borderRadius: '11px',
               border: isAutoMix ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.15)',
               background: isAutoMix ? 'linear-gradient(135deg, #C27803 0%, #D97706 100%)' : 'rgba(255, 255, 255, 0.08)',
@@ -303,6 +625,29 @@ export default function LiveProjectorWallPage() {
             ))}
           </div>
 
+          {/* MC QR Spotlight Button (Shortcut Q) */}
+          <button
+            onClick={() => setShowQrSpotlight(p => !p)}
+            title="Tampilkan QR Code Raksasa untuk MC Callout (Shortcut: Q)"
+            style={{
+              background: showQrSpotlight ? '#F59E0B' : 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              color: showQrSpotlight ? '#161412' : '#F59E0B',
+              padding: '6px 11px',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '11.5px',
+              fontWeight: 700,
+              whiteSpace: 'nowrap'
+            }}
+          >
+            <QrCodeIcon size={13} />
+            <span>QR Panggung (Q)</span>
+          </button>
+
           {/* Fullscreen Button */}
           <button
             onClick={toggleFullscreen}
@@ -310,20 +655,196 @@ export default function LiveProjectorWallPage() {
               background: 'rgba(255, 255, 255, 0.1)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               color: '#fff',
-              padding: '6px 12px',
+              padding: '6px 11px',
               borderRadius: '12px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              fontSize: '12px'
+              gap: '5px',
+              fontSize: '11.5px',
+              whiteSpace: 'nowrap'
             }}
           >
-            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
             <span>{isFullscreen ? 'Kecilkan' : 'Layar Penuh (F11)'}</span>
           </button>
         </div>
       </header>
+
+      {/* Floating Real-time Toast: New Photo Arrival Banner */}
+      <AnimatePresence>
+        {newPhotoToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -40, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -30, scale: 0.95 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              position: 'fixed',
+              top: '70px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: 'rgba(20, 18, 15, 0.92)',
+              border: '1px solid rgba(245, 158, 11, 0.6)',
+              borderRadius: '999px',
+              padding: '8px 20px 8px 10px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.8), 0 0 30px rgba(245, 158, 11, 0.35)',
+              backdropFilter: 'blur(16px)',
+              zIndex: 60,
+              maxWidth: '90vw'
+            }}
+          >
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              background: '#000',
+              border: '2px solid #F59E0B',
+              flexShrink: 0
+            }}>
+              <img src={newPhotoToast.imageData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            <div style={{ textAlign: 'left' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#F59E0B', animation: 'pulse 1s infinite' }} />
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#F59E0B', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                  Jepretan Baru Masuk!
+                </span>
+              </div>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF' }}>
+                @{newPhotoToast.guestName} baru saja mengunggah foto
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MC Spotlight QR Modal (Full-Screen Callout for Banquet / Stage Announcements) */}
+      <AnimatePresence>
+        {showQrSpotlight && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 100,
+              background: 'rgba(8, 7, 6, 0.92)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px'
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              transition={{ duration: 0.3 }}
+              style={{
+                background: 'linear-gradient(145deg, rgba(28, 25, 21, 0.95), rgba(15, 14, 12, 0.98))',
+                border: '2px solid rgba(245, 158, 11, 0.5)',
+                borderRadius: '32px',
+                padding: '40px 36px',
+                maxWidth: '540px',
+                width: '100%',
+                textAlign: 'center',
+                boxShadow: '0 30px 90px rgba(0, 0, 0, 0.9), 0 0 60px rgba(194, 120, 3, 0.25)',
+                position: 'relative'
+              }}
+            >
+              <button
+                onClick={() => setShowQrSpotlight(false)}
+                style={{
+                  position: 'absolute',
+                  top: '18px',
+                  right: '18px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  color: '#FFFFFF',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X size={18} />
+              </button>
+
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 14px',
+                borderRadius: '999px',
+                background: 'rgba(245, 158, 11, 0.15)',
+                border: '1px solid rgba(245, 158, 11, 0.35)',
+                color: '#F59E0B',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                marginBottom: '16px'
+              }}>
+                <Camera size={13} />
+                <span>Kamera Tamu Langsung Aktif</span>
+              </div>
+
+              <h2 style={{
+                fontFamily: 'var(--font-display-serif), Georgia, serif',
+                fontSize: '32px',
+                fontWeight: 700,
+                color: '#FFFFFF',
+                margin: '0 0 10px',
+                letterSpacing: '-0.02em'
+              }}>
+                Waktunya Foto Bareng!
+              </h2>
+
+              <p style={{ color: '#D4D4D8', fontSize: '14.5px', margin: '0 0 24px', lineHeight: 1.5 }}>
+                Arahkan kamera smartphone ke kode QR di bawah ini untuk mulai memotret candid & tampil langsung di layar videotron!
+              </p>
+
+              {/* Giant QR Code Display */}
+              <div style={{
+                display: 'inline-block',
+                background: '#FFFFFF',
+                padding: '16px',
+                borderRadius: '24px',
+                boxShadow: '0 16px 40px rgba(0,0,0,0.5), 0 0 40px rgba(245, 158, 11, 0.35)',
+                marginBottom: '20px'
+              }}>
+                {qrDataUrl && (
+                  <img src={qrDataUrl} alt="Scan QR Tamu" style={{ width: '240px', height: '240px', display: 'block' }} />
+                )}
+              </div>
+
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '16px',
+                color: '#A1A1A6',
+                fontSize: '12px'
+              }}>
+                <span>Tanpa Perlu Unduh Aplikasi</span>
+                <span>•</span>
+                <span>Gratis & Sekali Klik</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Slideshow Stage */}
       <main style={{
@@ -332,10 +853,11 @@ export default function LiveProjectorWallPage() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: displayMode === 'mosaic' ? 'flex-start' : 'center',
-        padding: '85px 24px 80px',
+        padding: isVertical ? '70px 16px 90px' : '85px 24px 80px',
         position: 'relative',
         width: '100%',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
+        zIndex: 10
       }}>
         {isDelayedAndLocked ? (
           /* RETRO AMBIENT COUNTDOWN CURTAIN (ANTI-LEAK SHIELD) */
@@ -480,8 +1002,338 @@ export default function LiveProjectorWallPage() {
               Menunggu jepretan candid pertama dari para tamu! Pindai kode QR di sudut layar atau kartu QR tamu untuk mulai memotret.
             </p>
           </div>
+        ) : displayMode === 'vertical-waterfall' ? (
+          /* VERTICAL MODE 1: KASKADE ROL FILM VERTIKAL */
+          <div style={{
+            width: '100%',
+            maxWidth: '540px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            position: 'relative'
+          }}>
+            <div style={{
+              width: '100%',
+              background: '#0B0A08',
+              borderRadius: '28px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              boxShadow: '0 30px 90px rgba(0,0,0,0.95), 0 0 45px rgba(245, 158, 11, 0.2)',
+              overflow: 'hidden',
+              position: 'relative'
+            }}>
+              {/* Left & Right Sprocket Perforations */}
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                position: 'absolute',
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                pointerEvents: 'none',
+                zIndex: 20
+              }}>
+                {/* Left Sprocket Column */}
+                <div style={{ width: '28px', background: '#12100C', borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignItems: 'center', padding: '12px 0' }}>
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} style={{ width: '14px', height: '18px', borderRadius: '4px', background: 'rgba(255,255,255,0.85)', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
+                  ))}
+                </div>
+                {/* Right Sprocket Column */}
+                <div style={{ width: '28px', background: '#12100C', borderLeft: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignItems: 'center', padding: '12px 0' }}>
+                  {Array.from({ length: 12 }).map((_, i) => (
+                    <div key={i} style={{ width: '14px', height: '18px', borderRadius: '4px', background: 'rgba(255,255,255,0.85)', boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.8)' }} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Film Header Badge */}
+              <div style={{ padding: '12px 36px', background: '#171512', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="font-mono-film" style={{ fontSize: '11px', color: '#F59E0B', letterSpacing: '0.15em', fontWeight: 700 }}>
+                  35MM VERTIKAL • FRAME #{currentPhoto.shotNumber}
+                </span>
+                <span className="font-mono-film" style={{ fontSize: '11px', color: '#A1A1A6' }}>
+                  {new Date(currentPhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+
+              {/* Main Photo Frame */}
+              <div style={{ padding: '20px 42px', background: '#090807' }}>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentPhoto.id}
+                    initial={{ opacity: 0, y: 40, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -40, scale: 0.95 }}
+                    transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
+                    style={{
+                      aspectRatio: '3/4',
+                      borderRadius: '18px',
+                      overflow: 'hidden',
+                      background: '#141210',
+                      boxShadow: '0 20px 50px rgba(0,0,0,0.8)',
+                      border: '2px solid rgba(245, 158, 11, 0.4)',
+                      position: 'relative'
+                    }}
+                  >
+                    <img src={currentPhoto.imageData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Film Footer: Guest Details & Caption */}
+              <div style={{ padding: '16px 36px 24px', background: '#12100C', borderTop: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
+                <span style={{ fontSize: '20px', fontWeight: 800, fontFamily: 'var(--font-display)', color: '#FFF', display: 'block' }}>
+                  Diabadikan oleh @{currentPhoto.guestName}
+                </span>
+                {currentPhoto.caption && (
+                  <p style={{ fontSize: '14px', color: '#FDE68A', fontStyle: 'italic', margin: '8px 0 0', lineHeight: 1.4 }}>
+                    &ldquo;{currentPhoto.caption}&rdquo;
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : displayMode === 'vertical-polaroid' ? (
+          /* VERTICAL MODE 2: TOTEM POLAROID KIOS */
+          <div style={{
+            width: '100%',
+            maxWidth: '460px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '24px'
+          }}>
+            <AnimatePresence mode="popLayout">
+              <motion.div
+                key={currentPhoto.id}
+                initial={{ opacity: 0, scale: 0.92, rotate: -2, y: 20 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0, y: 0 }}
+                exit={{ opacity: 0, scale: 1.04, rotate: 2, y: -20 }}
+                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                style={{
+                  background: '#FAF8F5',
+                  padding: '16px 16px 32px 16px',
+                  borderRadius: '24px',
+                  boxShadow: '0 30px 80px rgba(0, 0, 0, 0.95), 0 0 50px rgba(194, 120, 3, 0.22)',
+                  width: '100%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center'
+                }}
+              >
+                <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '16px', overflow: 'hidden', background: '#12100B' }}>
+                  <img src={currentPhoto.imageData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+                <div style={{ marginTop: '16px', textAlign: 'center', color: '#1A1815', width: '100%' }}>
+                  <span style={{ fontSize: '20px', fontWeight: '800', fontFamily: 'var(--font-display)', display: 'block' }}>
+                    @{currentPhoto.guestName}
+                  </span>
+                  <span style={{ fontSize: '12px', color: '#736D65', fontFamily: 'var(--font-lcd)', display: 'block', marginTop: '2px' }}>
+                    FRAME #{currentPhoto.shotNumber} • {new Date(currentPhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  {currentPhoto.caption && (
+                    <div style={{ marginTop: '10px', padding: '6px 14px', background: 'rgba(194, 120, 3, 0.08)', borderRadius: '10px', display: 'inline-block' }}>
+                      <span style={{ fontSize: '13px', color: '#78350F', fontStyle: 'italic', fontWeight: 600 }}>
+                        &ldquo;{currentPhoto.caption}&rdquo;
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </AnimatePresence>
+
+            {/* Standing Totem Eye-Level Interactive Scanning Dock */}
+            <div style={{
+              width: '100%',
+              background: 'rgba(20, 18, 15, 0.88)',
+              border: '1px solid rgba(245, 158, 11, 0.4)',
+              borderRadius: '24px',
+              padding: '16px 20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+              backdropFilter: 'blur(16px)'
+            }}>
+              {qrDataUrl && (
+                <div style={{ background: '#FFF', padding: '8px', borderRadius: '12px', flexShrink: 0 }}>
+                  <img src={qrDataUrl} alt="Scan QR" style={{ width: '92px', height: '92px', display: 'block' }} />
+                </div>
+              )}
+              <div style={{ textAlign: 'left' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#F59E0B', letterSpacing: '0.08em', textTransform: 'uppercase', display: 'block' }}>
+                  Ayo Ikut Memotret!
+                </span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#FFFFFF', display: 'block', marginTop: '2px' }}>
+                  Arahkan HP-mu ke QR ini
+                </span>
+                <span style={{ fontSize: '11px', color: '#A1A1A6', display: 'block', marginTop: '4px' }}>
+                  Hasil jepretan langsung tayang di totem layar ini
+                </span>
+              </div>
+            </div>
+          </div>
+        ) : displayMode === 'vertical-split' ? (
+          /* VERTICAL MODE 3: SPLIT KIOS & QR (50/50 Top Photo / Bottom Interactive QR) */
+          <div style={{
+            width: '100%',
+            maxWidth: '480px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px'
+          }}>
+            {/* Top Half: Cinematic Photo Card */}
+            <div style={{
+              borderRadius: '24px',
+              overflow: 'hidden',
+              background: '#12100B',
+              boxShadow: '0 25px 65px rgba(0,0,0,0.9)',
+              border: '1px solid rgba(255,255,255,0.15)',
+              position: 'relative',
+              aspectRatio: '4/3'
+            }}>
+              <img src={currentPhoto.imageData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                padding: '16px 20px',
+                background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)'
+              }}>
+                <span style={{ fontSize: '17px', fontWeight: 800, color: '#FFF', display: 'block' }}>
+                  @{currentPhoto.guestName}
+                </span>
+                {currentPhoto.caption && (
+                  <span style={{ fontSize: '13px', color: '#FDE68A', fontStyle: 'italic', display: 'block' }}>
+                    &ldquo;{currentPhoto.caption}&rdquo;
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Bottom Half: Giant QR Station */}
+            <div style={{
+              background: 'linear-gradient(145deg, rgba(25, 22, 18, 0.92), rgba(15, 14, 12, 0.95))',
+              border: '1px solid rgba(245, 158, 11, 0.45)',
+              borderRadius: '24px',
+              padding: '24px 20px',
+              textAlign: 'center',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.7)',
+              backdropFilter: 'blur(14px)'
+            }}>
+              <span className="font-mono-film" style={{ fontSize: '11px', color: '#F59E0B', letterSpacing: '0.1em', fontWeight: 700, display: 'block', marginBottom: '6px' }}>
+                LIVE GUEST CANDID CAMERA
+              </span>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#FFF', margin: '0 0 14px' }}>
+                Scan QR untuk Ambil Foto
+              </h3>
+
+              <div style={{ background: '#FFF', padding: '12px', borderRadius: '16px', display: 'inline-block', marginBottom: '14px' }}>
+                {qrDataUrl && (
+                  <img src={qrDataUrl} alt="Scan QR" style={{ width: '160px', height: '160px', display: 'block' }} />
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', color: '#D4D4D8', fontSize: '11px', marginTop: '6px' }}>
+                <div style={{ background: 'rgba(255,255,255,0.06)', padding: '6px', borderRadius: '8px' }}>
+                  1. Scan QR
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.06)', padding: '6px', borderRadius: '8px' }}>
+                  2. Jepret Momen
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.06)', padding: '6px', borderRadius: '8px' }}>
+                  3. Tampil Live!
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : displayMode === 'vertical-stories' ? (
+          /* VERTICAL MODE 4: REELS & STORIES 9:16 FULL-BLEED */
+          <div style={{
+            width: '100%',
+            maxWidth: '430px',
+            height: 'calc(100vh - 120px)',
+            borderRadius: '28px',
+            overflow: 'hidden',
+            position: 'relative',
+            background: '#0D0C0A',
+            boxShadow: '0 30px 90px rgba(0,0,0,0.95), 0 0 50px rgba(245, 158, 11, 0.25)',
+            border: '2px solid rgba(245, 158, 11, 0.35)'
+          }}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentPhoto.id}
+                initial={{ opacity: 0, scale: 1.05 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6 }}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  backgroundImage: `url(${currentPhoto.imageData})`,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  filter: 'brightness(0.95)'
+                }}
+              />
+            </AnimatePresence>
+
+            {/* Gradient Scrim */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 25%, transparent 65%, rgba(0,0,0,0.9) 100%)'
+            }} />
+
+            {/* Top Stories Progress Bar */}
+            <div style={{ position: 'absolute', top: '16px', left: '16px', right: '16px', display: 'flex', gap: '4px', zIndex: 10 }}>
+              {photos.slice(0, 15).map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    flex: 1,
+                    height: '3px',
+                    borderRadius: '2px',
+                    background: i === currentIndex % 15 ? '#F59E0B' : 'rgba(255,255,255,0.3)',
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+              ))}
+            </div>
+
+            {/* Top Left Stories User Badge */}
+            <div style={{ position: 'absolute', top: '32px', left: '16px', display: 'flex', alignItems: 'center', gap: '10px', zIndex: 10 }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #F59E0B, #C27803)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#000', fontWeight: 800, fontSize: '14px' }}>
+                {currentPhoto.guestName.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#FFF', display: 'block' }}>
+                  @{currentPhoto.guestName}
+                </span>
+                <span style={{ fontSize: '11px', color: '#D4D4D8' }}>
+                  {new Date(currentPhoto.timestamp).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            </div>
+
+            {/* Bottom Stories Caption Capsule */}
+            <div style={{ position: 'absolute', bottom: '24px', left: '16px', right: '16px', zIndex: 10 }}>
+              {currentPhoto.caption && (
+                <div style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(10px)', padding: '12px 18px', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.15)', marginBottom: '12px' }}>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#FDE68A', fontStyle: 'italic', lineHeight: 1.4 }}>
+                    &ldquo;{currentPhoto.caption}&rdquo;
+                  </p>
+                </div>
+              )}
+              <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#A1A1A6', letterSpacing: '0.08em' }}>
+                SUDUT BINGKAI REELS • FRAME #{currentPhoto.shotNumber}
+              </span>
+            </div>
+          </div>
         ) : displayMode === 'polaroid' ? (
-          /* MODE 1: POLAROID SPOTLIGHT */
+          /* HORIZONTAL MODE 1: POLAROID SPOTLIGHT */
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', maxWidth: '900px', width: '100%' }}>
             <AnimatePresence mode="popLayout">
               <motion.div
@@ -494,7 +1346,7 @@ export default function LiveProjectorWallPage() {
                   background: '#FAF8F5',
                   padding: '16px 16px 36px 16px',
                   borderRadius: '24px',
-                  boxShadow: '0 30px 80px rgba(0, 0, 0, 0.9), 0 0 50px rgba(194, 120, 3, 0.18)',
+                  boxShadow: '0 30px 80px rgba(0, 0, 0, 0.9), 0 0 50px rgba(194, 120, 3, 0.22)',
                   width: '100%',
                   maxWidth: '460px',
                   display: 'flex',
@@ -554,7 +1406,7 @@ export default function LiveProjectorWallPage() {
             </AnimatePresence>
           </div>
         ) : displayMode === 'filmstrip' ? (
-          /* MODE: ROL FILM 35MM (Cinematic Filmstrip with Perforations) */
+          /* HORIZONTAL MODE: ROL FILM 35MM */
           <div style={{ width: '100%', maxWidth: '1280px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
             <div style={{
               width: '100%',
@@ -565,7 +1417,7 @@ export default function LiveProjectorWallPage() {
               boxShadow: '0 30px 80px rgba(0,0,0,0.9)',
               position: 'relative'
             }}>
-              {/* Top Sprocket Perforations & Film Code */}
+              {/* Top Sprocket Perforations */}
               <div style={{
                 height: '42px',
                 background: '#141210',
@@ -589,7 +1441,7 @@ export default function LiveProjectorWallPage() {
                 </span>
               </div>
 
-              {/* Main Film Frames Reel (3 frames carousel: Prev, Center/Active, Next) */}
+              {/* Main Film Frames Reel */}
               <div style={{
                 padding: '24px 20px',
                 display: 'flex',
@@ -673,7 +1525,6 @@ export default function LiveProjectorWallPage() {
               </div>
             </div>
 
-            {/* Active Subtitle Capsule */}
             <div style={{ marginTop: '20px', textAlign: 'center' }}>
               <span className="font-display-serif" style={{ fontSize: '24px', fontWeight: 700, color: '#FFFFFF', display: 'block' }}>
                 Diabadikan oleh @{currentPhoto.guestName}
@@ -686,7 +1537,7 @@ export default function LiveProjectorWallPage() {
             </div>
           </div>
         ) : displayMode === 'coverflow' ? (
-          /* MODE: 3D COVERFLOW STAGE */
+          /* HORIZONTAL MODE: 3D COVERFLOW STAGE */
           <div style={{ width: '100%', maxWidth: '1300px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
             <div style={{
               perspective: '1200px',
@@ -746,7 +1597,6 @@ export default function LiveProjectorWallPage() {
               })}
             </div>
 
-            {/* Active Caption Badge */}
             {currentPhoto.caption && (
               <div style={{
                 marginTop: '16px',
@@ -767,7 +1617,7 @@ export default function LiveProjectorWallPage() {
             )}
           </div>
         ) : displayMode === 'stack' ? (
-          /* MODE: POLAROID STACK / SHUFFLE */
+          /* HORIZONTAL MODE: POLAROID STACK */
           <div style={{ width: '100%', maxWidth: '700px', display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
             <div style={{ position: 'relative', width: '380px', height: '490px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {/* Back Card 3 */}
@@ -824,21 +1674,6 @@ export default function LiveProjectorWallPage() {
                     zIndex: 20
                   }}
                 >
-                  {/* Vintage Tape strip */}
-                  <div style={{
-                    position: 'absolute',
-                    top: '-12px',
-                    left: '50%',
-                    transform: 'translateX(-50%) rotate(-2deg)',
-                    width: '80px',
-                    height: '24px',
-                    background: 'rgba(245, 158, 11, 0.35)',
-                    backdropFilter: 'blur(3px)',
-                    border: '1px dashed rgba(255,255,255,0.4)',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
-                    zIndex: 30
-                  }} />
-
                   <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '14px', overflow: 'hidden', background: '#12100B' }}>
                     <img src={currentPhoto.imageData} alt={currentPhoto.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
@@ -861,7 +1696,7 @@ export default function LiveProjectorWallPage() {
             </div>
           </div>
         ) : displayMode === 'duo' ? (
-          /* MODE: DUO SHOWCASE (Side-by-Side Dual Guest Perspective) */
+          /* HORIZONTAL MODE: DUO SHOWCASE */
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
@@ -908,7 +1743,7 @@ export default function LiveProjectorWallPage() {
             })}
           </div>
         ) : displayMode === 'kenburns' ? (
-          /* MODE 2: CINEMATIC FULLSCREEN KEN BURNS ZOOM */
+          /* HORIZONTAL MODE: KEN BURNS FULLSCREEN ZOOM */
           <div style={{
             position: 'absolute',
             inset: 0,
@@ -935,14 +1770,12 @@ export default function LiveProjectorWallPage() {
                 }}
               />
             </AnimatePresence>
-            {/* Film vignette & dark gradient */}
             <div style={{
               position: 'absolute',
               inset: 0,
               background: 'radial-gradient(circle at center, transparent 40%, rgba(0,0,0,0.85) 100%), linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 40%)'
             }} />
 
-            {/* Bottom Title Card Overlay */}
             <div style={{
               position: 'absolute',
               bottom: '40px',
@@ -964,7 +1797,7 @@ export default function LiveProjectorWallPage() {
             </div>
           </div>
         ) : displayMode === 'split' ? (
-          /* MODE 3: SPLIT-SCREEN (Giant QR on Left, Live Photo on Right) */
+          /* HORIZONTAL MODE: SPLIT-SCREEN (Giant QR on Left, Live Photo on Right) */
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'minmax(320px, 420px) 1fr',
@@ -974,7 +1807,6 @@ export default function LiveProjectorWallPage() {
             height: 'calc(100vh - 120px)',
             alignItems: 'center'
           }}>
-            {/* Left QR Column */}
             <div style={{
               background: 'rgba(255, 255, 255, 0.05)',
               border: '1px solid rgba(194, 120, 3, 0.3)',
@@ -1011,7 +1843,6 @@ export default function LiveProjectorWallPage() {
               </p>
             </div>
 
-            {/* Right Photo Column */}
             <div style={{
               height: '100%',
               maxHeight: '620px',
@@ -1044,7 +1875,7 @@ export default function LiveProjectorWallPage() {
             </div>
           </div>
         ) : (
-          /* MODE 4: MOSAIC WALL (Multi-photo Masonry Grid) */
+          /* HORIZONTAL MODE: MOSAIC WALL */
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))',
@@ -1085,35 +1916,44 @@ export default function LiveProjectorWallPage() {
         )}
       </main>
 
-      {/* Floating Corner QR Code (For Guests in Audience - Hidden in Split mode since already large) */}
-      {displayMode !== 'split' && (
-        <div style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          background: 'rgba(20, 18, 15, 0.94)',
-          border: '1px solid rgba(194, 120, 3, 0.4)',
-          borderRadius: '18px',
-          padding: '14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '14px',
-          boxShadow: '0 15px 35px rgba(0,0,0,0.7)',
-          backdropFilter: 'blur(10px)',
-          zIndex: 40
-        }}>
+      {/* Floating Corner QR Code (Clickable to open MC Spotlight QR) */}
+      {displayMode !== 'split' && displayMode !== 'vertical-split' && (
+        <div 
+          onClick={() => setShowQrSpotlight(true)}
+          title="Klik untuk perbesar QR Code (Shortcut: Q)"
+          style={{
+            position: 'fixed',
+            bottom: '22px',
+            right: '22px',
+            background: 'rgba(20, 18, 15, 0.94)',
+            border: '1px solid rgba(194, 120, 3, 0.45)',
+            borderRadius: '20px',
+            padding: '12px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '14px',
+            boxShadow: '0 15px 35px rgba(0,0,0,0.7), 0 0 25px rgba(194, 120, 3, 0.2)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            zIndex: 40,
+            cursor: 'pointer',
+            transition: 'transform 0.2s ease'
+          }}
+        >
           {qrDataUrl && (
-            <img src={qrDataUrl} alt="Scan QR Tamu" style={{ width: '70px', height: '70px', borderRadius: '8px' }} />
+            <div style={{ background: '#FFF', padding: '4px', borderRadius: '10px', flexShrink: 0 }}>
+              <img src={qrDataUrl} alt="Scan QR Tamu" style={{ width: '80px', height: '80px', display: 'block', borderRadius: '6px' }} />
+            </div>
           )}
           <div style={{ textAlign: 'left' }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block' }}>
+            <span style={{ fontSize: '10px', fontWeight: '800', color: '#F59E0B', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block' }}>
               Ikut Memotret
             </span>
             <span style={{ fontSize: '13px', fontWeight: '700', color: '#fff', display: 'block' }}>
               Scan Lewat HP-mu
             </span>
-            <span style={{ fontSize: '10px', color: '#86868B' }}>
-              Tanpa Perlu Unduh App
+            <span style={{ fontSize: '10px', color: '#86868B', display: 'block', marginTop: '2px' }}>
+              Klik / Tekan Q untuk Perbesar
             </span>
           </div>
         </div>
@@ -1123,8 +1963,8 @@ export default function LiveProjectorWallPage() {
       {event?.vendorName && (
         <div style={{
           position: 'fixed',
-          bottom: '24px',
-          left: '24px',
+          bottom: '22px',
+          left: '22px',
           background: 'rgba(18, 16, 11, 0.82)',
           border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: '16px',
@@ -1133,6 +1973,7 @@ export default function LiveProjectorWallPage() {
           alignItems: 'center',
           gap: '10px',
           backdropFilter: 'blur(10px)',
+          WebkitBackdropFilter: 'blur(10px)',
           zIndex: 40,
           boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
         }}>
