@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import QRCode from 'qrcode';
 import confetti from 'canvas-confetti';
-import { Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw, Layout, Film, Grid, SplitSquareVertical, Clock, Building, Disc, Layers, Copy, Shuffle } from 'lucide-react';
+import { Maximize2, Minimize2, ArrowLeft, Camera, RefreshCw, Layout, Film, Grid, SplitSquareVertical, Clock, Building, Disc, Layers, Copy, Shuffle, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventData, PhotoRecord } from '@/lib/types';
 
@@ -537,7 +537,7 @@ export default function LiveProjectorWallPage() {
                       gap: '8px',
                       maxWidth: '95%'
                     }}>
-                      <span style={{ fontSize: '14px' }}>💬</span>
+                      <MessageSquare size={14} color="#78350F" style={{ flexShrink: 0 }} />
                       <span style={{
                         fontSize: '13.5px',
                         color: '#78350F',
@@ -756,11 +756,13 @@ export default function LiveProjectorWallPage() {
                 border: '1px solid rgba(194, 120, 3, 0.4)',
                 backdropFilter: 'blur(10px)',
                 color: '#FDE68A',
-                fontSize: '15px',
-                fontStyle: 'italic',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.6)'
+                boxShadow: '0 10px 30px rgba(0,0,0,0.6)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
               }}>
-                💬 &ldquo;{currentPhoto.caption}&rdquo;
+                <MessageSquare size={15} color="#F59E0B" />
+                <span>&ldquo;{currentPhoto.caption}&rdquo;</span>
               </div>
             )}
           </div>

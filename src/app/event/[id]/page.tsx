@@ -7,7 +7,7 @@ import {
   Camera, Tv, Printer, Download, Share2, RefreshCw, ArrowLeft, 
   Image as ImageIcon, Users, Check, Lock, Unlock, Clock, Volume2, 
   Mic, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Film, CheckCircle2,
-  SlidersHorizontal, Play, Briefcase
+  SlidersHorizontal, Play, Briefcase, Calendar, MapPin, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { hapticLightTap, hapticDialClick } from '@/lib/haptics';
@@ -917,7 +917,7 @@ export default function EventDashboardPage() {
           >
             {event?.eventDate && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                <span>📅</span>
+                <Calendar size={14} color="#E5C07B" />
                 <strong style={{ color: '#FFFFFF' }}>{formatIndonesianDate(event.eventDate)}</strong>
               </span>
             )}
@@ -925,7 +925,7 @@ export default function EventDashboardPage() {
               <>
                 <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  <span>📍</span>
+                  <MapPin size={14} color="#E5C07B" />
                   <span>{event.location}</span>
                 </span>
               </>
@@ -957,7 +957,7 @@ export default function EventDashboardPage() {
                 fontWeight: 500
               }}
             >
-              <span>📸</span>
+              <Camera size={13} color="#E5C07B" />
               <span><strong>{photos.length}</strong> Momen Terabadikan</span>
             </div>
 
@@ -1006,7 +1006,7 @@ export default function EventDashboardPage() {
                   fontWeight: 500
                 }}
               >
-                <span>🎙️</span>
+                <Mic size={13} color="#E5C07B" />
                 <span><strong>{voiceNotes.length}</strong> Ucapan Hangat</span>
               </div>
             )}
@@ -1027,7 +1027,7 @@ export default function EventDashboardPage() {
                   fontWeight: 500
                 }}
               >
-                <span>👥</span>
+                <Users size={13} color="#E5C07B" />
                 <span><strong>{uniqueGuests.length}</strong> Tamu Berbagi Sudut Pandang</span>
               </div>
             )}
@@ -1137,7 +1137,7 @@ export default function EventDashboardPage() {
                 }}
               >
                 <Film size={16} />
-                <span>🎬 Tonton Video Ucapan ({videoWishes.length})</span>
+                <span>Tonton Video Ucapan ({videoWishes.length})</span>
               </button>
             )}
           </div>
@@ -1224,9 +1224,10 @@ export default function EventDashboardPage() {
                     setSelectedGuest('all');
                   }}
                   className="glass-pill"
-                  style={{ padding: '6px 14px', fontSize: '12px', color: '#C27803', cursor: 'pointer' }}
+                  style={{ padding: '6px 14px', fontSize: '12px', color: '#C27803', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
                 >
-                  ✕ Bersihkan Filter
+                  <X size={12} />
+                  <span>Bersihkan Filter</span>
                 </button>
               )}
               <button onClick={fetchEventData} className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
@@ -1514,7 +1515,7 @@ export default function EventDashboardPage() {
                           gap: '6px'
                         }}
                       >
-                        <span style={{ fontSize: '12px', flexShrink: 0, fontStyle: 'normal' }}>💬</span>
+                        <MessageSquare size={12} color="#C27803" style={{ flexShrink: 0, marginTop: '2px' }} />
                         <span style={{
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -2024,7 +2025,7 @@ export default function EventDashboardPage() {
                     width: '100%'
                   }}
                 >
-                  <span style={{ fontSize: '15px', lineHeight: 1 }}>💬</span>
+                  <MessageSquare size={15} color="#FBBF24" style={{ flexShrink: 0, marginTop: '2px' }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span className="font-mono-film" style={{ fontSize: '9px', color: '#FBBF24', display: 'block', marginBottom: '2px', letterSpacing: '0.05em' }}>
                       UCAPAN DARI {activePhoto.guestName.toUpperCase()}

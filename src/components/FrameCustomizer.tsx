@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
-import { Upload, Image as ImageIcon, HelpCircle, Check, Sliders, Info, Download } from 'lucide-react';
+import { Upload, Image as ImageIcon, HelpCircle, Check, Sliders, Info, Download, Heart, Camera, Film, PartyPopper, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FrameCustomizerProps {
@@ -223,10 +223,10 @@ export default function FrameCustomizer({
               }}
             >
               {cat === 'all' && 'Semua (10+)'}
-              {cat === 'wedding' && '💍 Wedding'}
-              {cat === 'classic' && '📸 Polaroid'}
-              {cat === 'retro' && '🎞️ Vintage'}
-              {cat === 'party' && '🎉 Party'}
+              {cat === 'wedding' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Heart size={12} /> Wedding</span>}
+              {cat === 'classic' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Camera size={12} /> Polaroid</span>}
+              {cat === 'retro' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><Film size={12} /> Vintage</span>}
+              {cat === 'party' && <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}><PartyPopper size={12} /> Party</span>}
             </button>
           ))}
         </div>
@@ -323,8 +323,8 @@ export default function FrameCustomizer({
             </label>
 
             {customFrameUrl && (
-              <span style={{ display: 'block', marginTop: '8px', fontSize: '11px', color: '#27AE60', fontWeight: 600 }}>
-                ✓ Bingkai khusus aktif ({customFrameUrl.split('/').pop()})
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', fontSize: '11px', color: '#27AE60', fontWeight: 600 }}>
+                <Check size={12} strokeWidth={2.5} /> Bingkai khusus aktif ({customFrameUrl.split('/').pop()})
               </span>
             )}
           </div>
@@ -357,10 +357,15 @@ export default function FrameCustomizer({
                 color: sampleModel === 'couple' ? '#1D1D1F' : '#6E6E73',
                 boxShadow: sampleModel === 'couple' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px'
               }}
             >
-              💍 Foto Pengantin
+              <Heart size={13} />
+              <span>Foto Pengantin</span>
             </button>
             <button
               type="button"
@@ -376,10 +381,15 @@ export default function FrameCustomizer({
                 color: sampleModel === 'guests' ? '#1D1D1F' : '#6E6E73',
                 boxShadow: sampleModel === 'guests' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                 cursor: 'pointer',
-                transition: 'all 0.15s ease'
+                transition: 'all 0.15s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px'
               }}
             >
-              📸 Selfie Para Tamu
+              <Camera size={13} />
+              <span>Selfie Para Tamu</span>
             </button>
           </div>
 
@@ -506,9 +516,10 @@ export default function FrameCustomizer({
               <button
                 onClick={() => setShowGuideModal(false)}
                 className="glass-pill"
-                style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}
+                style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
               >
-                ✕ Tutup
+                <X size={13} />
+                <span>Tutup</span>
               </button>
             </div>
 

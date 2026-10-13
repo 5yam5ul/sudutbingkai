@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Video, Square, RefreshCw, Send, CheckCircle2, X, Volume2, Camera, MessageSquare } from 'lucide-react';
+import { Video, Square, RefreshCw, Send, CheckCircle2, X, Volume2, Camera, MessageSquare, Check } from 'lucide-react';
 import { getSupportedVideoMimeType, playCountdownBeep, generateVideoThumbnail } from '@/lib/videoRecorder';
 import { toast } from 'sonner';
 
@@ -221,7 +221,7 @@ export default function VideoWishRecorder({
 
       const data = await res.json();
       if (data.success) {
-        toast.success(`Video ucapan 15 detik Anda berhasil dikirim untuk ${coupleOrHost}! 🎬❤️`);
+        toast.success(`Video ucapan 15 detik Anda berhasil dikirim untuk ${coupleOrHost}!`);
         if (stream) stream.getTracks().forEach(t => t.stop());
         onSuccess();
       } else {
@@ -378,8 +378,9 @@ export default function VideoWishRecorder({
         <div style={{ background: 'rgba(255, 255, 255, 0.05)', padding: '14px', borderRadius: '16px', marginBottom: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
             <span style={{ fontSize: '12px', fontWeight: 600, color: '#D97706' }}>Tuliskan Doa & Ucapan Anda</span>
-            <button onClick={() => setIsShyTextMode(false)} style={{ background: 'none', border: 'none', color: '#86868B', fontSize: '11px', cursor: 'pointer' }}>
-              ✕ Batal
+            <button onClick={() => setIsShyTextMode(false)} style={{ background: 'none', border: 'none', color: '#86868B', fontSize: '11px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <X size={12} />
+              <span>Batal</span>
             </button>
           </div>
           <textarea
@@ -496,8 +497,9 @@ export default function VideoWishRecorder({
           ) : (
             /* Review & Submit Actions */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <span style={{ fontSize: '12.5px', color: '#4ADE80', fontWeight: 600 }}>
-                ✓ Rekaman video selesai ({recordSeconds} detik)
+              <span style={{ fontSize: '12.5px', color: '#4ADE80', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                <Check size={14} color="#4ADE80" strokeWidth={2.5} />
+                <span>Rekaman video selesai ({recordSeconds} detik)</span>
               </span>
 
               <div style={{ display: 'flex', gap: '8px' }}>

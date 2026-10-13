@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   Printer, ArrowLeft, CheckCircle2, Share2, 
   Calendar, Building2, User, Mail, Phone, ShieldCheck, 
-  Download, ExternalLink
+  Download, ExternalLink, MessageSquare, Tag
 } from 'lucide-react';
 import { InvoiceRecord } from '@/lib/types';
 import SkeletonLoader from '@/components/SkeletonLoader';
@@ -149,7 +149,8 @@ export default function InvoicePage() {
             className="glass-pill"
             style={{ padding: '8px 14px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', color: '#25D366' }}
           >
-            <span>💬 WhatsApp</span>
+            <MessageSquare size={14} color="#25D366" />
+            <span>WhatsApp</span>
           </button>
 
           <button
@@ -262,8 +263,9 @@ export default function InvoicePage() {
               {invoice.buyerName}
             </strong>
             {invoice.companyName && (
-              <span style={{ fontSize: '13px', color: '#C27803', fontWeight: 600, display: 'block', marginBottom: '2px' }}>
-                🏢 {invoice.companyName}
+              <span style={{ fontSize: '13px', color: '#C27803', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '5px', marginBottom: '2px' }}>
+                <Building2 size={13} color="#C27803" />
+                <span>{invoice.companyName}</span>
               </span>
             )}
             <p style={{ fontSize: '13px', color: '#515154', lineHeight: 1.6, margin: 0 }}>
@@ -311,7 +313,10 @@ export default function InvoicePage() {
               {invoice.discountAmount > 0 && (
                 <tr style={{ color: '#10B981' }}>
                   <td style={{ padding: '8px 0', fontSize: '13px' }}>
-                    <span>🏷️ Potongan Diskon Kemitraan {invoice.discountCode ? `(Kode Promo: ${invoice.discountCode})` : ''}</span>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                      <Tag size={13} color="#10B981" />
+                      <span>Potongan Diskon Kemitraan {invoice.discountCode ? `(Kode Promo: ${invoice.discountCode})` : ''}</span>
+                    </span>
                   </td>
                   <td style={{ padding: '8px 0', textAlign: 'right', fontSize: '13.5px', fontWeight: 600 }}>
                     -Rp {invoice.discountAmount.toLocaleString('id-ID')}

@@ -9,7 +9,7 @@ import {
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
   CreditCard, Wallet, Share2, Video, Film, PlayCircle,
-  Printer, Tv, Eye
+  Printer, Tv, Eye, Award, X, AlertTriangle, Calendar, MapPin, Mail, Lightbulb, Clock
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
@@ -698,7 +698,9 @@ export default function VendorPortalPage() {
 
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>LEVEL KEMITRAAN</span>
-              <strong style={{ fontSize: '20px', color: '#C27803' }}>🥈 Mitra Pro (15%)</strong>
+              <strong style={{ fontSize: '20px', color: '#C27803', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Award size={18} /> Mitra Pro (15%)
+              </strong>
             </div>
           </div>
         </div>
@@ -854,7 +856,9 @@ export default function VendorPortalPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div style={{ background: '#FFFFFF', padding: '12px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
                     <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Level Mitra Anda</span>
-                    <strong style={{ fontSize: '14px', color: '#C27803' }}>🥈 Mitra Pro (15%)</strong>
+                    <strong style={{ fontSize: '14px', color: '#C27803', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
+                      <Award size={15} /> Mitra Pro (15%)
+                    </strong>
                   </div>
                   <div style={{ background: '#FFFFFF', padding: '12px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
                     <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Syarat Naik Level VIP (20%)</span>
@@ -873,8 +877,8 @@ export default function VendorPortalPage() {
                     <span className="font-mono-film" style={{ color: '#86868B', fontSize: '11px' }}>
                       SALDO KOMISI AKTIF
                     </span>
-                    <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '3px 10px', borderRadius: '999px', fontWeight: 600 }}>
-                      ✓ Siap Dicairkan
+                    <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '3px 10px', borderRadius: '999px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <Check size={12} strokeWidth={2.5} /> Siap Dicairkan
                     </span>
                   </div>
 
@@ -1082,16 +1086,16 @@ export default function VendorPortalPage() {
                           </td>
                           <td style={{ padding: '14px 12px' }}>
                             {p.status === 'approved' ? (
-                              <span style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#059669', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
-                                ✓ Berhasil Ditransfer
+                              <span style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#059669', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <Check size={12} strokeWidth={2.5} /> Berhasil Ditransfer
                               </span>
                             ) : p.status === 'rejected' ? (
-                              <span style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#DC2626', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
-                                ✕ Ditolak
+                              <span style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#DC2626', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <X size={12} strokeWidth={2.5} /> Ditolak
                               </span>
                             ) : (
-                              <span style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#D97706', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
-                                ⏳ Menunggu Transfer Admin
+                              <span style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#D97706', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <Clock size={12} /> Menunggu Transfer Admin
                               </span>
                             )}
                           </td>
@@ -1186,9 +1190,9 @@ export default function VendorPortalPage() {
                     </div>
 
                     <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>3 Voucher Kuota Wedding (300 Tamu)</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Masa aktif kuota 12 bulan</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Co-branding logo WO di kartu QR tamu</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>3 Voucher Kuota Wedding (300 Tamu)</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Masa aktif kuota 12 bulan</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Co-branding logo WO di kartu QR tamu</span></li>
                     </ul>
                   </div>
 
@@ -1224,9 +1228,9 @@ export default function VendorPortalPage() {
                     </div>
 
                     <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>5 Voucher Kuota Wedding (300 Tamu)</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Masa aktif kuota 18 bulan</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Logo WO tayang di homepage SudutBingkai</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>5 Voucher Kuota Wedding (300 Tamu)</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Masa aktif kuota 18 bulan</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Logo WO tayang di homepage SudutBingkai</span></li>
                     </ul>
                   </div>
 
@@ -1266,10 +1270,10 @@ export default function VendorPortalPage() {
                     </div>
 
                     <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>10 Voucher Kuota Wedding (300 Tamu)</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Masa aktif 24 bulan (2 tahun penuh)</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Prioritas Bantuan CS WhatsApp 24/7</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Featured badge di halaman Beranda</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>10 Voucher Kuota Wedding (300 Tamu)</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Masa aktif 24 bulan (2 tahun penuh)</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Prioritas Bantuan CS WhatsApp 24/7</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Featured badge di halaman Beranda</span></li>
                     </ul>
                   </div>
 
@@ -1305,9 +1309,9 @@ export default function VendorPortalPage() {
                     </div>
 
                     <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>20 Voucher Kuota Wedding (300 Tamu)</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span><strong>Masa aktif selamanya (No Expiry)</strong></span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Custom branding di live proyektor</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>20 Voucher Kuota Wedding (300 Tamu)</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span><strong>Masa aktif selamanya (No Expiry)</strong></span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Custom branding di live proyektor</span></li>
                     </ul>
                   </div>
 
@@ -1343,9 +1347,9 @@ export default function VendorPortalPage() {
                     </div>
 
                     <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '12px', color: '#515154', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Unlimited kuota acara selama 1 tahun</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Maksimal 300 tamu per event</span></li>
-                      <li style={{ display: 'flex', gap: '6px' }}>✓ <span>Dedicated Account Manager</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Unlimited kuota acara selama 1 tahun</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Maksimal 300 tamu per event</span></li>
+                      <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Check size={13} color="#C27803" /> <span>Dedicated Account Manager</span></li>
                     </ul>
                   </div>
 
@@ -1534,8 +1538,8 @@ export default function VendorPortalPage() {
                       </strong>
                     </div>
                     {discountPercent < 45 && (
-                      <span style={{ fontSize: '11px', color: '#86868B' }}>
-                        💡 Tambah {customEvents < 5 ? 5 - customEvents : customEvents < 10 ? 10 - customEvents : 20 - customEvents} acara lagi untuk membuka diskon {customEvents < 5 ? '30%' : customEvents < 10 ? '40%' : '45%'}!
+                      <span style={{ fontSize: '11px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '4px' }}>
+                        <Lightbulb size={12} color="#C27803" /> Tambah {customEvents < 5 ? 5 - customEvents : customEvents < 10 ? 10 - customEvents : 20 - customEvents} acara lagi untuk membuka diskon {customEvents < 5 ? '30%' : customEvents < 10 ? '40%' : '45%'}!
                       </span>
                     )}
                   </div>
@@ -1768,8 +1772,13 @@ export default function VendorPortalPage() {
                       <label style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B' }}>
                         Durasi Video (Detik) *
                       </label>
-                      <span className="font-mono-film" style={{ fontSize: '13px', fontWeight: 700, color: testiDuration >= 60 ? '#10B981' : '#EF4444' }}>
-                        {testiDuration} Detik {testiDuration >= 60 ? '✓ (Memenuhi Syarat)' : '⚠️ (Min. 60s)'}
+                      <span className="font-mono-film" style={{ fontSize: '13px', fontWeight: 700, color: testiDuration >= 60 ? '#10B981' : '#EF4444', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <span>{testiDuration} Detik</span>
+                        {testiDuration >= 60 ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><Check size={13} strokeWidth={2.5} /> (Memenuhi Syarat)</span>
+                        ) : (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}><AlertTriangle size={13} /> (Min. 60s)</span>
+                        )}
                       </span>
                     </div>
                     <input
@@ -1862,16 +1871,16 @@ export default function VendorPortalPage() {
                           </div>
 
                           {t.status === 'approved' ? (
-                            <span style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
-                              ✓ Disetujui (+Rp 50.000)
+                            <span style={{ background: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.3)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Check size={11} strokeWidth={2.5} /> Disetujui (+Rp 50.000)
                             </span>
                           ) : t.status === 'rejected' ? (
-                            <span style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
-                              ✕ Perlu Revisi
+                            <span style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <X size={11} strokeWidth={2.5} /> Perlu Revisi
                             </span>
                           ) : (
-                            <span style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#D97706', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
-                              ⏳ Menunggu Kurasi
+                            <span style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#D97706', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={11} /> Menunggu Kurasi
                             </span>
                           )}
                         </div>
@@ -2079,9 +2088,10 @@ export default function VendorPortalPage() {
                 type="submit"
                 disabled={isSaving}
                 className="btn-apple-black"
-                style={{ padding: '14px', fontSize: '14.5px', borderRadius: '12px' }}
+                style={{ padding: '14px', fontSize: '14.5px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
-                <span>{isSaving ? 'Menyimpan & Menayangkan...' : isBrandingSaved ? '✓ Tersimpan & Tayang di Homepage!' : 'Simpan & Tayangkan Logo ke Homepage'}</span>
+                {isBrandingSaved && <Check size={16} />}
+                <span>{isSaving ? 'Menyimpan & Menayangkan...' : isBrandingSaved ? 'Tersimpan & Tayang di Homepage!' : 'Simpan & Tayangkan Logo ke Homepage'}</span>
               </button>
             </form>
           </div>
@@ -2182,15 +2192,40 @@ export default function VendorPortalPage() {
                       </span>
                     </div>
 
-                    <p style={{ fontSize: '13px', color: '#6E6E73', margin: '0 0 6px' }}>
-                      📅 {c.date} • 📍 {c.venue}
-                      {c.hostEmail && <span> • ✉️ {c.hostEmail}</span>}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6E6E73', margin: '0 0 6px', flexWrap: 'wrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Calendar size={13} color="#86868B" />
+                        <span>{c.date}</span>
+                      </span>
+                      <span>•</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <MapPin size={13} color="#86868B" />
+                        <span>{c.venue}</span>
+                      </span>
+                      {c.hostEmail && (
+                        <>
+                          <span>•</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                            <Mail size={13} color="#86868B" />
+                            <span>{c.hostEmail}</span>
+                          </span>
+                        </>
+                      )}
+                    </div>
 
-                    <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#515154', flexWrap: 'wrap' }}>
-                      <span>🎞️ Preset: <strong>{c.preset}</strong></span>
-                      <span>👥 Kapasitas: <strong>{c.guestCount} Undangan</strong></span>
-                      <span>📸 Jatah: <strong>{c.shotsPerGuest || 36} Foto/Tamu</strong></span>
+                    <div style={{ display: 'flex', gap: '14px', fontSize: '12px', color: '#515154', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Film size={13} color="#C27803" />
+                        <span>Preset: <strong>{c.preset}</strong></span>
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Users size={13} color="#C27803" />
+                        <span>Kapasitas: <strong>{c.guestCount} Undangan</strong></span>
+                      </span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <Camera size={13} color="#C27803" />
+                        <span>Jatah: <strong>{c.shotsPerGuest || 36} Foto/Tamu</strong></span>
+                      </span>
                     </div>
                   </div>
 
@@ -2391,8 +2426,8 @@ export default function VendorPortalPage() {
                   className="glass-pill"
                   style={{ padding: '8px 14px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
                 >
-                  <Copy size={13} />
-                  <span>{copiedScript === 'mc1' ? '✓ Tersalin!' : 'Salin Teks MC'}</span>
+                  {copiedScript === 'mc1' ? <Check size={13} color="#27AE60" /> : <Copy size={13} />}
+                  <span>{copiedScript === 'mc1' ? 'Tersalin!' : 'Salin Teks MC'}</span>
                 </button>
               </div>
 

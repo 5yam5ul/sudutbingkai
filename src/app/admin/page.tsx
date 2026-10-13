@@ -9,7 +9,7 @@ import {
   EyeOff, Trash2, Download, ExternalLink, RefreshCw, Plus,
   Sliders, Search, ArrowRight, LogOut, Check, X, Flame,
   Edit, Pencil, ArrowUpRight, ArrowDownRight, Layers, CreditCard,
-  Mic, Volume2, Film, Play
+  Mic, Volume2, Film, Play, Clock
 } from 'lucide-react';
 import { getClientSession, clearClientSession } from '@/lib/auth';
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
@@ -992,7 +992,9 @@ export default function SuperAdminDashboard() {
                   </button>
                 </div>
                 {payouts.filter(p => p.status === 'pending').length === 0 ? (
-                  <p style={{ color: '#86868B', fontSize: '13px', margin: 0 }}>✓ Tidak ada permintaan penarikan yang menunggu transfer.</p>
+                  <p style={{ color: '#86868B', fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Check size={14} color="#10B981" /> Tidak ada permintaan penarikan yang menunggu transfer.
+                  </p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {payouts.filter(p => p.status === 'pending').slice(0, 3).map(p => (
@@ -1016,7 +1018,9 @@ export default function SuperAdminDashboard() {
                   </button>
                 </div>
                 {testimonials.filter(t => t.status === 'pending').length === 0 ? (
-                  <p style={{ color: '#86868B', fontSize: '13px', margin: 0 }}>✓ Seluruh video testimoni telah dikurasi.</p>
+                  <p style={{ color: '#86868B', fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Check size={14} color="#10B981" /> Seluruh video testimoni telah dikurasi.
+                  </p>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     {testimonials.filter(t => t.status === 'pending').slice(0, 3).map(t => (
@@ -1238,10 +1242,14 @@ export default function SuperAdminDashboard() {
                   cursor: 'pointer',
                   background: moderationMediaType === 'photos' ? '#1D1D1F' : '#FFFFFF',
                   color: moderationMediaType === 'photos' ? '#FFFFFF' : '#1D1D1F',
-                  border: '1px solid rgba(0,0,0,0.08)'
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
-                📸 Foto Tamu ({filteredPhotos.length})
+                <Camera size={13} />
+                <span>Foto Tamu ({filteredPhotos.length})</span>
               </button>
 
               <button
@@ -1643,16 +1651,16 @@ export default function SuperAdminDashboard() {
                         </td>
                         <td style={{ padding: '16px 18px' }}>
                           {inv.status === 'paid' ? (
-                            <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                              ✓ LUNAS
+                            <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <Check size={11} strokeWidth={2.5} /> LUNAS
                             </span>
                           ) : inv.status === 'cancelled' ? (
-                            <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                              ✕ BATAL
+                            <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <X size={11} strokeWidth={2.5} /> BATAL
                             </span>
                           ) : (
-                            <span style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                              ⏳ MENUNGGU
+                            <span style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <Clock size={11} /> MENUNGGU
                             </span>
                           )}
                         </td>
@@ -1747,16 +1755,16 @@ export default function SuperAdminDashboard() {
                         </td>
                         <td style={{ padding: '16px 18px' }}>
                           {p.status === 'approved' ? (
-                            <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                              ✓ DITRANSFER
+                            <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <Check size={11} strokeWidth={2.5} /> DITRANSFER
                             </span>
                           ) : p.status === 'rejected' ? (
-                            <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                              ✕ DITOLAK
+                            <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#DC2626', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <X size={11} strokeWidth={2.5} /> DITOLAK
                             </span>
                           ) : (
-                            <span style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                              ⏳ MENUNGGU TRANSFER
+                            <span style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              <Clock size={11} /> MENUNGGU TRANSFER
                             </span>
                           )}
                         </td>
@@ -1810,16 +1818,16 @@ export default function SuperAdminDashboard() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                       <strong style={{ fontSize: '15px' }}>{t.eventTitle}</strong>
                       {t.status === 'approved' ? (
-                        <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', fontSize: '10.5px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                          ✓ Disetujui (+50k)
+                        <span style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#059669', fontSize: '10.5px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Check size={11} strokeWidth={2.5} /> Disetujui (+50k)
                         </span>
                       ) : t.status === 'rejected' ? (
-                        <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#DC2626', fontSize: '10.5px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                          ✕ Ditolak
+                        <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#DC2626', fontSize: '10.5px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <X size={11} strokeWidth={2.5} /> Ditolak
                         </span>
                       ) : (
-                        <span style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706', fontSize: '10.5px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                          ⏳ Menunggu Kurasi
+                        <span style={{ background: 'rgba(245, 158, 11, 0.12)', color: '#D97706', fontSize: '10.5px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <Clock size={11} /> Menunggu Kurasi
                         </span>
                       )}
                     </div>
@@ -1945,8 +1953,15 @@ export default function SuperAdminDashboard() {
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '14px' }}>
-                      <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px' }}>
-                        {item.freeShippingJabodetabek ? '✓ Gratis Ongkir Jabodetabek' : 'Ongkir Reguler'}
+                      <span style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669', fontSize: '11px', fontWeight: 700, padding: '3px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        {item.freeShippingJabodetabek ? (
+                          <>
+                            <Check size={11} strokeWidth={2.5} />
+                            <span>Gratis Ongkir Jabodetabek</span>
+                          </>
+                        ) : (
+                          'Ongkir Reguler'
+                        )}
                       </span>
 
                       <div style={{ display: 'flex', gap: '6px' }}>
@@ -2129,9 +2144,9 @@ export default function SuperAdminDashboard() {
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
-                    <option value="video">🎬 Video Ucapan 15 Detik (Eksklusif)</option>
-                    <option value="voice">🎙️ Rekaman Pesan Suara 15 Detik</option>
-                    <option value="none">🚫 Nonaktifkan (Tanpa Ucapan)</option>
+                    <option value="video">Video Ucapan 15 Detik (Eksklusif)</option>
+                    <option value="voice">Rekaman Pesan Suara 15 Detik</option>
+                    <option value="none">Nonaktifkan (Tanpa Ucapan)</option>
                   </select>
                 </div>
                 <div>
@@ -2296,9 +2311,9 @@ export default function SuperAdminDashboard() {
                   className="glass-input"
                   style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                 >
-                  <option value="video">🎬 Video Ucapan 15 Detik (Eksklusif Wedding/VIP)</option>
-                  <option value="voice">🎙️ Rekaman Pesan Suara 15 Detik (Default Party/Event)</option>
-                  <option value="none">🚫 Nonaktifkan (Tanpa Ucapan)</option>
+                  <option value="video">Video Ucapan 15 Detik (Eksklusif Wedding/VIP)</option>
+                  <option value="voice">Rekaman Pesan Suara 15 Detik (Default Party/Event)</option>
+                  <option value="none">Nonaktifkan (Tanpa Ucapan)</option>
                 </select>
               </div>
 
@@ -2762,9 +2777,9 @@ export default function SuperAdminDashboard() {
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
-                    <option value="paid">✓ Lunas (Paid)</option>
-                    <option value="pending">⏳ Menunggu (Pending)</option>
-                    <option value="cancelled">✕ Dibatalkan (Cancelled)</option>
+                    <option value="paid">Lunas (Paid)</option>
+                    <option value="pending">Menunggu (Pending)</option>
+                    <option value="cancelled">Dibatalkan (Cancelled)</option>
                   </select>
                 </div>
                 <div>

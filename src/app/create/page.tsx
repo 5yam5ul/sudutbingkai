@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { 
   ArrowLeft, ArrowRight, Check, Calendar, MapPin, Film, Camera,
   Lock, Unlock, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye,
-  Mail, Key, UserCheck, Tag, Percent, Wallet, Briefcase, Loader2
+  Mail, Key, UserCheck, Tag, Percent, Wallet, Briefcase, Loader2, Star, Mic
 } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FilmPresetId, EventPackageTier, PACKAGE_TIERS, PRIMARY_PACKAGE_TIER_KEYS, UserAccount } from '@/lib/types';
@@ -679,8 +679,8 @@ function CreateEventForm() {
                         <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#C27803' }}>
                           PAKET PEMBELIAN ANDA
                         </span>
-                        <span style={{ fontSize: '10px', background: '#27AE60', color: '#FFFFFF', fontWeight: 700, padding: '2px 8px', borderRadius: '999px' }}>
-                          ✓ AKTIF & TERVERIFIKASI
+                        <span style={{ fontSize: '10px', background: '#27AE60', color: '#FFFFFF', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <Check size={11} strokeWidth={3} /> AKTIF & TERVERIFIKASI
                         </span>
                       </div>
                       <h3 style={{ fontSize: '19px', fontWeight: 800, color: '#1D1D1F', margin: 0 }}>
@@ -872,10 +872,14 @@ function CreateEventForm() {
                     color: previewSample === 'couple' ? '#FFFFFF' : '#1D1D1F',
                     border: previewSample === 'couple' ? 'none' : '1px solid rgba(0,0,0,0.1)',
                     cursor: 'pointer',
-                    boxShadow: previewSample === 'couple' ? '0 2px 8px rgba(194, 120, 3, 0.3)' : 'none'
+                    boxShadow: previewSample === 'couple' ? '0 2px 8px rgba(194, 120, 3, 0.3)' : 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
                   }}
                 >
-                  Foto Utama / Host
+                  <Heart size={13} />
+                  <span>Foto Utama / Host</span>
                 </button>
                 <button
                   type="button"
@@ -889,10 +893,14 @@ function CreateEventForm() {
                     color: previewSample === 'guests' ? '#FFFFFF' : '#1D1D1F',
                     border: previewSample === 'guests' ? 'none' : '1px solid rgba(0,0,0,0.1)',
                     cursor: 'pointer',
-                    boxShadow: previewSample === 'guests' ? '0 2px 8px rgba(194, 120, 3, 0.3)' : 'none'
+                    boxShadow: previewSample === 'guests' ? '0 2px 8px rgba(194, 120, 3, 0.3)' : 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
                   }}
                 >
-                  📸 Selfie Para Tamu
+                  <Camera size={13} />
+                  <span>Selfie Para Tamu</span>
                 </button>
               </div>
             </div>
@@ -970,9 +978,12 @@ function CreateEventForm() {
                             padding: '2px 8px',
                             borderRadius: '999px',
                             boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                            letterSpacing: '0.04em'
+                            letterSpacing: '0.04em',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px'
                           }}>
-                            ★ UTAMA
+                            <Star size={10} fill="#FFFFFF" /> UTAMA
                           </span>
                         )}
                       </div>
@@ -1014,10 +1025,21 @@ function CreateEventForm() {
                           border: 'none',
                           background: isPrimary ? '#C27803' : 'rgba(0,0,0,0.05)',
                           color: isPrimary ? '#FFF' : '#1D1D1F',
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
                         }}
                       >
-                        {isPrimary ? '✓ Filter Utama Acara' : 'Jadikan Filter Utama'}
+                        {isPrimary ? (
+                          <>
+                            <Check size={12} strokeWidth={2.5} />
+                            <span>Filter Utama Acara</span>
+                          </>
+                        ) : (
+                          'Jadikan Filter Utama'
+                        )}
                       </button>
 
                       {allowGuestPresetSwitch && activeTier.maxPresets > 1 && (
@@ -1307,14 +1329,22 @@ function CreateEventForm() {
               >
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>
-                      {(selectedTier === 'wedding' || selectedTier === 'unlimited')
-                        ? '🎬 Video Ucapan Tamu 15 Detik (Otomatis Aktif)'
-                        : '🎙️ Pesan Suara & Doa Tamu (Voice Note 15 Detik)'}
+                    <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {(selectedTier === 'wedding' || selectedTier === 'unlimited') ? (
+                        <>
+                          <Film size={15} color="#C27803" />
+                          <span>Video Ucapan Tamu 15 Detik (Otomatis Aktif)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic size={15} color="#C27803" />
+                          <span>Pesan Suara & Doa Tamu (Voice Note 15 Detik)</span>
+                        </>
+                      )}
                     </strong>
                     {(selectedTier === 'wedding' || selectedTier === 'unlimited') && (
-                      <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #FF0055, #7928CA)', color: '#FFF', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
-                        ★ EKSKLUSIF {activeTier.name.toUpperCase()}
+                      <span style={{ fontSize: '10px', background: 'linear-gradient(135deg, #FF0055, #7928CA)', color: '#FFF', padding: '2px 8px', borderRadius: '999px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                        <Star size={10} fill="#FFF" /> EKSKLUSIF {activeTier.name.toUpperCase()}
                       </span>
                     )}
                   </div>

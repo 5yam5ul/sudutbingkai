@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import QRCode from 'qrcode';
-import { Printer, ArrowLeft, Camera, Sliders, Palette, Layout, Type, Hash, Check } from 'lucide-react';
+import { Printer, ArrowLeft, Camera, Sliders, Palette, Layout, Type, Hash, Check, Scissors } from 'lucide-react';
 import { EventData } from '@/lib/types';
 
 type CardFormat = 'tent' | 'standing' | 'mini';
@@ -787,7 +787,8 @@ export default function PrintTableCardPage() {
             }}
           >
             <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', color: '#B45309' }}>
-              🖨️ Tips Cetak / Simpan PDF Sempurna:
+              <Printer size={15} color="#B45309" />
+              <span>Tips Cetak / Simpan PDF Sempurna:</span>
             </strong>
             <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
               <li>
@@ -851,7 +852,9 @@ export default function PrintTableCardPage() {
                   borderBottom: `1px dashed ${ts.dividerColor}`
                 }}
               >
-                <span>✂️ GARIS LIPAT MEJA (FOLD LINE - TENT CARD) ✂️</span>
+                <Scissors size={12} />
+                <span>GARIS LIPAT MEJA (FOLD LINE - TENT CARD)</span>
+                <Scissors size={12} />
               </div>
 
               {/* Bottom Side (Front Panel when folded) */}

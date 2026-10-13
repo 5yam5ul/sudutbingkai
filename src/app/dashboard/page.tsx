@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play } from 'lucide-react';
+import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
 import { getClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
@@ -836,10 +836,14 @@ export default function BrideDashboardPage() {
                   fontWeight: 600,
                   cursor: 'pointer',
                   background: gallerySubTab === 'photos' ? '#1D1D1F' : 'rgba(255,255,255,0.7)',
-                  color: gallerySubTab === 'photos' ? '#FFFFFF' : '#1D1D1F'
+                  color: gallerySubTab === 'photos' ? '#FFFFFF' : '#1D1D1F',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
-                📸 Momen Foto ({photos.length})
+                <Camera size={13} />
+                <span>Momen Foto ({photos.length})</span>
               </button>
 
               <button
@@ -914,10 +918,14 @@ export default function BrideDashboardPage() {
                       fontWeight: 600,
                       cursor: 'pointer',
                       background: filterTab === 'wishes' ? 'rgba(20, 20, 22, 0.9)' : 'rgba(255,255,255,0.75)',
-                      color: filterTab === 'wishes' ? '#FFFFFF' : '#C27803'
+                      color: filterTab === 'wishes' ? '#FFFFFF' : '#C27803',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
                     }}
                   >
-                    💬 Ada Ucapan ({photos.filter(p => !!p.caption && p.caption.trim().length > 0).length})
+                    <MessageSquare size={13} />
+                    <span>Ada Ucapan ({photos.filter(p => !!p.caption && p.caption.trim().length > 0).length})</span>
                   </button>
 
                   <button
@@ -1058,7 +1066,7 @@ export default function BrideDashboardPage() {
                             }}
                             title="Klik untuk melihat foto & ucapan lengkap"
                           >
-                            <span style={{ fontSize: '12px', flexShrink: 0, fontStyle: 'normal' }}>💬</span>
+                            <MessageSquare size={12} style={{ flexShrink: 0, marginTop: '2px', color: '#C27803' }} />
                             <span style={{
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
@@ -1387,10 +1395,14 @@ export default function BrideDashboardPage() {
                     padding: '4px 10px',
                     borderRadius: '20px',
                     border: '1px solid rgba(255,255,255,0.2)',
-                    fontWeight: 500
+                    fontWeight: 500,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
                   }}
                 >
-                  👁️ Live Preview Tamu
+                  <Eye size={12} />
+                  <span>Live Preview Tamu</span>
                 </div>
               </div>
 
@@ -1481,10 +1493,10 @@ export default function BrideDashboardPage() {
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {[
-                    { label: '👰 Potret Pengantin', url: '/samples/dummy-couple.jpg' },
-                    { label: '🥂 Suasana Tamu & Pesta', url: '/samples/dummy-guests.jpg' },
-                    { label: '🕯️ Romantic Warmth (Unsplash)', url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80' },
-                    { label: '🌅 Sunset Silhouette (Unsplash)', url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1600&q=80' },
+                    { label: 'Potret Pengantin', url: '/samples/dummy-couple.jpg' },
+                    { label: 'Suasana Tamu & Pesta', url: '/samples/dummy-guests.jpg' },
+                    { label: 'Romantic Warmth (Unsplash)', url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80' },
+                    { label: 'Sunset Silhouette (Unsplash)', url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1600&q=80' },
                   ].map((p, idx) => (
                     <button
                       key={idx}
@@ -1955,10 +1967,14 @@ export default function BrideDashboardPage() {
                             fontWeight: 700,
                             border: 'none',
                             cursor: 'pointer',
-                            whiteSpace: 'nowrap'
+                            whiteSpace: 'nowrap',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
                           }}
                         >
-                          🔓 Buka Album Sekarang
+                          <Unlock size={13} />
+                          <span>Buka Album Sekarang</span>
                         </button>
                       </div>
                     </div>
@@ -1978,10 +1994,18 @@ export default function BrideDashboardPage() {
                   }}
                 >
                   <div>
-                    <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>
-                      {packageTier === 'wedding' || packageTier === 'unlimited'
-                        ? '🎬 Video Ucapan Tamu 15 Detik (Fitur Spesial Paket Wedding/Unlimited)'
-                        : '🎙️ Pesan Suara Penutup Tamu (Voice Note 15 Detik)'}
+                    <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+                      {packageTier === 'wedding' || packageTier === 'unlimited' ? (
+                        <>
+                          <Film size={14} color="#C27803" />
+                          <span>Video Ucapan Tamu 15 Detik (Fitur Spesial Paket Wedding/Unlimited)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Mic size={14} color="#C27803" />
+                          <span>Pesan Suara Penutup Tamu (Voice Note 15 Detik)</span>
+                        </>
+                      )}
                     </strong>
                     <span style={{ fontSize: '11.5px', color: '#86868B' }}>
                       {packageTier === 'wedding' || packageTier === 'unlimited'
@@ -2002,9 +2026,10 @@ export default function BrideDashboardPage() {
                     onClick={handleSaveSettings} 
                     disabled={isSavingSettings}
                     className="btn-apple-black" 
-                    style={{ padding: '12px 28px', fontSize: '14px', cursor: isSavingSettings ? 'wait' : 'pointer' }}
+                    style={{ padding: '12px 28px', fontSize: '14px', cursor: isSavingSettings ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <span>{isSavingSettings ? 'Menyimpan Pengaturan...' : saveSuccess ? '✓ Pengaturan & Bingkai Disimpan!' : 'Simpan Semua Perubahan'}</span>
+                    {saveSuccess && <Check size={15} />}
+                    <span>{isSavingSettings ? 'Menyimpan Pengaturan...' : saveSuccess ? 'Pengaturan & Bingkai Disimpan!' : 'Simpan Semua Perubahan'}</span>
                   </button>
                 </div>
               </div>
@@ -2079,7 +2104,7 @@ export default function BrideDashboardPage() {
                   alignItems: 'flex-start',
                   gap: '10px'
                 }}>
-                  <span style={{ fontSize: '18px', lineHeight: 1 }}>💬</span>
+                  <MessageSquare size={18} style={{ color: '#C27803', flexShrink: 0, marginTop: '2px' }} />
                   <div>
                     <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#C27803', display: 'block', marginBottom: '3px', letterSpacing: '0.5px' }}>
                       UCAPAN DARI {activePhoto.guestName.toUpperCase()}

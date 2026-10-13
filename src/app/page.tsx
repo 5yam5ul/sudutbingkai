@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Play, Camera, Check, ChevronDown, ChevronRight, Tv, Shield, Download, QrCode, Menu, X, Mic, LogOut, Star } from 'lucide-react';
+import { ArrowRight, Play, Camera, Check, ChevronDown, ChevronRight, Tv, Shield, Download, QrCode, Menu, X, Mic, LogOut, Star, Zap } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FilmPresetId, UserAccount } from '@/lib/types';
 import { getClientSession, clearClientSession } from '@/lib/auth';
@@ -196,7 +196,7 @@ export default function HomePage() {
       retention: '30 Hari Pasca Acara (1 Bulan)', 
       shotsPerGuest: '36 foto / tamu (1 Roll Film)', 
       presets: 'Semua 8 Karakter Film Lengkap',
-      wishFeature: '🎬 Video Ucapan 15s (Reels VHS)', 
+      wishFeature: 'Video Ucapan 15s (Reels VHS)', 
       isExclusiveWish: true, 
       popular: true 
     },
@@ -211,7 +211,7 @@ export default function HomePage() {
       retention: '30 Hari Pasca Acara (1 Bulan)', 
       shotsPerGuest: '99 foto / tamu (Tanpa Batas)', 
       presets: 'Semua 8 Karakter Film Lengkap',
-      wishFeature: '🎬 Video Ucapan 15s (Reels VHS)', 
+      wishFeature: 'Video Ucapan 15s (Reels VHS)', 
       isExclusiveWish: true, 
       popular: false 
     }
@@ -762,8 +762,8 @@ export default function HomePage() {
                 zIndex: 10,
                 background: 'linear-gradient(180deg, rgba(0,0,0,0.85) 0%, transparent 100%)'
               }}>
-                <span style={{ fontSize: '10.5px', color: '#F59E0B', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '3px' }}>
-                  ⚡ AUTO
+                <span style={{ fontSize: '10.5px', color: '#F59E0B', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <Zap size={11} fill="#F59E0B" /> AUTO
                 </span>
                 <span className="font-mono-film" style={{ fontSize: '9px', background: 'rgba(255, 255, 255, 0.15)', backdropFilter: 'blur(8px)', color: '#FFFFFF', padding: '2px 8px', borderRadius: '999px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
                   PORTRA 400

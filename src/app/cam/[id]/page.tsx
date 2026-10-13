@@ -7,7 +7,7 @@ import {
   Zap, ZapOff, RotateCcw, ArrowLeft, ArrowRight, Camera, QrCode as QrIcon, 
   Check, Eye, Download, X, Heart, MessageSquare, CheckCircle2, Film,
   Share2, Layers, Mic, MicOff, Play, Square, WifiOff,
-  Image as ImageIcon, AlertTriangle, Upload, Trash2
+  Image as ImageIcon, AlertTriangle, Upload, Trash2, Pencil
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
@@ -647,19 +647,19 @@ export default function GuestCameraPage() {
         const torchActive = await setHardwareTorch(true);
         if (torchActive) {
           setFlashMode('torch');
-          toast.success('🔦 Senter LED Kamera Menyala');
+          toast.success('Senter LED Kamera Menyala');
           return;
         }
       }
       // If hardware torch is not supported (e.g. iOS Safari WebRTC or front camera)
       await setHardwareTorch(false);
       setFlashMode('screen');
-      toast.info('⚡ Flash Layar Aktif (Kilat putih saat jepret)');
+      toast.info('Flash Layar Aktif (Kilat putih saat jepret)');
     } else if (flashMode === 'torch') {
       // 2. Switch from Hardware Torch to Screen Flash
       await setHardwareTorch(false);
       setFlashMode('screen');
-      toast.info('⚡ Flash Layar Aktif (Kilat putih saat jepret)');
+      toast.info('Flash Layar Aktif (Kilat putih saat jepret)');
     } else {
       // 3. Turn off flash
       await setHardwareTorch(false);
@@ -1862,7 +1862,7 @@ export default function GuestCameraPage() {
               }}
               title="Klik jika ingin ganti nama tamu"
             >
-              <strong>{guestName || 'UNDANGAN'}</strong> ✎
+              <strong>{guestName || 'UNDANGAN'}</strong> <Pencil size={11} style={{ display: 'inline-block', verticalAlign: 'middle', marginLeft: '3px', opacity: 0.8 }} />
             </button>
           </span>
         </div>
@@ -1923,7 +1923,7 @@ export default function GuestCameraPage() {
                 type="text"
                 autoFocus
                 maxLength={60}
-                placeholder={`Contoh: Bahagia selalu ${event?.coupleOrHost || 'kedua mempelai'}! 🎉`}
+                placeholder={`Contoh: Bahagia selalu ${event?.coupleOrHost || 'kedua mempelai'}!`}
                 value={currentWish}
                 onChange={(e) => setCurrentWish(e.target.value)}
                 className="glass-input"
@@ -2167,7 +2167,7 @@ export default function GuestCameraPage() {
                           alignItems: 'center',
                           gap: '4px'
                         }}>
-                          <span style={{ fontSize: '10px', flexShrink: 0, fontStyle: 'normal' }}>💬</span>
+                          <MessageSquare size={10} style={{ flexShrink: 0 }} />
                           <span style={{
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -2678,7 +2678,9 @@ export default function GuestCameraPage() {
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ fontSize: '11.5px', color: '#4ADE80' }}>✓ Rekaman siap kirim ({recordDuration}s)</span>
+                        <span style={{ fontSize: '11.5px', color: '#4ADE80', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <Check size={12} color="#4ADE80" /> Rekaman siap kirim ({recordDuration}s)
+                        </span>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button
                             onClick={submitVoiceNote}
