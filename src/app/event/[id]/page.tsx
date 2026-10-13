@@ -818,46 +818,6 @@ export default function EventDashboardPage() {
           />
         </div>
 
-        {/* Top Floating Badges Inside Hero (Cleaned from Clutter) */}
-        <div
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            zIndex: 4,
-            display: 'flex',
-            justifyContent: 'flex-end',
-            alignItems: 'center',
-            padding: '16px 20px',
-            maxWidth: '1240px',
-            margin: '0 auto'
-          }}
-        >
-          {isHost && (
-            <Link
-              href={`/dashboard?eventId=${eventId}`}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 14px',
-                borderRadius: '999px',
-                background: 'rgba(194, 120, 3, 0.9)',
-                backdropFilter: 'blur(12px)',
-                color: '#FFFFFF',
-                fontSize: '11.5px',
-                fontWeight: 600,
-                textDecoration: 'none',
-                boxShadow: '0 4px 14px rgba(194, 120, 3, 0.4)'
-              }}
-            >
-              <SlidersHorizontal size={12} />
-              <span>Kelola di Dashboard</span>
-            </Link>
-          )}
-        </div>
-
         {/* Bottom Hero Content */}
         <div
           style={{
@@ -939,7 +899,7 @@ export default function EventDashboardPage() {
               alignItems: 'center',
               flexWrap: 'wrap',
               gap: '8px',
-              marginBottom: '24px'
+              marginBottom: 0
             }}
           >
             <div
@@ -1033,114 +993,6 @@ export default function EventDashboardPage() {
             )}
           </div>
 
-          {/* Hero Action CTA Buttons */}
-          <div className="hero-action-buttons">
-            <Link
-              href={`/cam/${event?.slug || eventId}`}
-              className="hero-cta-primary"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                padding: '13px 26px',
-                borderRadius: '999px',
-                background: 'linear-gradient(135deg, #E5C07B 0%, #C27803 100%)',
-                color: '#161412',
-                fontSize: '14px',
-                fontWeight: 700,
-                textDecoration: 'none',
-                boxShadow: '0 8px 24px rgba(194, 120, 3, 0.45)',
-                transition: 'transform 0.2s ease',
-                cursor: 'pointer'
-              }}
-            >
-              <Camera size={17} />
-              <span>Buka Kamera & Jepret Momen</span>
-            </Link>
-
-            <div className="hero-secondary-grid" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={handleShareGallery}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '12px 20px',
-                  borderRadius: '999px',
-                  background: 'rgba(255, 255, 255, 0.16)',
-                  backdropFilter: 'blur(12px)',
-                  border: '1px solid rgba(255, 255, 255, 0.28)',
-                  color: '#FFFFFF',
-                  fontSize: '13.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {copied ? <Check size={16} color="#E5C07B" /> : <Share2 size={16} />}
-                <span>{copied ? 'Tautan Tersalin!' : 'Bagikan Galeri'}</span>
-              </button>
-
-              {photos.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => downloadAllPhotosAsZip(displayedPhotos)}
-                  disabled={isZipping}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    padding: '12px 20px',
-                    borderRadius: '999px',
-                    background: 'rgba(0, 0, 0, 0.45)',
-                    backdropFilter: 'blur(12px)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    color: 'rgba(255, 255, 255, 0.92)',
-                    fontSize: '13px',
-                    fontWeight: 500,
-                    cursor: isZipping ? 'wait' : 'pointer'
-                  }}
-                >
-                  {isZipping ? <RefreshCw size={15} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={15} />}
-                  <span>{isZipping ? zipProgress : 'Unduh ZIP Foto'}</span>
-                </button>
-              )}
-            </div>
-
-            {videoWishes.length > 0 && (
-              <button
-                type="button"
-                className="hero-video-story-btn"
-                onClick={() => {
-                  setActiveStoryIndex(0);
-                  setShowStoriesPlayer(true);
-                }}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  padding: '12px 22px',
-                  borderRadius: '999px',
-                  background: 'linear-gradient(135deg, #FF0055 0%, #7928CA 100%)',
-                  color: '#FFFFFF',
-                  fontSize: '13.5px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: '0 8px 24px rgba(255, 0, 85, 0.4)',
-                  border: 'none',
-                  transition: 'transform 0.2s ease'
-                }}
-              >
-                <Film size={16} />
-                <span>Tonton Video Ucapan ({videoWishes.length})</span>
-              </button>
-            )}
-          </div>
         </div>
       </section>
 
@@ -1215,7 +1067,7 @@ export default function EventDashboardPage() {
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
               {selectedGuest !== 'all' && (
                 <button
                   type="button"
@@ -1228,6 +1080,19 @@ export default function EventDashboardPage() {
                 >
                   <X size={12} />
                   <span>Bersihkan Filter</span>
+                </button>
+              )}
+              {photos.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => downloadAllPhotosAsZip(displayedPhotos)}
+                  disabled={isZipping}
+                  className="glass-pill"
+                  style={{ padding: '6px 14px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: isZipping ? 'wait' : 'pointer' }}
+                  title="Unduh seluruh foto galeri dalam format ZIP"
+                >
+                  {isZipping ? <RefreshCw size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={12} />}
+                  <span>{isZipping ? zipProgress : 'Unduh ZIP'}</span>
                 </button>
               )}
               <button onClick={fetchEventData} className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
