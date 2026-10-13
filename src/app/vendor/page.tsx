@@ -10,7 +10,8 @@ import {
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
   CreditCard, Wallet, Share2, Video, Film, PlayCircle,
   Printer, Tv, Eye, Award, X, AlertTriangle, Calendar, MapPin, Mail, Lightbulb, Clock,
-  Heart, ChevronDown, ChevronUp, Shield
+  Heart, ChevronDown, ChevronUp, Shield,
+  Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
@@ -190,6 +191,15 @@ export default function VendorPortalPage() {
   const [customEvents, setCustomEvents] = useState<number>(5);
   const [customPlan, setCustomPlan] = useState<'event' | 'wedding' | 'unlimited'>('wedding');
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
+
+  // Marketing Kit Sub-Tabs & Interactive Pitch Customization
+  const [marketingSubTab, setMarketingSubTab] = useState<'pitch' | 'mc' | 'battlecard' | 'checklist' | 'promokit' | 'faq'>('pitch');
+  const [pitchClientName, setPitchClientName] = useState<string>('Sarah & Dimas');
+  const [pitchEventDate, setPitchEventDate] = useState<string>('14 Februari 2026');
+  const [checkedChecklistItems, setCheckedChecklistItems] = useState<Record<string, boolean>>({});
+  const toggleChecklistItem = (key: string) => {
+    setCheckedChecklistItems(prev => ({ ...prev, [key]: !prev[key] }));
+  };
 
   // Vendor Clients State (Clean real data)
   const [clients, setClients] = useState<any[]>([]);
@@ -2617,80 +2627,947 @@ export default function VendorPortalPage() {
         {/* TAB: MARKETING KIT & PANDUAN MC */}
         {activeTab === 'marketing' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+            {/* Header Hero Card */}
             <div className="glass-card" style={{ padding: '32px 36px', borderRadius: '24px' }}>
-              <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
-                WEDDING & EVENT ORGANIZER TOOLKIT
-              </span>
-              <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#1D1D1F', marginBottom: '8px' }}>
-                Marketing Kit, Script MC & Panduan Eksekusi di Hari H
-              </h2>
-              <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6, maxWidth: '780px' }}>
-                Gunakan materi ini untuk mempermudah kru EO/WO Anda dan Master of Ceremony (MC) dalam mengarahkan para tamu undangan agar aktif memotret momen tak terduga.
-              </p>
-            </div>
-
-            {/* Script MC Section */}
-            <div className="glass-card" style={{ padding: '32px 36px', borderRadius: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
                 <div>
-                  <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
-                    1. Script MC: Ajakan Scan QR Kamera Tamu (Durasi 45 Detik)
-                  </h3>
-                  <span style={{ fontSize: '12.5px', color: '#6E6E73' }}>
-                    Bacakan saat acara dimulai atau setelah prosesi pembuka berlangsung.
+                  <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
+                    WEDDING & EVENT ORGANIZER TOOLKIT
+                  </span>
+                  <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#1D1D1F', marginBottom: '8px' }}>
+                    Marketing Kit, Script MC & Panduan Eksekusi Hari H
+                  </h2>
+                  <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6, maxWidth: '780px', margin: 0 }}>
+                    Peralatan lengkap siap pakai untuk tim sales, kru lapangan EO/WO, dan Master of Ceremony (MC). Tingkatkan konversi penjualan paket Anda dan pastikan eksekusi di hari H berjalan sempurna.
+                  </p>
+                </div>
+
+                <div style={{
+                  padding: '8px 16px',
+                  borderRadius: '14px',
+                  background: 'rgba(194, 120, 3, 0.08)',
+                  border: '1px solid rgba(194, 120, 3, 0.25)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Award size={16} color="#C27803" />
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F' }}>
+                    Mitra Resmi: {companyName || 'Sudut Bingkai Partner'}
                   </span>
                 </div>
-
-                <button
-                  onClick={() => copyToClipboard(`"Bapak, Ibu, dan teman-teman semuanya, perhatikan kartu QR yang telah dibagikan! Hari ini ${companyName} bersama tuan rumah menyiapkan kamera analog sekali pakai digital SudutBingkai untuk kalian semua. Cukup buka kamera HP, scan kartu QR, isi nama Anda, dan langsung motret tanpa perlu download aplikasi apapun! Semua momen candid seru kalian akan langsung terabadikan di album rahasia tuan rumah. Yuk scan sekarang dan jepret momen terindah kalian!"`, 'mc1')}
-                  className="glass-pill"
-                  style={{ padding: '8px 14px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                >
-                  {copiedScript === 'mc1' ? <Check size={13} color="#27AE60" /> : <Copy size={13} />}
-                  <span>{copiedScript === 'mc1' ? 'Tersalin!' : 'Salin Teks MC'}</span>
-                </button>
               </div>
 
-              <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', fontStyle: 'italic', fontSize: '14px', color: '#333336', lineHeight: 1.7 }}>
-                &ldquo;Bapak, Ibu, dan teman-teman semuanya, perhatikan kartu QR yang telah dibagikan! Hari ini <strong>{companyName}</strong> bersama tuan rumah menyiapkan kamera analog sekali pakai digital SudutBingkai untuk kalian semua. Cukup buka kamera HP, scan kartu QR, isi nama Anda, dan langsung motret tanpa perlu download aplikasi apapun! Semua momen candid seru kalian akan langsung terabadikan di album kenangan. Yuk scan sekarang dan jepret momen terindah kalian!&rdquo;
+              {/* Sub-Navigation Pills */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                {[
+                  { id: 'pitch', label: 'Template Chat WhatsApp', icon: MessageCircle, badge: '4 Template' },
+                  { id: 'mc', label: 'Script MC Panggung', icon: Mic, badge: '5 Skenario' },
+                  { id: 'battlecard', label: 'Battlecard vs Photobooth', icon: Target, badge: 'Lembar Jualan' },
+                  { id: 'checklist', label: 'SOP & Checklist Hari H', icon: CheckSquare, badge: 'H-7 s/d H+1' },
+                  { id: 'promokit', label: 'Panduan Cetak & Medsos', icon: Printer, badge: 'Aset Visual' },
+                  { id: 'faq', label: 'Penanganan Keraguan (FAQ)', icon: HelpCircle, badge: '6 Jawaban' },
+                ].map((tab) => {
+                  const IconComp = tab.icon;
+                  const isActive = marketingSubTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setMarketingSubTab(tab.id as any)}
+                      className="glass-pill"
+                      style={{
+                        padding: '9px 16px',
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: isActive ? '#1D1D1F' : 'rgba(255,255,255,0.7)',
+                        color: isActive ? '#FFFFFF' : '#1D1D1F',
+                        border: isActive ? '1px solid #1D1D1F' : '1px solid rgba(0,0,0,0.08)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <IconComp size={13} color={isActive ? '#FFFFFF' : '#C27803'} />
+                      <span>{tab.label}</span>
+                      <span style={{
+                        fontSize: '10px',
+                        padding: '1px 6px',
+                        borderRadius: '6px',
+                        background: isActive ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.05)',
+                        color: isActive ? '#FFFFFF' : '#86868B',
+                        fontWeight: 500
+                      }}>
+                        {tab.badge}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Checklist Kru WO di Hari H */}
-            <div className="glass-card" style={{ padding: '32px 36px', borderRadius: '24px' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', marginBottom: '16px' }}>
-                2. Checklist Operasional Kru di Lokasi Acara
-              </h3>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-                <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-                    H-3 Acara: Cetak Kartu QR Tamu
-                  </strong>
-                  <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: 0, lineHeight: 1.5 }}>
-                    Buka tombol &ldquo;Cetak Kartu QR Tamu&rdquo; di daftar klien, unduh format siap cetak, dan siapkan untuk para tamu undangan.
+            {/* SUB-TAB 1: TEMPLATE CHAT WHATSAPP (CLIENT PITCH SUITE) */}
+            {marketingSubTab === 'pitch' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Dynamic Personalization Toolbar */}
+                <div className="glass-card" style={{ padding: '20px 24px', borderRadius: '20px', background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(253, 246, 236, 0.8) 100%)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                    <Zap size={16} color="#C27803" />
+                    <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>
+                      Personalisasi Otomatis Template Penawaran Klien
+                    </strong>
+                  </div>
+                  <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: '0 0 14px 0' }}>
+                    Ketik nama calon pengantin / klien di bawah ini. Semua pesan WhatsApp siap kirim akan langsung disesuaikan dengan nama mereka dan kode promo Anda <strong>({referralCode})</strong>!
                   </p>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#86868B', textTransform: 'uppercase', marginBottom: '4px' }}>
+                        Nama Klien / Calon Pengantin
+                      </label>
+                      <input
+                        type="text"
+                        value={pitchClientName}
+                        onChange={(e) => setPitchClientName(e.target.value)}
+                        placeholder="Contoh: Sarah & Dimas"
+                        className="glass-input"
+                        style={{ width: '100%', padding: '9px 12px', fontSize: '13px', borderRadius: '10px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#86868B', textTransform: 'uppercase', marginBottom: '4px' }}>
+                        Tanggal Rencana Acara
+                      </label>
+                      <input
+                        type="text"
+                        value={pitchEventDate}
+                        onChange={(e) => setPitchEventDate(e.target.value)}
+                        placeholder="Contoh: 14 Februari 2026"
+                        className="glass-input"
+                        style={{ width: '100%', padding: '9px 12px', fontSize: '13px', borderRadius: '10px' }}
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-                    H-1 Jam: Cek Layar Proyektor
-                  </strong>
-                  <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: 0, lineHeight: 1.5 }}>
-                    Hubungkan laptop operator ke videotron/proyektor ballroom, buka link &ldquo;Layar Proyektor&rdquo; dengan mode Fullscreen (F11).
-                  </p>
-                </div>
+                {/* 4 Pitch Templates */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
+                  {/* Template 1: Add-On Hangat & Solutif */}
+                  {(() => {
+                    const text1 = `Halo Kak ${pitchClientName || 'Calon Pengantin'}! 📸\n\nMau sharing ide seru buat momen resepsi pernikahan kalian tanggal ${pitchEventDate || 'nanti'} nih.\n\nBiasanya di acara wedding, tamu seringkali cuma duduk di meja atau antre lama di photobooth. Nah, bareng tim ${companyName || 'kami'}, kita bisa siapkan fitur *Sudut Bingkai — Kamera Analog Sekali Pakai Digital* untuk semua tamu undangan kalian!\n\n✨ *Gimana cara kerjanya?*\n1. Di setiap meja tamu disediakan kartu barcode estetik berbingkai nama kalian.\n2. Tamu cukup scan pakai kamera HP (tanpa download aplikasi apapun!).\n3. Tamu langsung bisa motret momen candid seru & rekam video ucapan selamat 15 detik.\n4. Semua foto bisa langsung tayang live di videotron ballroom panggung, dan kalian bakal dapet album kenangan lengkap beresolusi tinggi dengan stempel tanggal analog retro!\n\nKalian bisa dapatkan diskon 10% dengan kode partner kami: *${referralCode}*.\n\nBoleh dicoba simulasi tes kameranya di sini ya Kak: https://sudutbingkai.id/cam/demo\n\nKira-kira gimana Kak ${pitchClientName || ''}, tertarik kita masukkan ke rundown resepsinya?`;
+                    return (
+                      <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div>
+                            <span style={{ fontSize: '10.5px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                              REKOMENDASI UTAMA • TINGGI RESPON
+                            </span>
+                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1D1D1F', margin: '6px 0 2px' }}>
+                              1. Penawaran Add-On Hangat & Anti-Bosan
+                            </h3>
+                            <span style={{ fontSize: '12px', color: '#86868B' }}>
+                              Cocok dikirim saat tahap penawaran paket atau diskusi rundown.
+                            </span>
+                          </div>
+                        </div>
 
-                <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)' }}>
-                  <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-                    H+1 Acara: Serahkan ZIP Foto
-                  </strong>
-                  <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: 0, lineHeight: 1.5 }}>
-                    Download seluruh foto resolusi tinggi berstempel tanggal analog via dashboard, kirimkan link Google Drive / flashdisk ke tuan rumah.
-                  </p>
+                        <div style={{
+                          background: '#FFFFFF',
+                          padding: '16px',
+                          borderRadius: '14px',
+                          border: '1px solid rgba(0,0,0,0.06)',
+                          fontSize: '12.5px',
+                          color: '#333336',
+                          lineHeight: 1.6,
+                          whiteSpace: 'pre-wrap',
+                          maxHeight: '260px',
+                          overflowY: 'auto',
+                          marginBottom: '16px'
+                        }}>
+                          {text1}
+                        </div>
+
+                        <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(text1, 'pitch1')}
+                            className="glass-pill"
+                            style={{ flex: 1, padding: '9px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                          >
+                            {copiedScript === 'pitch1' ? <Check size={14} color="#27AE60" /> : <Copy size={14} />}
+                            <span>{copiedScript === 'pitch1' ? 'Tersalin!' : 'Salin Pesan'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(text1)}`, '_blank')}
+                            className="btn-apple-black"
+                            style={{ padding: '9px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: '#25D366', color: '#FFFFFF', border: 'none' }}
+                          >
+                            <Send size={13} />
+                            <span>Buka WA</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Template 2: Proposal Edukatif (Hemat Jutaan vs Photobooth) */}
+                  {(() => {
+                    const text2 = `Hai Kak ${pitchClientName || 'Calon Pengantin'}! 🤍\n\nUntuk hiburan tamu dan dokumentasi resepsi pernikahan kalian, tim ${companyName || 'kami'} sangat menyarankan fitur *Sudut Bingkai* dibanding sewa photobooth fisik konvensional. Ini beberapa perbandingannya:\n\n💰 *Hemat Jutaan Rupiah*: Sewa photobooth biasa Rp 3-6 Juta untuk 2-3 jam saja. Sudut Bingkai aktif seharian penuh hanya Rp 499rb.\n🚫 *Bebas Antrean Berdiri*: Tamu gak perlu antre berjubel di depan backdrop. Mereka bisa motret langsung dari meja makan atau saat salaman.\n📸 *Ratusan Sudut Pandang*: Menangkap senyum dan tawa candid jujur dari mata para sahabat, bukan pose kaku di photobooth.\n📺 *Live Videotron Ballroom*: Foto tamu langsung tampil estetik di layar proyektor panggung secara real-time.\n🎙️ *Video Ucapan 15 Detik*: Tamu bisa merekam doa dan ucapan selamat langsung dari kamera HP mereka.\n\nKhusus klien ${companyName || 'kami'}, ada potongan diskon dengan kode promo: *${referralCode}*.\n\nKira-kira mau kami siapkan simulasinya untuk acara kalian? 🙏`;
+                    return (
+                      <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div>
+                            <span style={{ fontSize: '10.5px', background: 'rgba(39, 174, 96, 0.1)', color: '#27AE60', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                              SOLUSI BUDGET • TINGGI KONVERSI
+                            </span>
+                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1D1D1F', margin: '6px 0 2px' }}>
+                              2. Komparasi Hemat vs Sewa Photobooth Rp 5 Jt
+                            </h3>
+                            <span style={{ fontSize: '12px', color: '#86868B' }}>
+                              Sangat ampuh untuk klien yang mempertimbangkan budget photobooth.
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          background: '#FFFFFF',
+                          padding: '16px',
+                          borderRadius: '14px',
+                          border: '1px solid rgba(0,0,0,0.06)',
+                          fontSize: '12.5px',
+                          color: '#333336',
+                          lineHeight: 1.6,
+                          whiteSpace: 'pre-wrap',
+                          maxHeight: '260px',
+                          overflowY: 'auto',
+                          marginBottom: '16px'
+                        }}>
+                          {text2}
+                        </div>
+
+                        <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(text2, 'pitch2')}
+                            className="glass-pill"
+                            style={{ flex: 1, padding: '9px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                          >
+                            {copiedScript === 'pitch2' ? <Check size={14} color="#27AE60" /> : <Copy size={14} />}
+                            <span>{copiedScript === 'pitch2' ? 'Tersalin!' : 'Salin Pesan'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(text2)}`, '_blank')}
+                            className="btn-apple-black"
+                            style={{ padding: '9px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: '#25D366', color: '#FFFFFF', border: 'none' }}
+                          >
+                            <Send size={13} />
+                            <span>Buka WA</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Template 3: Follow-Up Pasca Konsultasi / Rapat Rundown */}
+                  {(() => {
+                    const text3 = `Halo Kak ${pitchClientName || 'Calon Pengantin'}, terima kasih banyak untuk sesi konsultasi persiapan acara kemarin bersama tim ${companyName || 'kami'} ya! 🙏\n\nMengingatkan kembali, slot reservasi untuk paket kamera tamu Sudut Bingkai masih tersedia untuk tanggal ${pitchEventDate || 'acara kalian'}.\n\nJika ingin kami masukkan ke dalam susunan rundown dan layout penataan kartu barcode di meja resepsi, kabari kami ya Kak agar tim kami bisa mulai menyiapkan kustomisasi bingkai foto dan pilihan filter filmnya lebih awal.\n\nBisa langsung daftar dengan kode promo diskon kami: *${referralCode}* di https://sudutbingkai.id/create?ref=${referralCode}\n\nTerima kasih dan sehat selalu ya Kak ${pitchClientName || ''}! 🌸`;
+                    return (
+                      <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div>
+                            <span style={{ fontSize: '10.5px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                              FOLLOW-UP CEPAT • RAMAH
+                            </span>
+                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1D1D1F', margin: '6px 0 2px' }}>
+                              3. Follow-Up Pasca Konsultasi / Meeting WO
+                            </h3>
+                            <span style={{ fontSize: '12px', color: '#86868B' }}>
+                              Kirimkan H+1 atau H+2 setelah sesi konsultasi atau meeting persiapan.
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          background: '#FFFFFF',
+                          padding: '16px',
+                          borderRadius: '14px',
+                          border: '1px solid rgba(0,0,0,0.06)',
+                          fontSize: '12.5px',
+                          color: '#333336',
+                          lineHeight: 1.6,
+                          whiteSpace: 'pre-wrap',
+                          maxHeight: '260px',
+                          overflowY: 'auto',
+                          marginBottom: '16px'
+                        }}>
+                          {text3}
+                        </div>
+
+                        <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(text3, 'pitch3')}
+                            className="glass-pill"
+                            style={{ flex: 1, padding: '9px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                          >
+                            {copiedScript === 'pitch3' ? <Check size={14} color="#27AE60" /> : <Copy size={14} />}
+                            <span>{copiedScript === 'pitch3' ? 'Tersalin!' : 'Salin Pesan'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(text3)}`, '_blank')}
+                            className="btn-apple-black"
+                            style={{ padding: '9px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: '#25D366', color: '#FFFFFF', border: 'none' }}
+                          >
+                            <Send size={13} />
+                            <span>Buka WA</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Template 4: Event Korporat, Gathering, & Birthday Party */}
+                  {(() => {
+                    const text4 = `Halo Rekan Panitia ${pitchClientName || 'Event'}! 🎉\n\nUntuk memeriahkan agenda acara gathering / anniversary perusahaan kalian tanggal ${pitchEventDate || 'mendatang'}, tim ${companyName || 'kami'} merekomendasikan media interaktif tamu: *Sudut Bingkai Digital Disposable Camera*.\n\nKeunggulan untuk event gathering:\n1. Peserta cukup scan QR tanpa download aplikasi apapun.\n2. Setiap foto otomatis diberi watermark / logo perusahaan & nama event kalian.\n3. Foto langsung tayang interaktif di layar videotron / proyektor panggung secara real-time.\n4. Panitia bisa mengunduh seluruh file foto resolusi tinggi dalam 1 file ZIP pasca acara untuk dokumentasi resmi.\n\nDapatkan penawaran khusus mitra dengan kode: *${referralCode}*.\n\nBoleh kami kirimkan proposal teknisnya untuk dipelajari bersama tim panitia? Terima kasih!`;
+                    return (
+                      <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                          <div>
+                            <span style={{ fontSize: '10.5px', background: 'rgba(107, 114, 128, 0.1)', color: '#4B5563', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                              NON-WEDDING • GATHERING & CORPORATE
+                            </span>
+                            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1D1D1F', margin: '6px 0 2px' }}>
+                              4. Penawaran Event Perusahaan & Gathering
+                            </h3>
+                            <span style={{ fontSize: '12px', color: '#86868B' }}>
+                              Khusus untuk event corporate, gathering kantor, ulang tahun, & reuni.
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{
+                          background: '#FFFFFF',
+                          padding: '16px',
+                          borderRadius: '14px',
+                          border: '1px solid rgba(0,0,0,0.06)',
+                          fontSize: '12.5px',
+                          color: '#333336',
+                          lineHeight: 1.6,
+                          whiteSpace: 'pre-wrap',
+                          maxHeight: '260px',
+                          overflowY: 'auto',
+                          marginBottom: '16px'
+                        }}>
+                          {text4}
+                        </div>
+
+                        <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(text4, 'pitch4')}
+                            className="glass-pill"
+                            style={{ flex: 1, padding: '9px', fontSize: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                          >
+                            {copiedScript === 'pitch4' ? <Check size={14} color="#27AE60" /> : <Copy size={14} />}
+                            <span>{copiedScript === 'pitch4' ? 'Tersalin!' : 'Salin Pesan'}</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(text4)}`, '_blank')}
+                            className="btn-apple-black"
+                            style={{ padding: '9px 16px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', background: '#25D366', color: '#FFFFFF', border: 'none' }}
+                          >
+                            <Send size={13} />
+                            <span>Buka WA</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* SUB-TAB 2: SCRIPT MC PANGGUNG (5 SKENARIO) */}
+            {marketingSubTab === 'mc' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div className="glass-card" style={{ padding: '20px 24px', borderRadius: '20px', background: 'rgba(194, 120, 3, 0.04)', border: '1px solid rgba(194, 120, 3, 0.2)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <Mic size={16} color="#C27803" />
+                    <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>
+                      Panduan Master of Ceremony (MC) Saat Resepsi Berlangsung
+                    </strong>
+                  </div>
+                  <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: 0, lineHeight: 1.5 }}>
+                    Berikan salinan teks ini kepada MC acara. Terdapat 5 skenario pembacaan yang dirancang agar para tamu aktif memotret tanpa mengganggu alur sakral prosesi pernikahan.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  {[
+                    {
+                      id: 'mc1',
+                      title: 'Skenario 1: Pembukaan Acara / Setelah Prosesi Masuk Pelaminan',
+                      duration: '~45 Detik',
+                      cue: 'Dibacakan saat kedua mempelai telah duduk di pelaminan dan seluruh tamu duduk nyaman di meja masing-masing.',
+                      script: `"Bapak, Ibu, dan teman-teman semuanya, perhatikan kartu barcode cantik yang ada di tengah meja Anda masing-masing! Hari ini ${companyName || 'tim Wedding Organizer'} bersama kedua mempelai menyiapkan kamera analog digital Sudut Bingkai khusus untuk kalian semua. Cukup buka kamera HP, arahkan dan scan kartu barcode di meja, isi nama Anda, dan Anda bisa langsung memotret tanpa perlu download aplikasi apapun! Semua momen candid seru kalian akan langsung terabadikan di album kenangan kedua mempelai. Yuk ambil HP kalian sekarang, scan QR-nya, dan jepret momen terindah kalian!"`
+                    },
+                    {
+                      id: 'mc2',
+                      title: 'Skenario 2: Saat Jam Santap Malam & Suasana Meja Santai',
+                      duration: '~40 Detik',
+                      cue: 'Dibacakan saat para tamu sedang menikmati hidangan utama untuk memicu interaksi foto antar sahabat semeja.',
+                      script: `"Sambil menikmati santap malam yang lezat, jangan biarkan tawa manis di meja kalian terlewatkan begitu saja! Buat teman-teman yang belum scan barcode Sudut Bingkai di meja, yuk buka kamera HP sekarang. Jepret foto candid teman semeja kalian, wefie seru, atau tawa bahagia malam ini. Ingat ya, kuota roll filmnya terbatas seperti kamera analog klasik, jadi pastikan setiap jepretan Anda penuh momen berharga!"`
+                    },
+                    {
+                      id: 'mc3',
+                      title: 'Skenario 3: Sorotan Layar Proyektor / Videotron Panggung',
+                      duration: '~35 Detik',
+                      cue: 'Dibacakan saat foto-foto candid tamu mulai bermunculan di layar videotron / proyektor ballroom.',
+                      script: `"Wah, luar biasa sekali! Coba kita lihat bersama ke layar videotron utama di depan panggung! Foto-foto candid dari teman-teman yang baru saja motret lewat barcode meja sudah mulai bermunculan nih. Keren banget tone warnanya khas roll film analog. Yang fotonya belum muncul di layar, jangan mau kalah! Scan barcode di meja kalian sekarang, dan buat foto kalian tampil megah di panggung resepsi malam ini!"`
+                    },
+                    {
+                      id: 'mc4',
+                      title: 'Skenario 4: Pengingat Kuota & Rekaman Video Ucapan Penutup 15 Detik',
+                      duration: '~40 Detik',
+                      cue: 'Dibacakan 30-45 menit sebelum acara berakhir untuk mendorong tamu menggunakan jatah video ucapan penutup.',
+                      script: `"Teman-teman semuanya, sebelum acara yang berbahagia ini kita akhiri, pastikan jatah roll kamera kalian sudah dipakai semua ya! Dan buat kalian yang kuota fotonya sudah habis, ada fitur spesial: kalian bisa merekam Video Ucapan 15 detik langsung dari kamera HP kalian untuk kedua mempelai! Rekam doa terbaik, ucapan selamat, atau pesan kocak kalian. Video ini akan disimpan selamanya di memori manis kedua mempelai. Yuk rekam video ucapan kalian sekarang!"`
+                    },
+                    {
+                      id: 'mc5',
+                      title: 'Skenario 5: Pengumuman Hitung Mundur Sensasi Cuci Roll (Delayed Mode)',
+                      duration: '~30 Detik',
+                      cue: 'Khusus untuk acara yang menggunakan mode Delayed Reveal (album foto serentak terbuka jam tertentu).',
+                      script: `"Pasti penasaran kan sama hasil jepretan kamera analog kalian malam ini? Khusus resepsi malam ini, kita menggunakan fitur Sensasi Cuci Roll! Semua foto masih dirahasiakan dan akan serentak diungkapkan ke galeri bersama tepat jam 10 malam nanti! Jangan lupa simpan tautan galerinya, dan bersiaplah bernostalgia melihat tawa dan momen tak terduga kita semua malam ini!"`
+                    }
+                  ].map((item, idx) => (
+                    <div key={item.id} className="glass-card" style={{ padding: '24px 28px', borderRadius: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                              DURASI: {item.duration}
+                            </span>
+                            <span style={{ fontSize: '11.5px', color: '#86868B' }}>
+                              • {item.cue}
+                            </span>
+                          </div>
+                          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                            {item.title}
+                          </h3>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(item.script, item.id)}
+                          className="glass-pill"
+                          style={{ padding: '8px 14px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                        >
+                          {copiedScript === item.id ? <Check size={13} color="#27AE60" /> : <Copy size={13} />}
+                          <span>{copiedScript === item.id ? 'Tersalin!' : 'Salin Script MC'}</span>
+                        </button>
+                      </div>
+
+                      <div style={{
+                        background: '#FFFFFF',
+                        padding: '18px 22px',
+                        borderRadius: '16px',
+                        border: '1px solid rgba(0,0,0,0.06)',
+                        fontStyle: 'italic',
+                        fontSize: '13.5px',
+                        color: '#2C2C2E',
+                        lineHeight: 1.7,
+                        borderLeft: '4px solid #C27803'
+                      }}>
+                        {item.script}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB 3: SALES BATTLECARD (VS PHOTOBOOTH BIASA) */}
+            {marketingSubTab === 'battlecard' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div className="glass-card" style={{ padding: '24px 28px', borderRadius: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', marginBottom: '16px' }}>
+                    <div>
+                      <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '4px' }}>
+                        SALES ONE-PAGER COMPARISON
+                      </span>
+                      <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                        Perbandingan Nilai: Sudut Bingkai vs Photobooth Konvensional
+                      </h3>
+                      <p style={{ fontSize: '13px', color: '#6E6E73', margin: '4px 0 0' }}>
+                        Gunakan tabel perbandingan ini saat calon pengantin ragu atau membandingkan biaya dengan vendor photobooth cetak fisik.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const summaryText = `*MENGAPA SUDUT BINGKAI LEBIH UNGGUL DIBANDING PHOTOBOOTH BIASA?*\n\n1. Biaya: Mulai Rp 499rb vs Photobooth fisik Rp 3-6 Juta (Hemat hingga 85%).\n2. Antrean: Nol antrean! Tamu motret santai dari meja masing-masing.\n3. Jangkauan: 100-300+ tamu aktif motret vs hanya 50 orang yang mau antre.\n4. Kebutuhan Ruang: 0 m² vs butuh area 3x3m + kabel listrik.\n5. Hasil: Foto candid jujur & natural + video ucapan 15s + live videotron ballroom.\n\nCek demonya di: https://sudutbingkai.id/cam/demo`;
+                        copyToClipboard(summaryText, 'battlecard');
+                        toast.success('Ringkasan battlecard disalin!');
+                      }}
+                      className="glass-pill"
+                      style={{ padding: '8px 16px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                    >
+                      {copiedScript === 'battlecard' ? <Check size={13} color="#27AE60" /> : <Copy size={13} />}
+                      <span>{copiedScript === 'battlecard' ? 'Tersalin!' : 'Salin Ringkasan Battlecard'}</span>
+                    </button>
+                  </div>
+
+                  {/* Comparison Table */}
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '2px solid rgba(0,0,0,0.08)' }}>
+                          <th style={{ padding: '14px 16px', color: '#86868B', fontWeight: 600, width: '22%' }}>Parameter</th>
+                          <th style={{ padding: '14px 16px', color: '#E11D48', fontWeight: 700, width: '38%', background: 'rgba(225, 29, 72, 0.03)', borderRadius: '12px 12px 0 0' }}>
+                            Photobooth Cetak Fisik
+                          </th>
+                          <th style={{ padding: '14px 16px', color: '#C27803', fontWeight: 700, width: '40%', background: 'rgba(194, 120, 3, 0.08)', borderRadius: '12px 12px 0 0' }}>
+                            Sudut Bingkai (Digital Disposable Cam)
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[
+                          {
+                            param: 'Estimasi Biaya Sewa',
+                            old: 'Rp 3.000.000 – Rp 6.000.000+ (hanya untuk 2-3 jam)',
+                            sb: 'Mulai Rp 499.000 (Hemat hingga 85%, aktif seharian)',
+                            winner: true
+                          },
+                          {
+                            param: 'Antrean Tamu',
+                            old: 'Antrean panjang & berjubel berdiri di depan backdrop',
+                            sb: 'Nol antrean! Tamu motret santai dari meja & pelaminan',
+                            winner: true
+                          },
+                          {
+                            param: 'Kapasitas & Partisipasi',
+                            old: 'Terbatas (hanya 50-80 orang yang rela antre)',
+                            sb: 'Menjangkau 100 – 300+ tamu di seluruh sudut ballroom',
+                            winner: true
+                          },
+                          {
+                            param: 'Kebutuhan Area / Ruang',
+                            old: 'Memakan tempat 3x3 meter + kabel listrik berseliweran',
+                            sb: '0 m² ruang fisik! Cukup letakkan kartu barcode di meja',
+                            winner: true
+                          },
+                          {
+                            param: 'Instalasi & Akses Tamu',
+                            old: 'Kertas cetak foto kecil rawan tertekuk, basah & hilang',
+                            sb: 'Tanpa install app, langsung via kamera bawaan smartphone',
+                            winner: true
+                          },
+                          {
+                            param: 'Karakter & Sudut Pandang',
+                            old: 'Pose kaku & formal di depan latar belakang yang sama',
+                            sb: 'Ratusan ekspresi candid jujur dari mata para sahabat',
+                            winner: true
+                          },
+                          {
+                            param: 'Integrasi Panggung Utama',
+                            old: 'Terisolasi di pojok pintu masuk, tidak terlihat panggung',
+                            sb: 'Terhubung live real-time ke Videotron & Proyektor panggung',
+                            winner: true
+                          },
+                          {
+                            param: 'Pesan Suara & Video Ucapan',
+                            old: 'Tidak ada (hanya lembaran cetak foto bisu)',
+                            sb: 'Rekaman Voice Note & Video Ucapan 15 detik dari tamu',
+                            winner: true
+                          },
+                          {
+                            param: 'Penyimpanan & File Asli',
+                            old: 'Hardcopy terbatas, file digital sering harus bayar lagi',
+                            sb: 'Album cloud awet + Download ZIP resolusi asli penuh',
+                            winner: true
+                          }
+                        ].map((row, rIdx) => (
+                          <tr key={rIdx} style={{ borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+                            <td style={{ padding: '14px 16px', fontWeight: 600, color: '#1D1D1F' }}>
+                              {row.param}
+                            </td>
+                            <td style={{ padding: '14px 16px', color: '#6E6E73', background: 'rgba(225, 29, 72, 0.02)' }}>
+                              {row.old}
+                            </td>
+                            <td style={{ padding: '14px 16px', color: '#1D1D1F', fontWeight: 600, background: 'rgba(194, 120, 3, 0.04)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <CheckCircle2 size={15} color="#27AE60" style={{ flexShrink: 0 }} />
+                                <span>{row.sb}</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB 4: SOP & CHECKLIST HARI H (INTERACTIVE) */}
+            {marketingSubTab === 'checklist' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div className="glass-card" style={{ padding: '24px 28px', borderRadius: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+                    <div>
+                      <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '4px' }}>
+                        STANDARD OPERATING PROCEDURE
+                      </span>
+                      <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                        SOP & Checklist Operasional Kru WO di Hari H
+                      </h3>
+                      <p style={{ fontSize: '13px', color: '#6E6E73', margin: '4px 0 0' }}>
+                        Centang setiap tahapan di bawah ini selama persiapan hingga penutupan acara untuk memastikan eksekusi tanpa cela.
+                      </p>
+                    </div>
+
+                    {/* Progress Indicator */}
+                    {(() => {
+                      const totalItems = 7;
+                      const completedCount = Object.values(checkedChecklistItems).filter(Boolean).length;
+                      const pct = Math.round((completedCount / totalItems) * 100);
+                      return (
+                        <div style={{
+                          padding: '8px 16px',
+                          borderRadius: '14px',
+                          background: pct === 100 ? 'rgba(39, 174, 96, 0.1)' : 'rgba(194, 120, 3, 0.08)',
+                          border: pct === 100 ? '1px solid #27AE60' : '1px solid rgba(194, 120, 3, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px'
+                        }}>
+                          <CheckSquare size={16} color={pct === 100 ? '#27AE60' : '#C27803'} />
+                          <div>
+                            <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>
+                              {completedCount} dari {totalItems} Langkah Siap ({pct}%)
+                            </strong>
+                            <span style={{ fontSize: '11px', color: '#86868B' }}>
+                              {pct === 100 ? 'Kru siap tempur di Hari H!' : 'Selesaikan seluruh persiapan'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[
+                      {
+                        key: 'h7',
+                        phase: 'H-7 Acara',
+                        title: 'Konfirmasi Tema, Filter & Kustomisasi Bingkai Foto',
+                        desc: 'Buka menu "Setting Album" di daftar klien. Tentukan Signature Film (Portra, Fuji, dll), sesuaikan teks watermark nama pengantin & tanggal, serta tentukan mode pembukaan (Langsung Terbuka atau Sensasi Cuci Roll).'
+                      },
+                      {
+                        key: 'h3',
+                        phase: 'H-3 Acara',
+                        title: 'Cetak Kartu Barcode Meja Tamu (Tent Card / Akrilik)',
+                        desc: 'Gunakan tombol "Cetak QR Meja" di dashboard vendor. Cetak dalam format Tent Card A6 atau standing akrilik bening 2R/3R. Lakukan uji scan lewat kamera smartphone iPhone & Android untuk memastikan QR tajam.'
+                      },
+                      {
+                        key: 'h1',
+                        phase: 'H-1 Acara',
+                        title: 'Gladi Resik & Uji Coba Layar Videotron / Proyektor Venue',
+                        desc: 'Sambungkan laptop kru operator ke proyektor / videotron ballroom. Buka link "Live Proyektor" acara tersebut, tekan F11 untuk mode layar penuh. Pastikan tampilan horizontal atau vertikal sesuai orientasi layar panggung.'
+                      },
+                      {
+                        key: 'd0_pre',
+                        phase: 'Hari H (Sebelum Open Gate)',
+                        title: 'Penataan Kartu Meja & Briefing MC Utama',
+                        desc: 'Letakkan 1-2 kartu QR di setiap meja bundar atau meja panjang tamu. Serahkan lembar Script MC kepada Master of Ceremony, tandai 5 skenario waktu pembacaan pada rundown resmi.'
+                      },
+                      {
+                        key: 'd0_live',
+                        phase: 'Hari H (Saat Acara Berlangsung)',
+                        title: 'Monitoring Layar Proyektor & Moderasi Foto',
+                        desc: 'Operator videotron sesekali memantau feed foto masuk. Jika ada foto tamu yang blur parah atau tidak pantas, gunakan fitur moderasi 1-klik "Sembunyikan Foto" via dashboard host/vendor.'
+                      },
+                      {
+                        key: 'd0_close',
+                        phase: 'Hari H (30 Menit Sebelum Penutupan)',
+                        title: 'Trigger Rekaman Video Ucapan Penutup Tamu',
+                        desc: 'Instruksikan MC membacakan Skenario 4 untuk mengajak tamu yang kuota fotonya telah habis merekam video ucapan penutup 15 detik sebagai kado manis untuk kedua mempelai.'
+                      },
+                      {
+                        key: 'd1_post',
+                        phase: 'H+1 Pasca Acara',
+                        title: 'Unduh Master ZIP Foto Resolusi Penuh & Serahkan ke Pengantin',
+                        desc: 'Buka dashboard host atau vendor, klik "Unduh Semua (ZIP Resolusi Asli Penuh)". Kirimkan tautan unduhan atau Google Drive kepada pengantin sebagai hadiah penutup profesional dari WO Anda.'
+                      }
+                    ].map((step) => {
+                      const isDone = !!checkedChecklistItems[step.key];
+                      return (
+                        <div
+                          key={step.key}
+                          onClick={() => toggleChecklistItem(step.key)}
+                          style={{
+                            padding: '16px 20px',
+                            borderRadius: '16px',
+                            background: isDone ? 'rgba(39, 174, 96, 0.05)' : '#FFFFFF',
+                            border: isDone ? '1px solid rgba(39, 174, 96, 0.3)' : '1px solid rgba(0,0,0,0.06)',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '14px',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isDone}
+                            onChange={() => {}} // handled by parent onClick
+                            style={{ width: '18px', height: '18px', accentColor: '#27AE60', cursor: 'pointer', marginTop: '2px' }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                              <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700, color: isDone ? '#27AE60' : '#C27803' }}>
+                                {step.phase}
+                              </span>
+                              <strong style={{ fontSize: '14px', color: '#1D1D1F', textDecoration: isDone ? 'line-through' : 'none' }}>
+                                {step.title}
+                              </strong>
+                            </div>
+                            <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: 0, lineHeight: 1.5 }}>
+                              {step.desc}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB 5: PANDUAN CETAK MEJA & MEDSOS */}
+            {marketingSubTab === 'promokit' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Print Specs */}
+                <div className="glass-card" style={{ padding: '24px 28px', borderRadius: '20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '16px' }}>
+                    <div>
+                      <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '4px' }}>
+                        SPESIFIKASI MEDIA CETAK
+                      </span>
+                      <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                        Panduan Ukuran Cetak Kartu Barcode Meja Tamu
+                      </h3>
+                      <p style={{ fontSize: '13px', color: '#6E6E73', margin: '4px 0 0' }}>
+                        Rekomendasi jenis bahan dan ukuran agar kartu barcode meja terlihat elegan dan mewah di atas meja dekorasi.
+                      </p>
+                    </div>
+
+                    <Link
+                      href="/create"
+                      className="glass-pill"
+                      style={{ padding: '8px 16px', fontSize: '12.5px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                    >
+                      <Plus size={13} />
+                      <span>Buat Acara Baru</span>
+                    </Link>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+                    <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                      <span style={{ fontSize: '11px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                        PALING POPULER
+                      </span>
+                      <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block', margin: '8px 0 4px' }}>
+                        Tent Card Meja Segitiga (A6)
+                      </strong>
+                      <p style={{ fontSize: '12px', color: '#6E6E73', margin: '0 0 10px 0', lineHeight: 1.5 }}>
+                        Ukuran terbuka A5 (14.8 x 21 cm), lipat 2 berdiri menjadi A6 (10.5 x 14.8 cm).
+                      </p>
+                      <span style={{ fontSize: '11px', color: '#1D1D1F', fontWeight: 600, display: 'block' }}>
+                        Bahan: Art Carton 260 / 310 gsm + Laminasi Doff
+                      </span>
+                    </div>
+
+                    <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                      <span style={{ fontSize: '11px', background: 'rgba(59, 130, 246, 0.1)', color: '#3B82F6', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                        ELEGAN & MEWAH
+                      </span>
+                      <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block', margin: '8px 0 4px' }}>
+                        Standing Akrilik Bening (2R / 3R)
+                      </strong>
+                      <p style={{ fontSize: '12px', color: '#6E6E73', margin: '0 0 10px 0', lineHeight: 1.5 }}>
+                        Cetak kartu foto ukuran 2R (6 x 9 cm) atau 3R (8.9 x 12.7 cm) lalu masukkan ke standing akrilik transparan meja.
+                      </p>
+                      <span style={{ fontSize: '11px', color: '#1D1D1F', fontWeight: 600, display: 'block' }}>
+                        Bahan: Kertas Foto Silky / Luster 230 gsm
+                      </span>
+                    </div>
+
+                    <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                      <span style={{ fontSize: '11px', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                        AREA FOYER / ENTRANCE
+                      </span>
+                      <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block', margin: '8px 0 4px' }}>
+                        Roll-Up / X-Banner (60 x 160 cm)
+                      </strong>
+                      <p style={{ fontSize: '12px', color: '#6E6E73', margin: '0 0 10px 0', lineHeight: 1.5 }}>
+                        Diletakkan di dekat meja penerima tamu / buku tamu dengan barcode besar agar tamu langsung paham sebelum masuk ballroom.
+                      </p>
+                      <span style={{ fontSize: '11px', color: '#1D1D1F', fontWeight: 600, display: 'block' }}>
+                        Bahan: Albatros Doff / Flexi Korea High-Res
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Social Media Caption Templates */}
+                <div className="glass-card" style={{ padding: '24px 28px', borderRadius: '20px' }}>
+                  <div style={{ marginBottom: '16px' }}>
+                    <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '4px' }}>
+                      KONTEN MEDIA SOSIAL MITRA
+                    </span>
+                    <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                      Caption Siap Pakai untuk Instagram & TikTok Portofolio Anda
+                    </h3>
+                    <p style={{ fontSize: '13px', color: '#6E6E73', margin: '4px 0 0' }}>
+                      Pamerkan bahwa tim WO/Fotografi Anda modern dan selalu menghadirkan pengalaman resepsi interaktif terkini.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '16px' }}>
+                    {/* Caption 1 */}
+                    {(() => {
+                      const cap1 = `Gak ada lagi cerita tamu bosan cuma duduk nunggu giliran salaman! 📸✨\n\nDi wedding klien kami kemarin, setiap meja disediakan kartu barcode kamera analog sekali pakai digital @sudutbingkai.id. Tamu tinggal scan pakai kamera HP (tanpa download aplikasi!), motret candid sesuka hati, dan fotonya langsung muncul live di videotron ballroom!\n\nPengantin dapet ratusan foto candid jujur & pesan video ucapan yang super hangat dari sahabat-sahabat mereka. Lebih hemat jutaan rupiah dibanding sewa photobooth biasa lho!\n\nMau resepsi pernikahanmu seseru ini? Konsultasikan bareng tim @${companyName ? companyName.toLowerCase().replace(/[^a-z0-9]/g, '') : 'weddingorganizer'} sekarang! 🤍\n\n#WeddingOrganizer #WeddingHacks #SudutBingkai #WeddingInspiration #IdeWedding #PhotoboothWedding #WeddingReception`;
+                      return (
+                        <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <strong style={{ fontSize: '13.5px', color: '#1D1D1F' }}>
+                              Caption A: Showcase Portofolio WO Modern
+                            </strong>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(cap1, 'cap1')}
+                              className="glass-pill"
+                              style={{ padding: '5px 12px', fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              {copiedScript === 'cap1' ? <Check size={12} color="#27AE60" /> : <Copy size={12} />}
+                              <span>{copiedScript === 'cap1' ? 'Tersalin!' : 'Salin Caption'}</span>
+                            </button>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.6, whiteSpace: 'pre-wrap', maxHeight: '180px', overflowY: 'auto' }}>
+                            {cap1}
+                          </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Caption 2 */}
+                    {(() => {
+                      const cap2 = `Tips Wedding: Cara hemat budget jutaan rupiah tapi tamu resepsi tetap happy dan terhibur! 💡\n\nDaripada sewa photobooth fisik yang antreannya panjang dan cuma aktif 2-3 jam, sekarang pengantin cerdas beralih ke kamera digital tamu @sudutbingkai.id.\n\nKenapa pengantin kami suka banget:\n✅ Tamu motret dari mana saja tanpa antre\n✅ Foto bernuansa retro film analog langsung tayang di proyektor panggung\n✅ Ada rekaman video ucapan penutup 15 detik\n✅ Hasil ratusan foto candid asli langsung bisa diunduh penuh\n\nSpesial untuk calon pengantin kami, ada voucher diskon dengan kode: ${referralCode}.\n\nHubungi tim kami di bio untuk info lengkapnya ya! 💍\n\n#TipsPernikahan #WeddingTips #BridesStory #WeddingPlanner #VendorWedding`;
+                      return (
+                        <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <strong style={{ fontSize: '13.5px', color: '#1D1D1F' }}>
+                              Caption B: Tips Hemat & Edukasi Calon Pengantin
+                            </strong>
+                            <button
+                              type="button"
+                              onClick={() => copyToClipboard(cap2, 'cap2')}
+                              className="glass-pill"
+                              style={{ padding: '5px 12px', fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            >
+                              {copiedScript === 'cap2' ? <Check size={12} color="#27AE60" /> : <Copy size={12} />}
+                              <span>{copiedScript === 'cap2' ? 'Tersalin!' : 'Salin Caption'}</span>
+                            </button>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#555', lineHeight: 1.6, whiteSpace: 'pre-wrap', maxHeight: '180px', overflowY: 'auto' }}>
+                            {cap2}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* SUB-TAB 6: PENANGANAN KERAGUAN KLIEN (OBJECTION HANDLING FAQ) */}
+            {marketingSubTab === 'faq' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="glass-card" style={{ padding: '24px 28px', borderRadius: '20px' }}>
+                  <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '4px' }}>
+                    SALES OBJECTION HANDLING
+                  </span>
+                  <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                    Jawaban Tuntas untuk 6 Pertanyaan Kritis Calon Pengantin
+                  </h3>
+                  <p style={{ fontSize: '13px', color: '#6E6E73', margin: '4px 0 16px 0' }}>
+                    Klien ragu atau punya kekhawatiran teknis? Gunakan jawaban profesional di bawah ini untuk meyakinkan mereka dengan cepat.
+                  </p>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[
+                      {
+                        q: 'Apakah tamu undangan harus mengunduh aplikasi terlebih dahulu?',
+                        a: 'Sama sekali tidak! Tamu cukup membuka kamera bawaan smartphone (iPhone maupun Android), arahkan ke kartu QR di meja, dan web kamera Sudut Bingkai akan langsung terbuka instan di browser HP. Tanpa perlu download dari App Store atau Play Store, tanpa login akun rumit, dan sangat ramah bahkan untuk tamu orang tua.'
+                      },
+                      {
+                        q: 'Bagaimana jika sinyal internet di dalam gedung atau ballroom pernikahan kurang kuat?',
+                        a: 'Sudut Bingkai dirancang sangat ringan dengan ukuran aset di bawah 1MB dan dilengkapi teknologi Offline Resilience Shield. Jika sinyal sempat terputus, kamera tetap dapat memotret dan foto akan tersimpan aman di memori lokal ponsel tamu, lalu otomatis terunggah begitu ponsel kembali mendeteksi sinyal internet.'
+                      },
+                      {
+                        q: 'Bagaimana jika ada tamu yang iseng mengunggah foto blur atau tidak pantas?',
+                        a: 'Tenang saja, tuan rumah dan tim WO memegang kendali penuh. Di dashboard host terdapat tombol Moderasi Real-Time 1-Klik ("Sembunyikan Foto"). Jika ada foto yang tidak diinginkan, cukup klik ikon mata dan foto tersebut otomatis langsung hilang dari galeri tamu dan layar videotron panggung secara instan.'
+                      },
+                      {
+                        q: 'Apakah foto yang dihasilkan bisa diunduh dengan kualitas resolusi asli tinggi?',
+                        a: 'Pasti! Berbeda dengan foto yang dikirim lewat WhatsApp yang biasanya terkompresi pecah, seluruh jepretan tamu di Sudut Bingkai disimpan dalam resolusi tinggi asli (lengkap dengan stempel tanggal analog retro). Pengantin dapat mengunduh seluruh master file foto sekaligus dalam 1 berkas ZIP via tombol unduh di dashboard.'
+                      },
+                      {
+                        q: 'Berapa lama album foto kami tersimpan aman di Sudut Bingkai?',
+                        a: 'Foto tersimpan aman di server awan berkecepatan tinggi selama 30 hingga 90 hari pasca acara (sesuai paket yang dipilih). Pengantin dan tamu memiliki waktu yang sangat leluasa untuk melihat-lihat, bernostalgia, dan mengunduh seluruh foto favorit mereka.'
+                      },
+                      {
+                        q: 'Apakah desain bingkai foto dan filter film bisa disesuaikan dengan tema dekorasi kami?',
+                        a: 'Sangat bisa! Host dan vendor dapat memilih dari 10 template bingkai polaroid/retro premium, menambahkan teks nama pasangan dan tanggal acara, atau bahkan mengunggah frame PNG karya desainer grafis Anda sendiri dengan tema dan palet warna dekorasi pernikahan Anda.'
+                      }
+                    ].map((item, fIdx) => (
+                      <div key={fIdx} style={{ background: '#FFFFFF', padding: '18px 22px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '8px' }}>
+                          <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>
+                            {fIdx + 1}. &ldquo;{item.q}&rdquo;
+                          </strong>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              copyToClipboard(item.a, `faq_${fIdx}`);
+                              toast.success('Jawaban disalin!');
+                            }}
+                            className="glass-pill"
+                            style={{ padding: '4px 10px', fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}
+                          >
+                            {copiedScript === `faq_${fIdx}` ? <Check size={12} color="#27AE60" /> : <Copy size={12} />}
+                            <span>{copiedScript === `faq_${fIdx}` ? 'Tersalin!' : 'Salin Jawaban'}</span>
+                          </button>
+                        </div>
+                        <p style={{ fontSize: '13px', color: '#555', margin: 0, lineHeight: 1.6 }}>
+                          {item.a}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>
