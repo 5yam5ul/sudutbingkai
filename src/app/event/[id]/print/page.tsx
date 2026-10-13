@@ -1,14 +1,75 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import QRCode from 'qrcode';
-import { Printer, ArrowLeft, Camera, Sliders, Palette, Layout, Type, Hash, Check, Scissors } from 'lucide-react';
+import { toPng } from 'html-to-image';
+import { toast } from 'sonner';
+import {
+  Printer, ArrowLeft, Camera, Sliders, Palette, Layout, Type, Check, Scissors,
+  Download, Share2, Sparkles, Box, Upload, X, ChevronLeft, ChevronRight,
+  Send, Layers, Table as TableIcon, FileImage, ShieldCheck
+} from 'lucide-react';
 import { EventData } from '@/lib/types';
 
 type CardFormat = 'tent' | 'standing' | 'mini';
 type CardTheme = 'cream' | 'kraft' | 'charcoal';
+type CardFont = 'serif' | 'sans' | 'mono';
+type CardBorder = 'dashed' | 'double' | 'arch' | 'viewfinder';
+type ViewMode = 'sheet' | '3d-fold';
+
+interface TableNumberConfig {
+  enabled: boolean;
+  mode: 'range' | 'custom';
+  prefix: string;
+  startNum: number;
+  endNum: number;
+  customListText: string;
+}
+
+const EVENT_PRESETS = [
+  {
+    id: 'wedding',
+    name: 'Pernikahan Elegan',
+    badge: 'MOMEN PERNIKAHAN',
+    subtitle: 'Sudut Pandangmu, Kenangan Seumur Hidup Kami',
+    steps: ['Scan QR kamera di meja', 'Isi nama & ambil rol', 'Jepret momen berharga!'] as [string, string, string],
+    font: 'serif' as CardFont,
+    theme: 'cream' as CardTheme,
+    border: 'double' as CardBorder
+  },
+  {
+    id: 'birthday',
+    name: 'Pesta Ulang Tahun',
+    badge: 'KAMERA PESTA SPESIAL',
+    subtitle: 'Jepret Keseruan Pesta Ini dari Sudut Pandangmu!',
+    steps: ['Scan QR di meja', 'Buka kamera analog', 'Abadikan tawa & pesta!'] as [string, string, string],
+    font: 'sans' as CardFont,
+    theme: 'kraft' as CardTheme,
+    border: 'arch' as CardBorder
+  },
+  {
+    id: 'corporate',
+    name: 'Gathering & Reuni',
+    badge: 'MOMEN KEBERSAMAAN',
+    subtitle: 'Dokumentasikan Cerita dan Momen Kebersamaan',
+    steps: ['Scan QR tanpa aplikasi', 'Buka rol kamera web', 'Tangkap keceriaan tim!'] as [string, string, string],
+    font: 'sans' as CardFont,
+    theme: 'charcoal' as CardTheme,
+    border: 'viewfinder' as CardBorder
+  },
+  {
+    id: 'minimalist',
+    name: 'Minimalis Modern',
+    badge: 'ANALOG GUEST CAMERA',
+    subtitle: 'Capture the candid moments through your lens',
+    steps: ['Scan QR code', 'Take your roll', 'Snap candid shots'] as [string, string, string],
+    font: 'mono' as CardFont,
+    theme: 'cream' as CardTheme,
+    border: 'dashed' as CardBorder
+  }
+];
 
 export default function PrintTableCardPage() {
   const params = useParams();
@@ -16,22 +77,53 @@ export default function PrintTableCardPage() {
 
   const [event, setEvent] = useState<EventData | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
+  const [guestCameraUrl, setGuestCameraUrl] = useState<string>('');
 
-  // Customizer State
+  // Primary Customizer State
   const [format, setFormat] = useState<CardFormat>('tent');
   const [theme, setTheme] = useState<CardTheme>('cream');
+  const [font, setFont] = useState<CardFont>('serif');
+  const [borderStyle, setBorderStyle] = useState<CardBorder>('dashed');
+  const [viewMode, setViewMode] = useState<ViewMode>('sheet');
+
   const [customBadge, setCustomBadge] = useState<string>('KAMERA TAMU SPESIAL');
   const [customTitle, setCustomTitle] = useState<string>('');
   const [customSubtitle, setCustomSubtitle] = useState<string>('Sudut Pandangmu, Kenangan Kami');
   const [customHashtag, setCustomHashtag] = useState<string>('');
   const [customFooter, setCustomFooter] = useState<string>('Powered by SudutBingkai • Tanpa Perlu Download Aplikasi');
+  const [steps, setSteps] = useState<[string, string, string]>([
+    'Scan QR di kamera HP',
+    'Isi nama & ambil rol',
+    'Jepret momen seru!'
+  ]);
   const [showSteps, setShowSteps] = useState<boolean>(true);
   const [showHashtag, setShowHashtag] = useState<boolean>(true);
+
+  // Logo / Co-branding State
+  const [customLogoUrl, setCustomLogoUrl] = useState<string>('');
+
+  // Table Numbering State
+  const [tableConfig, setTableConfig] = useState<TableNumberConfig>({
+    enabled: false,
+    mode: 'range',
+    prefix: 'Meja ',
+    startNum: 1,
+    endNum: 12,
+    customListText: 'VIP 1, VIP 2, Keluarga Utama, Meja 1, Meja 2, Meja 3, Meja 4, Meja 5'
+  });
+  const [previewTableIndex, setPreviewTableIndex] = useState<number>(0);
 
   // Advanced Print & Layout States
   const [miniCount, setMiniCount] = useState<number>(6); // 2, 4, or 6 cards per A4 page
   const [standingCount, setStandingCount] = useState<number>(2); // 1 or 2 cards per A4 page
   const [inkSaver, setInkSaver] = useState<boolean>(false); // Clean white background for home/inkjet printing
+
+  // Export Modal & Loading States
+  const [showQrModal, setShowQrModal] = useState<boolean>(false);
+  const [isExportingPng, setIsExportingPng] = useState<boolean>(false);
+
+  const previewCardRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Fetch event details
@@ -41,13 +133,14 @@ export default function PrintTableCardPage() {
         if (data.success && data.event) {
           setEvent(data.event);
           setCustomTitle(data.event.title || 'Momen Spesial');
-          const cleanCouple = data.event.coupleOrHost?.replace(/[^a-zA-Z0-9]/g, '') || '';
-          setCustomHashtag(cleanCouple ? `#${cleanCouple}Story` : '#SudutBingkai');
+          const cleanHost = data.event.coupleOrHost?.replace(/[^a-zA-Z0-9]/g, '') || '';
+          setCustomHashtag(cleanHost ? `#${cleanHost}Story` : '#SudutBingkai');
 
           // Generate QR Code with slug preference
           if (typeof window !== 'undefined') {
             const slugOrId = data.event.slug || eventId;
             const guestUrl = `${window.location.origin}/cam/${slugOrId}`;
+            setGuestCameraUrl(guestUrl);
             QRCode.toDataURL(guestUrl, {
               width: 400,
               margin: 1,
@@ -66,6 +159,143 @@ export default function PrintTableCardPage() {
     window.print();
   };
 
+  // Resolve table labels list
+  const getTableList = (): string[] => {
+    if (!tableConfig.enabled) return [''];
+    if (tableConfig.mode === 'range') {
+      const list: string[] = [];
+      const start = Math.max(1, tableConfig.startNum);
+      const end = Math.max(start, Math.min(start + 60, tableConfig.endNum));
+      for (let i = start; i <= end; i++) {
+        list.push(`${tableConfig.prefix}${i}`);
+      }
+      return list.length ? list : ['Meja 1'];
+    } else {
+      const items = tableConfig.customListText
+        .split(/[\n,]+/)
+        .map(s => s.trim())
+        .filter(Boolean);
+      return items.length ? items : ['Meja Utama'];
+    }
+  };
+
+  const tableList = getTableList();
+  const currentTableLabel = tableConfig.enabled ? tableList[previewTableIndex] || tableList[0] : '';
+
+  // Apply quick event preset
+  const applyPreset = (preset: typeof EVENT_PRESETS[0]) => {
+    setCustomBadge(preset.badge);
+    setCustomSubtitle(preset.subtitle);
+    setSteps(preset.steps);
+    setFont(preset.font);
+    setTheme(preset.theme);
+    setBorderStyle(preset.border);
+    toast.success(`Preset "${preset.name}" diterapkan.`);
+  };
+
+  // Handle Logo Upload
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Ukuran logo maksimal 2 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCustomLogoUrl(reader.result as string);
+      toast.success('Logo berhasil diunggah.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Export Single Card as High-Resolution PNG (300 DPI equivalent)
+  const handleDownloadPng = async () => {
+    if (!previewCardRef.current) return;
+    setIsExportingPng(true);
+    toast.info('Menyiapkan gambar kartu resolusi tinggi (300 DPI)...');
+
+    try {
+      const dataUrl = await toPng(previewCardRef.current, {
+        pixelRatio: 3,
+        quality: 1,
+        backgroundColor: ts.cardBg
+      });
+
+      const fileName = `${event?.slug || eventId}-kartu-meja${currentTableLabel ? `-${currentTableLabel.replace(/\s+/g, '_')}` : ''}.png`;
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = dataUrl;
+      link.click();
+      toast.success('Kartu meja HD berhasil diunduh!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal mengunduh gambar kartu. Coba gunakan fitur Simpan PDF.');
+    } finally {
+      setIsExportingPng(false);
+    }
+  };
+
+  // Download Raw QR Code as HD PNG (1000px)
+  const handleDownloadQrPng = async () => {
+    if (!guestCameraUrl) return;
+    try {
+      const hdUrl = await QRCode.toDataURL(guestCameraUrl, {
+        width: 1000,
+        margin: 1,
+        color: { dark: '#12100b', light: '#ffffff' }
+      });
+      const link = document.createElement('a');
+      link.download = `${event?.slug || eventId}-qr-code-1000px.png`;
+      link.href = hdUrl;
+      link.click();
+      toast.success('QR Code HD (1000x1000px) berhasil diunduh!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal mengunduh QR Code.');
+    }
+  };
+
+  // Download Raw QR Code as Vector SVG
+  const handleDownloadQrSvg = async () => {
+    if (!guestCameraUrl) return;
+    try {
+      const svgString = await QRCode.toString(guestCameraUrl, {
+        type: 'svg',
+        margin: 1,
+        color: { dark: '#12100b', light: '#ffffff' }
+      });
+      const blob = new Blob([svgString], { type: 'image/svg+xml;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `${event?.slug || eventId}-qr-code-vektor.svg`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success('QR Code Vektor (SVG) berhasil diunduh untuk Canva / Illustrator!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal membuat QR Code SVG.');
+    }
+  };
+
+  // Direct WhatsApp Share to Printing Vendor
+  const handleShareToWhatsApp = () => {
+    const formatName = format === 'tent' ? 'Tent Card (Lipat Dua Tenda Meja)' : format === 'standing' ? 'Standing A6 Frame (10x15cm)' : 'Mini Card Ringkas';
+    const paperSpec = theme === 'kraft' ? 'Kertas Samson Kraft 250-280gsm' : 'Art Paper / Linen Paper 260-310gsm';
+    const tableInfo = tableConfig.enabled ? `Total Meja: ${tableList.length} kartu (${tableList[0]} s/d ${tableList[tableList.length - 1]})` : 'Desain Kartu Standar';
+
+    const text = encodeURIComponent(
+      `Halo Percetakan! Saya ingin mencetak Kartu Meja Tamu untuk acara *${customTitle || event?.title || 'Spesial'}*.\n\n` +
+      `Format: *${formatName}*\n` +
+      `Tema Warna: *${theme === 'charcoal' ? 'Charcoal Dark' : theme === 'kraft' ? 'Rustic Kraft' : 'Cream Gold'}*\n` +
+      `Spesifikasi Kertas: *${paperSpec}*\n` +
+      `${tableInfo}\n\n` +
+      `Tautan Desain & Print Langsung:\n${typeof window !== 'undefined' ? window.location.href : ''}`
+    );
+    window.open(`https://wa.me/?text=${text}`, '_blank');
+  };
+
   // Theme styling definitions with Ink-Saver fallback
   const getThemeStyles = () => {
     if (inkSaver) {
@@ -82,7 +312,7 @@ export default function PrintTableCardPage() {
         stepCircleColor: '#FFFFFF',
         dividerColor: 'rgba(0, 0, 0, 0.15)',
         accentColor: theme === 'charcoal' ? '#1D1D1F' : theme === 'kraft' ? '#8C673B' : '#C27803',
-        cardBorder: '1.5px dashed #86868B'
+        cardBorderColor: '#86868B'
       };
     }
 
@@ -101,7 +331,7 @@ export default function PrintTableCardPage() {
           stepCircleColor: '#FFFFFF',
           dividerColor: '#DDD2C3',
           accentColor: '#8C673B',
-          cardBorder: '1.5px dashed #BFA892'
+          cardBorderColor: '#BFA892'
         };
       case 'charcoal':
         return {
@@ -117,7 +347,7 @@ export default function PrintTableCardPage() {
           stepCircleColor: '#12100B',
           dividerColor: 'rgba(255, 255, 255, 0.15)',
           accentColor: '#F59E0B',
-          cardBorder: '1.5px dashed rgba(255, 255, 255, 0.4)'
+          cardBorderColor: 'rgba(255, 255, 255, 0.4)'
         };
       case 'cream':
       default:
@@ -134,18 +364,33 @@ export default function PrintTableCardPage() {
           stepCircleColor: '#FFFFFF',
           dividerColor: '#EFECE6',
           accentColor: '#C27803',
-          cardBorder: '1.5px dashed #D4AF37'
+          cardBorderColor: '#D4AF37'
         };
     }
   };
 
   const ts = getThemeStyles();
 
+  // Typography font family resolver
+  const getFontFamily = (f: CardFont) => {
+    switch (f) {
+      case 'sans':
+        return '-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif';
+      case 'mono':
+        return 'var(--font-mono), "SF Mono", Monaco, Consolas, monospace';
+      case 'serif':
+      default:
+        return 'var(--font-serif), "Playfair Display", Georgia, serif';
+    }
+  };
+
   // Helper render for single card content
-  const renderCardBody = (isBackSide = false, isCompact = false) => {
-    const qrSize = isCompact 
-      ? 110 
-      : (format === 'mini' ? (miniCount === 4 ? 130 : 145) : (format === 'standing' ? 175 : 190));
+  const renderCardBody = (isBackSide = false, isCompact = false, tableLabel?: string) => {
+    const qrSize = isCompact
+      ? 105
+      : (format === 'mini' ? (miniCount === 4 ? 125 : 140) : (format === 'standing' ? 170 : 185));
+
+    const activeTable = tableLabel !== undefined ? tableLabel : currentTableLabel;
 
     return (
       <div
@@ -155,49 +400,100 @@ export default function PrintTableCardPage() {
           alignItems: 'center',
           justifyContent: 'space-between',
           height: '100%',
-          padding: isCompact ? '16px 12px' : (format === 'mini' ? '24px 18px' : '36px 28px'),
+          padding: isCompact ? '16px 12px' : (format === 'mini' ? '22px 16px' : '34px 26px'),
           textAlign: 'center',
           position: 'relative',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          fontFamily: getFontFamily(font)
         }}
       >
+        {/* Viewfinder Corner Accents (If Selected) */}
+        {borderStyle === 'viewfinder' && (
+          <>
+            <span style={{ position: 'absolute', top: '10px', left: '10px', width: '12px', height: '12px', borderTop: `2px solid ${ts.accentColor}`, borderLeft: `2px solid ${ts.accentColor}` }} />
+            <span style={{ position: 'absolute', top: '10px', right: '10px', width: '12px', height: '12px', borderTop: `2px solid ${ts.accentColor}`, borderRight: `2px solid ${ts.accentColor}` }} />
+            <span style={{ position: 'absolute', bottom: '10px', left: '10px', width: '12px', height: '12px', borderBottom: `2px solid ${ts.accentColor}`, borderLeft: `2px solid ${ts.accentColor}` }} />
+            <span style={{ position: 'absolute', bottom: '10px', right: '10px', width: '12px', height: '12px', borderBottom: `2px solid ${ts.accentColor}`, borderRight: `2px solid ${ts.accentColor}` }} />
+          </>
+        )}
+
         {/* Top Header */}
         <div style={{ width: '100%' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '5px',
-              padding: isCompact ? '3px 10px' : '4px 12px',
-              borderRadius: '999px',
-              background: ts.badgeBg,
-              border: `1px solid ${ts.badgeBorder}`,
-              color: ts.badgeText,
-              fontSize: isCompact ? '8.5px' : (format === 'mini' ? '9.5px' : '11px'),
-              fontWeight: 800,
-              letterSpacing: '0.08em',
-              textTransform: 'uppercase',
-              marginBottom: isCompact ? '6px' : '12px'
-            }}
-          >
-            <Camera size={isCompact ? 11 : 13} />
-            <span>{customBadge || 'KAMERA TAMU SPESIAL'}</span>
+          {/* Custom Logo (if uploaded) */}
+          {customLogoUrl && (
+            <div style={{ marginBottom: isCompact ? '6px' : '10px', display: 'flex', justifyContent: 'center' }}>
+              <img
+                src={customLogoUrl}
+                alt="Logo Mitra"
+                style={{
+                  maxHeight: isCompact ? '24px' : '34px',
+                  maxWidth: '120px',
+                  objectFit: 'contain'
+                }}
+              />
+            </div>
+          )}
+
+          {/* Table Number Badge (If Table Numbering Enabled) */}
+          {activeTable && (
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: isCompact ? '2px 8px' : '4px 12px',
+                borderRadius: '8px',
+                background: ts.accentColor,
+                color: theme === 'charcoal' && !inkSaver ? '#181715' : '#FFFFFF',
+                fontSize: isCompact ? '10px' : '12.5px',
+                fontWeight: 800,
+                letterSpacing: '0.06em',
+                marginBottom: isCompact ? '6px' : '8px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}
+            >
+              <TableIcon size={isCompact ? 10 : 12} />
+              <span>{activeTable.toUpperCase()}</span>
+            </div>
+          )}
+
+          {/* Badge Atas */}
+          <div style={{ display: 'block' }}>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                padding: isCompact ? '3px 10px' : '4px 12px',
+                borderRadius: '999px',
+                background: ts.badgeBg,
+                border: `1px solid ${ts.badgeBorder}`,
+                color: ts.badgeText,
+                fontSize: isCompact ? '8.5px' : (format === 'mini' ? '9.5px' : '11px'),
+                fontWeight: 800,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                marginBottom: isCompact ? '5px' : '10px'
+              }}
+            >
+              <Camera size={isCompact ? 11 : 13} />
+              <span>{customBadge || 'KAMERA TAMU SPESIAL'}</span>
+            </div>
           </div>
 
           <h1
-            className="font-display-serif"
             style={{
-              fontSize: isCompact ? '15px' : (format === 'mini' ? '19px' : '25px'),
+              fontSize: isCompact ? '15px' : (format === 'mini' ? '18px' : '24px'),
               color: ts.textColor,
               lineHeight: 1.2,
-              marginBottom: isCompact ? '3px' : '6px',
+              marginBottom: isCompact ? '3px' : '5px',
               fontWeight: 700
             }}
           >
             {customTitle || event?.title || 'SudutBingkai Acara'}
           </h1>
 
-          <p style={{ fontSize: isCompact ? '9.5px' : (format === 'mini' ? '11px' : '13px'), color: ts.mutedColor, fontWeight: 500, margin: 0 }}>
+          <p style={{ fontSize: isCompact ? '9px' : (format === 'mini' ? '10.5px' : '12.5px'), color: ts.mutedColor, fontWeight: 500, margin: 0 }}>
             {customSubtitle}
           </p>
 
@@ -205,9 +501,9 @@ export default function PrintTableCardPage() {
             <span
               style={{
                 display: 'inline-block',
-                marginTop: isCompact ? '3px' : '6px',
-                fontSize: isCompact ? '9px' : (format === 'mini' ? '10px' : '11.5px'),
-                fontFamily: 'var(--font-mono)',
+                marginTop: isCompact ? '3px' : '5px',
+                fontSize: isCompact ? '8.5px' : (format === 'mini' ? '9.5px' : '11px'),
+                fontFamily: 'var(--font-mono), monospace',
                 color: ts.accentColor,
                 fontWeight: 600
               }}
@@ -220,9 +516,9 @@ export default function PrintTableCardPage() {
         {/* QR Code Container */}
         <div
           style={{
-            margin: isCompact ? '8px 0' : (format === 'mini' ? '14px 0' : '20px 0'),
-            padding: isCompact ? '6px' : (format === 'mini' ? '10px' : '14px'),
-            borderRadius: isCompact ? '12px' : '18px',
+            margin: isCompact ? '6px 0' : (format === 'mini' ? '12px 0' : '18px 0'),
+            padding: isCompact ? '6px' : (format === 'mini' ? '9px' : '12px'),
+            borderRadius: isCompact ? '12px' : '16px',
             background: ts.qrBg,
             border: `2px dashed ${ts.qrBorder}`,
             display: 'inline-block'
@@ -259,26 +555,26 @@ export default function PrintTableCardPage() {
         {/* Step by step instructions */}
         <div style={{ width: '100%' }}>
           {showSteps && (
-            <div style={{ display: 'flex', justifyContent: 'center', gap: isCompact ? '6px' : (format === 'mini' ? '10px' : '16px'), marginBottom: isCompact ? '10px' : '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: isCompact ? '6px' : (format === 'mini' ? '10px' : '14px'), marginBottom: isCompact ? '8px' : '14px' }}>
               <div style={{ textAlign: 'center', maxWidth: isCompact ? '68px' : '85px' }}>
                 <span
                   style={{
                     display: 'inline-block',
-                    width: isCompact ? '17px' : '20px',
-                    height: isCompact ? '17px' : '20px',
+                    width: isCompact ? '16px' : '19px',
+                    height: isCompact ? '16px' : '19px',
                     borderRadius: '50%',
                     background: ts.stepCircleBg,
                     color: ts.stepCircleColor,
-                    fontSize: isCompact ? '8.5px' : '10px',
+                    fontSize: isCompact ? '8px' : '9.5px',
                     fontWeight: 'bold',
-                    lineHeight: isCompact ? '17px' : '20px',
+                    lineHeight: isCompact ? '16px' : '19px',
                     marginBottom: '3px'
                   }}
                 >
                   1
                 </span>
-                <p style={{ fontSize: isCompact ? '8px' : (format === 'mini' ? '9.5px' : '10.5px'), color: ts.mutedColor, lineHeight: 1.25, margin: 0 }}>
-                  Scan QR di kamera HP
+                <p style={{ fontSize: isCompact ? '7.5px' : (format === 'mini' ? '9px' : '10px'), color: ts.mutedColor, lineHeight: 1.25, margin: 0 }}>
+                  {steps[0]}
                 </p>
               </div>
 
@@ -286,21 +582,21 @@ export default function PrintTableCardPage() {
                 <span
                   style={{
                     display: 'inline-block',
-                    width: isCompact ? '17px' : '20px',
-                    height: isCompact ? '17px' : '20px',
+                    width: isCompact ? '16px' : '19px',
+                    height: isCompact ? '16px' : '19px',
                     borderRadius: '50%',
                     background: ts.stepCircleBg,
                     color: ts.stepCircleColor,
-                    fontSize: isCompact ? '8.5px' : '10px',
+                    fontSize: isCompact ? '8px' : '9.5px',
                     fontWeight: 'bold',
-                    lineHeight: isCompact ? '17px' : '20px',
+                    lineHeight: isCompact ? '16px' : '19px',
                     marginBottom: '3px'
                   }}
                 >
                   2
                 </span>
-                <p style={{ fontSize: isCompact ? '8px' : (format === 'mini' ? '9.5px' : '10.5px'), color: ts.mutedColor, lineHeight: 1.25, margin: 0 }}>
-                  Isi nama & ambil rol
+                <p style={{ fontSize: isCompact ? '7.5px' : (format === 'mini' ? '9px' : '10px'), color: ts.mutedColor, lineHeight: 1.25, margin: 0 }}>
+                  {steps[1]}
                 </p>
               </div>
 
@@ -308,21 +604,21 @@ export default function PrintTableCardPage() {
                 <span
                   style={{
                     display: 'inline-block',
-                    width: isCompact ? '17px' : '20px',
-                    height: isCompact ? '17px' : '20px',
+                    width: isCompact ? '16px' : '19px',
+                    height: isCompact ? '16px' : '19px',
                     borderRadius: '50%',
                     background: ts.stepCircleBg,
                     color: ts.stepCircleColor,
-                    fontSize: isCompact ? '8.5px' : '10px',
+                    fontSize: isCompact ? '8px' : '9.5px',
                     fontWeight: 'bold',
-                    lineHeight: isCompact ? '17px' : '20px',
+                    lineHeight: isCompact ? '16px' : '19px',
                     marginBottom: '3px'
                   }}
                 >
                   3
                 </span>
-                <p style={{ fontSize: isCompact ? '8px' : (format === 'mini' ? '9.5px' : '10.5px'), color: ts.mutedColor, lineHeight: 1.25, margin: 0 }}>
-                  Jepret momen seru!
+                <p style={{ fontSize: isCompact ? '7.5px' : (format === 'mini' ? '9px' : '10px'), color: ts.mutedColor, lineHeight: 1.25, margin: 0 }}>
+                  {steps[2]}
                 </p>
               </div>
             </div>
@@ -330,11 +626,11 @@ export default function PrintTableCardPage() {
 
           <div
             style={{
-              fontSize: isCompact ? '7.5px' : (format === 'mini' ? '9px' : '10.5px'),
+              fontSize: isCompact ? '7.5px' : (format === 'mini' ? '8.5px' : '10px'),
               color: ts.mutedColor,
               letterSpacing: '0.03em',
               borderTop: `1px solid ${ts.dividerColor}`,
-              paddingTop: isCompact ? '6px' : '10px',
+              paddingTop: isCompact ? '6px' : '9px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -343,7 +639,7 @@ export default function PrintTableCardPage() {
           >
             {event?.vendorName && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginBottom: '2px' }}>
-                <span style={{ fontWeight: 700, color: ts.textColor, fontSize: isCompact ? '8.5px' : (format === 'mini' ? '9.5px' : '11px'), letterSpacing: '0.5px' }}>
+                <span style={{ fontWeight: 700, color: ts.textColor, fontSize: isCompact ? '8px' : (format === 'mini' ? '9px' : '10.5px'), letterSpacing: '0.5px' }}>
                   Organized with love by {event.vendorName}
                 </span>
               </div>
@@ -353,6 +649,28 @@ export default function PrintTableCardPage() {
         </div>
       </div>
     );
+  };
+
+  // Border frame style resolver
+  const getCardBorderStyle = () => {
+    switch (borderStyle) {
+      case 'double':
+        return `3px double ${ts.cardBorderColor}`;
+      case 'arch':
+        return `1.5px solid ${ts.cardBorderColor}`;
+      case 'viewfinder':
+        return `1px solid ${ts.cardBorderColor}`;
+      case 'dashed':
+      default:
+        return `1.5px dashed ${ts.cardBorderColor}`;
+    }
+  };
+
+  const getCardBorderRadius = () => {
+    if (borderStyle === 'arch') {
+      return format === 'tent' ? '120px 120px 20px 20px' : '80px 80px 20px 20px';
+    }
+    return format === 'mini' ? '16px' : '20px';
   };
 
   return (
@@ -386,14 +704,126 @@ export default function PrintTableCardPage() {
           </Link>
           <span style={{ color: 'rgba(255,255,255,0.2)' }}>|</span>
           <span style={{ fontSize: '13px', fontWeight: 600, color: '#FBFBFA' }}>
-            Editor & Cetak Kartu QR Tamu
+            Editor & Cetak Kartu Meja Tamu
           </span>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '12px', color: '#86868B' }} className="desktop-only">
-            {format === 'tent' ? 'Format Tent Card (Lipat Berdiri Sendiri)' : format === 'standing' ? 'Format Standing A6 (Frame Akrilik)' : 'Format Mini Card'}
-          </span>
+        {/* View Mode Toggle (Sheet vs 3D Fold) */}
+        {format === 'tent' && (
+          <div style={{ display: 'flex', background: 'rgba(255,255,255,0.08)', borderRadius: '10px', padding: '3px' }}>
+            <button
+              type="button"
+              onClick={() => setViewMode('sheet')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                background: viewMode === 'sheet' ? '#C27803' : 'transparent',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <Layers size={13} />
+              <span>Lembar A4</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('3d-fold')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                background: viewMode === '3d-fold' ? '#C27803' : 'transparent',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px'
+              }}
+            >
+              <Box size={13} />
+              <span>Simulasi Meja 3D</span>
+            </button>
+          </div>
+        )}
+
+        {/* Action Buttons Group */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {/* Download Raw QR */}
+          <button
+            type="button"
+            onClick={() => setShowQrModal(true)}
+            className="glass-pill"
+            style={{
+              padding: '7px 12px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: 'rgba(255,255,255,0.1)',
+              color: '#FFFFFF',
+              border: '1px solid rgba(255,255,255,0.15)'
+            }}
+            title="Unduh QR Code mentah untuk Canva / Photoshop"
+          >
+            <FileImage size={14} />
+            <span>Unduh QR Mentah</span>
+          </button>
+
+          {/* Export HD PNG */}
+          <button
+            type="button"
+            onClick={handleDownloadPng}
+            disabled={isExportingPng}
+            className="glass-pill"
+            style={{
+              padding: '7px 12px',
+              fontSize: '12px',
+              cursor: isExportingPng ? 'wait' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: 'rgba(255,255,255,0.1)',
+              color: '#FFFFFF',
+              border: '1px solid rgba(255,255,255,0.15)'
+            }}
+            title="Unduh gambar PNG 300 DPI siap kirim ke percetakan"
+          >
+            <Download size={14} />
+            <span>{isExportingPng ? 'Memproses...' : 'Unduh PNG HD'}</span>
+          </button>
+
+          {/* Share to WhatsApp */}
+          <button
+            type="button"
+            onClick={handleShareToWhatsApp}
+            className="glass-pill"
+            style={{
+              padding: '7px 12px',
+              fontSize: '12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              background: 'rgba(37, 211, 102, 0.15)',
+              color: '#25D366',
+              border: '1px solid rgba(37, 211, 102, 0.3)'
+            }}
+            title="Kirim spesifikasi ke percetakan via WhatsApp"
+          >
+            <Send size={13} />
+            <span>Kirim Percetakan</span>
+          </button>
+
+          {/* Print / Save PDF */}
           <button
             onClick={handlePrint}
             className="btn-apple-black"
@@ -404,13 +834,14 @@ export default function PrintTableCardPage() {
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              background: '#C27803',
+              background: 'linear-gradient(135deg, #C27803 0%, #9A5E02 100%)',
               border: 'none',
+              color: '#FFFFFF',
               boxShadow: '0 4px 14px rgba(194, 120, 3, 0.35)'
             }}
           >
             <Printer size={15} />
-            <span>Cetak / Simpan PDF</span>
+            <span>{tableConfig.enabled ? `Cetak ${tableList.length} Kartu PDF` : 'Cetak / Simpan PDF'}</span>
           </button>
         </div>
       </div>
@@ -449,6 +880,13 @@ export default function PrintTableCardPage() {
             page-break-inside: avoid !important;
             break-inside: avoid !important;
           }
+          .print-page-break {
+            page-break-after: always !important;
+            break-after: page !important;
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            margin-bottom: 0 !important;
+          }
           .fold-guide-line {
             display: flex !important;
           }
@@ -465,11 +903,11 @@ export default function PrintTableCardPage() {
       <div
         className="print-workspace-container"
         style={{
-          maxWidth: '1200px',
+          maxWidth: '1280px',
           margin: '0 auto',
           padding: '28px 20px 80px',
           display: 'grid',
-          gridTemplateColumns: '360px 1fr',
+          gridTemplateColumns: '380px 1fr',
           gap: '32px',
           alignItems: 'start'
         }}
@@ -479,7 +917,7 @@ export default function PrintTableCardPage() {
           className="no-print glass-card"
           style={{
             borderRadius: '24px',
-            padding: '24px 22px',
+            padding: '24px 20px',
             background: 'rgba(255, 255, 255, 0.94)',
             boxShadow: '0 12px 36px rgba(0, 0, 0, 0.06)',
             position: 'sticky',
@@ -488,25 +926,57 @@ export default function PrintTableCardPage() {
             overflowY: 'auto'
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '12px' }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '18px', borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: '12px' }}>
             <Sliders size={18} color="#C27803" />
             <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, color: '#1D1D1F' }}>
               Pengaturan Desain Kartu
             </h2>
           </div>
 
-          {/* 1. Format Card Options */}
+          {/* Quick Presets Carousel */}
           <div style={{ marginBottom: '22px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Sparkles size={14} color="#C27803" />
+              <span>Preset Cepat Gaya Acara</span>
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+              {EVENT_PRESETS.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => applyPreset(p)}
+                  style={{
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(0,0,0,0.08)',
+                    background: '#FFFFFF',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    transition: 'all 0.15s ease'
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#C27803')}
+                  onMouseLeave={(e) => (e.currentTarget.style.borderColor = 'rgba(0,0,0,0.08)')}
+                >
+                  <strong style={{ fontSize: '11.5px', color: '#1D1D1F', display: 'block' }}>{p.name}</strong>
+                  <span style={{ fontSize: '10px', color: '#86868B' }}>{p.theme} • {p.font}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 1. Format Card Options */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
               <Layout size={14} color="#C27803" />
               <span>1. Format Bentuk Kartu</span>
             </label>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
               <button
                 type="button"
                 onClick={() => setFormat('tent')}
                 style={{
-                  padding: '10px 14px',
+                  padding: '9px 12px',
                   borderRadius: '12px',
                   border: format === 'tent' ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
                   background: format === 'tent' ? 'rgba(194, 120, 3, 0.08)' : '#FFFFFF',
@@ -518,17 +988,17 @@ export default function PrintTableCardPage() {
                 }}
               >
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>Tent Card (Lipat Dua Tenda)</strong>
-                  <span style={{ fontSize: '11px', color: '#86868B' }}>Dapat berdiri langsung di meja tanpa bingkai akrilik.</span>
+                  <strong style={{ fontSize: '12.5px', color: '#1D1D1F', display: 'block' }}>Tent Card (Lipat Dua Tenda)</strong>
+                  <span style={{ fontSize: '10.5px', color: '#86868B' }}>Dapat berdiri langsung di meja tanpa bingkai akrilik.</span>
                 </div>
-                {format === 'tent' && <Check size={16} color="#C27803" />}
+                {format === 'tent' && <Check size={15} color="#C27803" />}
               </button>
 
               <button
                 type="button"
                 onClick={() => setFormat('standing')}
                 style={{
-                  padding: '10px 14px',
+                  padding: '9px 12px',
                   borderRadius: '12px',
                   border: format === 'standing' ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
                   background: format === 'standing' ? 'rgba(194, 120, 3, 0.08)' : '#FFFFFF',
@@ -540,17 +1010,17 @@ export default function PrintTableCardPage() {
                 }}
               >
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>Standing A6 Frame</strong>
-                  <span style={{ fontSize: '11px', color: '#86868B' }}>Ukuran standar 10x15cm untuk display acrylic standing.</span>
+                  <strong style={{ fontSize: '12.5px', color: '#1D1D1F', display: 'block' }}>Standing A6 Frame</strong>
+                  <span style={{ fontSize: '10.5px', color: '#86868B' }}>Ukuran standar 10x15cm untuk display acrylic frame.</span>
                 </div>
-                {format === 'standing' && <Check size={16} color="#C27803" />}
+                {format === 'standing' && <Check size={15} color="#C27803" />}
               </button>
 
               <button
                 type="button"
                 onClick={() => setFormat('mini')}
                 style={{
-                  padding: '10px 14px',
+                  padding: '9px 12px',
                   borderRadius: '12px',
                   border: format === 'mini' ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
                   background: format === 'mini' ? 'rgba(194, 120, 3, 0.08)' : '#FFFFFF',
@@ -562,22 +1032,22 @@ export default function PrintTableCardPage() {
                 }}
               >
                 <div>
-                  <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>Mini Card Ringkas</strong>
-                  <span style={{ fontSize: '11px', color: '#86868B' }}>Ukuran compact untuk souvenir atau amplop ucapan.</span>
+                  <strong style={{ fontSize: '12.5px', color: '#1D1D1F', display: 'block' }}>Mini Card Ringkas</strong>
+                  <span style={{ fontSize: '10.5px', color: '#86868B' }}>Ukuran compact untuk souvenir atau amplop ucapan.</span>
                 </div>
-                {format === 'mini' && <Check size={16} color="#C27803" />}
+                {format === 'mini' && <Check size={15} color="#C27803" />}
               </button>
             </div>
 
             {/* Sub-selector for Mini Card Count */}
             {format === 'mini' && (
-              <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: '12px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+              <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: '10px' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#1D1D1F', display: 'block', marginBottom: '5px' }}>
                   Jumlah Kartu per Lembar A4:
                 </span>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
                   {[
-                    { count: 6, label: '6 Kartu (Rekomendasi)' },
+                    { count: 6, label: '6 Kartu' },
                     { count: 4, label: '4 Kartu' },
                     { count: 2, label: '2 Kartu' }
                   ].map(opt => (
@@ -586,15 +1056,14 @@ export default function PrintTableCardPage() {
                       type="button"
                       onClick={() => setMiniCount(opt.count)}
                       style={{
-                        padding: '6px 4px',
-                        borderRadius: '8px',
-                        fontSize: '11px',
+                        padding: '5px 4px',
+                        borderRadius: '6px',
+                        fontSize: '10.5px',
                         fontWeight: miniCount === opt.count ? 700 : 500,
                         background: miniCount === opt.count ? '#1D1D1F' : '#FFFFFF',
                         color: miniCount === opt.count ? '#FFFFFF' : '#1D1D1F',
                         border: miniCount === opt.count ? 'none' : '1px solid rgba(0,0,0,0.1)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
+                        cursor: 'pointer'
                       }}
                     >
                       {opt.label}
@@ -606,13 +1075,13 @@ export default function PrintTableCardPage() {
 
             {/* Sub-selector for Standing A6 Count */}
             {format === 'standing' && (
-              <div style={{ marginTop: '10px', padding: '10px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: '12px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+              <div style={{ marginTop: '8px', padding: '8px 10px', background: 'rgba(0,0,0,0.03)', borderRadius: '10px' }}>
+                <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#1D1D1F', display: 'block', marginBottom: '5px' }}>
                   Jumlah Kartu per Lembar A4:
                 </span>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
                   {[
-                    { count: 2, label: '2 Kartu (Pasangan 1 Lembar A4)' },
+                    { count: 2, label: '2 Kartu (Pasangan)' },
                     { count: 1, label: '1 Kartu (Tunggal)' }
                   ].map(opt => (
                     <button
@@ -620,15 +1089,14 @@ export default function PrintTableCardPage() {
                       type="button"
                       onClick={() => setStandingCount(opt.count)}
                       style={{
-                        padding: '6px 4px',
-                        borderRadius: '8px',
-                        fontSize: '11px',
+                        padding: '5px 4px',
+                        borderRadius: '6px',
+                        fontSize: '10.5px',
                         fontWeight: standingCount === opt.count ? 700 : 500,
                         background: standingCount === opt.count ? '#1D1D1F' : '#FFFFFF',
                         color: standingCount === opt.count ? '#FFFFFF' : '#1D1D1F',
                         border: standingCount === opt.count ? 'none' : '1px solid rgba(0,0,0,0.1)',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease'
+                        cursor: 'pointer'
                       }}
                     >
                       {opt.label}
@@ -639,13 +1107,78 @@ export default function PrintTableCardPage() {
             )}
           </div>
 
-          {/* 2. Aesthetic Theme Options */}
-          <div style={{ marginBottom: '22px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-              <Palette size={14} color="#C27803" />
-              <span>2. Tema Warna & Kertas</span>
+          {/* 2. Style Tipografi & Bingkai */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Type size={14} color="#C27803" />
+              <span>2. Tipografi & Bingkai Kartu</span>
             </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+
+            {/* Font Style */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginBottom: '10px' }}>
+              {[
+                { id: 'serif', label: 'Serif Elegan' },
+                { id: 'sans', label: 'Modern Sans' },
+                { id: 'mono', label: 'Mono Film' }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setFont(f.id as CardFont)}
+                  style={{
+                    padding: '6px 4px',
+                    borderRadius: '8px',
+                    fontSize: '10.5px',
+                    fontWeight: font === f.id ? 700 : 500,
+                    border: font === f.id ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                    background: font === f.id ? 'rgba(194,120,3,0.08)' : '#FFFFFF',
+                    color: '#1D1D1F',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Border Style */}
+            <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '5px' }}>Style Ornamen Bingkai:</span>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+              {[
+                { id: 'dashed', label: 'Garis Potong Putus' },
+                { id: 'double', label: 'Double Gold Line' },
+                { id: 'arch', label: 'Modern Arch' },
+                { id: 'viewfinder', label: 'Fokus Viewfinder' }
+              ].map(b => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => setBorderStyle(b.id as CardBorder)}
+                  style={{
+                    padding: '6px 8px',
+                    borderRadius: '8px',
+                    fontSize: '10.5px',
+                    fontWeight: borderStyle === b.id ? 700 : 500,
+                    border: borderStyle === b.id ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                    background: borderStyle === b.id ? 'rgba(194,120,3,0.08)' : '#FFFFFF',
+                    color: '#1D1D1F',
+                    cursor: 'pointer',
+                    textAlign: 'left'
+                  }}
+                >
+                  {b.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 3. Aesthetic Theme Options */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Palette size={14} color="#C27803" />
+              <span>3. Tema Warna & Kertas</span>
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
               {[
                 { id: 'cream', name: 'Cream Gold', bg: '#FFFFFF', border: '#D4AF37' },
                 { id: 'kraft', name: 'Rustic Kraft', bg: '#F3EDE2', border: '#BFA892' },
@@ -674,8 +1207,8 @@ export default function PrintTableCardPage() {
             </div>
 
             {/* Ink Saver Checkbox */}
-            <div style={{ marginTop: '10px' }}>
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '11.5px', color: '#1D1D1F', cursor: 'pointer', background: 'rgba(0,0,0,0.03)', padding: '8px 10px', borderRadius: '10px' }}>
+            <div style={{ marginTop: '8px' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '11px', color: '#1D1D1F', cursor: 'pointer', background: 'rgba(0,0,0,0.03)', padding: '7px 9px', borderRadius: '10px' }}>
                 <input
                   type="checkbox"
                   checked={inkSaver}
@@ -684,75 +1217,242 @@ export default function PrintTableCardPage() {
                 />
                 <div>
                   <span style={{ fontWeight: 600, display: 'block' }}>Mode Hemat Tinta (Latar Putih)</span>
-                  <span style={{ fontSize: '10px', color: '#86868B', lineHeight: 1.3, display: 'block' }}>
-                    Menjaga latar tetap putih bersih agar tidak boros tinta hitam printer standar.
+                  <span style={{ fontSize: '9.5px', color: '#86868B', lineHeight: 1.3, display: 'block' }}>
+                    Menjaga latar putih bersih untuk printer inkjet rumahan.
                   </span>
                 </div>
               </label>
             </div>
           </div>
 
-          {/* 3. Text Customizer Inputs */}
+          {/* 4. Batch Table Numbering Module */}
+          <div style={{ marginBottom: '20px', padding: '12px', background: 'rgba(194, 120, 3, 0.06)', borderRadius: '14px', border: '1px solid rgba(194, 120, 3, 0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={tableConfig.enabled}
+                  onChange={(e) => setTableConfig({ ...tableConfig, enabled: e.target.checked })}
+                  style={{ accentColor: '#C27803' }}
+                />
+                <TableIcon size={14} color="#C27803" />
+                <span>Cetak Nomor Meja Otomatis</span>
+              </label>
+              {tableConfig.enabled && (
+                <span style={{ fontSize: '10.5px', fontWeight: 700, color: '#C27803', background: 'rgba(194,120,3,0.12)', padding: '2px 8px', borderRadius: '999px' }}>
+                  {tableList.length} Meja
+                </span>
+              )}
+            </div>
+
+            {tableConfig.enabled && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setTableConfig({ ...tableConfig, mode: 'range' })}
+                    style={{
+                      padding: '5px',
+                      borderRadius: '6px',
+                      fontSize: '10.5px',
+                      fontWeight: tableConfig.mode === 'range' ? 700 : 500,
+                      background: tableConfig.mode === 'range' ? '#1D1D1F' : '#FFFFFF',
+                      color: tableConfig.mode === 'range' ? '#FFFFFF' : '#1D1D1F',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Nomor Urut (1 s/d N)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTableConfig({ ...tableConfig, mode: 'custom' })}
+                    style={{
+                      padding: '5px',
+                      borderRadius: '6px',
+                      fontSize: '10.5px',
+                      fontWeight: tableConfig.mode === 'custom' ? 700 : 500,
+                      background: tableConfig.mode === 'custom' ? '#1D1D1F' : '#FFFFFF',
+                      color: tableConfig.mode === 'custom' ? '#FFFFFF' : '#1D1D1F',
+                      border: 'none',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Daftar Nama Custom
+                  </button>
+                </div>
+
+                {tableConfig.mode === 'range' ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: '6px' }}>
+                    <div>
+                      <span style={{ fontSize: '10px', color: '#86868B', display: 'block' }}>Awalan:</span>
+                      <input
+                        type="text"
+                        value={tableConfig.prefix}
+                        onChange={(e) => setTableConfig({ ...tableConfig, prefix: e.target.value })}
+                        placeholder="Meja "
+                        className="input-field"
+                        style={{ padding: '6px 8px', fontSize: '11px' }}
+                      />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: '#86868B', display: 'block' }}>Dari:</span>
+                      <input
+                        type="number"
+                        min={1}
+                        value={tableConfig.startNum}
+                        onChange={(e) => setTableConfig({ ...tableConfig, startNum: parseInt(e.target.value) || 1 })}
+                        className="input-field"
+                        style={{ padding: '6px 8px', fontSize: '11px' }}
+                      />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '10px', color: '#86868B', display: 'block' }}>Sampai:</span>
+                      <input
+                        type="number"
+                        min={tableConfig.startNum}
+                        max={60}
+                        value={tableConfig.endNum}
+                        onChange={(e) => setTableConfig({ ...tableConfig, endNum: parseInt(e.target.value) || 1 })}
+                        className="input-field"
+                        style={{ padding: '6px 8px', fontSize: '11px' }}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <span style={{ fontSize: '10px', color: '#86868B', display: 'block', marginBottom: '3px' }}>
+                      Pisahkan nama meja dengan tanda koma atau baris baru:
+                    </span>
+                    <textarea
+                      rows={3}
+                      value={tableConfig.customListText}
+                      onChange={(e) => setTableConfig({ ...tableConfig, customListText: e.target.value })}
+                      placeholder="VIP 1, VIP 2, Meja Keluarga, Meja 1, Meja 2"
+                      className="input-field"
+                      style={{ padding: '6px 8px', fontSize: '11px', width: '100%', resize: 'vertical' }}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 5. Co-Branding Logo Uploader */}
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-              <Type size={14} color="#C27803" />
-              <span>3. Kustomisasi Tulisan</span>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Upload size={14} color="#C27803" />
+              <span>4. Logo Co-Branding WO / Sponsor</span>
             </label>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {customLogoUrl ? (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(0,0,0,0.03)', borderRadius: '10px' }}>
+                <img src={customLogoUrl} alt="Logo" style={{ maxHeight: '28px', maxWidth: '100px', objectFit: 'contain' }} />
+                <button
+                  type="button"
+                  onClick={() => setCustomLogoUrl('')}
+                  style={{ background: 'transparent', border: 'none', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}
+                >
+                  <X size={14} />
+                  <span>Hapus</span>
+                </button>
+              </div>
+            ) : (
               <div>
-                <span style={{ fontSize: '11px', color: '#86868B', display: 'block', marginBottom: '4px' }}>Badge Atas:</span>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleLogoUpload}
+                  accept="image/png, image/jpeg, image/webp"
+                  style={{ display: 'none' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    border: '1px dashed rgba(194, 120, 3, 0.4)',
+                    background: 'rgba(194, 120, 3, 0.04)',
+                    color: '#C27803',
+                    fontSize: '11.5px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Upload size={14} />
+                  <span>Unggah Logo (PNG Transparan / JPEG)</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 6. Text Customizer Inputs */}
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Type size={14} color="#C27803" />
+              <span>5. Kustomisasi Tulisan</span>
+            </label>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '9px' }}>
+              <div>
+                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '3px' }}>Badge Atas:</span>
                 <input
                   type="text"
                   value={customBadge}
                   onChange={(e) => setCustomBadge(e.target.value)}
                   placeholder="KAMERA TAMU SPESIAL"
                   className="input-field"
-                  style={{ padding: '8px 12px', fontSize: '12.5px' }}
+                  style={{ padding: '7px 10px', fontSize: '12px' }}
                 />
               </div>
 
               <div>
-                <span style={{ fontSize: '11px', color: '#86868B', display: 'block', marginBottom: '4px' }}>Nama Acara / Pasangan:</span>
+                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '3px' }}>Nama Acara / Tuan Rumah:</span>
                 <input
                   type="text"
                   value={customTitle}
                   onChange={(e) => setCustomTitle(e.target.value)}
                   placeholder="Contoh: Kevin & Cindy"
                   className="input-field"
-                  style={{ padding: '8px 12px', fontSize: '12.5px' }}
+                  style={{ padding: '7px 10px', fontSize: '12px' }}
                 />
               </div>
 
               <div>
-                <span style={{ fontSize: '11px', color: '#86868B', display: 'block', marginBottom: '4px' }}>Tagline / Kalimat Sambut:</span>
+                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '3px' }}>Tagline / Kalimat Sambut:</span>
                 <input
                   type="text"
                   value={customSubtitle}
                   onChange={(e) => setCustomSubtitle(e.target.value)}
                   placeholder="Sudut Pandangmu, Kenangan Kami"
                   className="input-field"
-                  style={{ padding: '8px 12px', fontSize: '12.5px' }}
+                  style={{ padding: '7px 10px', fontSize: '12px' }}
                 />
               </div>
 
               <div>
-                <span style={{ fontSize: '11px', color: '#86868B', display: 'block', marginBottom: '4px' }}>Hashtag Acara:</span>
+                <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', marginBottom: '3px' }}>Hashtag Acara:</span>
                 <input
                   type="text"
                   value={customHashtag}
                   onChange={(e) => setCustomHashtag(e.target.value)}
                   placeholder="#SarahDimasStory"
                   className="input-field"
-                  style={{ padding: '8px 12px', fontSize: '12.5px' }}
+                  style={{ padding: '7px 10px', fontSize: '12px' }}
                 />
               </div>
             </div>
           </div>
 
-          {/* 4. Display Toggles */}
-          <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#1D1D1F', cursor: 'pointer' }}>
+          {/* 7. Display Toggles */}
+          <div style={{ borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#1D1D1F', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={showSteps}
@@ -762,7 +1462,7 @@ export default function PrintTableCardPage() {
               <span>Tampilkan Panduan 3 Langkah (1-2-3)</span>
             </label>
 
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#1D1D1F', cursor: 'pointer' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11.5px', color: '#1D1D1F', cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={showHashtag}
@@ -778,156 +1478,558 @@ export default function PrintTableCardPage() {
             style={{
               background: 'rgba(194, 120, 3, 0.08)',
               border: '1px solid rgba(194, 120, 3, 0.25)',
-              borderRadius: '14px',
-              padding: '12px 14px',
-              marginTop: '18px',
-              fontSize: '11.5px',
+              borderRadius: '12px',
+              padding: '12px',
+              marginTop: '16px',
+              fontSize: '11px',
               color: '#8C6D16',
               lineHeight: 1.5
             }}
           >
-            <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px', color: '#B45309' }}>
-              <Printer size={15} color="#B45309" />
-              <span>Tips Cetak / Simpan PDF Sempurna:</span>
+            <strong style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '5px', color: '#B45309' }}>
+              <Printer size={14} color="#B45309" />
+              <span>Tips Cetak Sempurna:</span>
             </strong>
-            <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <ul style={{ margin: 0, paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
               <li>
-                Di jendela print browser, <b>wajib centang "Background graphics"</b> (Grafik latar belakang) agar warna tema {theme === 'charcoal' && !inkSaver ? 'Charcoal Gelap' : theme === 'kraft' ? 'Rustic Kraft' : 'Cream Gold'} tercetak pekat.
+                Di jendela print browser, <b>centang "Background graphics"</b> agar warna tema tercetak solid.
               </li>
               <li>
-                <b>Hilangkan centang "Headers and footers"</b> agar URL browser dan tanggal di tepi kertas tidak ikut tercetak.
+                <b>Hilangkan centang "Headers and footers"</b> agar tanggal dan URL browser tidak ikut tercetak di tepi kertas.
               </li>
               <li>
-                Setiap kartu dilengkapi garis putus-putus untuk mempermudah pemotongan dengan gunting atau cutter.
+                Gunakan kertas tebal (Art Paper 260/310gsm atau Samson Kraft) agar kartu kokoh saat berdiri.
               </li>
             </ul>
           </div>
         </aside>
 
-        {/* RIGHT COLUMN: Live Print Preview */}
+        {/* RIGHT COLUMN: Live Print Preview / 3D Simulation */}
         <main style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
-          {format === 'tent' ? (
-            /* TENT CARD: Two panels (front + back) with fold line */
+          {/* Table Number Navigation Bar (If Enabled) */}
+          {tableConfig.enabled && (
             <div
-              className="print-card-wrapper"
+              className="no-print"
               style={{
                 width: '100%',
-                maxWidth: '430px',
-                borderRadius: '20px',
-                overflow: 'hidden',
-                background: ts.cardBg,
-                boxShadow: '0 24px 60px rgba(0, 0, 0, 0.12)',
-                border: `1.5px dashed ${theme === 'charcoal' && !inkSaver ? 'rgba(255,255,255,0.35)' : '#86868B'}`
+                maxWidth: '520px',
+                marginBottom: '16px',
+                padding: '8px 14px',
+                borderRadius: '12px',
+                background: 'rgba(255, 255, 255, 0.92)',
+                boxShadow: '0 4px 16px rgba(0,0,0,0.04)',
+                border: '1px solid rgba(0,0,0,0.06)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
               }}
             >
-              {/* Top Side (Back Panel when folded - Rotated 180° for true Tent folding) */}
-              <div
-                className="tent-back-panel"
-                style={{
-                  height: '410px',
-                  borderBottom: `2px dashed ${ts.dividerColor}`,
-                  transform: 'rotate(180deg)',
-                  transformOrigin: 'center center'
-                }}
-              >
-                {renderCardBody(true, false)}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TableIcon size={15} color="#C27803" />
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F' }}>
+                  Preview: {currentTableLabel} ({previewTableIndex + 1} dari {tableList.length})
+                </span>
               </div>
 
-              {/* Fold Indicator Line */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  type="button"
+                  disabled={previewTableIndex <= 0}
+                  onClick={() => setPreviewTableIndex(Math.max(0, previewTableIndex - 1))}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(0,0,0,0.1)',
+                    background: '#FFFFFF',
+                    cursor: previewTableIndex <= 0 ? 'not-allowed' : 'pointer',
+                    opacity: previewTableIndex <= 0 ? 0.4 : 1
+                  }}
+                  title="Meja Sebelumnya"
+                >
+                  <ChevronLeft size={14} />
+                </button>
+                <select
+                  value={previewTableIndex}
+                  onChange={(e) => setPreviewTableIndex(parseInt(e.target.value))}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(0,0,0,0.1)',
+                    fontSize: '11.5px',
+                    background: '#FFFFFF'
+                  }}
+                >
+                  {tableList.map((tbl, idx) => (
+                    <option key={idx} value={idx}>
+                      {tbl}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={previewTableIndex >= tableList.length - 1}
+                  onClick={() => setPreviewTableIndex(Math.min(tableList.length - 1, previewTableIndex + 1))}
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid rgba(0,0,0,0.1)',
+                    background: '#FFFFFF',
+                    cursor: previewTableIndex >= tableList.length - 1 ? 'not-allowed' : 'pointer',
+                    opacity: previewTableIndex >= tableList.length - 1 ? 0.4 : 1
+                  }}
+                  title="Meja Berikutnya"
+                >
+                  <ChevronRight size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 3D TENT FOLD SIMULATION VIEW */}
+          {format === 'tent' && viewMode === '3d-fold' ? (
+            <div
+              className="no-print"
+              style={{
+                width: '100%',
+                maxWidth: '600px',
+                height: '620px',
+                background: 'linear-gradient(180deg, #ECE7DE 0%, #D8D2C5 100%)',
+                borderRadius: '24px',
+                padding: '24px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 20px 48px rgba(0,0,0,0.08)',
+                position: 'relative',
+                overflow: 'hidden'
+              }}
+            >
+              <div style={{ position: 'absolute', top: '16px', left: '20px', zIndex: 10 }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: '#86868B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  Simulasi Lipatan Meja (3D Tent Card)
+                </span>
+                <p style={{ margin: 0, fontSize: '12px', color: '#555' }}>
+                  Begini tampilan kartu saat ditekuk dan berdiri di atas meja tamu.
+                </p>
+              </div>
+
+              {/* Table Surface Reflection */}
               <div
-                className="fold-guide-line"
                 style={{
-                  background: ts.badgeBg,
-                  padding: '7px 14px',
+                  position: 'absolute',
+                  bottom: '60px',
+                  width: '380px',
+                  height: '80px',
+                  background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.22) 0%, transparent 70%)',
+                  borderRadius: '50%',
+                  pointerEvents: 'none'
+                }}
+              />
+
+              {/* 3D Standing Fold Container */}
+              <div
+                style={{
+                  perspective: '1200px',
+                  width: '300px',
+                  height: '420px',
+                  position: 'relative',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  fontSize: '10px',
-                  fontWeight: 800,
-                  fontFamily: 'var(--font-mono)',
-                  color: ts.mutedColor,
-                  letterSpacing: '0.08em',
-                  borderTop: `1px dashed ${ts.dividerColor}`,
-                  borderBottom: `1px dashed ${ts.dividerColor}`
+                  justifyContent: 'center'
                 }}
               >
-                <Scissors size={12} />
-                <span>GARIS LIPAT MEJA (FOLD LINE - TENT CARD)</span>
-                <Scissors size={12} />
+                <div
+                  style={{
+                    width: '290px',
+                    height: '380px',
+                    background: ts.cardBg,
+                    borderRadius: '16px',
+                    boxShadow: '0 24px 50px rgba(0,0,0,0.2), 0 4px 12px rgba(0,0,0,0.1)',
+                    border: getCardBorderStyle(),
+                    transform: 'rotateX(14deg) rotateY(-8deg)',
+                    transformStyle: 'preserve-3d',
+                    overflow: 'hidden'
+                  }}
+                >
+                  {renderCardBody(false, true, currentTableLabel)}
+                </div>
               </div>
 
-              {/* Bottom Side (Front Panel when folded) */}
-              <div style={{ height: '410px' }}>
-                {renderCardBody(false, false)}
+              <div style={{ position: 'absolute', bottom: '16px', textAlign: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('sheet')}
+                  className="btn-apple-black"
+                  style={{ padding: '8px 16px', fontSize: '12px', cursor: 'pointer' }}
+                >
+                  Kembali ke Mode Lembar A4
+                </button>
               </div>
             </div>
-          ) : format === 'standing' ? (
-            /* STANDING A6 CARD */
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: standingCount === 2 ? 'repeat(auto-fit, minmax(290px, 1fr))' : '1fr',
-                gap: '24px',
-                width: '100%',
-                maxWidth: standingCount === 2 ? '700px' : '410px',
-                margin: '0 auto'
-              }}
-            >
-              {Array.from({ length: standingCount }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="print-card-wrapper"
-                  style={{
-                    width: '100%',
-                    maxWidth: '345px',
-                    minHeight: '520px',
-                    borderRadius: '20px',
-                    overflow: 'hidden',
-                    background: ts.cardBg,
-                    boxShadow: '0 24px 60px rgba(0, 0, 0, 0.12)',
-                    border: `1.5px dashed ${theme === 'charcoal' && !inkSaver ? 'rgba(255,255,255,0.35)' : '#86868B'}`,
-                    margin: '0 auto'
-                  }}
-                >
-                  {renderCardBody(false, false)}
-                </div>
-              ))}
-            </div>
           ) : (
-            /* MINI CARDS: 2, 4, or 6 compact cards */
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: miniCount === 6 ? 'repeat(2, 1fr)' : (miniCount === 4 ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(280px, 1fr))'),
-                gap: miniCount === 6 ? '12px' : '20px',
-                width: '100%',
-                maxWidth: '680px',
-                margin: '0 auto'
-              }}
-            >
-              {Array.from({ length: miniCount }).map((_, idx) => (
-                <div
-                  key={idx}
-                  className="print-card-wrapper"
-                  style={{
-                    borderRadius: '16px',
-                    overflow: 'hidden',
-                    background: ts.cardBg,
-                    boxShadow: '0 12px 30px rgba(0, 0, 0, 0.08)',
-                    border: `1.5px dashed ${theme === 'charcoal' && !inkSaver ? 'rgba(255,255,255,0.35)' : '#86868B'}`,
-                    minHeight: miniCount === 6 ? '290px' : (miniCount === 4 ? '360px' : '430px'),
-                    display: 'flex',
-                    flexDirection: 'column'
-                  }}
-                >
-                  {renderCardBody(false, miniCount === 6)}
+            /* STANDARD PRINT SHEET PREVIEW */
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              {/* SCREEN PREVIEW WRAPPER (Referenced by toPng for HD Export) */}
+              <div ref={previewCardRef} style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                {format === 'tent' ? (
+                  /* TENT CARD: Two panels (front + back) with fold line */
+                  <div
+                    className="print-card-wrapper"
+                    style={{
+                      width: '100%',
+                      maxWidth: '430px',
+                      borderRadius: getCardBorderRadius(),
+                      overflow: 'hidden',
+                      background: ts.cardBg,
+                      boxShadow: '0 24px 60px rgba(0, 0, 0, 0.12)',
+                      border: getCardBorderStyle()
+                    }}
+                  >
+                    {/* Top Side (Back Panel when folded - Rotated 180° for true Tent folding) */}
+                    <div
+                      className="tent-back-panel"
+                      style={{
+                        height: '410px',
+                        borderBottom: `2px dashed ${ts.dividerColor}`,
+                        transform: 'rotate(180deg)',
+                        transformOrigin: 'center center'
+                      }}
+                    >
+                      {renderCardBody(true, false, currentTableLabel)}
+                    </div>
+
+                    {/* Fold Indicator Line */}
+                    <div
+                      className="fold-guide-line"
+                      style={{
+                        background: ts.badgeBg,
+                        padding: '7px 14px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        fontSize: '10px',
+                        fontWeight: 800,
+                        fontFamily: 'var(--font-mono), monospace',
+                        color: ts.mutedColor,
+                        letterSpacing: '0.08em',
+                        borderTop: `1px dashed ${ts.dividerColor}`,
+                        borderBottom: `1px dashed ${ts.dividerColor}`
+                      }}
+                    >
+                      <Scissors size={12} />
+                      <span>GARIS LIPAT MEJA (FOLD LINE - TENT CARD)</span>
+                      <Scissors size={12} />
+                    </div>
+
+                    {/* Bottom Side (Front Panel when folded) */}
+                    <div style={{ height: '410px' }}>
+                      {renderCardBody(false, false, currentTableLabel)}
+                    </div>
+                  </div>
+                ) : format === 'standing' ? (
+                  /* STANDING A6 CARD */
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: standingCount === 2 ? 'repeat(auto-fit, minmax(290px, 1fr))' : '1fr',
+                      gap: '24px',
+                      width: '100%',
+                      maxWidth: standingCount === 2 ? '700px' : '410px',
+                      margin: '0 auto'
+                    }}
+                  >
+                    {Array.from({ length: standingCount }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="print-card-wrapper"
+                        style={{
+                          width: '100%',
+                          maxWidth: '345px',
+                          minHeight: '520px',
+                          borderRadius: getCardBorderRadius(),
+                          overflow: 'hidden',
+                          background: ts.cardBg,
+                          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.12)',
+                          border: getCardBorderStyle(),
+                          margin: '0 auto'
+                        }}
+                      >
+                        {renderCardBody(false, false, currentTableLabel)}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* MINI CARDS: 2, 4, or 6 compact cards */
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: miniCount === 6 ? 'repeat(2, 1fr)' : (miniCount === 4 ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(280px, 1fr))'),
+                      gap: miniCount === 6 ? '12px' : '20px',
+                      width: '100%',
+                      maxWidth: '680px',
+                      margin: '0 auto'
+                    }}
+                  >
+                    {Array.from({ length: miniCount }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="print-card-wrapper"
+                        style={{
+                          borderRadius: getCardBorderRadius(),
+                          overflow: 'hidden',
+                          background: ts.cardBg,
+                          boxShadow: '0 12px 30px rgba(0, 0, 0, 0.08)',
+                          border: getCardBorderStyle(),
+                          minHeight: miniCount === 6 ? '290px' : (miniCount === 4 ? '360px' : '430px'),
+                          display: 'flex',
+                          flexDirection: 'column'
+                        }}
+                      >
+                        {renderCardBody(false, miniCount === 6, currentTableLabel)}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* PRINT-ONLY MULTI-PAGE CONTAINER (Only active during window.print() when table numbering is active) */}
+              {tableConfig.enabled && (
+                <div className="print-only-batch-tables" style={{ display: 'none' }}>
+                  <style
+                    dangerouslySetInnerHTML={{
+                      __html: `
+                    @media print {
+                      .print-only-batch-tables {
+                        display: block !important;
+                      }
+                      .print-card-wrapper {
+                        display: none !important;
+                      }
+                    }
+                  `
+                    }}
+                  />
+                  {tableList.map((tblName, tblIdx) => (
+                    <div
+                      key={tblIdx}
+                      className="print-page-break"
+                      style={{
+                        pageBreakAfter: 'always',
+                        breakAfter: 'page',
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        minHeight: '94vh',
+                        padding: '10mm 0'
+                      }}
+                    >
+                      {format === 'tent' ? (
+                        <div
+                          style={{
+                            width: '100%',
+                            maxWidth: '430px',
+                            borderRadius: getCardBorderRadius(),
+                            overflow: 'hidden',
+                            background: ts.cardBg,
+                            border: getCardBorderStyle()
+                          }}
+                        >
+                          <div
+                            className="tent-back-panel"
+                            style={{
+                              height: '410px',
+                              borderBottom: `2px dashed ${ts.dividerColor}`,
+                              transform: 'rotate(180deg)',
+                              transformOrigin: 'center center'
+                            }}
+                          >
+                            {renderCardBody(true, false, tblName)}
+                          </div>
+                          <div
+                            className="fold-guide-line"
+                            style={{
+                              background: ts.badgeBg,
+                              padding: '7px 14px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px',
+                              fontSize: '10px',
+                              fontWeight: 800,
+                              fontFamily: 'var(--font-mono), monospace',
+                              color: ts.mutedColor
+                            }}
+                          >
+                            <Scissors size={12} />
+                            <span>GARIS LIPAT MEJA ({tblName})</span>
+                            <Scissors size={12} />
+                          </div>
+                          <div style={{ height: '410px' }}>
+                            {renderCardBody(false, false, tblName)}
+                          </div>
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            width: '100%',
+                            maxWidth: '345px',
+                            minHeight: '520px',
+                            borderRadius: getCardBorderRadius(),
+                            overflow: 'hidden',
+                            background: ts.cardBg,
+                            border: getCardBorderStyle()
+                          }}
+                        >
+                          {renderCardBody(false, false, tblName)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
         </main>
       </div>
+
+      {/* RAW QR CODE EXPORT MODAL */}
+      {showQrModal && (
+        <div
+          className="no-print"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000,
+            background: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setShowQrModal(false)}
+        >
+          <div
+            className="glass-card"
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              borderRadius: '24px',
+              padding: '28px',
+              background: '#FFFFFF',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.25)',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setShowQrModal(false)}
+              style={{
+                position: 'absolute',
+                top: '18px',
+                right: '18px',
+                background: 'rgba(0,0,0,0.06)',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
+              <X size={16} />
+            </button>
+
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'rgba(194,120,3,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803', margin: '0 auto 12px' }}>
+                <FileImage size={22} />
+              </div>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 6px' }}>
+                Unduh QR Code Kamera Tamu
+              </h3>
+              <p style={{ fontSize: '12.5px', color: '#86868B', margin: 0, lineHeight: 1.5 }}>
+                Gunakan file ini jika Anda ingin mendesain kartu meja sendiri di Canva, Photoshop, atau Adobe Illustrator.
+              </p>
+            </div>
+
+            {/* QR Code Preview */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '22px' }}>
+              <div style={{ padding: '14px', background: '#FAF8F5', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.08)' }}>
+                {qrDataUrl && (
+                  <img src={qrDataUrl} alt="QR Code" width={180} height={180} style={{ display: 'block', borderRadius: '8px' }} />
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={handleDownloadQrPng}
+                className="btn-apple-black"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'pointer'
+                }}
+              >
+                <Download size={15} />
+                <span>Unduh PNG Resolusi Tinggi (1000 x 1000 px)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadQrSvg}
+                className="glass-pill"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  fontSize: '13px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  border: '1px solid rgba(0,0,0,0.12)',
+                  color: '#1D1D1F',
+                  fontWeight: 600
+                }}
+              >
+                <Download size={15} />
+                <span>Unduh Vektor SVG (Untuk Canva & Illustrator)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(guestCameraUrl);
+                  toast.success('Tautan kamera tamu disalin ke clipboard!');
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#C27803',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  padding: '6px',
+                  fontWeight: 600
+                }}
+              >
+                Salin Tautan Kamera Web Tamu Saja
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
