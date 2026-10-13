@@ -1437,7 +1437,7 @@ export default function HomePage() {
                   </span>
                 </div>
                 <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#86868B' }}>
-                  Roll 48 Foto
+                  Paket Wedding • 300 Tamu
                 </span>
               </div>
 
@@ -1528,7 +1528,7 @@ export default function HomePage() {
                 <span style={{ fontSize: '12px', color: '#86868B' }}>Plataran Cilandak, Jakarta</span>
               </div>
               <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#515154', background: '#ECECE8', padding: '3px 9px', borderRadius: '6px' }}>
-                14 SEP 2024
+                18 JUL 2026
               </span>
             </div>
           </article>
@@ -1554,7 +1554,7 @@ export default function HomePage() {
                   </span>
                 </div>
                 <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#86868B' }}>
-                  Roll 36 Foto
+                  Paket Event • 150 Tamu
                 </span>
               </div>
 
@@ -1645,7 +1645,7 @@ export default function HomePage() {
                 <span style={{ fontSize: '12px', color: '#86868B' }}>Cafe Gathering, Surabaya</span>
               </div>
               <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#515154', background: '#ECECE8', padding: '3px 9px', borderRadius: '6px' }}>
-                05 OKT 2024
+                22 AGU 2026
               </span>
             </div>
           </article>
@@ -1671,7 +1671,7 @@ export default function HomePage() {
                   </span>
                 </div>
                 <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#86868B' }}>
-                  Roll 72 Foto
+                  Paket Unlimited • 120 Karyawan
                 </span>
               </div>
 
@@ -1762,7 +1762,7 @@ export default function HomePage() {
                 <span style={{ fontSize: '12px', color: '#86868B' }}>People Lead, SCBD Jakarta</span>
               </div>
               <span style={{ fontSize: '10.5px', fontFamily: 'var(--font-mono)', color: '#515154', background: '#ECECE8', padding: '3px 9px', borderRadius: '6px' }}>
-                20 NOV 2024
+                15 SEP 2026
               </span>
             </div>
           </article>
