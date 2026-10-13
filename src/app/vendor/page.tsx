@@ -445,7 +445,7 @@ export default function VendorPortalPage() {
       role: 'host'
     };
     setClientSession(updated);
-    toast.success('Beralih ke mode Pengantin / Penyelenggara.');
+    toast.success('Beralih ke Dashboard Acara Host.');
     router.push('/dashboard');
   };
 
@@ -749,14 +749,14 @@ export default function VendorPortalPage() {
                     color: '#C27803',
                     flexShrink: 0
                   }}>
-                    <Heart size={18} />
+                    <Calendar size={18} />
                   </div>
                   <div>
                     <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>
-                      Halo, {currentSession.name || 'Pengantin'}! Anda saat ini masuk dengan akun Pengantin.
+                      Halo, {currentSession.name || 'Penyelenggara Acara'}! Anda saat ini masuk sebagai Host (Penyelenggara Acara).
                     </strong>
                     <span style={{ fontSize: '12.5px', color: '#6E6E73' }}>
-                      Ini adalah halaman informasi Program Kemitraan Agensi & Wedding Organizer. Seluruh data acara Anda tetap aman.
+                      Ini adalah halaman informasi Program Kemitraan Agensi & Event Planner. Seluruh album dan data acara Anda tetap aman.
                     </span>
                   </div>
                 </div>
@@ -775,7 +775,7 @@ export default function VendorPortalPage() {
                     className="glass-pill"
                     style={{ padding: '8px 14px', fontSize: '12px', cursor: 'pointer', color: '#C27803', fontWeight: 600, border: '1px solid rgba(194, 120, 3, 0.3)' }}
                   >
-                    Daftar Agensi WO
+                    Daftar Jadi Mitra
                   </button>
                 </div>
               </div>
@@ -881,7 +881,7 @@ export default function VendorPortalPage() {
                     Penghasilan Tambahan (Komisi Pasif)
                   </strong>
                   <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
-                    Raih komisi 15% - 20% untuk setiap calon pengantin yang memesan paket melalui tautan referral atau kode promo agensi Anda. Komisi masuk otomatis ke dompet digital mitra.
+                    Raih komisi 15% - 20% untuk setiap klien acara (pernikahan, ulang tahun, gathering, reuni, dll.) yang memesan paket melalui tautan referral atau kode promo agensi Anda. Komisi masuk otomatis ke dompet digital mitra.
                   </p>
                 </div>
 
@@ -893,7 +893,7 @@ export default function VendorPortalPage() {
                     100% Tanpa Modal & Tanpa Kuota
                   </strong>
                   <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
-                    Tidak perlu menyetok kuota voucher atau menanggung risiko modal. Cukup rekomendasikan kode promo unik Anda kepada calon pengantin. Komisi 15%–20% otomatis masuk ke dompet digital Anda.
+                    Tidak perlu menyetok kuota voucher atau menanggung risiko modal. Cukup rekomendasikan kode promo unik Anda kepada klien acara. Komisi 15%–20% otomatis masuk ke dompet digital Anda.
                   </p>
                 </div>
 
@@ -905,7 +905,7 @@ export default function VendorPortalPage() {
                     Identitas & Branding Agensi Anda
                   </strong>
                   <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
-                    Logo dan nama Wedding Organizer Anda tampil elegan di template barcode cetak meja dan antarmuka kamera web tamu, memperkuat citra profesional agensi Anda di hadapan ratusan tamu undangan.
+                    Logo dan nama agensi Event Planner / Wedding Organizer Anda tampil elegan di template barcode cetak meja dan antarmuka kamera web tamu, memperkuat citra profesional agensi Anda di hadapan ratusan tamu undangan.
                   </p>
                 </div>
 
@@ -930,10 +930,10 @@ export default function VendorPortalPage() {
                   KALKULATOR POTENSI KOMISI
                 </span>
                 <h3 className="font-display-serif" style={{ fontSize: '26px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 8px' }}>
-                  Simulasi Komisi Pasif Agensi Anda
+                  Simulasi Komisi Pasif Mitra Acara
                 </h3>
                 <p style={{ fontSize: '13.5px', color: '#6E6E73', margin: 0 }}>
-                  Pilih estimasi jumlah acara klien pernikahan yang Anda tangani untuk melihat potensi pendapatan bersih yang langsung cair ke rekening bank Anda.
+                  Pilih estimasi jumlah acara klien (Pernikahan, Ulang Tahun, Gathering, Reuni, dll.) yang Anda tangani untuk melihat potensi pendapatan bersih Anda.
                 </p>
               </div>
 
@@ -941,7 +941,7 @@ export default function VendorPortalPage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '28px', alignItems: 'center' }}>
                 <div>
                   <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '8px' }}>
-                    Jumlah Acara Klien WO Anda:
+                    Jumlah Acara Klien Agensi / Mitra Anda:
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '20px' }}>
                     {[3, 5, 10, 20].map((num) => (
@@ -1010,7 +1010,7 @@ export default function VendorPortalPage() {
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', fontSize: '12.5px', color: '#10B981', fontWeight: 600 }}>
-                    <span>Modal & Risiko WO:</span>
+                    <span>Modal & Risiko Mitra:</span>
                     <span>Rp 0 (100% Bebas Risiko)</span>
                   </div>
 
@@ -1033,7 +1033,7 @@ export default function VendorPortalPage() {
                       className="btn-apple-black"
                       style={{ width: '100%', padding: '12px', fontSize: '13.5px', cursor: 'pointer', textAlign: 'center', borderRadius: '12px' }}
                     >
-                      Daftar Agensi WO untuk Klaim Komisi Ini
+                      Daftar Jadi Mitra untuk Klaim Komisi Ini
                     </button>
                   ) : (
                     <Link
@@ -1077,10 +1077,10 @@ export default function VendorPortalPage() {
                     2
                   </div>
                   <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-                    Tawarkan ke Calon Pengantin
+                    Tawarkan ke Klien Acara
                   </strong>
                   <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, margin: 0 }}>
-                    Sertakan fitur kamera tamu analog ini sebagai bonus paket WO Anda atau bagikan tautan referral Anda kepada klien.
+                    Sertakan fitur kamera tamu analog ini sebagai nilai tambah paket layanan EO/WO Anda atau bagikan tautan referral Anda kepada klien.
                   </p>
                 </div>
 
@@ -1102,7 +1102,7 @@ export default function VendorPortalPage() {
             <div style={{ marginBottom: '64px' }}>
               <div style={{ textAlign: 'center', marginBottom: '20px' }}>
                 <span style={{ fontSize: '12px', fontWeight: 600, color: '#86868B', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  Dipercaya oleh Agensi Wedding Organizer di Seluruh Indonesia
+                  Dipercaya oleh Puluhan Wedding Organizer & Event Planner di Seluruh Indonesia
                 </span>
               </div>
               <div className="vendor-marquee-container">
@@ -1124,8 +1124,32 @@ export default function VendorPortalPage() {
                         minWidth: '260px'
                       }}
                     >
-                      <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(194, 120, 3, 0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C27803', flexShrink: 0 }}>
-                        <Building size={16} />
+                      <div style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        border: '1px solid rgba(0, 0, 0, 0.08)',
+                        background: '#FFFFFF',
+                        boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
+                        flexShrink: 0,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {p.logoUrl ? (
+                          <img
+                            src={p.logoUrl}
+                            alt={p.name}
+                            width={38}
+                            height={38}
+                            loading="lazy"
+                            decoding="async"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <Building size={16} color="#C27803" />
+                        )}
                       </div>
                       <div style={{ textAlign: 'left' }}>
                         <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', whiteSpace: 'nowrap' }}>{p.name}</strong>
@@ -1160,11 +1184,11 @@ export default function VendorPortalPage() {
                   },
                   {
                     q: 'Apakah saya wajib membeli kuota atau deposit modal terlebih dahulu?',
-                    a: 'Sama sekali tidak! Program kemitraan ini 100% tanpa modal awal dan tanpa beban beli kuota grosir. Anda cukup merekomendasikan kode promo unik Anda kepada calon pengantin. Setiap transaksi berhasil, komisi 15%–20% langsung otomatis masuk ke saldo dompet mitra Anda dan siap ditarik ke rekening bank Anda.'
+                    a: 'Sama sekali tidak! Program kemitraan ini 100% tanpa modal awal dan tanpa beban beli kuota grosir. Anda cukup merekomendasikan kode promo unik Anda kepada klien acara Anda. Setiap transaksi berhasil, komisi 15%–20% langsung otomatis masuk ke saldo dompet mitra Anda dan siap ditarik ke rekening bank Anda.'
                   },
                   {
-                    q: 'Bagaimana jika saya calon pengantin dan tidak sengaja membuka halaman ini?',
-                    a: 'Tidak perlu khawatir! Akun dan data acara pernikahan Anda tetap aman di sistem kami. Cukup klik tombol "Dashboard Acara Saya" di atas untuk kembali mengelola acara pernikahan Anda.'
+                    q: 'Bagaimana jika saya penyelenggara acara biasa / tuan rumah dan tidak sengaja membuka halaman ini?',
+                    a: 'Tidak perlu khawatir! Akun dan seluruh data galeri acara Anda (pernikahan, ulang tahun, gathering, dll.) tetap aman di sistem kami. Cukup klik tombol "Dashboard Acara Saya" di atas untuk kembali mengelola acara Anda.'
                   }
                 ].map((item, idx) => {
                   const isOpen = openFaqIndex === idx;
@@ -1213,53 +1237,72 @@ export default function VendorPortalPage() {
 
             {/* Bottom CTA Banner */}
             <div style={{
-              background: 'linear-gradient(135deg, #1D1D1F 0%, #2C2C2E 100%)',
+              background: 'linear-gradient(135deg, #181715 0%, #232220 100%)',
               color: '#FFFFFF',
               borderRadius: '24px',
-              padding: '40px 24px',
+              padding: '44px 28px',
               textAlign: 'center',
-              boxShadow: '0 16px 40px rgba(0,0,0,0.12)'
+              boxShadow: '0 20px 48px rgba(0,0,0,0.18)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              position: 'relative',
+              overflow: 'hidden'
             }}>
-              <h3 className="font-display-serif" style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2rem)', fontWeight: 700, marginBottom: '12px' }}>
-                Siap Memberikan Pengalaman Berbeda untuk Calon Pengantin Anda?
+              {/* Subtle Ambient Gold Aura */}
+              <div style={{
+                position: 'absolute',
+                top: '-50%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: '380px',
+                height: '240px',
+                background: 'radial-gradient(circle, rgba(194, 120, 3, 0.22) 0%, transparent 70%)',
+                pointerEvents: 'none'
+              }} />
+
+              <h3 className="font-display-serif" style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.1rem)', fontWeight: 700, marginBottom: '12px', color: '#FFFFFF', position: 'relative', zIndex: 1 }}>
+                Siap Memberikan Nilai Tambah Eksklusif untuk Klien Anda?
               </h3>
-              <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '14px', maxWidth: '540px', margin: '0 auto 24px' }}>
-                Bergabunglah bersama puluhan Wedding Organizer dan nikmati komisi pasif serta kemudahan operasional foto candid tamu.
+              <p style={{ color: 'rgba(255,255,255,0.82)', fontSize: '14.5px', maxWidth: '580px', margin: '0 auto 26px', lineHeight: 1.6, position: 'relative', zIndex: 1 }}>
+                Bergabunglah bersama puluhan Wedding Organizer & Event Planner di seluruh Indonesia. Nikmati komisi pasif hingga 20% dan kemudahan operasional foto candid tamu tanpa ribet.
               </p>
-              {currentSession?.role === 'host' ? (
-                <button
-                  type="button"
-                  onClick={() => setShowRegisterModal(true)}
-                  style={{
-                    padding: '12px 28px',
-                    borderRadius: '12px',
-                    background: '#C27803',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Daftarkan Agensi WO Anda Sekarang
-                </button>
-              ) : (
-                <Link
-                  href="/login?role=vendor&mode=register"
-                  style={{
-                    padding: '12px 28px',
-                    borderRadius: '12px',
-                    background: '#C27803',
-                    color: '#FFFFFF',
-                    textDecoration: 'none',
-                    fontWeight: 700,
-                    fontSize: '14px',
-                    display: 'inline-block'
-                  }}
-                >
-                  Daftar Kemitraan Gratis Sekarang
-                </Link>
-              )}
+              <div style={{ position: 'relative', zIndex: 1 }}>
+                {currentSession?.role === 'host' ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowRegisterModal(true)}
+                    style={{
+                      padding: '13px 32px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #C27803 0%, #9A5E02 100%)',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '14px',
+                      cursor: 'pointer',
+                      boxShadow: '0 8px 24px rgba(194, 120, 3, 0.4)'
+                    }}
+                  >
+                    Daftar Sebagai Mitra Sekarang
+                  </button>
+                ) : (
+                  <Link
+                    href="/login?role=vendor&mode=register"
+                    style={{
+                      padding: '13px 32px',
+                      borderRadius: '12px',
+                      background: 'linear-gradient(135deg, #C27803 0%, #9A5E02 100%)',
+                      color: '#FFFFFF',
+                      textDecoration: 'none',
+                      fontWeight: 700,
+                      fontSize: '14px',
+                      display: 'inline-block',
+                      boxShadow: '0 8px 24px rgba(194, 120, 3, 0.4)'
+                    }}
+                  >
+                    Daftar Kemitraan Gratis Sekarang
+                  </Link>
+                )}
+              </div>
             </div>
           </main>
         </div>
@@ -1304,10 +1347,10 @@ export default function VendorPortalPage() {
                     color: '#C27803',
                     fontWeight: 600
                   }}
-                  title="Beralih ke mode Pengantin / Penyelenggara Acara"
+                  title="Beralih ke Dashboard Acara Host"
                 >
-                  <Heart size={13} />
-                  <span>Mode Pengantin</span>
+                  <Calendar size={13} />
+                  <span>Mode Host / Acara</span>
                 </button>
 
                 <button
@@ -2482,13 +2525,13 @@ export default function VendorPortalPage() {
                       <span>Galeri Tamu</span>
                     </Link>
 
-                    {/* Bagi Link ke Pengantin */}
+                    {/* Bagi Link ke Klien / Penyelenggara */}
                     <button
                       type="button"
                       onClick={() => {
                         const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/event/${c.id}` : `https://sudutbingkai.id/event/${c.id}`;
                         navigator.clipboard.writeText(shareUrl);
-                        toast.success(`Tautan galeri acara "${c.title}" berhasil disalin! Bagikan ke pengantin.`);
+                        toast.success(`Tautan galeri acara "${c.title}" berhasil disalin! Bagikan ke klien atau tuan rumah.`);
                       }}
                       className="glass-pill"
                       style={{
@@ -2501,10 +2544,10 @@ export default function VendorPortalPage() {
                         color: '#C27803',
                         border: '1px solid rgba(194, 120, 3, 0.3)'
                       }}
-                      title="Salin tautan album untuk dibagikan ke pasangan pengantin"
+                      title="Salin tautan album untuk dibagikan ke klien atau tuan rumah acara"
                     >
                       <Share2 size={13} />
-                      <span>Bagi ke Pengantin</span>
+                      <span>Bagi ke Klien</span>
                     </button>
 
                     {/* Tes Kamera */}
