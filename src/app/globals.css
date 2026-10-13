@@ -1211,5 +1211,43 @@ br.mobile-only {
   box-shadow: 0 16px 36px -4px rgba(0, 0, 0, 0.22), 0 4px 12px -2px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Event Full-Bleed Hero Responsive Action Grid */
+.hero-action-buttons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+@media (max-width: 640px) {
+  .hero-action-buttons {
+    gap: 10px;
+    width: 100%;
+  }
+  .hero-cta-primary {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 14px 20px !important;
+  }
+  .hero-secondary-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100% !important;
+  }
+  .hero-secondary-grid > button,
+  .hero-secondary-grid > a {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 11px 12px !important;
+    font-size: 12.5px !important;
+  }
+  .hero-video-story-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+
 
 
