@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyMayarWebhookToken } from '@/lib/mayar';
 import { getEventById, updateEvent, getAllVendors, updateVendor, isWebhookProcessed, markWebhookProcessed, getInvoice, createInvoice, updateInvoiceStatus } from '@/lib/db';
 import { PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
+import { isSameVendorId } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {
@@ -99,7 +100,7 @@ export async function POST(request: Request) {
           if (event.vendorId && event.commissionAmount && event.commissionAmount > 0 && event.commissionStatus !== 'available') {
             try {
               const vendors = await getAllVendors();
-              const matchedVendor = vendors.find(v => v.id === event.vendorId);
+              const matchedVendor = vendors.find(v => isSameVendorId(v.id, event.vendorId));
               if (matchedVendor) {
                 await updateVendor(matchedVendor.id, {
                   walletBalance: (matchedVendor.walletBalance || 0) + event.commissionAmount,

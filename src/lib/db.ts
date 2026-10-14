@@ -3,6 +3,7 @@ import path from 'path';
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem, VideoWishRecord, PACKAGE_TIERS, EventPackageTier } from './types';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { uploadBufferToR2, isR2Configured, deleteFromR2 } from './r2';
+import { isSameVendorId } from './auth';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const EVENTS_FILE = path.join(DATA_DIR, 'events.json');
@@ -1423,7 +1424,7 @@ export async function getPayoutRequests(vendorId?: string): Promise<PayoutReques
     const raw = fs.existsSync(PAYOUTS_FILE) ? fs.readFileSync(PAYOUTS_FILE, 'utf8') : '[]';
     const payouts: PayoutRequest[] = JSON.parse(raw);
     if (!vendorId) return payouts;
-    return payouts.filter(p => p.vendorId === vendorId || p.vendorEmail.toLowerCase() === vendorId.toLowerCase());
+    return payouts.filter(p => isSameVendorId(p.vendorId, vendorId) || p.vendorEmail.toLowerCase() === vendorId.toLowerCase());
   } catch {
     return [];
   }
@@ -1457,7 +1458,7 @@ export async function updatePayoutStatus(
     try {
       const vendors = await getAllVendors();
       const matchedVendor = vendors.find(
-        v => v.id === vendorId || (vendorEmail && v.email?.toLowerCase() === vendorEmail.toLowerCase())
+        v => isSameVendorId(v.id, vendorId) || (vendorEmail && v.email?.toLowerCase() === vendorEmail.toLowerCase())
       );
       if (matchedVendor) {
         await updateVendor(matchedVendor.id, {
@@ -1556,7 +1557,7 @@ export async function deletePayout(id: string): Promise<boolean> {
       if (target.status === 'pending' && target.amount > 0) {
         const vendors = await getAllVendors();
         const matchedVendor = vendors.find(
-          v => v.id === target.vendorId || (target.vendorEmail && v.email?.toLowerCase() === target.vendorEmail.toLowerCase())
+          v => isSameVendorId(v.id, target.vendorId) || (target.vendorEmail && v.email?.toLowerCase() === target.vendorEmail.toLowerCase())
         );
         if (matchedVendor) {
           await updateVendor(matchedVendor.id, {
@@ -1704,7 +1705,7 @@ export async function getAllTestimonials(): Promise<VideoTestimonialSubmission[]
 
 export async function getTestimonialsByVendor(vendorId: string): Promise<VideoTestimonialSubmission[]> {
   const all = await getAllTestimonials();
-  return all.filter(t => t.submitterId === vendorId || t.submitterEmail?.toLowerCase() === vendorId.toLowerCase());
+  return all.filter(t => isSameVendorId(t.submitterId, vendorId) || t.submitterEmail?.toLowerCase() === vendorId.toLowerCase());
 }
 
 export async function getTestimonialsByEvent(eventId: string): Promise<VideoTestimonialSubmission[]> {
@@ -1767,7 +1768,7 @@ export async function updateTestimonialStatus(
         if (status === 'approved' && !alreadyRewarded && updatedTesti.submitterType === 'vendor' && updatedTesti.submitterId) {
           try {
             const vendors = await getAllVendors();
-            const matchedVendor = vendors.find(v => v.id === updatedTesti.submitterId || (updatedTesti.submitterEmail && v.email === updatedTesti.submitterEmail));
+            const matchedVendor = vendors.find(v => isSameVendorId(v.id, updatedTesti.submitterId) || (updatedTesti.submitterEmail && v.email === updatedTesti.submitterEmail));
             if (matchedVendor) {
               const reward = updatedTesti.rewardAmount || 50000;
               await updateVendor(matchedVendor.id, {
@@ -1825,7 +1826,7 @@ export async function updateTestimonialStatus(
         const currentTesti = list[index];
         if (currentTesti && currentTesti.submitterType === 'vendor' && currentTesti.submitterId) {
           const vendors = await getAllVendors();
-          const matchedVendor = vendors.find(v => v.id === currentTesti.submitterId || (currentTesti.submitterEmail && v.email === currentTesti.submitterEmail));
+          const matchedVendor = vendors.find(v => isSameVendorId(v.id, currentTesti.submitterId) || (currentTesti.submitterEmail && v.email === currentTesti.submitterEmail));
           if (matchedVendor) {
             const reward = currentTesti.rewardAmount || 50000;
             await updateVendor(matchedVendor.id, {

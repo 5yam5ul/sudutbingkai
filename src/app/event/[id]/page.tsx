@@ -20,7 +20,7 @@ import ConfirmModal from '@/components/ConfirmModal';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import VideoWishStoriesPlayer from '@/components/VideoWishStoriesPlayer';
 import { toast } from 'sonner';
-import { getClientSession, authFetch } from '@/lib/auth';
+import { getClientSession, authFetch, isSameVendorId } from '@/lib/auth';
 
 interface VoiceNoteRecord {
   id: string;
@@ -235,7 +235,7 @@ export default function EventDashboardPage() {
             session &&
               (session.role === 'admin' ||
                 Boolean(ev.hostEmail) ||
-                (session.role === 'vendor' && ev.vendorId && session.id === ev.vendorId))
+                (session.role === 'vendor' && isSameVendorId(session.id, ev.vendorId)))
           );
           setIsHost(isVerifiedOwner);
         }

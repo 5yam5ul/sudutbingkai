@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getInvoice, createInvoice, getEventById, getAllInvoices, updateInvoice, deleteInvoice, updateEvent, getAllVendors, updateVendor } from '@/lib/db';
 import { PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
-import { getServerSession } from '@/lib/auth';
+import { getServerSession, isSameVendorId } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
           session.email?.toLowerCase() === event.hostEmail?.toLowerCase() ||
           session.id === event.hostEmail
         );
-        const isOwnerVendor = session.role === 'vendor' && session.id === event.vendorId;
+        const isOwnerVendor = session.role === 'vendor' && isSameVendorId(session.id, event.vendorId);
         const isAdmin = session.role === 'admin';
         if (!isOwnerHost && !isOwnerVendor && !isAdmin) {
           return NextResponse.json({ success: false, error: 'Akses ditolak: Anda tidak memiliki akses ke faktur acara ini.' }, { status: 403 });
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
       )
     );
     const isOwnerByEventVendor = Boolean(
-      linkedEvent && session.role === 'vendor' && session.id === linkedEvent.vendorId
+      linkedEvent && session.role === 'vendor' && isSameVendorId(session.id, linkedEvent.vendorId)
     );
 
     if (!isAdmin && !isOwnerByEmail && !isOwnerByEventHost && !isOwnerByEventVendor) {
@@ -198,7 +198,7 @@ export async function PATCH(request: Request) {
             const eventUpdates: any = { paymentStatus: 'paid' };
             if (linkedEvent.vendorId && linkedEvent.commissionAmount && linkedEvent.commissionAmount > 0 && linkedEvent.commissionStatus !== 'available') {
               const vendors = await getAllVendors();
-              const matchedVendor = vendors.find(v => v.id === linkedEvent.vendorId);
+              const matchedVendor = vendors.find(v => isSameVendorId(v.id, linkedEvent.vendorId));
               if (matchedVendor && matchedVendor.status !== 'suspended') {
                 await updateVendor(matchedVendor.id, {
                   walletBalance: (matchedVendor.walletBalance || 0) + linkedEvent.commissionAmount,

@@ -254,7 +254,6 @@ function CreateEventForm() {
       eventPayload.vendorName = currentUser.companyName || currentUser.name;
       eventPayload.vendorLogo = currentUser.logoUrl;
       eventPayload.vendorInstagram = currentUser.instagram;
-      eventPayload.referralCodeUsed = currentUser.referralCode;
       eventPayload.commissionAmount = vendorCommissionAmount;
       eventPayload.commissionStatus = paymentStatus === 'paid' ? 'available' : 'pending';
     } else {
@@ -282,6 +281,8 @@ function CreateEventForm() {
           role: 'host'
         };
         setClientSession(sessionUser, data.sessionToken);
+      } else if (currentUser && data.sessionToken) {
+        setClientSession(currentUser, data.sessionToken);
       }
       return data.event.id;
     } else {
@@ -325,7 +326,7 @@ function CreateEventForm() {
       // 3. Initiate Mayar Checkout with accurate canonical eventId & server-validated price
       const hostUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.vercel.app';
       const basePackagePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 349000;
-      const finalChargedAmount = referralDiscount?.valid ? referralDiscount.finalPrice : basePackagePrice;
+      const finalChargedAmount = (!isVendor && referralDiscount?.valid) ? referralDiscount.finalPrice : basePackagePrice;
       const redirectSuccessUrl = isVendor
         ? `${hostUrl}/vendor?tab=clients&newClient=${eventId}&paid=true`
         : `${hostUrl}/dashboard?eventId=${eventId}&paid=true`;
@@ -338,7 +339,7 @@ function CreateEventForm() {
           name: coupleOrHost || title,
           email: cleanEmail,
           eventId,
-          referralCode: isVendor ? currentUser?.referralCode : (referralDiscount?.valid ? referralCode.toUpperCase().trim() : undefined),
+          referralCode: !isVendor && referralDiscount?.valid ? referralCode.toUpperCase().trim() : undefined,
           amount: finalChargedAmount,
           redirectUrl: redirectSuccessUrl
         })
@@ -1688,9 +1689,10 @@ function CreateEventForm() {
           setPaymentModalOpen(false);
           toast.success('Pembayaran Terkonfirmasi!');
 
+          let serverSignedToken: string | undefined;
           if (createdDraftEventId) {
             try {
-              await authFetch('/api/events', {
+              const patchRes = await authFetch('/api/events', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1698,6 +1700,10 @@ function CreateEventForm() {
                   paymentStatus: 'paid',
                 }),
               });
+              const patchData = await patchRes.json();
+              if (patchData?.sessionToken) {
+                serverSignedToken = patchData.sessionToken;
+              }
             } catch (evErr) {
               console.warn('Failed to mark draft event as paid:', evErr);
             }
@@ -1712,7 +1718,7 @@ function CreateEventForm() {
               totalEarnings: newEarnings,
               clientCount: (currentUser.clientCount || 0) + 1
             };
-            setClientSession(updatedUser);
+            setClientSession(updatedUser, serverSignedToken);
             setCurrentUser(updatedUser);
 
             toast.success(`Komisi sebesar Rp ${vendorCommissionAmount.toLocaleString('id-ID')} berhasil masuk ke saldo dompet Anda!`);

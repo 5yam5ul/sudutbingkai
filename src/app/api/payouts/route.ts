@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPayoutRequests, createPayoutRequest, updatePayoutStatus, deletePayout, getAllVendors, updateVendor } from '@/lib/db';
-import { getServerSession } from '@/lib/auth';
+import { getServerSession, isSameVendorId } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
 
     const isAdmin = session.role === 'admin';
     const isSelf = session.role === 'vendor' && (
-      session.id === vendorId ||
+      isSameVendorId(session.id, vendorId) ||
       (session.email && session.email.toLowerCase() === vendorId.toLowerCase())
     );
 
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
 
     const isAdmin = session.role === 'admin';
     const isSelf = session.role === 'vendor' && (
-      session.id === vendorId ||
+      isSameVendorId(session.id, vendorId) ||
       (session.email && vendorEmail && session.email.toLowerCase() === vendorEmail.toLowerCase())
     );
 
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
 
     // Verify vendor balance in database (except demo account vendor_vows_co if not yet persisted)
     const allVendors = await getAllVendors();
-    const matchedVendor = allVendors.find(v => v.id === vendorId || (vendorEmail && v.email?.toLowerCase() === vendorEmail.toLowerCase()));
+    const matchedVendor = allVendors.find(v => isSameVendorId(v.id, vendorId) || (vendorEmail && v.email?.toLowerCase() === vendorEmail.toLowerCase()));
 
     if (matchedVendor) {
       const availableBalance = Number(matchedVendor.walletBalance || 0);

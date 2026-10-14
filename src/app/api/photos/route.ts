@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAllPhotos, savePhoto, updatePhoto, deletePhoto, getEventById, getPhotoById } from '@/lib/db';
 import { PhotoRecord, getEventRetentionInfo } from '@/lib/types';
-import { getServerSession } from '@/lib/auth';
+import { getServerSession, isSameVendorId } from '@/lib/auth';
 import { isMayarConfigured } from '@/lib/mayar';
 
 export async function GET(request: Request) {
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         session.id === targetEvent?.hostEmail
       )
     );
-    const isAuthorizedVendor = Boolean(session?.role === 'vendor' && session.id === targetEvent?.vendorId);
+    const isAuthorizedVendor = Boolean(session?.role === 'vendor' && isSameVendorId(session.id, targetEvent?.vendorId));
     const isAdmin = session?.role === 'admin';
     const isOwnerOrAdmin = isAdmin || isAuthorizedHost || isAuthorizedVendor;
 
@@ -237,7 +237,7 @@ export async function PATCH(request: Request) {
       session.email?.toLowerCase() === event?.hostEmail?.toLowerCase() ||
       session.id === event?.hostEmail
     );
-    const isVendor = session?.role === 'vendor' && session.id === event?.vendorId;
+    const isVendor = session?.role === 'vendor' && isSameVendorId(session.id, event?.vendorId);
     const isAdmin = session?.role === 'admin';
 
     if (!isHost && !isVendor && !isAdmin) {
@@ -288,7 +288,7 @@ export async function DELETE(request: Request) {
       session.email?.toLowerCase() === event?.hostEmail?.toLowerCase() ||
       session.id === event?.hostEmail
     );
-    const isVendor = session?.role === 'vendor' && session.id === event?.vendorId;
+    const isVendor = session?.role === 'vendor' && isSameVendorId(session.id, event?.vendorId);
     const isAdmin = session?.role === 'admin';
 
     // Allow the guest who captured the photo in their own camera roll session to delete it (strictly requires matching sessionId)

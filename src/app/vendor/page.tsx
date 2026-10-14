@@ -14,7 +14,7 @@ import {
   Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo } from '@/lib/types';
-import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS, authFetch } from '@/lib/auth';
+import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS, authFetch, isSameVendorId } from '@/lib/auth';
 import ConfirmModal from '@/components/ConfirmModal';
 import { toast } from 'sonner';
 
@@ -250,7 +250,7 @@ export default function VendorPortalPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success && data.vendors) {
-          const fresh = data.vendors.find((v: any) => v.id === session.id || (session.email && v.email === session.email));
+          const fresh = data.vendors.find((v: any) => isSameVendorId(v.id, session.id) || (session.email && v.email === session.email));
           if (fresh) {
             if (fresh.walletBalance !== undefined) setWalletBalance(fresh.walletBalance);
             if (fresh.totalEarnings !== undefined) setTotalEarnings(fresh.totalEarnings);

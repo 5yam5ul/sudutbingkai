@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { createMayarInvoice, isMayarConfigured } from '@/lib/mayar';
 import { EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
 import { getEventById, getAllVendors } from '@/lib/db';
+import { getServerSession } from '@/lib/auth';
 
 // Price map in IDR (synced with PACKAGE_TIERS)
 const TIER_PRICES: Record<EventPackageTier, number> = {
@@ -24,6 +25,8 @@ const ADDON_PAX_PRICES: Record<number, number> = {
 
 export async function POST(request: Request) {
   try {
+    const session = getServerSession(request);
+    const isVendorDirectPurchase = session?.role === 'vendor';
     const body = await request.json();
     const {
       packageTier = 'wedding',
@@ -58,9 +61,11 @@ export async function POST(request: Request) {
       const tierInfo = PACKAGE_TIERS[tierKey];
       const basePrice = TIER_PRICES[tierKey] ?? 499000;
 
-      // Validate referral code server-side for legitimate 10% partner discount
-      let hasValidReferral = Boolean(existingEvent?.referralCodeUsed && existingEvent?.vendorId);
-      const codeToCheck = (referralCode || existingEvent?.referralCodeUsed || '').trim().toUpperCase();
+      // Validate referral code server-side for legitimate 10% host partner discount (not applied to direct Vendor Mode purchases)
+      let hasValidReferral = !isVendorDirectPurchase && Boolean(existingEvent?.referralCodeUsed);
+      const codeToCheck = !isVendorDirectPurchase
+        ? (referralCode || existingEvent?.referralCodeUsed || '').trim().toUpperCase()
+        : '';
 
       if (!hasValidReferral && codeToCheck && basePrice > 0) {
         if (codeToCheck === 'VOWSANDCO' || codeToCheck === 'VOWSANDCO10' || codeToCheck === 'KREATIV10') {

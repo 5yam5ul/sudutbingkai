@@ -287,11 +287,49 @@ export function getClientSession(): UserAccount | null {
   return null;
 }
 
+export function isSameVendorId(a?: string | null, b?: string | null): boolean {
+  if (!a || !b) return false;
+  const cleanA = a.trim();
+  const cleanB = b.trim();
+  if (cleanA === cleanB) return true;
+  const vowsAliases = ['vendor_vows_co', 'v_vowsandco'];
+  if (vowsAliases.includes(cleanA) && vowsAliases.includes(cleanB)) return true;
+  return false;
+}
+
 export function setClientSession(user: UserAccount & { password?: string }, preSignedToken?: string): void {
   if (typeof window === 'undefined') return;
   const { password: _, ...safeUser } = user;
   const serialized = JSON.stringify(safeUser);
-  const signedToken = preSignedToken && preSignedToken.includes('.') ? preSignedToken : signSessionPayload(serialized);
+  let signedToken = preSignedToken && preSignedToken.includes('.') ? preSignedToken : '';
+
+  if (!signedToken) {
+    // Check if an existing server-signed token for the same user & role is already stored
+    try {
+      const existingRaw = localStorage.getItem(STORAGE_KEY);
+      if (existingRaw && existingRaw.includes('.')) {
+        const [b64Payload, existingSig] = existingRaw.split('.');
+        if (b64Payload && existingSig && /^[0-9a-f]{64}$/i.test(existingSig)) {
+          const existingPayloadJson = decodeB64(b64Payload);
+          const existingParsed = JSON.parse(existingPayloadJson);
+          const localExpectedSig = sha256Sync(`${existingPayloadJson}#${SESSION_SECRET}`);
+          // If the existing token belongs to the same user & role and was signed with a server-only AUTH_SECRET, preserve it
+          if (
+            existingParsed &&
+            existingParsed.id === safeUser.id &&
+            existingParsed.role === safeUser.role &&
+            existingSig !== localExpectedSig
+          ) {
+            signedToken = existingRaw;
+          }
+        }
+      }
+    } catch {}
+  }
+
+  if (!signedToken) {
+    signedToken = signSessionPayload(serialized);
+  }
 
   try {
     localStorage.setItem(STORAGE_KEY, signedToken);

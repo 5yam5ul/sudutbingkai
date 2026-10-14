@@ -19,15 +19,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Handle OAuth Session Signing or Authenticated Role Switch (strictly non-admin)
+    // 1. Handle OAuth Session Signing or Authenticated Role Switch
     if (mode === 'oauth') {
-      if (requestedRole === 'admin' || cleanEmail.includes('admin@sudutbingkai.id')) {
-        return NextResponse.json(
-          { success: false, error: 'Akses ditolak untuk peran Admin melalui OAuth.' },
-          { status: 403 }
-        );
-      }
-
       const existingSession = getServerSession(request);
       let isVerifiedIdentity = Boolean(
         existingSession && existingSession.email && existingSession.email.trim().toLowerCase() === cleanEmail
@@ -40,6 +33,40 @@ export async function POST(request: Request) {
             isVerifiedIdentity = true;
           }
         } catch {}
+      }
+
+      if (requestedRole === 'admin' || cleanEmail.includes('admin@sudutbingkai.id')) {
+        const isVerifiedAdminIdentity =
+          isVerifiedIdentity &&
+          (existingSession?.role === 'admin' || cleanEmail === 'admin@sudutbingkai.id');
+        if (!isVerifiedAdminIdentity) {
+          return NextResponse.json(
+            { success: false, error: 'Akses ditolak untuk peran Admin melalui OAuth.' },
+            { status: 403 }
+          );
+        }
+        const adminObj: UserAccount = {
+          id: 'admin_sudutbingkai',
+          name: (body.name || 'Super Admin SudutBingkai').trim(),
+          email: 'admin@sudutbingkai.id',
+          role: 'admin',
+          companyName: 'Sudut Bingkai HQ',
+        };
+        const token = signSessionPayload(JSON.stringify(adminObj));
+        const response = NextResponse.json({
+          success: true,
+          user: adminObj,
+          token,
+          sessionToken: token,
+        });
+        const maxAge = 60 * 24 * 60 * 60;
+        response.cookies.set('sb_auth_session', token, {
+          path: '/',
+          maxAge,
+          sameSite: 'lax',
+          httpOnly: false,
+        });
+        return response;
       }
 
       if (!isVerifiedIdentity) {

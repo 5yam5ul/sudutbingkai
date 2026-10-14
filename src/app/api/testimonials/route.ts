@@ -8,7 +8,7 @@ import {
   deleteTestimonial,
   getEventById
 } from '@/lib/db';
-import { getServerSession } from '@/lib/auth';
+import { getServerSession, isSameVendorId } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
       }
       const isAdmin = session.role === 'admin';
       const isSelf = session.role === 'vendor' && (
-        session.id === vendorId ||
+        isSameVendorId(session.id, vendorId) ||
         (session.email && session.email.toLowerCase() === vendorId.toLowerCase())
       );
       if (!isAdmin && !isSelf) {
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       caption
     } = body;
 
-    if (session.role !== 'admin' && submitterId !== session.id && submitterEmail !== session.email) {
+    if (session.role !== 'admin' && !isSameVendorId(submitterId, session.id) && submitterEmail !== session.email) {
       return NextResponse.json(
         { success: false, error: 'Akses ditolak: Identitas pengirim tidak sesuai dengan sesi login aktif.' },
         { status: 403 }

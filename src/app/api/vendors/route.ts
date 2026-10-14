@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAllVendors, saveVendor, updateVendor, deleteVendor } from '@/lib/db';
-import { getServerSession, signSessionPayload } from '@/lib/auth';
+import { getServerSession, signSessionPayload, isSameVendorId } from '@/lib/auth';
 import { isMayarConfigured } from '@/lib/mayar';
 
 export async function GET(req: Request) {
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     // 2. Logged-in Vendor: full access to their own account, masked for others
     if (session?.role === 'vendor') {
       const sanitized = cleanVendors.map(v => {
-        const isSelf = v.id === session.id || (session.email && v.email?.toLowerCase() === session.email.toLowerCase());
+        const isSelf = isSameVendorId(v.id, session.id) || (session.email && v.email?.toLowerCase() === session.email.toLowerCase());
         if (isSelf) return v;
         return {
           id: v.id,
@@ -73,11 +73,11 @@ export async function POST(req: Request) {
 
     // Check if updating an existing vendor profile via POST (e.g. handleSaveBranding)
     const allVendors = await getAllVendors();
-    const existing = allVendors.find(v => v.id === vendorId || (v.email && v.email.toLowerCase() === vendorEmail));
+    const existing = allVendors.find(v => isSameVendorId(v.id, vendorId) || (v.email && v.email.toLowerCase() === vendorEmail));
 
     if (existing) {
       const isSelf = session?.role === 'vendor' && (
-        session.id === existing.id ||
+        isSameVendorId(session.id, existing.id) ||
         (session.email && existing.email && session.email.toLowerCase() === existing.email.toLowerCase())
       );
       if (!isAdmin && !isSelf) {
@@ -191,14 +191,14 @@ export async function PATCH(req: Request) {
     }
 
     const allVendors = await getAllVendors();
-    const current = allVendors.find(v => v.id === body.id);
+    const current = allVendors.find(v => isSameVendorId(v.id, body.id));
     if (!current) {
       return NextResponse.json({ success: false, error: 'Vendor tidak ditemukan' }, { status: 404 });
     }
 
     const isAdmin = session.role === 'admin';
     const isSelf = session.role === 'vendor' && (
-      session.id === current.id ||
+      isSameVendorId(session.id, current.id) ||
       (session.email && current.email && session.email.toLowerCase() === current.email.toLowerCase())
     );
 

@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { getVideoWishes, saveVideoWish, deleteVideoWish, getEventById } from '@/lib/db';
 import { uploadBufferToR2, isR2Configured } from '@/lib/r2';
-import { getServerSession } from '@/lib/auth';
+import { getServerSession, isSameVendorId } from '@/lib/auth';
 import { getEventRetentionInfo } from '@/lib/types';
 import { isMayarConfigured } from '@/lib/mayar';
 
@@ -57,7 +57,7 @@ export async function GET(request: Request) {
               (session.role === 'host' &&
                 targetEvent.hostEmail &&
                 session.email.toLowerCase() === targetEvent.hostEmail.toLowerCase()) ||
-              (session.role === 'vendor' && targetEvent.vendorId && session.id === targetEvent.vendorId))
+              (session.role === 'vendor' && isSameVendorId(session.id, targetEvent.vendorId)))
         );
         if (!isAuthorizedManager) {
           return NextResponse.json({
@@ -228,7 +228,7 @@ export async function DELETE(request: Request) {
         session.email?.toLowerCase() === event?.hostEmail?.toLowerCase() ||
         session.id === event?.hostEmail
       );
-      const isOwnerVendor = session.role === 'vendor' && session.id === event?.vendorId;
+      const isOwnerVendor = session.role === 'vendor' && isSameVendorId(session.id, event?.vendorId);
       if (!isOwnerHost && !isOwnerVendor) {
         return NextResponse.json({
           success: false,

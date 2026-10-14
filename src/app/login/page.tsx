@@ -202,7 +202,8 @@ function LoginFormContent() {
         role: 'admin',
         companyName: 'Sudut Bingkai HQ'
       };
-      setClientSession(adminUser);
+      const srvToken = await signOAuthSessionOnServer(adminUser);
+      setClientSession(adminUser, srvToken);
       toast.success('Selamat datang, Super Admin!');
       router.push('/admin');
       return;

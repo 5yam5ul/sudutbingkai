@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File | null;
     const rawType = (formData.get('type') as string) || 'frame';
     const oldUrl = (formData.get('oldUrl') as string | null)?.trim() || '';
-    const type = ['frame', 'cover', 'logo', 'general'].includes(rawType) ? rawType : 'general';
+    const type = ['frame', 'cover', 'logo', 'proof', 'addon', 'general'].includes(rawType) ? rawType : 'general';
 
     if (!file) {
       return NextResponse.json({ success: false, error: 'File tidak ditemukan' }, { status: 400 });
@@ -41,7 +41,18 @@ export async function POST(request: Request) {
     // 2. Safe Extension derived from verified MIME (prevent double extension & executable tricks)
     const ext = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
     const buffer = Buffer.from(await file.arrayBuffer());
-    const subFolder = type === 'frame' ? 'frames' : type === 'cover' ? 'covers' : type === 'logo' ? 'logos' : 'general';
+    const subFolder =
+      type === 'frame'
+        ? 'frames'
+        : type === 'cover'
+          ? 'covers'
+          : type === 'logo'
+            ? 'logos'
+            : type === 'proof'
+              ? 'proofs'
+              : type === 'addon'
+                ? 'addons'
+                : 'general';
     const filename = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
     const storagePath = `${subFolder}/${filename}`;
 
@@ -104,6 +115,15 @@ export async function POST(request: Request) {
       fs.writeFileSync(targetPath, buffer);
 
       const publicUrl = `/uploads/${subFolder}/${filename}`;
+
+      if (oldUrl && oldUrl !== publicUrl && oldUrl.startsWith('/uploads/')) {
+        try {
+          const oldLocalPath = path.join(process.cwd(), 'public', oldUrl.replace(/^\//, ''));
+          if (fs.existsSync(oldLocalPath)) {
+            fs.unlinkSync(oldLocalPath);
+          }
+        } catch {}
+      }
 
       return NextResponse.json({
         success: true,

@@ -81,6 +81,7 @@ export default function FrameCustomizer({
 
   useEffect(() => {
     setCustomFrameUrl(initialCustomFrameUrl || '');
+    unsavedFrameUploadRef.current = '';
   }, [initialCustomFrameUrl]);
 
   useEffect(() => {

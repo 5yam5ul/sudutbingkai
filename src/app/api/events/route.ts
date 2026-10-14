@@ -1,17 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent, getAllVendors, updateVendor, getInvoice, updateInvoice } from '@/lib/db';
+import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent, getAllVendors, updateVendor, getInvoice, createInvoice, updateInvoice } from '@/lib/db';
 import { EventData, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
-import { getServerSession, signSessionPayload } from '@/lib/auth';
+import { getServerSession, signSessionPayload, isSameVendorId } from '@/lib/auth';
 import { isMayarConfigured } from '@/lib/mayar';
 import { deleteFromR2 } from '@/lib/r2';
-
-function isSameVendorId(a?: string, b?: string): boolean {
-  if (!a || !b) return false;
-  if (a === b) return true;
-  const vowsAliases = ['vendor_vows_co', 'v_vowsandco'];
-  if (vowsAliases.includes(a) && vowsAliases.includes(b)) return true;
-  return false;
-}
 
 export async function GET(request: Request) {
   try {
@@ -263,20 +255,67 @@ export async function POST(request: Request) {
     };
 
     const saved = await saveEvent(newEvent);
+    let updatedVendorBalance: number | undefined;
+    let updatedVendorEarnings: number | undefined;
+
     if (saved.paymentStatus === 'paid' && saved.vendorId && saved.commissionAmount && saved.commissionAmount > 0 && saved.commissionStatus === 'available') {
       try {
         const vendors = await getAllVendors();
-        const matchedVendor = vendors.find(v => v.id === saved.vendorId);
+        const matchedVendor = vendors.find(v => isSameVendorId(v.id, saved.vendorId));
         if (matchedVendor && matchedVendor.status !== 'suspended') {
+          updatedVendorBalance = (matchedVendor.walletBalance || 0) + saved.commissionAmount;
+          updatedVendorEarnings = (matchedVendor.totalEarnings || 0) + saved.commissionAmount;
           await updateVendor(matchedVendor.id, {
-            walletBalance: (matchedVendor.walletBalance || 0) + saved.commissionAmount,
-            totalEarnings: (matchedVendor.totalEarnings || 0) + saved.commissionAmount
+            walletBalance: updatedVendorBalance,
+            totalEarnings: updatedVendorEarnings
           });
         }
       } catch {}
     }
+
+    // Automatically generate official InvoiceRecord when event is created
+    try {
+      const existingInv = await getInvoice(saved.id);
+      if (!existingInv) {
+        const rawPrice = tierConfig.isFree || tierKey === 'starter'
+          ? 0
+          : (parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0);
+        const isHostReferralDiscount = Boolean(saved.referralCodeUsed && session?.role !== 'vendor');
+        const discount = isHostReferralDiscount ? Math.round(rawPrice * 0.1) : 0;
+        const finalAmount = rawPrice - discount;
+        const isEventPaid = tierConfig.isFree || tierKey === 'starter' || saved.paymentStatus === 'paid';
+
+        await createInvoice({
+          id: `inv_${saved.id}`,
+          eventId: saved.id,
+          orderId: `ord_${saved.id.substring(0, 10)}`,
+          buyerType: session?.role === 'vendor' ? 'vendor' : 'client',
+          buyerName: saved.coupleOrHost || saved.title,
+          buyerEmail: saved.hostEmail || 'pengantin@sudutbingkai.id',
+          companyName: saved.vendorName,
+          tierId: tierKey,
+          tierName: `${tierConfig.name} (${tierConfig.guestsLabel})`,
+          originalPrice: rawPrice,
+          discountAmount: discount,
+          discountCode: isHostReferralDiscount ? saved.referralCodeUsed : undefined,
+          finalAmount,
+          paymentMethod: 'qris',
+          status: isEventPaid ? 'paid' : 'pending',
+          paidAt: isEventPaid ? saved.createdAt : undefined,
+          createdAt: saved.createdAt
+        });
+      }
+    } catch {}
+
     let sessionToken: string | undefined;
-    if (saved.hostEmail && !isAdmin && session?.role !== 'vendor') {
+    if (session?.role === 'vendor') {
+      const vendorSessionUser = {
+        ...session,
+        walletBalance: updatedVendorBalance ?? session.walletBalance,
+        totalEarnings: updatedVendorEarnings ?? session.totalEarnings,
+      };
+      sessionToken = signSessionPayload(JSON.stringify(vendorSessionUser));
+    } else if (saved.hostEmail && !isAdmin) {
       const cleanHostEmail = saved.hostEmail.trim().toLowerCase();
       const hostUser = {
         id: session?.role === 'host' && session.id ? session.id : 'usr_' + cleanHostEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),
@@ -440,6 +479,9 @@ export async function PATCH(request: Request) {
     }
 
     // If transitioning to 'paid', disburse pending vendor commission and mark linked invoice 'paid'
+    let updatedVendorBalance: number | undefined;
+    let updatedVendorEarnings: number | undefined;
+
     if (updates.paymentStatus === 'paid' && existingEvent.paymentStatus !== 'paid') {
       const targetVendorId = updates.vendorId || existingEvent.vendorId;
       const targetCommission = updates.commissionAmount !== undefined ? updates.commissionAmount : existingEvent.commissionAmount;
@@ -448,9 +490,11 @@ export async function PATCH(request: Request) {
           const vendors = await getAllVendors();
           const matchedVendor = vendors.find(v => isSameVendorId(v.id, targetVendorId));
           if (matchedVendor && matchedVendor.status !== 'suspended') {
+            updatedVendorBalance = (matchedVendor.walletBalance || 0) + targetCommission;
+            updatedVendorEarnings = (matchedVendor.totalEarnings || 0) + targetCommission;
             await updateVendor(matchedVendor.id, {
-              walletBalance: (matchedVendor.walletBalance || 0) + targetCommission,
-              totalEarnings: (matchedVendor.totalEarnings || 0) + targetCommission
+              walletBalance: updatedVendorBalance,
+              totalEarnings: updatedVendorEarnings
             });
             updates.commissionStatus = 'available';
           }
@@ -458,10 +502,36 @@ export async function PATCH(request: Request) {
       }
       try {
         const existingInv = await getInvoice(existingEvent.id);
-        if (existingInv && existingInv.status !== 'paid') {
-          await updateInvoice(existingInv.id, {
+        if (existingInv) {
+          if (existingInv.status !== 'paid') {
+            await updateInvoice(existingInv.id, {
+              status: 'paid',
+              paidAt: new Date().toISOString()
+            });
+          }
+        } else {
+          const rawPrice = tierConfig.isFree || currentTier === 'starter'
+            ? 0
+            : (parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0);
+          const discount = existingEvent.referralCodeUsed ? Math.round(rawPrice * 0.1) : 0;
+          await createInvoice({
+            id: `inv_${existingEvent.id}`,
+            eventId: existingEvent.id,
+            orderId: `ord_${existingEvent.id.substring(0, 10)}`,
+            buyerType: existingEvent.vendorId && !existingEvent.referralCodeUsed ? 'vendor' : 'client',
+            buyerName: existingEvent.coupleOrHost || existingEvent.title,
+            buyerEmail: existingEvent.hostEmail || 'pengantin@sudutbingkai.id',
+            companyName: existingEvent.vendorName,
+            tierId: currentTier,
+            tierName: `${tierConfig.name} (${tierConfig.guestsLabel})`,
+            originalPrice: rawPrice,
+            discountAmount: discount,
+            discountCode: existingEvent.referralCodeUsed,
+            finalAmount: rawPrice - discount,
+            paymentMethod: 'qris',
             status: 'paid',
-            paidAt: new Date().toISOString()
+            paidAt: new Date().toISOString(),
+            createdAt: existingEvent.createdAt
           });
         }
       } catch {}
@@ -479,7 +549,17 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, event: updated });
+    let sessionToken: string | undefined;
+    if (session.role === 'vendor') {
+      const vendorSessionUser = {
+        ...session,
+        walletBalance: updatedVendorBalance ?? session.walletBalance,
+        totalEarnings: updatedVendorEarnings ?? session.totalEarnings,
+      };
+      sessionToken = signSessionPayload(JSON.stringify(vendorSessionUser));
+    }
+
+    return NextResponse.json({ success: true, event: updated, sessionToken });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 400 });
   }
