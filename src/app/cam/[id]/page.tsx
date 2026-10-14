@@ -350,6 +350,20 @@ export default function GuestCameraPage() {
                       localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
                       if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(persistentShots));
                     } catch {}
+                  } else {
+                    getOfflinePhotosQueue(eventId).then(queue => {
+                      if (queue.length === 0) {
+                        setShotCount(0);
+                        setMyPhotos([]);
+                        setLastShotThumb(null);
+                        try {
+                          localStorage.removeItem(`sb_shot_count_${canonicalId}`);
+                          localStorage.removeItem(`sb_shot_count_${eventId}`);
+                          localStorage.removeItem(`sb_my_shots_${eventId}`);
+                          localStorage.removeItem(`sb_my_shots_${canonicalId}`);
+                        } catch {}
+                      }
+                    }).catch(() => {});
                   }
                 }
               })
@@ -521,8 +535,10 @@ export default function GuestCameraPage() {
     }
   };
 
+  const hasRemainingShots = remaining > 0;
+
   useEffect(() => {
-    if (hasEnteredName && remaining > 0) {
+    if (hasEnteredName && hasRemainingShots) {
       startCamera();
     } else {
       stopCameraHardware();
@@ -530,12 +546,12 @@ export default function GuestCameraPage() {
     return () => {
       stopCameraHardware();
     };
-  }, [hasEnteredName, facingMode, remaining]);
+  }, [hasEnteredName, facingMode, hasRemainingShots]);
 
   // iOS Safari / Mobile Background Sleep Recovery: Auto-resume camera stream if user locks phone or switches apps
   useEffect(() => {
     const handleVisibilityOrFocus = () => {
-      if (document.visibilityState === 'visible' && hasEnteredName && remaining > 0) {
+      if (document.visibilityState === 'visible' && hasEnteredName && hasRemainingShots) {
         const track = streamRef.current?.getVideoTracks()[0];
         const isTrackDead = !track || track.readyState === 'ended' || track.muted;
         const isVideoPaused = videoRef.current ? (videoRef.current.paused || videoRef.current.ended) : true;
@@ -554,7 +570,7 @@ export default function GuestCameraPage() {
       window.removeEventListener('focus', handleVisibilityOrFocus);
       window.removeEventListener('pageshow', handleVisibilityOrFocus);
     };
-  }, [hasEnteredName, remaining, facingMode]);
+  }, [hasEnteredName, hasRemainingShots, facingMode]);
 
   // Hardware Torch Control (Physical LED Flashlight on Back Camera)
   const setHardwareTorch = async (enabled: boolean): Promise<boolean> => {

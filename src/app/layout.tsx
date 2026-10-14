@@ -22,6 +22,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://sudutbingkai.vercel.app'),
   title: 'SudutBingkai • Kamera Sekali Pakai untuk Pernikahan & Acara',
   description: 'Abadikan momen candid terbaik dari sudut pandang para tamu. Tamu memotret langsung lewat scan QR di meja tanpa install aplikasi.',
   keywords: 'kamera sekali pakai pernikahan, disposable camera digital, qr code foto pernikahan, sudut bingkai, foto tamu, satualbum',
@@ -29,6 +30,19 @@ export const metadata: Metadata = {
     icon: '/favicon.png',
     shortcut: '/favicon.ico',
     apple: '/favicon.png',
+  },
+  openGraph: {
+    title: 'SudutBingkai • Kamera Sekali Pakai untuk Pernikahan & Acara',
+    description: 'Abadikan momen candid terbaik dari sudut pandang para tamu. Tamu memotret langsung lewat scan QR di meja tanpa install aplikasi.',
+    url: 'https://sudutbingkai.vercel.app',
+    siteName: 'SudutBingkai',
+    locale: 'id_ID',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SudutBingkai • Kamera Sekali Pakai untuk Pernikahan & Acara',
+    description: 'Abadikan momen candid terbaik dari sudut pandang para tamu. Tamu memotret langsung lewat scan QR di meja tanpa install aplikasi.',
   },
 };
 

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent, getAllVendors, updateVendor } from '@/lib/db';
+import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent, getAllVendors, updateVendor, getInvoice, updateInvoice } from '@/lib/db';
 import { EventData, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 import { getServerSession, signSessionPayload } from '@/lib/auth';
 import { isMayarConfigured } from '@/lib/mayar';
@@ -155,6 +155,59 @@ export async function POST(request: Request) {
       ? rawAllowed.slice(0, maxP)
       : [chosenPreset];
 
+    let verifiedVendorId: string | undefined;
+    let verifiedVendorName: string | undefined;
+    let verifiedVendorLogo: string | undefined;
+    let verifiedVendorInstagram: string | undefined;
+    let verifiedReferralCode: string | undefined;
+    let serverCommissionAmount = 0;
+
+    if (body.referralCodeUsed || body.vendorId) {
+      const vendors = await getAllVendors();
+      const cleanRef = (body.referralCodeUsed || '').toString().trim().toUpperCase();
+      const matchedVendor = vendors.find(
+        v =>
+          (body.vendorId && v.id === body.vendorId) ||
+          (cleanRef && v.referralCode.toUpperCase() === cleanRef)
+      );
+
+      if (matchedVendor && matchedVendor.status !== 'suspended') {
+        verifiedVendorId = matchedVendor.id;
+        verifiedVendorName = matchedVendor.companyName;
+        verifiedVendorLogo = matchedVendor.logoUrl;
+        verifiedVendorInstagram = matchedVendor.instagram;
+        if (cleanRef) {
+          verifiedReferralCode = matchedVendor.referralCode;
+        }
+        if (tierKey !== 'starter' && !tierConfig.isFree) {
+          const basePrice = parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0;
+          const ratePercent = matchedVendor.commissionRate || (matchedVendor.partnerTier === 'vip' ? 25 : 20);
+          serverCommissionAmount = Math.round(basePrice * (ratePercent / 100));
+        }
+      } else if (cleanRef === 'VOWSANDCO' || cleanRef === 'VOWSANDCO10' || cleanRef === 'KREATIV10') {
+        verifiedReferralCode = cleanRef;
+        verifiedVendorId = body.vendorId || 'v_vowsandco';
+        verifiedVendorName = body.vendorName || 'Vows & Co. Photography';
+        verifiedVendorLogo = body.vendorLogo;
+        verifiedVendorInstagram = body.vendorInstagram;
+        if (tierKey !== 'starter' && !tierConfig.isFree) {
+          const basePrice = parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0;
+          serverCommissionAmount = Math.round(basePrice * 0.2);
+        }
+      }
+    }
+
+    const finalCommissionAmount = isAdmin && body.commissionAmount !== undefined
+      ? Number(body.commissionAmount)
+      : serverCommissionAmount;
+
+    const resolvedPaymentStatus =
+      tierKey === 'starter' || isAdmin
+        ? (body.paymentStatus || 'paid')
+        : isMayarConfigured
+          ? 'pending'
+          : (body.paymentStatus || 'pending');
+
     const newEvent: EventData = {
       id,
       slug: cleanSlug,
@@ -180,22 +233,31 @@ export async function POST(request: Request) {
       closingWishType: body.closingWishType || (tierKey === 'wedding' || tierKey === 'unlimited' ? 'video' : 'voice'),
       createdAt: new Date().toISOString(),
       hostEmail: body.hostEmail,
-      paymentStatus:
-        tierKey === 'starter' || isAdmin
-          ? (body.paymentStatus || 'paid')
-          : isMayarConfigured
-            ? 'pending'
-            : (body.paymentStatus || 'pending'),
-      referralCodeUsed: body.referralCodeUsed,
-      commissionAmount: body.commissionAmount,
-      commissionStatus: body.commissionStatus || (body.commissionAmount ? 'pending' : undefined),
-      vendorId: body.vendorId,
-      vendorName: body.vendorName,
-      vendorLogo: body.vendorLogo,
-      vendorInstagram: body.vendorInstagram
+      paymentStatus: resolvedPaymentStatus,
+      referralCodeUsed: verifiedReferralCode,
+      commissionAmount: finalCommissionAmount > 0 ? finalCommissionAmount : undefined,
+      commissionStatus: finalCommissionAmount > 0
+        ? (isAdmin && body.commissionStatus ? body.commissionStatus : (resolvedPaymentStatus === 'paid' ? 'available' : 'pending'))
+        : undefined,
+      vendorId: verifiedVendorId,
+      vendorName: verifiedVendorName,
+      vendorLogo: verifiedVendorLogo,
+      vendorInstagram: verifiedVendorInstagram
     };
 
     const saved = await saveEvent(newEvent);
+    if (saved.paymentStatus === 'paid' && saved.vendorId && saved.commissionAmount && saved.commissionAmount > 0 && saved.commissionStatus === 'available') {
+      try {
+        const vendors = await getAllVendors();
+        const matchedVendor = vendors.find(v => v.id === saved.vendorId);
+        if (matchedVendor && matchedVendor.status !== 'suspended') {
+          await updateVendor(matchedVendor.id, {
+            walletBalance: (matchedVendor.walletBalance || 0) + saved.commissionAmount,
+            totalEarnings: (matchedVendor.totalEarnings || 0) + saved.commissionAmount
+          });
+        }
+      } catch {}
+    }
     let sessionToken: string | undefined;
     if (saved.hostEmail && !isAdmin && session?.role !== 'vendor') {
       const cleanHostEmail = saved.hostEmail.trim().toLowerCase();
@@ -358,20 +420,41 @@ export async function PATCH(request: Request) {
       if (body.hostEmail !== undefined) updates.hostEmail = body.hostEmail;
     } else if (!isMayarConfigured && body.paymentStatus === 'paid' && existingEvent.paymentStatus === 'pending') {
       updates.paymentStatus = 'paid';
-      // Disburse vendor commission in sandbox mode if referral was used
-      if (existingEvent.vendorId && existingEvent.commissionAmount && existingEvent.commissionAmount > 0 && existingEvent.commissionStatus !== 'available') {
+    }
+
+    // If transitioning to 'paid', disburse pending vendor commission and mark linked invoice 'paid'
+    if (updates.paymentStatus === 'paid' && existingEvent.paymentStatus !== 'paid') {
+      const targetVendorId = updates.vendorId || existingEvent.vendorId;
+      const targetCommission = updates.commissionAmount !== undefined ? updates.commissionAmount : existingEvent.commissionAmount;
+      if (targetVendorId && targetCommission && targetCommission > 0 && existingEvent.commissionStatus !== 'available') {
         try {
           const vendors = await getAllVendors();
-          const matchedVendor = vendors.find(v => v.id === existingEvent.vendorId);
-          if (matchedVendor) {
+          const matchedVendor = vendors.find(v => v.id === targetVendorId);
+          if (matchedVendor && matchedVendor.status !== 'suspended') {
             await updateVendor(matchedVendor.id, {
-              walletBalance: (matchedVendor.walletBalance || 0) + existingEvent.commissionAmount,
-              totalEarnings: (matchedVendor.totalEarnings || 0) + existingEvent.commissionAmount
+              walletBalance: (matchedVendor.walletBalance || 0) + targetCommission,
+              totalEarnings: (matchedVendor.totalEarnings || 0) + targetCommission
             });
             updates.commissionStatus = 'available';
           }
         } catch {}
       }
+      try {
+        const existingInv = await getInvoice(existingEvent.id);
+        if (existingInv && existingInv.status !== 'paid') {
+          await updateInvoice(existingInv.id, {
+            status: 'paid',
+            paidAt: new Date().toISOString()
+          });
+        }
+      } catch {}
+    } else if (updates.paymentStatus === 'pending' && existingEvent.paymentStatus === 'paid') {
+      try {
+        const existingInv = await getInvoice(existingEvent.id);
+        if (existingInv && existingInv.status === 'paid') {
+          await updateInvoice(existingInv.id, { status: 'pending' });
+        }
+      } catch {}
     }
 
     const updated = await updateEvent(existingEvent.id, updates);

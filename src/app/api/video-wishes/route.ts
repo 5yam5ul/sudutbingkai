@@ -141,13 +141,32 @@ export async function POST(request: Request) {
       }
     }
 
+    let resolvedThumbnailUrl = thumbnailUrl || undefined;
+    if (resolvedThumbnailUrl && resolvedThumbnailUrl.startsWith('data:image/') && isR2Configured) {
+      try {
+        const matches = resolvedThumbnailUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const thumbMime = matches[1];
+          const thumbExt = thumbMime.includes('png') ? 'png' : thumbMime.includes('webp') ? 'webp' : 'jpg';
+          const thumbBuffer = Buffer.from(matches[2], 'base64');
+          const thumbKey = `events/${event.id}/videos/${wishId}-thumb.${thumbExt}`;
+          const r2ThumbUrl = await uploadBufferToR2(thumbBuffer, thumbKey, thumbMime);
+          if (r2ThumbUrl) {
+            resolvedThumbnailUrl = r2ThumbUrl;
+          }
+        }
+      } catch (e) {
+        console.warn('R2 video thumbnail upload failed, keeping fallback:', e);
+      }
+    }
+
     const newWish = await saveVideoWish({
       id: wishId,
       eventId: event.id,
       guestName: guestName.trim(),
       tableNumber: tableNumber ? tableNumber.trim() : undefined,
       videoUrl: videoUrl,
-      thumbnailUrl: thumbnailUrl || undefined,
+      thumbnailUrl: resolvedThumbnailUrl,
       durationSeconds: duration,
       aspectRatio: '9:16',
       timestamp: new Date().toISOString()

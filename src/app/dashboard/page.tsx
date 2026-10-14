@@ -103,14 +103,31 @@ export default function BrideDashboardPage() {
     fetchData(current, requestedEventId || undefined);
   }, []);
 
-  const handleRestoreHostRole = () => {
+  const handleRestoreHostRole = async () => {
     if (!user) return;
     const restoredUser: UserAccount = {
       ...user,
       role: 'host'
     };
+    let signedToken: string | undefined;
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'oauth',
+          role: 'host',
+          email: restoredUser.email,
+          name: restoredUser.name
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.sessionToken) {
+        signedToken = data.sessionToken;
+      }
+    } catch {}
     setUser(restoredUser);
-    setClientSession(restoredUser);
+    setClientSession(restoredUser, signedToken);
     setIsHostMismatched(false);
     toast.success('Peran akun Anda berhasil dikembalikan sebagai Pengantin / Penyelenggara!');
     fetchData(restoredUser);
@@ -451,16 +468,16 @@ export default function BrideDashboardPage() {
           slug: cleanSlug || undefined,
           shotsPerGuest: safeShots,
           revealMode,
-          revealTime: revealMode === 'delayed' ? revealTime : undefined,
+          revealTime: revealMode === 'delayed' ? revealTime : '',
           preset,
           allowedPresets: safeAllowedPresets,
           allowGuestPresetSwitch: safeGuestSwitch,
           frameId,
-          customFrameUrl: customFrameUrl || undefined,
+          customFrameUrl: customFrameUrl || '',
           frameText,
           allowGuestFrameToggle,
           allowVoiceNote,
-          coverUrl: coverUrl || undefined
+          coverUrl: coverUrl || ''
         })
       });
       const data = await res.json();

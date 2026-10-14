@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       const codeToCheck = (referralCode || existingEvent?.referralCodeUsed || '').trim().toUpperCase();
 
       if (!hasValidReferral && codeToCheck && basePrice > 0) {
-        if (codeToCheck === 'VOWSANDCO10' || codeToCheck === 'KREATIV10') {
+        if (codeToCheck === 'VOWSANDCO' || codeToCheck === 'VOWSANDCO10' || codeToCheck === 'KREATIV10') {
           hasValidReferral = true;
         } else {
           try {

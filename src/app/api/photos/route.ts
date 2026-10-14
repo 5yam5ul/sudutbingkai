@@ -58,17 +58,18 @@ export async function GET(request: Request) {
       new Date(targetEvent.revealTime).getTime() > Date.now()
     );
 
-    if (isDelayedAndLocked && !isOwnerOrAdmin && !isPersonalRollQuery) {
-      return NextResponse.json({
-        success: true,
-        photos: [],
-        count: totalCount,
-        isLocked: true,
-        revealTime: targetEvent?.revealTime
-      });
-    }
-
-    if (isPersonalRollQuery) {
+    if (isDelayedAndLocked && !isOwnerOrAdmin) {
+      if (!sessionId) {
+        return NextResponse.json({
+          success: true,
+          photos: [],
+          count: totalCount,
+          isLocked: true,
+          revealTime: targetEvent?.revealTime
+        });
+      }
+      photos = photos.filter(p => p.sessionId === sessionId);
+    } else if (isPersonalRollQuery) {
       photos = photos.filter(p => 
         (sessionId && p.sessionId === sessionId) ||
         (guestName && guestName.trim() !== 'Tamu' && guestName.trim() !== 'Tamu Undangan' && p.guestName && p.guestName.toLowerCase() === guestName.trim().toLowerCase())
@@ -290,10 +291,9 @@ export async function DELETE(request: Request) {
     const isVendor = session?.role === 'vendor' && session.id === event?.vendorId;
     const isAdmin = session?.role === 'admin';
 
-    // Allow the guest who captured the photo in their own camera roll session to delete it
+    // Allow the guest who captured the photo in their own camera roll session to delete it (strictly requires matching sessionId)
     const isGuestOwner = Boolean(
-      (sessionIdParam && targetPhoto.sessionId && targetPhoto.sessionId === sessionIdParam) ||
-      (sessionIdParam && guestNameParam && guestNameParam !== 'tamu' && guestNameParam !== 'tamu undangan' && targetPhoto.guestName?.trim().toLowerCase() === guestNameParam)
+      sessionIdParam && targetPhoto.sessionId && targetPhoto.sessionId === sessionIdParam
     );
 
     if (!isHost && !isVendor && !isAdmin && !isGuestOwner) {

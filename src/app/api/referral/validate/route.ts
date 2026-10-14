@@ -13,19 +13,39 @@ export async function POST(request: Request) {
     }
 
     // 1. Check system static vendors
-    let matchedVendor = Object.values(SYSTEM_USERS).find(
-      u => u.role === 'vendor' && (u.referralCode || '').toUpperCase() === code
+    let matchedVendor: any = Object.values(SYSTEM_USERS).find(
+      u => u.role === 'vendor' && (
+        (u.referralCode || '').toUpperCase() === code ||
+        (code === 'VOWSANDCO10' && u.referralCode === 'VOWSANDCO')
+      )
     );
+
+    if (!matchedVendor && code === 'KREATIV10') {
+      matchedVendor = {
+        id: 'vendor_kreativ',
+        name: 'Kreativ Studio',
+        email: 'halo@kreativ.id',
+        role: 'vendor',
+        companyName: 'Kreativ Wedding Studio',
+        referralCode: 'KREATIV10',
+        partnerTier: 'pro'
+      };
+    }
 
     // 2. Check registered vendors from database (Supabase + Local)
     if (!matchedVendor) {
       try {
         const dbVendors = await getAllVendors();
         const found = dbVendors.find(
-          v => (v.referralCode && v.referralCode.toUpperCase() === code) ||
-               (v.id && v.id.toUpperCase() === code)
+          v => v.referralCode && v.referralCode.toUpperCase() === code
         );
         if (found) {
+          if (found.status === 'suspended') {
+            return NextResponse.json({
+              success: false,
+              error: 'Kode kemitraan vendor ini sedang ditangguhkan dan tidak dapat digunakan.'
+            }, { status: 403 });
+          }
           matchedVendor = {
             id: found.id,
             name: found.name,
@@ -33,7 +53,8 @@ export async function POST(request: Request) {
             role: 'vendor',
             companyName: found.companyName || found.name,
             referralCode: found.referralCode || code,
-            partnerTier: found.partnerTier || 'pro'
+            partnerTier: found.partnerTier || 'regular',
+            commissionRate: found.commissionRate
           };
         }
       } catch (err) {

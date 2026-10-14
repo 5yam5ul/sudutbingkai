@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getInvoice, createInvoice, getEventById, getAllInvoices, updateInvoice, deleteInvoice } from '@/lib/db';
+import { getInvoice, createInvoice, getEventById, getAllInvoices, updateInvoice, deleteInvoice, updateEvent, getAllVendors, updateVendor } from '@/lib/db';
 import { PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 import { getServerSession } from '@/lib/auth';
 
@@ -9,10 +9,10 @@ export async function GET(request: Request) {
     const id = searchParams.get('id');
     const eventId = searchParams.get('eventId');
     const query = id || eventId;
+    const session = getServerSession(request);
 
     // If no specific query is provided, return all invoices strictly for Super Admin Dashboard
     if (!query) {
-      const session = getServerSession(request);
       if (!session || session.role !== 'admin') {
         return NextResponse.json({
           success: false,
@@ -24,21 +24,11 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, invoices });
     }
 
-
-    if (eventId) {
-      const session = getServerSession(request);
-      const ev = await getEventById(eventId);
-      if (ev) {
-        const isOwnerHost = session?.role === 'host' && (
-          session.email?.toLowerCase() === ev.hostEmail?.toLowerCase() ||
-          session.id === ev.hostEmail
-        );
-        const isOwnerVendor = session?.role === 'vendor' && session.id === ev.vendorId;
-        const isAdmin = session?.role === 'admin';
-        if (!isOwnerHost && !isOwnerVendor && !isAdmin) {
-          return NextResponse.json({ success: false, error: 'Akses ditolak: Anda tidak memiliki akses ke faktur acara ini.' }, { status: 403 });
-        }
-      }
+    if (!session) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Sesi login diperlukan untuk melihat faktur.'
+      }, { status: 401 });
     }
 
     let invoice = await getInvoice(query);
@@ -49,6 +39,16 @@ export async function GET(request: Request) {
       const event = await getEventById(targetEventId);
 
       if (event) {
+        const isOwnerHost = session.role === 'host' && (
+          session.email?.toLowerCase() === event.hostEmail?.toLowerCase() ||
+          session.id === event.hostEmail
+        );
+        const isOwnerVendor = session.role === 'vendor' && session.id === event.vendorId;
+        const isAdmin = session.role === 'admin';
+        if (!isOwnerHost && !isOwnerVendor && !isAdmin) {
+          return NextResponse.json({ success: false, error: 'Akses ditolak: Anda tidak memiliki akses ke faktur acara ini.' }, { status: 403 });
+        }
+
         const tierKey = (event.packageTier || 'wedding') as EventPackageTier;
         const tierInfo = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.wedding;
         const rawPrice = tierInfo.isFree || tierKey === 'starter' 
@@ -84,13 +84,31 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Invoice tidak ditemukan' }, { status: 404 });
     }
 
-    if (invoice.eventId) {
-      try {
-        const ev = await getEventById(invoice.eventId);
-        if (ev?.slug) {
-          (invoice as any).eventSlug = ev.slug;
-        }
-      } catch {}
+    // Verify ownership of the resolved invoice before returning PII
+    let linkedEvent = invoice.eventId ? await getEventById(invoice.eventId) : null;
+    const isAdmin = session.role === 'admin';
+    const isOwnerByEmail = Boolean(
+      session.email && invoice.buyerEmail && session.email.toLowerCase() === invoice.buyerEmail.toLowerCase()
+    );
+    const isOwnerByEventHost = Boolean(
+      linkedEvent && session.role === 'host' && (
+        session.email?.toLowerCase() === linkedEvent.hostEmail?.toLowerCase() ||
+        session.id === linkedEvent.hostEmail
+      )
+    );
+    const isOwnerByEventVendor = Boolean(
+      linkedEvent && session.role === 'vendor' && session.id === linkedEvent.vendorId
+    );
+
+    if (!isAdmin && !isOwnerByEmail && !isOwnerByEventHost && !isOwnerByEventVendor) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Anda tidak memiliki wewenang untuk mengakses faktur ini.'
+      }, { status: 403 });
+    }
+
+    if (linkedEvent?.slug) {
+      (invoice as any).eventSlug = linkedEvent.slug;
     }
 
     return NextResponse.json({ success: true, invoice });
@@ -169,6 +187,34 @@ export async function PATCH(request: Request) {
     const updated = await updateInvoice(id, updates);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Invoice tidak ditemukan' }, { status: 404 });
+    }
+
+    // Synchronize linked event paymentStatus and vendor commission when invoice status is updated
+    if (updated.eventId && updates.status) {
+      try {
+        const linkedEvent = await getEventById(updated.eventId);
+        if (linkedEvent) {
+          if (updates.status === 'paid' && linkedEvent.paymentStatus !== 'paid') {
+            const eventUpdates: any = { paymentStatus: 'paid' };
+            if (linkedEvent.vendorId && linkedEvent.commissionAmount && linkedEvent.commissionAmount > 0 && linkedEvent.commissionStatus !== 'available') {
+              const vendors = await getAllVendors();
+              const matchedVendor = vendors.find(v => v.id === linkedEvent.vendorId);
+              if (matchedVendor && matchedVendor.status !== 'suspended') {
+                await updateVendor(matchedVendor.id, {
+                  walletBalance: (matchedVendor.walletBalance || 0) + linkedEvent.commissionAmount,
+                  totalEarnings: (matchedVendor.totalEarnings || 0) + linkedEvent.commissionAmount
+                });
+                eventUpdates.commissionStatus = 'available';
+              }
+            }
+            await updateEvent(linkedEvent.id, eventUpdates);
+          } else if (updates.status === 'pending' && linkedEvent.paymentStatus === 'paid') {
+            await updateEvent(linkedEvent.id, { paymentStatus: 'pending' });
+          }
+        }
+      } catch (e) {
+        console.warn('Sinkronisasi status acara dari invoice gagal:', e);
+      }
     }
 
     return NextResponse.json({ success: true, invoice: updated });

@@ -194,7 +194,7 @@ export default function SuperAdminDashboard() {
   const [inspectPhotoModalOpen, setInspectPhotoModalOpen] = useState(false);
   const [photoToInspect, setPhotoToInspect] = useState<PhotoRecord | null>(null);
 
-  // 7. Custom Confirm Modal State
+  // 7. Custom Confirm & Input Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -209,6 +209,26 @@ export default function SuperAdminDashboard() {
     confirmText: 'Lanjutkan',
     variant: 'primary',
     onConfirm: () => {}
+  });
+
+  const [promptModal, setPromptModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    value: string;
+    inputType?: 'text' | 'number';
+    confirmText?: string;
+    variant?: 'danger' | 'primary';
+    onSubmit: (val: string) => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    value: '',
+    inputType: 'text',
+    confirmText: 'Simpan',
+    variant: 'primary',
+    onSubmit: () => {}
   });
 
   // Load Session and All Data on mount
@@ -379,29 +399,39 @@ export default function SuperAdminDashboard() {
     });
   };
 
-  const handleAddPax = async (eventId: string, currentPax: number, title: string) => {
-    const addStr = prompt(`Tambah berapa kuota Pax gratis untuk "${title}"?`, '50');
-    if (!addStr) return;
-    const toAdd = parseInt(addStr, 10);
-    if (isNaN(toAdd) || toAdd <= 0) {
-      toast.error('Jumlah pax harus angka positif.');
-      return;
-    }
-    const newTotal = currentPax + toAdd;
-    try {
-      const res = await authFetch('/api/events', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: eventId, maxGuests: newTotal, adminAuthorized: true })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Berhasil menambahkan +${toAdd} Pax gratis. Kuota sekarang: ${newTotal} Tamu.`);
-        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, maxGuests: newTotal } : e));
+  const handleAddPax = (eventId: string, currentPax: number, title: string) => {
+    setPromptModal({
+      isOpen: true,
+      title: 'Tambah Kuota Pax Gratis',
+      description: `Masukkan jumlah tambahan kuota tamu (Pax) gratis untuk "${title}":`,
+      value: '50',
+      inputType: 'number',
+      confirmText: 'Tambahkan Pax',
+      variant: 'primary',
+      onSubmit: async (addStr) => {
+        setPromptModal(prev => ({ ...prev, isOpen: false }));
+        const toAdd = parseInt(addStr, 10);
+        if (isNaN(toAdd) || toAdd <= 0) {
+          toast.error('Jumlah pax harus angka positif.');
+          return;
+        }
+        const newTotal = currentPax + toAdd;
+        try {
+          const res = await authFetch('/api/events', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: eventId, maxGuests: newTotal, adminAuthorized: true })
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Berhasil menambahkan +${toAdd} Pax gratis. Kuota sekarang: ${newTotal} Tamu.`);
+            setEvents(prev => prev.map(e => e.id === eventId ? { ...e, maxGuests: newTotal } : e));
+          }
+        } catch {
+          toast.error('Gagal memperbarui kuota tamu.');
+        }
       }
-    } catch {
-      toast.error('Gagal memperbarui kuota tamu.');
-    }
+    });
   };
 
   // -------------------------------------------------------------
@@ -626,6 +656,7 @@ export default function SuperAdminDashboard() {
           if (data.success) {
             toast.success(`Invoice ${invoiceNum} berhasil ditandai LUNAS!`);
             setInvoices(prev => prev.map(i => i.id === invoiceId ? { ...i, status: 'paid', paidAt: new Date().toISOString() } : i));
+            loadAllAdminData();
           } else {
             toast.error(data.error || 'Gagal memperbarui status invoice.');
           }
@@ -883,24 +914,35 @@ export default function SuperAdminDashboard() {
     });
   };
 
-  const handleRejectPayout = async (payoutId: string) => {
-    const reason = prompt('Masukkan alasan penolakan pencairan dana (saldo akan otomatis dikembalikan ke dompet vendor):', 'Nomor rekening bank tidak valid / nama tidak sesuai');
-    if (!reason) return;
-    try {
-      const res = await authFetch('/api/payouts', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: payoutId, status: 'rejected', notes: reason })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.error('Permintaan payout ditolak & saldo dikembalikan ke dompet vendor.');
-        setPayouts(prev => prev.map(p => p.id === payoutId ? { ...p, status: 'rejected', notes: reason } : p));
-        loadAllAdminData();
+  const handleRejectPayout = (payoutId: string) => {
+    setPromptModal({
+      isOpen: true,
+      title: 'Tolak Pencairan Dana Mitra',
+      description: 'Masukkan alasan penolakan pencairan dana (saldo akan otomatis dikembalikan ke dompet vendor):',
+      value: 'Nomor rekening bank tidak valid / nama tidak sesuai',
+      inputType: 'text',
+      confirmText: 'Tolak & Kembalikan Saldo',
+      variant: 'danger',
+      onSubmit: async (reason) => {
+        setPromptModal(prev => ({ ...prev, isOpen: false }));
+        if (!reason.trim()) return;
+        try {
+          const res = await authFetch('/api/payouts', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: payoutId, status: 'rejected', notes: reason.trim() })
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.error('Permintaan payout ditolak & saldo dikembalikan ke dompet vendor.');
+            setPayouts(prev => prev.map(p => p.id === payoutId ? { ...p, status: 'rejected', notes: reason.trim() } : p));
+            loadAllAdminData();
+          }
+        } catch {
+          toast.error('Gagal menolak payout.');
+        }
       }
-    } catch {
-      toast.error('Gagal menolak payout.');
-    }
+    });
   };
 
   const handleApproveTestimonial = (testiId: string, submitterName: string) => {
@@ -935,23 +977,34 @@ export default function SuperAdminDashboard() {
     });
   };
 
-  const handleRejectTestimonial = async (testiId: string) => {
-    const reason = prompt('Masukkan alasan penolakan kurasi:', 'Durasi video kurang dari 60 detik / visual buram');
-    if (!reason) return;
-    try {
-      const res = await authFetch('/api/testimonials', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: testiId, status: 'rejected', adminNotes: reason })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.error('Video testimoni ditolak.');
-        setTestimonials(prev => prev.map(t => t.id === testiId ? { ...t, status: 'rejected', adminNotes: reason } : t));
+  const handleRejectTestimonial = (testiId: string) => {
+    setPromptModal({
+      isOpen: true,
+      title: 'Tolak Video Testimoni',
+      description: 'Masukkan alasan penolakan kurasi video testimoni:',
+      value: 'Durasi video kurang dari 60 detik / visual buram',
+      inputType: 'text',
+      confirmText: 'Tolak Video',
+      variant: 'danger',
+      onSubmit: async (reason) => {
+        setPromptModal(prev => ({ ...prev, isOpen: false }));
+        if (!reason.trim()) return;
+        try {
+          const res = await authFetch('/api/testimonials', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: testiId, status: 'rejected', adminNotes: reason.trim() })
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.error('Video testimoni ditolak.');
+            setTestimonials(prev => prev.map(t => t.id === testiId ? { ...t, status: 'rejected', adminNotes: reason.trim() } : t));
+          }
+        } catch {
+          toast.error('Gagal menolak video.');
+        }
       }
-    } catch {
-      toast.error('Gagal menolak video.');
-    }
+    });
   };
 
   const handleDeletePayout = (payoutId: string, vendorName: string, amount: number) => {
@@ -3640,6 +3693,98 @@ export default function SuperAdminDashboard() {
         onConfirm={confirmModal.onConfirm}
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
+
+      {promptModal.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(12, 12, 14, 0.55)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setPromptModal(prev => ({ ...prev, isOpen: false }))}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '420px',
+              background: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '24px',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.22)',
+              border: '1px solid rgba(0, 0, 0, 0.08)'
+            }}
+          >
+            <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: 700, color: '#111113' }}>
+              {promptModal.title}
+            </h3>
+            <p style={{ margin: '0 0 16px 0', fontSize: '13.5px', lineHeight: 1.5, color: '#52525B' }}>
+              {promptModal.description}
+            </p>
+            <input
+              type={promptModal.inputType || 'text'}
+              value={promptModal.value}
+              onChange={(e) => setPromptModal(prev => ({ ...prev, value: e.target.value }))}
+              autoFocus
+              style={{
+                width: '100%',
+                padding: '12px 14px',
+                borderRadius: '12px',
+                border: '1px solid rgba(0,0,0,0.15)',
+                fontSize: '14px',
+                marginBottom: '20px',
+                outline: 'none'
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  promptModal.onSubmit(promptModal.value);
+                }
+              }}
+            />
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setPromptModal(prev => ({ ...prev, isOpen: false }))}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(0,0,0,0.1)',
+                  background: '#F4F4F5',
+                  color: '#27272A',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => promptModal.onSubmit(promptModal.value)}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: promptModal.variant === 'danger' ? '#E11D48' : '#111113',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                {promptModal.confirmText || 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

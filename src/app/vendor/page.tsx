@@ -448,13 +448,30 @@ export default function VendorPortalPage() {
     router.push('/login');
   };
 
-  const handleSwitchToHost = () => {
+  const handleSwitchToHost = async () => {
     const session = getClientSession();
     const updated: UserAccount = {
       ...(session || vendor),
       role: 'host'
     };
-    setClientSession(updated);
+    let signedToken: string | undefined;
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'oauth',
+          role: 'host',
+          email: updated.email,
+          name: updated.name
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.sessionToken) {
+        signedToken = data.sessionToken;
+      }
+    } catch {}
+    setClientSession(updated, signedToken);
     toast.success('Beralih ke Dashboard Acara Host.');
     router.push('/dashboard');
   };

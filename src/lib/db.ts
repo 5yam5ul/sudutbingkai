@@ -326,14 +326,14 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
       if (updates.additionalPax !== undefined) dbUpdates.additional_pax = updates.additionalPax;
       if (updates.shotsPerGuest !== undefined) dbUpdates.shots_per_guest = updates.shotsPerGuest;
       if (updates.revealMode !== undefined) dbUpdates.reveal_mode = updates.revealMode;
-      if (updates.revealTime !== undefined) dbUpdates.reveal_time = updates.revealTime;
+      if (updates.revealTime !== undefined) dbUpdates.reveal_time = updates.revealTime || null;
       if (updates.frameId !== undefined) dbUpdates.frame_id = updates.frameId;
-      if (updates.customFrameUrl !== undefined) dbUpdates.custom_frame_url = updates.customFrameUrl;
-      if (updates.frameText !== undefined) dbUpdates.frame_text = updates.frameText;
+      if (updates.customFrameUrl !== undefined) dbUpdates.custom_frame_url = updates.customFrameUrl || null;
+      if (updates.frameText !== undefined) dbUpdates.frame_text = updates.frameText || null;
       if (updates.allowVoiceNote !== undefined) dbUpdates.allow_voice_note = updates.allowVoiceNote;
       if (updates.closingWishType !== undefined) dbUpdates.closing_wish_type = updates.closingWishType;
       if (updates.allowGuestFrameToggle !== undefined) dbUpdates.allow_guest_frame_toggle = updates.allowGuestFrameToggle;
-      if (updates.coverUrl !== undefined) dbUpdates.cover_url = updates.coverUrl;
+      if (updates.coverUrl !== undefined) dbUpdates.cover_url = updates.coverUrl || null;
       if (updates.paymentStatus !== undefined) dbUpdates.payment_status = updates.paymentStatus;
       if (updates.hostEmail !== undefined) dbUpdates.host_email = updates.hostEmail;
       if (updates.referralCodeUsed !== undefined) dbUpdates.referral_code_used = updates.referralCodeUsed;
@@ -383,7 +383,12 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
     const existingIdx = events.findIndex(e => e.id === canonicalId || e.slug === canonicalId);
     if (existingIdx < 0) return null;
 
-    events[existingIdx] = { ...events[existingIdx], ...updates };
+    const normalizedUpdates = { ...updates };
+    if (normalizedUpdates.coverUrl === '') normalizedUpdates.coverUrl = undefined;
+    if (normalizedUpdates.customFrameUrl === '') normalizedUpdates.customFrameUrl = undefined;
+    if (normalizedUpdates.revealTime === '') normalizedUpdates.revealTime = undefined;
+
+    events[existingIdx] = { ...events[existingIdx], ...normalizedUpdates };
     fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf8');
     return events[existingIdx];
   } catch {
@@ -469,7 +474,7 @@ export async function deleteEvent(id: string): Promise<boolean> {
               if (v.audio_url.includes('/voices/')) {
                 try {
                   const pathPart = v.audio_url.split('/voices/')[1];
-                  if (pathPart) await supabase.storage.from('voices').remove([pathPart]);
+                  if (pathPart) await supabase.storage.from('photos').remove([`voices/${pathPart}`]);
                 } catch {}
               }
             }
@@ -1527,8 +1532,21 @@ export async function deletePayout(id: string): Promise<boolean> {
   try {
     const allPayouts = await getPayoutRequests();
     const target = allPayouts.find(p => p.id === id);
-    if (target?.proofUrl) {
-      await deleteFromR2(target.proofUrl);
+    if (target) {
+      if (target.proofUrl) {
+        await deleteFromR2(target.proofUrl);
+      }
+      if (target.status === 'pending' && target.amount > 0) {
+        const vendors = await getAllVendors();
+        const matchedVendor = vendors.find(
+          v => v.id === target.vendorId || (target.vendorEmail && v.email?.toLowerCase() === target.vendorEmail.toLowerCase())
+        );
+        if (matchedVendor) {
+          await updateVendor(matchedVendor.id, {
+            walletBalance: (matchedVendor.walletBalance || 0) + target.amount
+          });
+        }
+      }
     }
   } catch {}
 
@@ -2169,7 +2187,7 @@ export async function getAllAddons(): Promise<EventAddonItem[]> {
           price: Number(row.price),
           priceFormatted: `Rp ${Number(row.price).toLocaleString('id-ID')}`,
           costPrice: row.cost_price ? Number(row.cost_price) : undefined,
-          imagePreviewUrl: row.image_url || undefined,
+          imagePreviewUrl: row.image_preview_url || row.image_url || undefined,
           isActive: row.is_active !== false,
           freeShippingJabodetabek: row.free_shipping_jabodetabek !== false,
           unit: row.unit || '1 set',
@@ -2193,9 +2211,30 @@ export async function getAllAddons(): Promise<EventAddonItem[]> {
 }
 
 export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> {
+  const addonId = addon.id || `addon_${Date.now()}`;
+  let resolvedImageUrl = addon.imagePreviewUrl;
+
+  if (resolvedImageUrl && resolvedImageUrl.startsWith('data:image/') && isR2Configured) {
+    try {
+      const matches = resolvedImageUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+      if (matches && matches.length === 3) {
+        const mime = matches[1];
+        const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
+        const buffer = Buffer.from(matches[2], 'base64');
+        const r2Url = await uploadBufferToR2(buffer, `addons/${addonId}-${Date.now()}.${ext}`, mime);
+        if (r2Url) {
+          resolvedImageUrl = r2Url;
+        }
+      }
+    } catch (e) {
+      console.warn('R2 addon image upload failed, keeping fallback:', e);
+    }
+  }
+
   const newAddon: EventAddonItem = {
     ...addon,
-    id: addon.id || `addon_${Date.now()}`,
+    id: addonId,
+    imagePreviewUrl: resolvedImageUrl,
     priceFormatted: `Rp ${Number(addon.price).toLocaleString('id-ID')}`,
     createdAt: addon.createdAt || new Date().toISOString()
   };
@@ -2225,7 +2264,7 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
           price: Number(data.price),
           priceFormatted: `Rp ${Number(data.price).toLocaleString('id-ID')}`,
           costPrice: newAddon.costPrice,
-          imagePreviewUrl: data.image_preview_url || undefined,
+          imagePreviewUrl: data.image_preview_url || data.image_url || undefined,
           isActive: newAddon.isActive !== false,
           freeShippingJabodetabek: data.free_shipping_jabodetabek !== false,
           unit: data.unit || '1 set',
@@ -2272,6 +2311,28 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
 }
 
 export async function updateAddon(id: string, updates: Partial<EventAddonItem>): Promise<EventAddonItem | null> {
+  try {
+    const allAddons = await getAllAddons();
+    const existing = allAddons.find(a => a.id === id);
+    if (updates.imagePreviewUrl !== undefined) {
+      if (updates.imagePreviewUrl && updates.imagePreviewUrl.startsWith('data:image/') && isR2Configured) {
+        const matches = updates.imagePreviewUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
+        if (matches && matches.length === 3) {
+          const mime = matches[1];
+          const ext = mime.includes('png') ? 'png' : mime.includes('webp') ? 'webp' : 'jpg';
+          const buffer = Buffer.from(matches[2], 'base64');
+          const r2Url = await uploadBufferToR2(buffer, `addons/${id}-${Date.now()}.${ext}`, mime);
+          if (r2Url) {
+            updates.imagePreviewUrl = r2Url;
+          }
+        }
+      }
+      if (existing?.imagePreviewUrl && existing.imagePreviewUrl !== updates.imagePreviewUrl) {
+        await deleteFromR2(existing.imagePreviewUrl);
+      }
+    }
+  } catch {}
+
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
@@ -2280,7 +2341,7 @@ export async function updateAddon(id: string, updates: Partial<EventAddonItem>):
       if (updates.category !== undefined) dbUpdates.category = updates.category;
       if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.price !== undefined) dbUpdates.price = updates.price;
-      if (updates.imagePreviewUrl !== undefined) dbUpdates.image_preview_url = updates.imagePreviewUrl;
+      if (updates.imagePreviewUrl !== undefined) dbUpdates.image_preview_url = updates.imagePreviewUrl || null;
       if (updates.freeShippingJabodetabek !== undefined) dbUpdates.free_shipping_jabodetabek = updates.freeShippingJabodetabek;
       if (updates.unit !== undefined) dbUpdates.unit = updates.unit;
       if (updates.isPopular !== undefined) dbUpdates.is_popular = updates.isPopular;
@@ -2295,7 +2356,7 @@ export async function updateAddon(id: string, updates: Partial<EventAddonItem>):
           price: Number(data.price),
           priceFormatted: `Rp ${Number(data.price).toLocaleString('id-ID')}`,
           costPrice: updates.costPrice,
-          imagePreviewUrl: data.image_preview_url || undefined,
+          imagePreviewUrl: data.image_preview_url || data.image_url || undefined,
           isActive: updates.isActive !== undefined ? updates.isActive : true,
           freeShippingJabodetabek: data.free_shipping_jabodetabek !== false,
           unit: data.unit || '1 set',
@@ -2347,6 +2408,14 @@ export async function updateAddon(id: string, updates: Partial<EventAddonItem>):
 }
 
 export async function deleteAddon(id: string): Promise<boolean> {
+  try {
+    const allAddons = await getAllAddons();
+    const target = allAddons.find(a => a.id === id);
+    if (target?.imagePreviewUrl) {
+      await deleteFromR2(target.imagePreviewUrl);
+    }
+  } catch {}
+
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
