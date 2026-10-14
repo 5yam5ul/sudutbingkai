@@ -151,7 +151,32 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'ID video ucapan diperlukan' }, { status: 400 });
     }
 
+    const allWishes = await getVideoWishes();
+    const target = allWishes.find(w => w.id === id);
+    if (!target) {
+      return NextResponse.json({ success: false, error: 'Video ucapan tidak ditemukan' }, { status: 404 });
+    }
+
+    if (session.role !== 'admin') {
+      const event = await getEventById(target.eventId);
+      const isOwnerHost = session.role === 'host' && (
+        session.email?.toLowerCase() === event?.hostEmail?.toLowerCase() ||
+        session.id === event?.hostEmail
+      );
+      const isOwnerVendor = session.role === 'vendor' && session.id === event?.vendorId;
+      if (!isOwnerHost && !isOwnerVendor) {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus video ucapan dari acara ini.'
+        }, { status: 403 });
+      }
+    }
+
     const success = await deleteVideoWish(id);
+    if (!success) {
+      return NextResponse.json({ success: false, error: 'Gagal menghapus video ucapan' }, { status: 400 });
+    }
+
     return NextResponse.json({ success: true, message: 'Video ucapan berhasil dihapus' });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });

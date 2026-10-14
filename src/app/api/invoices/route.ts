@@ -25,6 +25,22 @@ export async function GET(request: Request) {
     }
 
 
+    if (eventId) {
+      const session = getServerSession(request);
+      const ev = await getEventById(eventId);
+      if (ev) {
+        const isOwnerHost = session?.role === 'host' && (
+          session.email?.toLowerCase() === ev.hostEmail?.toLowerCase() ||
+          session.id === ev.hostEmail
+        );
+        const isOwnerVendor = session?.role === 'vendor' && session.id === ev.vendorId;
+        const isAdmin = session?.role === 'admin';
+        if (!isOwnerHost && !isOwnerVendor && !isAdmin) {
+          return NextResponse.json({ success: false, error: 'Akses ditolak: Anda tidak memiliki akses ke faktur acara ini.' }, { status: 403 });
+        }
+      }
+    }
+
     let invoice = await getInvoice(query);
 
     // If not found in invoice database, check if it corresponds to an existing event and auto-generate invoice
@@ -84,6 +100,11 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat menerbitkan invoice secara manual' }, { status: 403 });
+    }
+
     const body = await request.json();
     if (!body.buyerName || !body.tierId || body.finalAmount === undefined) {
       return NextResponse.json({ success: false, error: 'Data invoice tidak lengkap' }, { status: 400 });
@@ -117,6 +138,11 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat memperbarui invoice' }, { status: 403 });
+    }
+
     const body = await request.json();
     const id = body.id || body.invoiceNumber;
     if (!id) {

@@ -213,7 +213,7 @@ export function verifyAndParseSession(rawInput: string): UserAccount | null {
   if (!rawInput) return null;
   const token = rawInput.trim();
 
-  // 1. Signed token verification (Format: <base64urlPayload>.<sha256Hex>)
+  // Signed token verification (Format: <base64urlPayload>.<sha256Hex>)
   if (token.includes('.')) {
     try {
       const parts = token.split('.');
@@ -238,19 +238,6 @@ export function verifyAndParseSession(rawInput: string): UserAccount | null {
       }
     } catch {}
   }
-
-  // 2. Backward compatibility fallback for existing valid JSON sessions
-  try {
-    const parsed = JSON.parse(token);
-    if (parsed && parsed.id && parsed.role) {
-      if (parsed.role === 'admin') {
-        const isAdminValid = (parsed.id === 'admin_sudutbingkai' && parsed.email?.toLowerCase().includes('admin@sudutbingkai.id')) || parsed.email?.toLowerCase().includes('superadmin');
-        if (isAdminValid) return SYSTEM_USERS['admin'];
-        return null;
-      }
-      return parsed;
-    }
-  } catch {}
 
   return null;
 }

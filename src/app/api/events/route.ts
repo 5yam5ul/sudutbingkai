@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent } from '@/lib/db';
 import { EventData, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 import { getServerSession } from '@/lib/auth';
+import { isMayarConfigured } from '@/lib/mayar';
 
 export async function GET(request: Request) {
   try {
@@ -42,31 +43,74 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, event });
     }
 
-
-    // 2. Unparameterized query: Strictly restricted to Super Admin
-    if (!hostEmail && !vendorId) {
+    // 2. Querying by hostEmail: Strictly restricted to the authenticated Host or Admin
+    if (hostEmail) {
       const session = getServerSession(request);
-      if (!session || session.role !== 'admin') {
+      if (!session) {
         return NextResponse.json({
           success: false,
-          error: 'Akses ditolak: Parameter identitas acara (id, hostEmail, vendorId) atau sesi Admin diperlukan.'
+          error: 'Akses ditolak: Sesi login diperlukan untuk mengakses daftar acara host.'
+        }, { status: 401 });
+      }
+
+      const cleanHost = hostEmail.trim().toLowerCase();
+      const isOwnerHost = (
+        (session.role === 'host' || session.role === 'vendor') &&
+        (session.email?.toLowerCase() === cleanHost || session.id?.toLowerCase() === cleanHost)
+      );
+      const isAdmin = session.role === 'admin';
+
+      if (!isOwnerHost && !isAdmin) {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Anda hanya dapat mengakses acara milik akun Anda sendiri.'
         }, { status: 403 });
       }
 
-      const allEvents = await getAllEvents();
-      return NextResponse.json({ success: true, events: allEvents });
-    }
-
-    let events = await getAllEvents();
-
-    if (hostEmail) {
-      const cleanHost = hostEmail.trim().toLowerCase();
+      let events = await getAllEvents();
       events = events.filter(e => e.hostEmail && e.hostEmail.toLowerCase() === cleanHost);
-    } else if (vendorId) {
-      events = events.filter(e => e.vendorId === vendorId);
+      return NextResponse.json({ success: true, events });
     }
 
-    return NextResponse.json({ success: true, events });
+    // 3. Querying by vendorId: Strictly restricted to the authenticated Vendor or Admin
+    if (vendorId) {
+      const session = getServerSession(request);
+      if (!session) {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Sesi login diperlukan untuk mengakses daftar acara vendor.'
+        }, { status: 401 });
+      }
+
+      const isOwnerVendor = session.role === 'vendor' && (
+        session.id === vendorId ||
+        session.email === vendorId
+      );
+      const isAdmin = session.role === 'admin';
+
+      if (!isOwnerVendor && !isAdmin) {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Anda hanya dapat mengakses acara milik vendor Anda sendiri.'
+        }, { status: 403 });
+      }
+
+      let events = await getAllEvents();
+      events = events.filter(e => e.vendorId === vendorId);
+      return NextResponse.json({ success: true, events });
+    }
+
+    // 4. Unparameterized query: Strictly restricted to Super Admin
+    const session = getServerSession(request);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Parameter identitas acara (id, hostEmail, vendorId) atau sesi Admin diperlukan.'
+      }, { status: 403 });
+    }
+
+    const allEvents = await getAllEvents();
+    return NextResponse.json({ success: true, events: allEvents });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
   }
@@ -153,6 +197,14 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Sesi login diperlukan untuk mengubah pengaturan acara.'
+      }, { status: 401 });
+    }
+
     const body = await request.json();
     if (!body.id) {
       return NextResponse.json({ success: false, error: 'ID acara diperlukan' }, { status: 400 });
@@ -163,7 +215,20 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
     }
 
-    const isCallerAdmin = body.adminAuthorized === true;
+    const isAuthorizedHost = session.role === 'host' && (
+      session.email?.toLowerCase() === existingEvent.hostEmail?.toLowerCase() ||
+      session.id === existingEvent.hostEmail
+    );
+    const isAuthorizedVendor = session.role === 'vendor' && session.id === existingEvent.vendorId;
+    const isCallerAdmin = session.role === 'admin';
+
+    if (!isAuthorizedHost && !isAuthorizedVendor && !isCallerAdmin) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Anda tidak memiliki wewenang untuk mengubah pengaturan acara ini.'
+      }, { status: 403 });
+    }
+
     const currentTier = (existingEvent.packageTier || 'starter') as EventPackageTier;
     const tierConfig = PACKAGE_TIERS[currentTier] || PACKAGE_TIERS.starter;
 
@@ -240,7 +305,11 @@ export async function PATCH(request: Request) {
     if (body.eventDate) updates.eventDate = body.eventDate;
     if (body.location !== undefined) updates.location = body.location.trim();
     if (body.preset) updates.preset = body.preset;
-    if (body.additionalPax !== undefined) updates.additionalPax = Number(body.additionalPax);
+    if (body.additionalPax !== undefined) {
+      if (isCallerAdmin || !isMayarConfigured) {
+        updates.additionalPax = Number(body.additionalPax);
+      }
+    }
     if (body.revealMode) updates.revealMode = body.revealMode;
     if (body.revealTime !== undefined) updates.revealTime = body.revealTime;
     if (body.frameId) updates.frameId = body.frameId;
@@ -250,10 +319,16 @@ export async function PATCH(request: Request) {
     if (body.allowGuestFrameToggle !== undefined) updates.allowGuestFrameToggle = body.allowGuestFrameToggle;
     if (body.closingWishType !== undefined) updates.closingWishType = body.closingWishType;
     if (body.coverUrl !== undefined) updates.coverUrl = body.coverUrl;
-    if (body.paymentStatus !== undefined) updates.paymentStatus = body.paymentStatus;
-    if (body.referralCodeUsed !== undefined) updates.referralCodeUsed = body.referralCodeUsed;
-    if (body.commissionAmount !== undefined) updates.commissionAmount = body.commissionAmount;
-    if (body.commissionStatus !== undefined) updates.commissionStatus = body.commissionStatus;
+
+    // Administrative & financial fields: strictly restricted to Admin
+    if (isCallerAdmin) {
+      if (body.paymentStatus !== undefined) updates.paymentStatus = body.paymentStatus;
+      if (body.referralCodeUsed !== undefined) updates.referralCodeUsed = body.referralCodeUsed;
+      if (body.commissionAmount !== undefined) updates.commissionAmount = body.commissionAmount;
+      if (body.commissionStatus !== undefined) updates.commissionStatus = body.commissionStatus;
+      if (body.vendorId !== undefined) updates.vendorId = body.vendorId;
+      if (body.hostEmail !== undefined) updates.hostEmail = body.hostEmail;
+    }
 
     const updated = await updateEvent(existingEvent.id, updates);
     if (!updated) {
@@ -268,6 +343,14 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Sesi login diperlukan untuk menghapus acara.'
+      }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {
@@ -279,14 +362,11 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
     }
 
-    const session = getServerSession(request);
-    if (session) {
-      const isOwner = session.role === 'admin' ||
-        (session.role === 'host' && (session.email?.toLowerCase() === existing.hostEmail?.toLowerCase() || session.id === existing.hostEmail)) ||
-        (session.role === 'vendor' && session.id === existing.vendorId);
-      if (!isOwner) {
-        return NextResponse.json({ success: false, error: 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus acara ini' }, { status: 403 });
-      }
+    const isOwner = session.role === 'admin' ||
+      (session.role === 'host' && (session.email?.toLowerCase() === existing.hostEmail?.toLowerCase() || session.id === existing.hostEmail)) ||
+      (session.role === 'vendor' && session.id === existing.vendorId);
+    if (!isOwner) {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus acara ini' }, { status: 403 });
     }
 
     const success = await deleteEvent(id);

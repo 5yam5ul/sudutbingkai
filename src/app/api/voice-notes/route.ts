@@ -267,29 +267,45 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: false, error: 'ID pesan suara diperlukan' }, { status: 400 });
   }
 
-
   // 1. Supabase
   if (isSupabaseConfigured && supabase) {
     try {
       const { data: target } = await supabase
         .from('voice_notes')
-        .select('audio_url')
+        .select('audio_url, event_id')
         .eq('id', id)
         .maybeSingle();
 
-      const { error } = await supabase
-        .from('voice_notes')
-        .delete()
-        .eq('id', id);
-
-      if (!error) {
-        if (target?.audio_url && target.audio_url.includes('/photos/')) {
-          const pathPart = target.audio_url.split('/photos/')[1];
-          if (pathPart) {
-            await supabase.storage.from('photos').remove([pathPart]);
+      if (target) {
+        if (session.role !== 'admin') {
+          const event = await getEventById(target.event_id);
+          const isOwnerHost = session.role === 'host' && (
+            session.email?.toLowerCase() === event?.hostEmail?.toLowerCase() ||
+            session.id === event?.hostEmail
+          );
+          const isOwnerVendor = session.role === 'vendor' && session.id === event?.vendorId;
+          if (!isOwnerHost && !isOwnerVendor) {
+            return NextResponse.json({
+              success: false,
+              error: 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus pesan suara dari acara ini.'
+            }, { status: 403 });
           }
         }
-        return NextResponse.json({ success: true, message: 'Pesan suara berhasil dihapus' });
+
+        const { error } = await supabase
+          .from('voice_notes')
+          .delete()
+          .eq('id', id);
+
+        if (!error) {
+          if (target.audio_url && target.audio_url.includes('/photos/')) {
+            const pathPart = target.audio_url.split('/photos/')[1];
+            if (pathPart) {
+              await supabase.storage.from('photos').remove([pathPart]);
+            }
+          }
+          return NextResponse.json({ success: true, message: 'Pesan suara berhasil dihapus' });
+        }
       }
     } catch (e) {
       console.warn('Supabase voice_notes DELETE error:', e);
@@ -305,6 +321,21 @@ export async function DELETE(request: Request) {
       const target = notes.find((n: any) => n.id === id);
       if (!target) {
         return NextResponse.json({ success: false, error: 'Pesan suara tidak ditemukan' }, { status: 404 });
+      }
+
+      if (session.role !== 'admin') {
+        const event = await getEventById(target.eventId);
+        const isOwnerHost = session.role === 'host' && (
+          session.email?.toLowerCase() === event?.hostEmail?.toLowerCase() ||
+          session.id === event?.hostEmail
+        );
+        const isOwnerVendor = session.role === 'vendor' && session.id === event?.vendorId;
+        if (!isOwnerHost && !isOwnerVendor) {
+          return NextResponse.json({
+            success: false,
+            error: 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus pesan suara dari acara ini.'
+          }, { status: 403 });
+        }
       }
 
       try {
