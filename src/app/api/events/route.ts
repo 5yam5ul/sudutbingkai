@@ -5,6 +5,14 @@ import { getServerSession, signSessionPayload } from '@/lib/auth';
 import { isMayarConfigured } from '@/lib/mayar';
 import { deleteFromR2 } from '@/lib/r2';
 
+function isSameVendorId(a?: string, b?: string): boolean {
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const vowsAliases = ['vendor_vows_co', 'v_vowsandco'];
+  if (vowsAliases.includes(a) && vowsAliases.includes(b)) return true;
+  return false;
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -25,7 +33,7 @@ export async function GET(request: Request) {
         session.email?.toLowerCase() === event.hostEmail?.toLowerCase() ||
         session.id === event.hostEmail
       );
-      const isAuthorizedVendor = session?.role === 'vendor' && session.id === event.vendorId;
+      const isAuthorizedVendor = session?.role === 'vendor' && isSameVendorId(session.id, event.vendorId);
       const isAdmin = session?.role === 'admin';
 
       // If caller is a Guest / public visitor: strictly strip private host and financial data
@@ -84,7 +92,7 @@ export async function GET(request: Request) {
       }
 
       const isOwnerVendor = session.role === 'vendor' && (
-        session.id === vendorId ||
+        isSameVendorId(session.id, vendorId) ||
         session.email === vendorId
       );
       const isAdmin = session.role === 'admin';
@@ -97,7 +105,7 @@ export async function GET(request: Request) {
       }
 
       let events = await getAllEvents();
-      events = events.filter(e => e.vendorId === vendorId);
+      events = events.filter(e => isSameVendorId(e.vendorId, vendorId));
       return NextResponse.json({ success: true, events });
     }
 
@@ -166,9 +174,13 @@ export async function POST(request: Request) {
       const vendors = await getAllVendors();
       const cleanRef = (body.referralCodeUsed || '').toString().trim().toUpperCase();
       const matchedVendor = vendors.find(
-        v =>
-          (body.vendorId && v.id === body.vendorId) ||
-          (cleanRef && v.referralCode.toUpperCase() === cleanRef)
+        v => {
+          const vRef = (v.referralCode || '').toUpperCase();
+          return (
+            (body.vendorId && isSameVendorId(v.id, body.vendorId)) ||
+            (cleanRef && (vRef === cleanRef || (cleanRef === 'VOWSANDCO10' && vRef === 'VOWSANDCO')))
+          );
+        }
       );
 
       if (matchedVendor && matchedVendor.status !== 'suspended') {
@@ -177,7 +189,7 @@ export async function POST(request: Request) {
         verifiedVendorLogo = matchedVendor.logoUrl;
         verifiedVendorInstagram = matchedVendor.instagram;
         if (cleanRef) {
-          verifiedReferralCode = matchedVendor.referralCode;
+          verifiedReferralCode = matchedVendor.referralCode || cleanRef;
         }
         if (tierKey !== 'starter' && !tierConfig.isFree) {
           const basePrice = parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0;
@@ -190,8 +202,8 @@ export async function POST(request: Request) {
         }
       } else if (cleanRef === 'VOWSANDCO' || cleanRef === 'VOWSANDCO10' || cleanRef === 'KREATIV10') {
         verifiedReferralCode = cleanRef;
-        verifiedVendorId = body.vendorId || 'v_vowsandco';
-        verifiedVendorName = body.vendorName || 'Vows & Co. Photography';
+        verifiedVendorId = body.vendorId || (cleanRef === 'KREATIV10' ? 'vendor_kreativ' : 'vendor_vows_co');
+        verifiedVendorName = body.vendorName || (cleanRef === 'KREATIV10' ? 'Kreativ Wedding Studio' : 'Vows & Co. Wedding Planner');
         verifiedVendorLogo = body.vendorLogo;
         verifiedVendorInstagram = body.vendorInstagram;
         if (tierKey !== 'starter' && !tierConfig.isFree) {
@@ -304,7 +316,7 @@ export async function PATCH(request: Request) {
       session.email?.toLowerCase() === existingEvent.hostEmail?.toLowerCase() ||
       session.id === existingEvent.hostEmail
     );
-    const isAuthorizedVendor = session.role === 'vendor' && session.id === existingEvent.vendorId;
+    const isAuthorizedVendor = session.role === 'vendor' && isSameVendorId(session.id, existingEvent.vendorId);
     const isCallerAdmin = session.role === 'admin';
 
     if (!isAuthorizedHost && !isAuthorizedVendor && !isCallerAdmin) {
@@ -434,7 +446,7 @@ export async function PATCH(request: Request) {
       if (targetVendorId && targetCommission && targetCommission > 0 && existingEvent.commissionStatus !== 'available') {
         try {
           const vendors = await getAllVendors();
-          const matchedVendor = vendors.find(v => v.id === targetVendorId);
+          const matchedVendor = vendors.find(v => isSameVendorId(v.id, targetVendorId));
           if (matchedVendor && matchedVendor.status !== 'suspended') {
             await updateVendor(matchedVendor.id, {
               walletBalance: (matchedVendor.walletBalance || 0) + targetCommission,
@@ -496,7 +508,7 @@ export async function DELETE(request: Request) {
 
     const isOwner = session.role === 'admin' ||
       (session.role === 'host' && (session.email?.toLowerCase() === existing.hostEmail?.toLowerCase() || session.id === existing.hostEmail)) ||
-      (session.role === 'vendor' && session.id === existing.vendorId);
+      (session.role === 'vendor' && isSameVendorId(session.id, existing.vendorId));
     if (!isOwner) {
       return NextResponse.json({ success: false, error: 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus acara ini' }, { status: 403 });
     }

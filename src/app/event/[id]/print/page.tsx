@@ -138,6 +138,9 @@ export default function PrintTableCardPage() {
         if (data.success && data.event) {
           setEvent(data.event);
           setCustomTitle(data.event.title || 'Momen Spesial');
+          if (data.event.vendorLogo) {
+            setCustomLogoUrl(data.event.vendorLogo);
+          }
           const cleanHost = data.event.coupleOrHost?.replace(/[^a-zA-Z0-9]/g, '') || '';
           setCustomHashtag(cleanHost ? `#${cleanHost}Story` : '#SudutBingkai');
 

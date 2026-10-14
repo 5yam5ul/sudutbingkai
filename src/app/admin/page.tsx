@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import {
@@ -9,7 +9,7 @@ import {
   EyeOff, Trash2, Download, ExternalLink, RefreshCw, Plus,
   Sliders, Search, ArrowRight, LogOut, Check, X, Flame,
   Edit, Pencil, ArrowUpRight, ArrowDownRight, Layers, CreditCard,
-  Mic, Volume2, Film, Play, Clock
+  Mic, Volume2, Film, Play, Clock, Upload
 } from 'lucide-react';
 import { getClientSession, clearClientSession, getSignedClientToken, authFetch } from '@/lib/auth';
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
@@ -229,6 +229,28 @@ export default function SuperAdminDashboard() {
     confirmText: 'Simpan',
     variant: 'primary',
     onSubmit: () => {}
+  });
+
+  // 8. Approve Payout & Transfer Receipt Modal State
+  const unsavedProofUploadRef = useRef<string | null>(null);
+  const [approvePayoutModal, setApprovePayoutModal] = useState<{
+    isOpen: boolean;
+    payoutId: string;
+    vendorName: string;
+    amount: number;
+    proofUrl: string;
+    notes: string;
+    isUploadingProof: boolean;
+    isSubmitting: boolean;
+  }>({
+    isOpen: false,
+    payoutId: '',
+    vendorName: '',
+    amount: 0,
+    proofUrl: '',
+    notes: 'Transfer bank berhasil diproses oleh Super Admin.',
+    isUploadingProof: false,
+    isSubmitting: false
   });
 
   // Load Session and All Data on mount
@@ -884,34 +906,86 @@ export default function SuperAdminDashboard() {
   // 6. PAYOUTS & TESTIMONIALS
   // -------------------------------------------------------------
   const handleApprovePayout = (payoutId: string, vendorName: string, amount: number) => {
-    setConfirmModal({
+    unsavedProofUploadRef.current = null;
+    setApprovePayoutModal({
       isOpen: true,
-      title: 'Setujui Pencairan Komisi?',
-      description: `Setujui pencairan komisi Rp ${amount.toLocaleString('id-ID')} untuk ${vendorName}? Pastikan Anda telah mentransfer dana ke rekening yang tertera.`,
-      confirmText: 'Setujui & Tandai Lunas',
-      variant: 'primary',
-      onConfirm: async () => {
-        setConfirmModal(prev => ({ ...prev, isOpen: false }));
-        try {
-          const res = await authFetch('/api/payouts', {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: payoutId,
-              status: 'approved',
-              notes: 'Transfer bank berhasil diproses oleh Super Admin.'
-            })
-          });
-          const data = await res.json();
-          if (data.success) {
-            toast.success(`Payout ${vendorName} berhasil disetujui & dicatat lunas.`);
-            setPayouts(prev => prev.map(p => p.id === payoutId ? { ...p, status: 'approved', processedAt: new Date().toISOString() } : p));
-          }
-        } catch {
-          toast.error('Gagal memproses payout.');
-        }
-      }
+      payoutId,
+      vendorName,
+      amount,
+      proofUrl: '',
+      notes: 'Transfer bank berhasil diproses oleh Super Admin.',
+      isUploadingProof: false,
+      isSubmitting: false
     });
+  };
+
+  const handleUploadPayoutProof = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setApprovePayoutModal(prev => ({ ...prev, isUploadingProof: true }));
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'proof');
+      if (unsavedProofUploadRef.current) {
+        formData.append('oldUrl', unsavedProofUploadRef.current);
+      }
+
+      const res = await authFetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        unsavedProofUploadRef.current = data.url;
+        setApprovePayoutModal(prev => ({ ...prev, proofUrl: data.url, isUploadingProof: false }));
+        toast.success('Bukti transfer berhasil diunggah ke Cloudflare R2!');
+        return;
+      }
+      toast.error(data.error || 'Gagal mengunggah bukti transfer.');
+    } catch {
+      toast.error('Gagal mengunggah bukti transfer.');
+    }
+    setApprovePayoutModal(prev => ({ ...prev, isUploadingProof: false }));
+  };
+
+  const handleConfirmApprovePayout = async () => {
+    if (!approvePayoutModal.payoutId) return;
+    setApprovePayoutModal(prev => ({ ...prev, isSubmitting: true }));
+    try {
+      const finalProofUrl = approvePayoutModal.proofUrl.trim() || undefined;
+      const finalNotes = approvePayoutModal.notes.trim() || 'Transfer bank berhasil diproses oleh Super Admin.';
+      const res = await authFetch('/api/payouts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: approvePayoutModal.payoutId,
+          status: 'approved',
+          proofUrl: finalProofUrl,
+          notes: finalNotes
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        unsavedProofUploadRef.current = null;
+        toast.success(`Payout ${approvePayoutModal.vendorName} berhasil disetujui & bukti transfer tersimpan.`);
+        setPayouts(prev => prev.map(p => p.id === approvePayoutModal.payoutId ? {
+          ...p,
+          status: 'approved',
+          proofUrl: finalProofUrl,
+          notes: finalNotes,
+          processedAt: new Date().toISOString()
+        } : p));
+        setApprovePayoutModal(prev => ({ ...prev, isOpen: false, isSubmitting: false }));
+      } else {
+        toast.error(data.error || 'Gagal menyetujui payout.');
+        setApprovePayoutModal(prev => ({ ...prev, isSubmitting: false }));
+      }
+    } catch {
+      toast.error('Gagal memproses payout.');
+      setApprovePayoutModal(prev => ({ ...prev, isSubmitting: false }));
+    }
   };
 
   const handleRejectPayout = (payoutId: string) => {
@@ -2141,6 +2215,19 @@ export default function SuperAdminDashboard() {
                               <span style={{ fontSize: '11.5px', color: '#86868B', marginRight: '4px' }}>
                                 {p.processedAt ? new Date(p.processedAt).toLocaleDateString('id-ID') : '-'}
                               </span>
+                            )}
+                            {p.proofUrl && (
+                              <a
+                                href={p.proofUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="glass-pill"
+                                style={{ padding: '5px 10px', fontSize: '11px', color: '#2563EB', fontWeight: 600, textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                title="Lihat Bukti Transfer"
+                              >
+                                <ExternalLink size={11} />
+                                <span>Bukti Transfer</span>
+                              </a>
                             )}
                             <button
                               onClick={() => handleDeletePayout(p.id, p.vendorName, p.amount)}
@@ -3787,6 +3874,169 @@ export default function SuperAdminDashboard() {
                 }}
               >
                 {promptModal.confirmText || 'Simpan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 9: APPROVE VENDOR PAYOUT & UPLOAD TRANSFER RECEIPT */}
+      {/* ======================================================== */}
+      {approvePayoutModal.isOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 99999,
+            background: 'rgba(12, 12, 14, 0.55)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => !approvePayoutModal.isSubmitting && setApprovePayoutModal(prev => ({ ...prev, isOpen: false }))}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '460px',
+              background: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '28px',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.22)',
+              border: '1px solid rgba(0, 0, 0, 0.08)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#111113' }}>
+                Setujui Pencairan Komisi
+              </h3>
+              <button
+                type="button"
+                onClick={() => setApprovePayoutModal(prev => ({ ...prev, isOpen: false }))}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p style={{ margin: '0 0 18px 0', fontSize: '13.5px', lineHeight: 1.5, color: '#52525B' }}>
+              Konfirmasi transfer komisi sebesar <strong style={{ color: '#059669' }}>Rp {approvePayoutModal.amount.toLocaleString('id-ID')}</strong> untuk mitra <strong>{approvePayoutModal.vendorName}</strong>.
+            </p>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#111113', marginBottom: '6px' }}>
+                Unggah Bukti Transfer Bank (Opsional - Tampil di Portal Mitra)
+              </label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                <label
+                  className="glass-pill"
+                  style={{
+                    padding: '9px 14px',
+                    fontSize: '12.5px',
+                    fontWeight: 600,
+                    cursor: approvePayoutModal.isUploadingProof ? 'wait' : 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#F4F4F5'
+                  }}
+                >
+                  <Upload size={14} />
+                  <span>{approvePayoutModal.isUploadingProof ? 'Mengunggah ke R2...' : 'Pilih Foto Resi Transfer'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUploadPayoutProof}
+                    disabled={approvePayoutModal.isUploadingProof}
+                    style={{ display: 'none' }}
+                  />
+                </label>
+                {approvePayoutModal.proofUrl && (
+                  <a
+                    href={approvePayoutModal.proofUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: '12px', color: '#059669', fontWeight: 600, textDecoration: 'underline' }}
+                  >
+                    Lihat Bukti Terunggah
+                  </a>
+                )}
+              </div>
+              <input
+                type="text"
+                value={approvePayoutModal.proofUrl}
+                onChange={(e) => setApprovePayoutModal(prev => ({ ...prev, proofUrl: e.target.value }))}
+                placeholder="Atau tempel tautan URL bukti transfer..."
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(0,0,0,0.14)',
+                  fontSize: '12.5px',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#111113', marginBottom: '6px' }}>
+                Catatan Pencairan
+              </label>
+              <input
+                type="text"
+                value={approvePayoutModal.notes}
+                onChange={(e) => setApprovePayoutModal(prev => ({ ...prev, notes: e.target.value }))}
+                placeholder="Contoh: Transfer BI-FAST BCA berhasil diproses"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid rgba(0,0,0,0.14)',
+                  fontSize: '13px',
+                  outline: 'none'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                disabled={approvePayoutModal.isSubmitting}
+                onClick={() => setApprovePayoutModal(prev => ({ ...prev, isOpen: false }))}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(0,0,0,0.1)',
+                  background: '#F4F4F5',
+                  color: '#27272A',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={approvePayoutModal.isSubmitting || approvePayoutModal.isUploadingProof}
+                onClick={handleConfirmApprovePayout}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: '#111113',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                {approvePayoutModal.isSubmitting ? 'Memproses...' : 'Setujui & Tandai Lunas'}
               </button>
             </div>
           </div>

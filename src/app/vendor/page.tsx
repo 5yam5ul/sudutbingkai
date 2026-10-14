@@ -60,6 +60,7 @@ const CURATED_PARTNERS = [
 export default function VendorPortalPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const unsavedLogoUploadRef = useRef<string | null>(null);
 
   const [vendor, setVendor] = useState<UserAccount>({
     id: '',
@@ -145,6 +146,10 @@ export default function VendorPortalPage() {
       toast.error('Nominal penarikan melebihi saldo komisi tersedia.');
       return;
     }
+    if (!accountNumber.trim() || !accountHolder.trim()) {
+      toast.error('Silakan lengkapi Nomor Rekening dan Nama Pemilik Rekening Bank tujuan terlebih dahulu.');
+      return;
+    }
 
     setIsRequestingPayout(true);
     try {
@@ -159,9 +164,9 @@ export default function VendorPortalPage() {
           companyName: companyName || vendor.name,
           amount: Number(payoutAmount),
           bankDetails: {
-            bankName,
-            accountNumber,
-            accountHolder
+            bankName: bankName.trim() || 'BCA',
+            accountNumber: accountNumber.trim(),
+            accountHolder: accountHolder.trim()
           },
           notes: `Penarikan komisi mitra ${companyName || vendor.name}`
         })
@@ -334,6 +339,15 @@ export default function VendorPortalPage() {
             setPhone(v.phone || session.phone || '');
             setLogoUrl(v.logoUrl || '');
             if (v.city) setCity(v.city);
+            if (v.partnerTier) setPartnerTier(v.partnerTier);
+            if (v.referralCode) setReferralCode(v.referralCode);
+            if (v.walletBalance !== undefined) setWalletBalance(v.walletBalance);
+            if (v.totalEarnings !== undefined) setTotalEarnings(v.totalEarnings);
+            if (v.bankDetails) {
+              if (v.bankDetails.bankName) setBankName(v.bankDetails.bankName);
+              if (v.bankDetails.accountNumber) setAccountNumber(v.bankDetails.accountNumber);
+              if (v.bankDetails.accountHolder) setAccountHolder(v.bankDetails.accountHolder);
+            }
           }
         }
       })
@@ -368,6 +382,48 @@ export default function VendorPortalPage() {
               };
             });
             setClients(realClients);
+
+            // Sync live referral commission history from vendor's events
+            const liveHistory = data.events
+              .filter((ev: any) => (ev.commissionAmount && Number(ev.commissionAmount) > 0) || ev.referredByCode)
+              .map((ev: any, idx: number) => {
+                const tierLabel = ev.packageTier === 'unlimited'
+                  ? 'Unlimited Tamu'
+                  : ev.packageTier === 'wedding'
+                    ? 'Wedding (300 Tamu)'
+                    : ev.packageTier === 'event'
+                      ? 'Event (150 Tamu)'
+                      : 'Party (75 Tamu)';
+                const approxPaid = ev.packageTier === 'unlimited'
+                  ? 899100
+                  : ev.packageTier === 'wedding'
+                    ? 449100
+                    : ev.packageTier === 'event'
+                      ? 242100
+                      : 161100;
+                return {
+                  id: ev.id || `ref_live_${idx}`,
+                  invoiceNumber: `INV/SB/${new Date(ev.createdAt || ev.eventDate || Date.now()).getFullYear()}/${String(idx + 1).padStart(4, '0')}`,
+                  clientName: ev.coupleOrHost || ev.title || 'Klien Acara',
+                  tierName: tierLabel,
+                  date: new Date(ev.eventDate || ev.createdAt || Date.now()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                  totalPaid: approxPaid,
+                  commissionAmount: Number(ev.commissionAmount || 0),
+                  status: ev.commissionStatus === 'withdrawn' ? 'Telah Ditarik' : 'Lunas / Cair'
+                };
+              });
+
+            if (liveHistory.length > 0) {
+              if (session.id === 'vendor_vows_co' || session.email === 'vendor@sudutbingkai.id') {
+                setReferralHistory(prev => {
+                  const existingIds = new Set(prev.map((item: any) => item.id));
+                  const uniqueNew = liveHistory.filter((item: any) => !existingIds.has(item.id));
+                  return [...uniqueNew, ...prev];
+                });
+              } else {
+                setReferralHistory(liveHistory);
+              }
+            }
           }
         })
         .catch(console.error);
@@ -547,12 +603,16 @@ export default function VendorPortalPage() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('type', 'logo');
+      if (unsavedLogoUploadRef.current) {
+        formData.append('oldUrl', unsavedLogoUploadRef.current);
+      }
       const res = await authFetch('/api/upload', {
         method: 'POST',
         body: formData
       });
       const data = await res.json();
       if (data.success && data.url) {
+        unsavedLogoUploadRef.current = data.url;
         setLogoUrl(data.url);
         toast.success('Logo agensi berhasil diunggah!');
         return;
@@ -606,25 +666,36 @@ export default function VendorPortalPage() {
           instagram,
           city,
           logoUrl,
+          bankDetails: {
+            bankName: bankName.trim() || 'BCA',
+            accountNumber: accountNumber.trim(),
+            accountHolder: accountHolder.trim() || companyName || vendor.name
+          },
           tier: vendor.tier || 'Agency Pro'
         })
       });
 
       const data = await res.json();
       if (data.success) {
+        unsavedLogoUploadRef.current = null;
         setIsBrandingSaved(true);
-        const updated = { 
+        const updated: UserAccount = { 
           ...vendor, 
           companyName: companyName || vendor.name, 
           name: companyName || vendor.name, 
           phone, 
           instagram, 
           city, 
-          logoUrl: data.vendor?.logoUrl || logoUrl
+          logoUrl: data.vendor?.logoUrl || logoUrl,
+          bankAccount: {
+            bankName: bankName.trim() || 'BCA',
+            accountNumber: accountNumber.trim(),
+            accountHolder: accountHolder.trim() || companyName || vendor.name
+          }
         };
         setVendor(updated);
         setClientSession(updated, data.sessionToken);
-        toast.success('Pengaturan profil dan identitas agensi berhasil diperbarui!');
+        toast.success('Pengaturan profil, rekening bank, dan identitas agensi berhasil diperbarui!');
         setTimeout(() => setIsBrandingSaved(false), 3500);
       }
     } catch (err) {
@@ -1630,11 +1701,13 @@ export default function VendorPortalPage() {
                   <div style={{ background: '#FFFFFF', padding: '12px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
                     <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Level Mitra Anda</span>
                     <strong style={{ fontSize: '14px', color: '#C27803', display: 'flex', alignItems: 'center', gap: '4px', justifyContent: 'center' }}>
-                      <Award size={15} /> Mitra Pro (15%)
+                      <Award size={15} /> {partnerTier === 'vip' ? 'Mitra VIP (20%)' : partnerTier === 'regular' ? 'Mitra Regular (12%)' : 'Mitra Pro (15%)'}
                     </strong>
                   </div>
                   <div style={{ background: '#FFFFFF', padding: '12px 18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', textAlign: 'center' }}>
-                    <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Syarat Naik Level VIP (20%)</span>
+                    <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>
+                      {partnerTier === 'vip' ? 'Status Kemitraan Tertinggi' : 'Syarat Naik Level VIP (20%)'}
+                    </span>
                     <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>{clients.length}/15 Acara</strong>
                   </div>
                 </div>
@@ -2312,6 +2385,59 @@ export default function VendorPortalPage() {
                 </div>
               </div>
 
+              {/* Rekening Bank Tujuan Pencairan Komisi */}
+              <div style={{
+                background: 'rgba(194, 120, 3, 0.04)',
+                border: '1px solid rgba(194, 120, 3, 0.16)',
+                borderRadius: '16px',
+                padding: '20px'
+              }}>
+                <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '12px' }}>
+                  REKENING BANK PENCAIRAN KOMISI (BI-FAST)
+                </span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      Nama Bank
+                    </label>
+                    <input
+                      type="text"
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      placeholder="Contoh: BCA / Mandiri / BRI"
+                      className="glass-input"
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', fontSize: '13.5px', background: '#FFFFFF' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      Nomor Rekening
+                    </label>
+                    <input
+                      type="text"
+                      value={accountNumber}
+                      onChange={(e) => setAccountNumber(e.target.value)}
+                      placeholder="Contoh: 8730129841"
+                      className="glass-input"
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', fontSize: '13.5px', background: '#FFFFFF' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      Nama Pemilik Rekening
+                    </label>
+                    <input
+                      type="text"
+                      value={accountHolder}
+                      onChange={(e) => setAccountHolder(e.target.value)}
+                      placeholder="Sesuai buku tabungan"
+                      className="glass-input"
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '10px', fontSize: '13.5px', background: '#FFFFFF' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
               {/* Preview on Homepage Marquee */}
               <div style={{
                 background: 'rgba(0, 0, 0, 0.02)',
@@ -2785,7 +2911,7 @@ export default function VendorPortalPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
                   {/* Template 1: Add-On Hangat & Solutif */}
                   {(() => {
-                    const text1 = `Halo Kak ${pitchClientName || 'Calon Pengantin'}! 📸\n\nMau sharing ide seru buat momen resepsi pernikahan kalian tanggal ${pitchEventDate || 'nanti'} nih.\n\nBiasanya di acara wedding, tamu seringkali cuma duduk di meja atau antre lama di photobooth. Nah, bareng tim ${companyName || 'kami'}, kita bisa siapkan fitur *Sudut Bingkai — Kamera Analog Sekali Pakai Digital* untuk semua tamu undangan kalian!\n\n✨ *Gimana cara kerjanya?*\n1. Di setiap meja tamu disediakan kartu barcode estetik berbingkai nama kalian.\n2. Tamu cukup scan pakai kamera HP (tanpa download aplikasi apapun!).\n3. Tamu langsung bisa motret momen candid seru & rekam video ucapan selamat 15 detik.\n4. Semua foto bisa langsung tayang live di videotron ballroom panggung, dan kalian bakal dapet album kenangan lengkap beresolusi tinggi dengan stempel tanggal analog retro!\n\nKalian bisa dapatkan diskon 10% dengan kode partner kami: *${referralCode}*.\n\nBoleh dicoba simulasi tes kameranya di sini ya Kak: https://sudutbingkai.id/cam/demo\n\nKira-kira gimana Kak ${pitchClientName || ''}, tertarik kita masukkan ke rundown resepsinya?`;
+                    const text1 = `Halo Kak ${pitchClientName || 'Calon Pengantin'}! 📸\n\nMau sharing ide seru buat momen resepsi pernikahan kalian tanggal ${pitchEventDate || 'nanti'} nih.\n\nBiasanya di acara wedding, tamu seringkali cuma duduk di meja atau antre lama di photobooth. Nah, bareng tim ${companyName || 'kami'}, kita bisa siapkan fitur *Sudut Bingkai — Kamera Analog Sekali Pakai Digital* untuk semua tamu undangan kalian!\n\n*Gimana cara kerjanya?*\n1. Di setiap meja tamu disediakan kartu barcode estetik berbingkai nama kalian.\n2. Tamu cukup scan pakai kamera HP (tanpa download aplikasi apapun!).\n3. Tamu langsung bisa motret momen candid seru & rekam video ucapan selamat 15 detik.\n4. Semua foto bisa langsung tayang live di videotron ballroom panggung, dan kalian bakal dapet album kenangan lengkap beresolusi tinggi dengan stempel tanggal analog retro!\n\nKalian bisa dapatkan diskon 10% dengan kode partner kami: *${referralCode}*.\n\nBoleh dicoba simulasi tes kameranya di sini ya Kak: https://sudutbingkai.id/cam/demo\n\nKira-kira gimana Kak ${pitchClientName || ''}, tertarik kita masukkan ke rundown resepsinya?`;
                     return (
                       <div className="glass-card" style={{ padding: '24px', borderRadius: '20px', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
@@ -3474,7 +3600,7 @@ export default function VendorPortalPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '16px' }}>
                     {/* Caption 1 */}
                     {(() => {
-                      const cap1 = `Gak ada lagi cerita tamu bosan cuma duduk nunggu giliran salaman! 📸✨\n\nDi wedding klien kami kemarin, setiap meja disediakan kartu barcode kamera analog sekali pakai digital @sudutbingkai.id. Tamu tinggal scan pakai kamera HP (tanpa download aplikasi!), motret candid sesuka hati, dan fotonya langsung muncul live di videotron ballroom!\n\nPengantin dapet ratusan foto candid jujur & pesan video ucapan yang super hangat dari sahabat-sahabat mereka. Lebih hemat jutaan rupiah dibanding sewa photobooth biasa lho!\n\nMau resepsi pernikahanmu seseru ini? Konsultasikan bareng tim @${companyName ? companyName.toLowerCase().replace(/[^a-z0-9]/g, '') : 'weddingorganizer'} sekarang! 🤍\n\n#WeddingOrganizer #WeddingHacks #SudutBingkai #WeddingInspiration #IdeWedding #PhotoboothWedding #WeddingReception`;
+                      const cap1 = `Gak ada lagi cerita tamu bosan cuma duduk nunggu giliran salaman! 📸\n\nDi wedding klien kami kemarin, setiap meja disediakan kartu barcode kamera analog sekali pakai digital @sudutbingkai.id. Tamu tinggal scan pakai kamera HP (tanpa download aplikasi!), motret candid sesuka hati, dan fotonya langsung muncul live di videotron ballroom!\n\nPengantin dapet ratusan foto candid jujur & pesan video ucapan yang super hangat dari sahabat-sahabat mereka. Lebih hemat jutaan rupiah dibanding sewa photobooth biasa lho!\n\nMau resepsi pernikahanmu seseru ini? Konsultasikan bareng tim @${companyName ? companyName.toLowerCase().replace(/[^a-z0-9]/g, '') : 'weddingorganizer'} sekarang! 🤍\n\n#WeddingOrganizer #WeddingHacks #SudutBingkai #WeddingInspiration #IdeWedding #PhotoboothWedding #WeddingReception`;
                       return (
                         <div style={{ background: '#FFFFFF', padding: '18px', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.06)', display: 'flex', flexDirection: 'column' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
@@ -3690,11 +3816,41 @@ export default function VendorPortalPage() {
             </div>
 
             <div style={{ background: '#FBFBFA', borderRadius: '14px', padding: '14px', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '24px', fontSize: '12.5px', color: '#515154' }}>
-              <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#86868B', display: 'block', marginBottom: '4px' }}>
+              <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#86868B', display: 'block', marginBottom: '10px', fontWeight: 600 }}>
                 REKENING BANK TUJUAN:
               </span>
-              <strong>{bankName} • {accountNumber}</strong><br />
-              Atas Nama: <strong>{accountHolder}</strong>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#86868B', marginBottom: '3px' }}>Nama Bank</label>
+                  <input
+                    type="text"
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    placeholder="Contoh: BCA / Mandiri / BRI"
+                    style={{ width: '100%', padding: '8px 11px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '12.5px', background: '#FFFFFF' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#86868B', marginBottom: '3px' }}>Nomor Rekening *</label>
+                  <input
+                    type="text"
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    placeholder="Masukkan nomor rekening bank"
+                    style={{ width: '100%', padding: '8px 11px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '12.5px', background: '#FFFFFF' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', color: '#86868B', marginBottom: '3px' }}>Nama Pemilik Rekening *</label>
+                  <input
+                    type="text"
+                    value={accountHolder}
+                    onChange={(e) => setAccountHolder(e.target.value)}
+                    placeholder="Nama sesuai buku tabungan"
+                    style={{ width: '100%', padding: '8px 11px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '12.5px', background: '#FFFFFF' }}
+                  />
+                </div>
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -3711,7 +3867,7 @@ export default function VendorPortalPage() {
               <button
                 type="button"
                 onClick={handleRequestPayout}
-                disabled={isRequestingPayout || payoutAmount < 100000 || payoutAmount > walletBalance}
+                disabled={isRequestingPayout || payoutAmount < 100000 || payoutAmount > walletBalance || !accountNumber.trim() || !accountHolder.trim()}
                 className="btn-apple-black"
                 style={{ padding: '11px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'center' }}
               >
