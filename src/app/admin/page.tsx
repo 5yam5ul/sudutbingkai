@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname, useParams } from 'next/navigation';
 import {
   Shield, DollarSign, Calendar, Camera, Users, FileText,
   Wallet, Video, Package, CheckCircle2, AlertCircle, Eye,
@@ -15,13 +15,87 @@ import { getClientSession, clearClientSession, getSignedClientToken } from '@/li
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
 import { toast } from 'sonner';
 
-type AdminTab = 'overview' | 'events' | 'moderation' | 'vendors' | 'invoices' | 'payouts' | 'testimonials' | 'addons';
+export type AdminTab = 'overview' | 'events' | 'moderation' | 'vendors' | 'invoices' | 'payouts' | 'testimonials' | 'addons';
+
+export const ADMIN_SLUG_MAP: Record<string, AdminTab> = {
+  'overview': 'overview',
+  'ringkasan': 'overview',
+  'finansial': 'overview',
+  'events': 'events',
+  'acara': 'events',
+  'moderation': 'moderation',
+  'moderasi': 'moderation',
+  'media': 'moderation',
+  'vendors': 'vendors',
+  'vendor': 'vendors',
+  'mitra': 'vendors',
+  'invoices': 'invoices',
+  'invoice': 'invoices',
+  'faktur': 'invoices',
+  'payouts': 'payouts',
+  'payout': 'payouts',
+  'pencairan': 'payouts',
+  'testimonials': 'testimonials',
+  'testimoni': 'testimonials',
+  'kurasi': 'testimonials',
+  'addons': 'addons',
+  'addon': 'addons',
+  'add-on': 'addons',
+  'katalog': 'addons'
+};
+
+function resolveTabFromPath(pathname?: string | null, slugParam?: string | null): AdminTab {
+  if (slugParam) {
+    const clean = slugParam.toLowerCase().trim();
+    if (ADMIN_SLUG_MAP[clean]) return ADMIN_SLUG_MAP[clean];
+  }
+  if (pathname) {
+    const parts = pathname.split('/').filter(Boolean);
+    if (parts.length >= 2 && parts[0] === 'admin') {
+      const sub = parts[1].toLowerCase().trim();
+      if (ADMIN_SLUG_MAP[sub]) return ADMIN_SLUG_MAP[sub];
+    }
+  }
+  return 'overview';
+}
 
 export default function SuperAdminDashboard() {
   const router = useRouter();
+  const pathname = usePathname();
+  const params = useParams();
+  const slugParam = typeof params?.slug === 'string' ? params.slug : undefined;
+
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
-  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [activeTab, setActiveTab] = useState<AdminTab>(() => resolveTabFromPath(pathname, slugParam));
   const [loading, setLoading] = useState(true);
+
+  // Sync activeTab with URL path and browser Back/Forward navigation
+  useEffect(() => {
+    const resolved = resolveTabFromPath(pathname, slugParam);
+    setActiveTab(resolved);
+  }, [pathname, slugParam]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      if (typeof window !== 'undefined') {
+        const resolved = resolveTabFromPath(window.location.pathname, null);
+        setActiveTab(resolved);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const navigateToTab = (tab: AdminTab) => {
+    setActiveTab(tab);
+    setSearchTerm('');
+    if (typeof window !== 'undefined') {
+      const targetPath = `/admin/${tab}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ tab }, '', targetPath);
+      }
+    }
+  };
 
   // Data collections
   const [events, setEvents] = useState<EventData[]>([]);
@@ -884,7 +958,7 @@ export default function SuperAdminDashboard() {
       {/* Top Glass Navigation Bar */}
       <header className="glass-nav" style={{ position: 'sticky', top: 0, zIndex: 50, padding: '12px 24px', borderBottom: '1px solid rgba(0,0,0,0.08)' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '14px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <img src="/sudut-bingkai-logo.png" alt="Sudut Bingkai" style={{ height: '28px', width: 'auto' }} />
             </Link>
@@ -893,6 +967,33 @@ export default function SuperAdminDashboard() {
               <Shield size={12} color="#F59E0B" />
               <span>SUPER ADMIN COMMAND CENTER</span>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  const fullUrl = `${window.location.origin}/admin/${activeTab}`;
+                  navigator.clipboard.writeText(fullUrl);
+                  toast.success(`URL halaman disalin: /admin/${activeTab}`);
+                }
+              }}
+              title="Klik untuk menyalin URL langsung halaman ini"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                background: 'rgba(245, 158, 11, 0.12)',
+                color: '#B45309',
+                border: '1px solid rgba(245, 158, 11, 0.3)',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                fontSize: '11.5px',
+                fontWeight: 600,
+                fontFamily: 'var(--font-mono)',
+                cursor: 'pointer'
+              }}
+            >
+              <span>/admin/{activeTab}</span>
+            </button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -933,24 +1034,22 @@ export default function SuperAdminDashboard() {
           marginBottom: '28px' 
         }}>
           {[
-            { id: 'overview', label: 'Ringkasan & Finansial', icon: DollarSign, count: null },
-            { id: 'events', label: 'Manajemen Acara', icon: Calendar, count: events.length },
-            { id: 'moderation', label: 'Moderasi Media', icon: Camera, count: photos.length + videoWishes.length + voiceNotes.length },
-            { id: 'vendors', label: 'Mitra Vendor', icon: Users, count: vendors.length },
-            { id: 'invoices', label: 'Pusat Invoice', icon: FileText, count: invoices.length },
-            { id: 'payouts', label: 'Pencairan Dana', icon: Wallet, count: payouts.filter(p => p.status === 'pending').length || null, alert: payouts.filter(p => p.status === 'pending').length > 0 },
-            { id: 'testimonials', label: 'Kurasi Video (+50k)', icon: Video, count: testimonials.filter(t => t.status === 'pending').length || null, alert: testimonials.filter(t => t.status === 'pending').length > 0 },
-            { id: 'addons', label: 'Katalog Add-on', icon: Package, count: addons.length }
+            { id: 'overview', label: 'Ringkasan & Finansial', slug: '/admin/overview', icon: DollarSign, count: null },
+            { id: 'events', label: 'Manajemen Acara', slug: '/admin/events', icon: Calendar, count: events.length },
+            { id: 'moderation', label: 'Moderasi Media', slug: '/admin/moderation', icon: Camera, count: photos.length + videoWishes.length + voiceNotes.length },
+            { id: 'vendors', label: 'Mitra Vendor', slug: '/admin/vendors', icon: Users, count: vendors.length },
+            { id: 'invoices', label: 'Pusat Invoice', slug: '/admin/invoices', icon: FileText, count: invoices.length },
+            { id: 'payouts', label: 'Pencairan Dana', slug: '/admin/payouts', icon: Wallet, count: payouts.filter(p => p.status === 'pending').length || null, alert: payouts.filter(p => p.status === 'pending').length > 0 },
+            { id: 'testimonials', label: 'Kurasi Video (+50k)', slug: '/admin/testimonials', icon: Video, count: testimonials.filter(t => t.status === 'pending').length || null, alert: testimonials.filter(t => t.status === 'pending').length > 0 },
+            { id: 'addons', label: 'Katalog Add-on', slug: '/admin/addons', icon: Package, count: addons.length }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id as AdminTab);
-                  setSearchTerm('');
-                }}
+                onClick={() => navigateToTab(tab.id as AdminTab)}
+                title={`Buka ${tab.label} (${tab.slug})`}
                 className="glass-pill"
                 style={{
                   background: isActive ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
@@ -1046,7 +1145,7 @@ export default function SuperAdminDashboard() {
               <div className="glass-card" style={{ padding: '26px', borderRadius: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>Antrean Pencairan Dana</h3>
-                  <button onClick={() => setActiveTab('payouts')} className="glass-pill" style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
+                  <button onClick={() => navigateToTab('payouts')} className="glass-pill" style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
                     Buka Payouts
                   </button>
                 </div>
@@ -1072,7 +1171,7 @@ export default function SuperAdminDashboard() {
               <div className="glass-card" style={{ padding: '26px', borderRadius: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>Kurasi Video Testimoni (+50k)</h3>
-                  <button onClick={() => setActiveTab('testimonials')} className="glass-pill" style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
+                  <button onClick={() => navigateToTab('testimonials')} className="glass-pill" style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
                     Buka Kurasi
                   </button>
                 </div>
