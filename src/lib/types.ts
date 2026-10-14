@@ -300,6 +300,8 @@ export interface EventData {
     showLogoOnGallery?: boolean;
     showLogoOnFrame?: boolean;
   };
+  guestPin?: string;
+  addons?: string[];
 }
 
 export interface VideoWishRecord {

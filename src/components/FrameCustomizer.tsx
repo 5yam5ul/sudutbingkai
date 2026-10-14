@@ -84,6 +84,28 @@ export default function FrameCustomizer({
     unsavedFrameUploadRef.current = '';
   }, [initialCustomFrameUrl]);
 
+  const cleanupUnsavedFrame = React.useCallback(() => {
+    const pendingUrl = unsavedFrameUploadRef.current;
+    if (pendingUrl) {
+      unsavedFrameUploadRef.current = '';
+      authFetch(`/api/upload?url=${encodeURIComponent(pendingUrl)}`, {
+        method: 'DELETE',
+        keepalive: true,
+      }).catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      cleanupUnsavedFrame();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanupUnsavedFrame();
+    };
+  }, [cleanupUnsavedFrame]);
+
   useEffect(() => {
     setAllowGuestToggle(initialAllowGuestToggle);
   }, [initialAllowGuestToggle]);

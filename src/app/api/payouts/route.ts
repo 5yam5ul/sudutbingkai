@@ -89,6 +89,12 @@ export async function POST(request: Request) {
     const matchedVendor = allVendors.find(v => isSameVendorId(v.id, vendorId) || (vendorEmail && v.email?.toLowerCase() === vendorEmail.toLowerCase()));
 
     if (matchedVendor) {
+      if (!isAdmin && matchedVendor.status === 'suspended') {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Akun kemitraan Anda sedang ditangguhkan dan tidak dapat mengajukan penarikan komisi.'
+        }, { status: 403 });
+      }
       const availableBalance = Number(matchedVendor.walletBalance || 0);
       if (!isAdmin && requestedAmount > availableBalance) {
         return NextResponse.json({

@@ -101,7 +101,7 @@ export async function POST(request: Request) {
             try {
               const vendors = await getAllVendors();
               const matchedVendor = vendors.find(v => isSameVendorId(v.id, event.vendorId));
-              if (matchedVendor) {
+              if (matchedVendor && matchedVendor.status !== 'suspended') {
                 await updateVendor(matchedVendor.id, {
                   walletBalance: (matchedVendor.walletBalance || 0) + event.commissionAmount,
                   totalEarnings: (matchedVendor.totalEarnings || 0) + event.commissionAmount

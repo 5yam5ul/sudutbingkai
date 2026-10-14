@@ -4,6 +4,7 @@ import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { uploadBufferToR2, isR2Configured, deleteFromR2 } from '@/lib/r2';
 import { getServerSession } from '@/lib/auth';
+import { getAllEvents, getAllVendors, getPayoutRequests, getAllAddons } from '@/lib/db';
 
 const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
 
@@ -138,6 +139,71 @@ export async function POST(request: Request) {
         error: 'Penyimpanan file gagal. Pastikan Cloudflare R2 atau Supabase Storage telah aktif.'
       }, { status: 500 });
     }
+  } catch (err: unknown) {
+    return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const session = getServerSession(request);
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Sesi login diperlukan.' }, { status: 401 });
+    }
+
+    const { searchParams } = new URL(request.url);
+    const targetUrl = (searchParams.get('url') || '').trim();
+    if (!targetUrl) {
+      return NextResponse.json({ success: false, error: 'Parameter url diperlukan.' }, { status: 400 });
+    }
+
+    // Protect persisted assets: verify targetUrl is not actively used by any saved event, vendor, payout, or addon
+    const [events, vendors, payouts, addons] = await Promise.all([
+      getAllEvents().catch(() => []),
+      getAllVendors().catch(() => []),
+      getPayoutRequests().catch(() => []),
+      getAllAddons().catch(() => [])
+    ]);
+
+    const isActivelyReferenced =
+      events.some(e => e.coverUrl === targetUrl || e.customFrameUrl === targetUrl || e.vendorLogo === targetUrl) ||
+      vendors.some(v => v.logoUrl === targetUrl) ||
+      payouts.some(p => p.proofUrl === targetUrl) ||
+      addons.some(a => a.imagePreviewUrl === targetUrl);
+
+    if (isActivelyReferenced) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        message: 'Aset sedang digunakan secara aktif oleh data yang telah disimpan.'
+      });
+    }
+
+    // 1. Delete from Cloudflare R2
+    await deleteFromR2(targetUrl).catch(() => {});
+
+    // 2. Delete from Supabase Storage if applicable
+    if (isSupabaseConfigured && supabase && targetUrl.includes('/photos/')) {
+      try {
+        const pathPart = targetUrl.split('/photos/')[1];
+        if (pathPart) {
+          await supabase.storage.from('photos').remove([pathPart]);
+        }
+      } catch {}
+    }
+
+    // 3. Delete from local /public/uploads if applicable
+    if (targetUrl.startsWith('/uploads/')) {
+      try {
+        const uploadsRoot = path.resolve(process.cwd(), 'public', 'uploads');
+        const resolvedLocal = path.resolve(process.cwd(), 'public', targetUrl.replace(/^\//, ''));
+        if (resolvedLocal.startsWith(uploadsRoot) && fs.existsSync(resolvedLocal)) {
+          fs.unlinkSync(resolvedLocal);
+        }
+      } catch {}
+    }
+
+    return NextResponse.json({ success: true, deleted: targetUrl });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
   }

@@ -214,6 +214,18 @@ function photoToRow(photo: PhotoRecord, imageUrl: string) {
 // ---------------------------------------------------------------------------
 
 export async function getAllEvents(): Promise<EventData[]> {
+  let localEventsMap = new Map<string, EventData>();
+  ensureLocalDataFiles();
+  try {
+    if (fs.existsSync(EVENTS_FILE)) {
+      const raw = fs.readFileSync(EVENTS_FILE, 'utf8');
+      const parsed: EventData[] = JSON.parse(raw);
+      for (const ev of parsed) {
+        localEventsMap.set(ev.id, ev);
+      }
+    }
+  } catch {}
+
   if (isSupabaseConfigured && supabase) {
     try {
       const { data, error } = await supabase
@@ -222,7 +234,16 @@ export async function getAllEvents(): Promise<EventData[]> {
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        return data.map(rowToEvent);
+        return data.map(row => {
+          const mapped = rowToEvent(row);
+          const localCached = localEventsMap.get(mapped.id);
+          if (localCached) {
+            if (localCached.guestPin && !mapped.guestPin) mapped.guestPin = localCached.guestPin;
+            if (localCached.vendorCoBranding && !mapped.vendorCoBranding) mapped.vendorCoBranding = localCached.vendorCoBranding;
+            if (localCached.addons && !mapped.addons) mapped.addons = localCached.addons;
+          }
+          return mapped;
+        });
       }
       if (error) {
         console.warn('Supabase getAllEvents error, falling back to local:', error.message);
@@ -232,15 +253,7 @@ export async function getAllEvents(): Promise<EventData[]> {
     }
   }
 
-  // Local JSON fallback
-  ensureLocalDataFiles();
-  try {
-    if (fs.existsSync(EVENTS_FILE)) {
-      const raw = fs.readFileSync(EVENTS_FILE, 'utf8');
-      return JSON.parse(raw);
-    }
-  } catch {}
-  return [];
+  return Array.from(localEventsMap.values());
 }
 
 export async function getEventById(id: string): Promise<EventData | null> {
@@ -255,7 +268,20 @@ export async function getEventById(id: string): Promise<EventData | null> {
         .maybeSingle();
 
       if (!error && data) {
-        return rowToEvent(data);
+        const mapped = rowToEvent(data);
+        try {
+          if (fs.existsSync(EVENTS_FILE)) {
+            const raw = fs.readFileSync(EVENTS_FILE, 'utf8');
+            const parsed: EventData[] = JSON.parse(raw);
+            const localCached = parsed.find(e => e.id === mapped.id);
+            if (localCached) {
+              if (localCached.guestPin && !mapped.guestPin) mapped.guestPin = localCached.guestPin;
+              if (localCached.vendorCoBranding && !mapped.vendorCoBranding) mapped.vendorCoBranding = localCached.vendorCoBranding;
+              if (localCached.addons && !mapped.addons) mapped.addons = localCached.addons;
+            }
+          }
+        } catch {}
+        return mapped;
       }
     } catch (err) {
       console.warn('Supabase getEventById exception:', err);
@@ -280,16 +306,15 @@ export async function saveEvent(event: EventData): Promise<EventData> {
         .from('events')
         .upsert(row);
 
-      if (!error) {
-        return event;
+      if (error) {
+        console.warn('Supabase saveEvent error, syncing local cache:', error.message);
       }
-      console.warn('Supabase saveEvent error, falling back to local:', error.message);
     } catch (err) {
       console.warn('Supabase saveEvent exception:', err);
     }
   }
 
-  // Local fallback
+  // Always sync local cache so extended fields (guestPin, vendorCoBranding, addons) and local fallback stay up to date
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(EVENTS_FILE) ? fs.readFileSync(EVENTS_FILE, 'utf8') : '[]';
@@ -363,7 +388,12 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
         .single();
 
       if (!error && data) {
-        const updated = rowToEvent(data);
+        const updated: EventData = {
+          ...rowToEvent(data),
+          guestPin: updates.guestPin !== undefined ? (updates.guestPin || undefined) : existing?.guestPin,
+          vendorCoBranding: updates.vendorCoBranding !== undefined ? updates.vendorCoBranding : existing?.vendorCoBranding,
+          addons: updates.addons !== undefined ? updates.addons : existing?.addons
+        };
         // Also sync local cache safely
         try {
           ensureLocalDataFiles();
@@ -514,6 +544,14 @@ export async function deleteEvent(id: string): Promise<boolean> {
       const keptVoices = allVoices.filter(v => v.eventId !== canonicalId);
       fs.writeFileSync(VOICES_FILE, JSON.stringify(keptVoices, null, 2), 'utf8');
     }
+
+    // Clean up any event testimonials and their R2 video files
+    const eventTestimonials = await getTestimonialsByEvent(canonicalId);
+    for (const t of eventTestimonials) {
+      if (t.videoUrl) {
+        await deleteFromR2(t.videoUrl);
+      }
+    }
   } catch {}
 
   // 3. Supabase row deletion
@@ -522,6 +560,8 @@ export async function deleteEvent(id: string): Promise<boolean> {
       await supabase.from('photos').delete().eq('event_id', canonicalId);
       await supabase.from('video_wishes').delete().eq('event_id', canonicalId);
       await supabase.from('voice_notes').delete().eq('event_id', canonicalId);
+      await supabase.from('testimonials').delete().eq('event_id', canonicalId);
+      await supabase.from('invoices').delete().eq('event_id', canonicalId);
       const { error } = await supabase.from('events').delete().eq('id', canonicalId);
       if (!error) {
         // Also sync local fallback cleanup
@@ -544,6 +584,18 @@ export async function deleteEvent(id: string): Promise<boolean> {
             let wishes: VideoWishRecord[] = JSON.parse(rawWishes);
             wishes = wishes.filter(w => w.eventId !== canonicalId);
             fs.writeFileSync(VIDEO_WISHES_FILE, JSON.stringify(wishes, null, 2), 'utf8');
+          }
+          if (fs.existsSync(TESTIMONIALS_FILE)) {
+            const rawTesti = fs.readFileSync(TESTIMONIALS_FILE, 'utf8');
+            let testis: VideoTestimonialSubmission[] = JSON.parse(rawTesti);
+            testis = testis.filter(t => t.eventId !== canonicalId);
+            fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(testis, null, 2), 'utf8');
+          }
+          if (fs.existsSync(INVOICES_FILE)) {
+            const rawInv = fs.readFileSync(INVOICES_FILE, 'utf8');
+            let invs: InvoiceRecord[] = JSON.parse(rawInv);
+            invs = invs.filter(inv => inv.eventId !== canonicalId);
+            fs.writeFileSync(INVOICES_FILE, JSON.stringify(invs, null, 2), 'utf8');
           }
         } catch {}
         return true;
@@ -574,6 +626,18 @@ export async function deleteEvent(id: string): Promise<boolean> {
       let wishes: VideoWishRecord[] = JSON.parse(rawWishes);
       wishes = wishes.filter(w => w.eventId !== canonicalId);
       fs.writeFileSync(VIDEO_WISHES_FILE, JSON.stringify(wishes, null, 2), 'utf8');
+    }
+    if (fs.existsSync(TESTIMONIALS_FILE)) {
+      const rawTesti = fs.readFileSync(TESTIMONIALS_FILE, 'utf8');
+      let testis: VideoTestimonialSubmission[] = JSON.parse(rawTesti);
+      testis = testis.filter(t => t.eventId !== canonicalId);
+      fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(testis, null, 2), 'utf8');
+    }
+    if (fs.existsSync(INVOICES_FILE)) {
+      const rawInv = fs.readFileSync(INVOICES_FILE, 'utf8');
+      let invs: InvoiceRecord[] = JSON.parse(rawInv);
+      invs = invs.filter(inv => inv.eventId !== canonicalId);
+      fs.writeFileSync(INVOICES_FILE, JSON.stringify(invs, null, 2), 'utf8');
     }
     return true;
   } catch (err) {
@@ -1769,7 +1833,7 @@ export async function updateTestimonialStatus(
           try {
             const vendors = await getAllVendors();
             const matchedVendor = vendors.find(v => isSameVendorId(v.id, updatedTesti.submitterId) || (updatedTesti.submitterEmail && v.email === updatedTesti.submitterEmail));
-            if (matchedVendor) {
+            if (matchedVendor && matchedVendor.status !== 'suspended') {
               const reward = updatedTesti.rewardAmount || 50000;
               await updateVendor(matchedVendor.id, {
                 walletBalance: (matchedVendor.walletBalance || 0) + reward,
@@ -1827,7 +1891,7 @@ export async function updateTestimonialStatus(
         if (currentTesti && currentTesti.submitterType === 'vendor' && currentTesti.submitterId) {
           const vendors = await getAllVendors();
           const matchedVendor = vendors.find(v => isSameVendorId(v.id, currentTesti.submitterId) || (currentTesti.submitterEmail && v.email === currentTesti.submitterEmail));
-          if (matchedVendor) {
+          if (matchedVendor && matchedVendor.status !== 'suspended') {
             const reward = currentTesti.rewardAmount || 50000;
             await updateVendor(matchedVendor.id, {
               walletBalance: (matchedVendor.walletBalance || 0) + reward,

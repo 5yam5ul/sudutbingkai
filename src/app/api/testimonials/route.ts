@@ -6,7 +6,8 @@ import {
   getTestimonialsByEvent,
   updateTestimonialStatus,
   deleteTestimonial,
-  getEventById
+  getEventById,
+  getAllVendors
 } from '@/lib/db';
 import { getServerSession, isSameVendorId } from '@/lib/auth';
 
@@ -98,6 +99,17 @@ export async function POST(request: Request) {
         { success: false, error: 'Akses ditolak: Identitas pengirim tidak sesuai dengan sesi login aktif.' },
         { status: 403 }
       );
+    }
+
+    if (session.role === 'vendor') {
+      const allVendors = await getAllVendors();
+      const matchedVendor = allVendors.find(v => isSameVendorId(v.id, session.id) || (session.email && v.email?.toLowerCase() === session.email.toLowerCase()));
+      if (matchedVendor && matchedVendor.status === 'suspended') {
+        return NextResponse.json(
+          { success: false, error: 'Akses ditolak: Akun kemitraan Anda sedang ditangguhkan.' },
+          { status: 403 }
+        );
+      }
     }
 
     if (!eventId || !videoUrl) {

@@ -251,7 +251,10 @@ export async function POST(request: Request) {
       vendorId: verifiedVendorId,
       vendorName: verifiedVendorName,
       vendorLogo: verifiedVendorLogo,
-      vendorInstagram: verifiedVendorInstagram
+      vendorInstagram: verifiedVendorInstagram,
+      vendorCoBranding: body.vendorCoBranding,
+      guestPin: body.guestPin ? String(body.guestPin).trim() : undefined,
+      addons: body.addons
     };
 
     const saved = await saveEvent(newEvent);
@@ -465,6 +468,15 @@ export async function PATCH(request: Request) {
       }
       updates.coverUrl = body.coverUrl;
     }
+    if (body.guestPin !== undefined) {
+      updates.guestPin = body.guestPin ? String(body.guestPin).trim() : '';
+    }
+    if (body.vendorCoBranding !== undefined) {
+      updates.vendorCoBranding = body.vendorCoBranding;
+    }
+    if (body.addons !== undefined) {
+      updates.addons = body.addons;
+    }
 
     // Administrative & financial fields: restricted to Admin (or sandbox simulation when !isMayarConfigured)
     if (isCallerAdmin) {
@@ -536,6 +548,21 @@ export async function PATCH(request: Request) {
         }
       } catch {}
     } else if (updates.paymentStatus === 'pending' && existingEvent.paymentStatus === 'paid') {
+      if (existingEvent.vendorId && existingEvent.commissionAmount && existingEvent.commissionAmount > 0 && existingEvent.commissionStatus === 'available') {
+        try {
+          const vendors = await getAllVendors();
+          const matchedVendor = vendors.find(v => isSameVendorId(v.id, existingEvent.vendorId));
+          if (matchedVendor) {
+            updatedVendorBalance = Math.max(0, (matchedVendor.walletBalance || 0) - existingEvent.commissionAmount);
+            updatedVendorEarnings = Math.max(0, (matchedVendor.totalEarnings || 0) - existingEvent.commissionAmount);
+            await updateVendor(matchedVendor.id, {
+              walletBalance: updatedVendorBalance,
+              totalEarnings: updatedVendorEarnings
+            });
+          }
+          updates.commissionStatus = 'pending';
+        } catch {}
+      }
       try {
         const existingInv = await getInvoice(existingEvent.id);
         if (existingInv && existingInv.status === 'paid') {

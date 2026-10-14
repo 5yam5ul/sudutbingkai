@@ -62,21 +62,27 @@ export async function POST(request: Request) {
       const basePrice = TIER_PRICES[tierKey] ?? 499000;
 
       // Validate referral code server-side for legitimate 10% host partner discount (not applied to direct Vendor Mode purchases)
-      let hasValidReferral = !isVendorDirectPurchase && Boolean(existingEvent?.referralCodeUsed);
+      let hasValidReferral = false;
       const codeToCheck = !isVendorDirectPurchase
         ? (referralCode || existingEvent?.referralCodeUsed || '').trim().toUpperCase()
         : '';
 
-      if (!hasValidReferral && codeToCheck && basePrice > 0) {
-        if (codeToCheck === 'VOWSANDCO' || codeToCheck === 'VOWSANDCO10' || codeToCheck === 'KREATIV10') {
-          hasValidReferral = true;
-        } else {
-          try {
-            const allVendors = await getAllVendors();
-            hasValidReferral = allVendors.some(
-              (v) => v.referralCode?.toUpperCase() === codeToCheck && v.status !== 'suspended'
-            );
-          } catch {}
+      if (!isVendorDirectPurchase && codeToCheck && basePrice > 0) {
+        try {
+          const allVendors = await getAllVendors();
+          const matchedVendor = allVendors.find((v) => {
+            const vRef = (v.referralCode || '').toUpperCase();
+            return vRef === codeToCheck || (codeToCheck === 'VOWSANDCO10' && vRef === 'VOWSANDCO');
+          });
+          if (matchedVendor) {
+            hasValidReferral = matchedVendor.status !== 'suspended';
+          } else if (codeToCheck === 'VOWSANDCO' || codeToCheck === 'VOWSANDCO10' || codeToCheck === 'KREATIV10') {
+            hasValidReferral = true;
+          }
+        } catch {
+          if (codeToCheck === 'VOWSANDCO' || codeToCheck === 'VOWSANDCO10' || codeToCheck === 'KREATIV10') {
+            hasValidReferral = true;
+          }
         }
       }
 
