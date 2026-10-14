@@ -133,6 +133,10 @@ export default function LiveProjectorWallPage() {
       let currentlyLocked = isDelayedAndLocked;
       if (dataE.success && dataE.event) {
         setEvent(dataE.event);
+        if (dataE.event.packageTier === 'starter') {
+          setPhotos([]);
+          return;
+        }
         if (dataE.event.revealMode === 'delayed' && dataE.event.revealTime) {
           currentlyLocked = new Date(dataE.event.revealTime).getTime() > Date.now();
         } else {
@@ -948,7 +952,88 @@ export default function LiveProjectorWallPage() {
         boxSizing: 'border-box',
         zIndex: 10
       }}>
-        {isDelayedAndLocked ? (
+        {event?.packageTier === 'starter' ? (
+          <div style={{
+            textAlign: 'center',
+            maxWidth: '580px',
+            width: '100%',
+            background: 'rgba(21, 19, 16, 0.9)',
+            border: '1px solid rgba(194, 120, 3, 0.45)',
+            borderRadius: '32px',
+            padding: '48px 36px',
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.65)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px'
+          }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '6px 16px',
+              borderRadius: '999px',
+              background: 'rgba(194, 120, 3, 0.15)',
+              border: '1px solid rgba(194, 120, 3, 0.35)',
+              color: '#F59E0B',
+              fontSize: '12px',
+              fontWeight: 700,
+              letterSpacing: '0.05em',
+              textTransform: 'uppercase'
+            }}>
+              <Monitor size={14} />
+              <span>Fitur Eksklusif Paket Berbayar</span>
+            </div>
+
+            <h1 style={{
+              fontFamily: 'var(--font-display-serif), Georgia, serif',
+              fontSize: 'clamp(1.8rem, 4vw, 2.4rem)',
+              color: '#FAF8F5',
+              margin: 0,
+              letterSpacing: '-0.01em'
+            }}>
+              Live Wall Projector Terkunci
+            </h1>
+
+            <p style={{ color: '#D4D4D8', fontSize: '15px', margin: 0, lineHeight: 1.6 }}>
+              Acara <strong>{event.title}</strong> saat ini menggunakan paket <strong>Starter (Uji Coba Gratis)</strong>. Fitur penayangan slideshow interaktif real-time untuk layar proyektor & videotron tersedia pada paket <strong>Intimate Party</strong>, <strong>Wedding</strong>, dan <strong>Royal Unlimited</strong>.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '8px' }}>
+              <Link
+                href={`/event/${event.slug || eventId}`}
+                style={{
+                  padding: '12px 22px',
+                  borderRadius: '999px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  color: '#FFFFFF',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  textDecoration: 'none'
+                }}
+              >
+                ← Kembali ke Album Acara
+              </Link>
+              <Link
+                href="/#pricing"
+                style={{
+                  padding: '12px 24px',
+                  borderRadius: '999px',
+                  background: 'linear-gradient(135deg, #C27803 0%, #D97706 100%)',
+                  color: '#FFFFFF',
+                  fontSize: '13.5px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  boxShadow: '0 8px 24px rgba(194, 120, 3, 0.35)'
+                }}
+              >
+                Lihat Paket Upgrade →
+              </Link>
+            </div>
+          </div>
+        ) : isDelayedAndLocked ? (
           /* RETRO AMBIENT COUNTDOWN CURTAIN (ANTI-LEAK SHIELD) */
           <div style={{
             textAlign: 'center',

@@ -353,6 +353,7 @@ export interface UserAccount {
   walletBalance?: number;
   totalEarnings?: number;
   bankAccount?: PartnerBankAccount;
+  bankDetails?: PartnerBankAccount;
   clientCount?: number;
 }
 

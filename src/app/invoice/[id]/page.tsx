@@ -182,33 +182,35 @@ export default function InvoicePage() {
           overflow: 'hidden'
         }}
       >
-        {/* Paid Stamp Watermark Seal */}
-        {isPaid && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '40px',
-              right: '48px',
-              border: '3px solid #10B981',
-              borderRadius: '14px',
-              padding: '8px 20px',
-              color: '#10B981',
-              fontWeight: 800,
-              fontSize: '18px',
-              letterSpacing: '3px',
-              textTransform: 'uppercase',
-              transform: 'rotate(-6deg)',
-              pointerEvents: 'none',
-              background: 'rgba(16, 185, 129, 0.05)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}
-          >
-            <CheckCircle2 size={20} />
-            <span>LUNAS / PAID</span>
-          </div>
-        )}
+        {/* Status Stamp Watermark Seal */}
+        <div
+          style={{
+            position: 'absolute',
+            top: '40px',
+            right: '48px',
+            border: `3px solid ${isPaid ? '#10B981' : invoice.status === 'cancelled' ? '#EF4444' : '#D97706'}`,
+            borderRadius: '14px',
+            padding: '8px 20px',
+            color: isPaid ? '#10B981' : invoice.status === 'cancelled' ? '#EF4444' : '#D97706',
+            fontWeight: 800,
+            fontSize: '18px',
+            letterSpacing: '3px',
+            textTransform: 'uppercase',
+            transform: 'rotate(-6deg)',
+            pointerEvents: 'none',
+            background: isPaid
+              ? 'rgba(16, 185, 129, 0.05)'
+              : invoice.status === 'cancelled'
+                ? 'rgba(239, 68, 68, 0.05)'
+                : 'rgba(217, 119, 6, 0.05)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <CheckCircle2 size={20} />
+          <span>{isPaid ? 'LUNAS / PAID' : invoice.status === 'cancelled' ? 'DIBATALKAN' : 'PENDING'}</span>
+        </div>
 
         {/* Letterhead Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '24px', paddingBottom: '32px', borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>
@@ -352,7 +354,7 @@ export default function InvoicePage() {
               </div>
             )}
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '14px 0 6px', borderTop: '2px solid #1D1D1F', marginTop: '8px', fontSize: '18px', fontWeight: 800, color: '#1D1D1F' }}>
-              <span>Total Pelunasan:</span>
+              <span>{isPaid ? 'Total Pelunasan:' : 'Total Tagihan:'}</span>
               <span style={{ color: '#C27803' }}>Rp {invoice.finalAmount.toLocaleString('id-ID')}</span>
             </div>
             <div style={{ textAlign: 'right', fontSize: '11px', color: '#86868B', marginTop: '2px' }}>
@@ -364,12 +366,29 @@ export default function InvoicePage() {
         {/* Payment Confirmation & Legal Electronic Stamp */}
         <div style={{ backgroundColor: '#FBFBFA', borderRadius: '16px', padding: '20px 24px', border: '1px solid rgba(0, 0, 0, 0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', marginBottom: '28px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              backgroundColor: isPaid
+                ? 'rgba(16, 185, 129, 0.1)'
+                : invoice.status === 'cancelled'
+                  ? 'rgba(239, 68, 68, 0.1)'
+                  : 'rgba(217, 119, 6, 0.1)',
+              color: isPaid ? '#10B981' : invoice.status === 'cancelled' ? '#EF4444' : '#D97706',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
               <ShieldCheck size={22} />
             </div>
             <div>
               <strong style={{ fontSize: '13.5px', color: '#1D1D1F', display: 'block' }}>
-                Pembayaran Sah & Terverifikasi Otomatis
+                {isPaid
+                  ? 'Pembayaran Sah & Terverifikasi Otomatis'
+                  : invoice.status === 'cancelled'
+                    ? 'Faktur Dibatalkan'
+                    : 'Menunggu Pembayaran (Pending)'}
               </strong>
               <span style={{ fontSize: '12px', color: '#6E6E73' }}>
                 Kanal: {invoice.paymentMethod.toUpperCase()} • ID Referensi: {invoice.orderId}
@@ -378,8 +397,10 @@ export default function InvoicePage() {
           </div>
 
           <div style={{ textAlign: 'right' }}>
-            <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Waktu Pelunasan:</span>
-            <span style={{ fontSize: '12px', color: '#10B981', fontWeight: 700 }}>
+            <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>
+              {isPaid ? 'Waktu Pelunasan:' : 'Waktu Tagihan:'}
+            </span>
+            <span style={{ fontSize: '12px', color: isPaid ? '#10B981' : invoice.status === 'cancelled' ? '#EF4444' : '#D97706', fontWeight: 700 }}>
               {formattedDate}, {formattedTime} WIB
             </span>
           </div>

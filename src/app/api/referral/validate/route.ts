@@ -12,13 +12,48 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Kode voucher referral wajib diisi' }, { status: 400 });
     }
 
-    // 1. Check system static vendors
-    let matchedVendor: any = Object.values(SYSTEM_USERS).find(
-      u => u.role === 'vendor' && (
-        (u.referralCode || '').toUpperCase() === code ||
-        (code === 'VOWSANDCO10' && u.referralCode === 'VOWSANDCO')
-      )
-    );
+    let matchedVendor: any = null;
+
+    // 1. Check registered vendors from database first (PostgreSQL + Local JSON)
+    try {
+      const dbVendors = await getAllVendors();
+      const found = dbVendors.find(
+        v => v.referralCode && (
+          v.referralCode.toUpperCase() === code ||
+          (code === 'VOWSANDCO10' && v.referralCode.toUpperCase() === 'VOWSANDCO')
+        )
+      );
+      if (found) {
+        if (found.status === 'suspended') {
+          return NextResponse.json({
+            success: false,
+            error: 'Kode kemitraan vendor ini sedang ditangguhkan dan tidak dapat digunakan.'
+          }, { status: 403 });
+        }
+        matchedVendor = {
+          id: found.id,
+          name: found.name,
+          email: found.email,
+          role: 'vendor',
+          companyName: found.companyName || found.name,
+          referralCode: found.referralCode || code,
+          partnerTier: found.partnerTier || 'regular',
+          commissionRate: found.commissionRate
+        };
+      }
+    } catch (err) {
+      console.warn('Error reading vendors in referral validate:', err);
+    }
+
+    // 2. Fallback to system static vendors if not present in database
+    if (!matchedVendor) {
+      matchedVendor = Object.values(SYSTEM_USERS).find(
+        u => u.role === 'vendor' && (
+          (u.referralCode || '').toUpperCase() === code ||
+          (code === 'VOWSANDCO10' && u.referralCode === 'VOWSANDCO')
+        )
+      );
+    }
 
     if (!matchedVendor && code === 'KREATIV10') {
       matchedVendor = {
@@ -30,36 +65,6 @@ export async function POST(request: Request) {
         referralCode: 'KREATIV10',
         partnerTier: 'pro'
       };
-    }
-
-    // 2. Check registered vendors from database (Supabase + Local)
-    if (!matchedVendor) {
-      try {
-        const dbVendors = await getAllVendors();
-        const found = dbVendors.find(
-          v => v.referralCode && v.referralCode.toUpperCase() === code
-        );
-        if (found) {
-          if (found.status === 'suspended') {
-            return NextResponse.json({
-              success: false,
-              error: 'Kode kemitraan vendor ini sedang ditangguhkan dan tidak dapat digunakan.'
-            }, { status: 403 });
-          }
-          matchedVendor = {
-            id: found.id,
-            name: found.name,
-            email: found.email,
-            role: 'vendor',
-            companyName: found.companyName || found.name,
-            referralCode: found.referralCode || code,
-            partnerTier: found.partnerTier || 'regular',
-            commissionRate: found.commissionRate
-          };
-        }
-      } catch (err) {
-        console.warn('Error reading vendors in referral validate:', err);
-      }
     }
 
     if (!matchedVendor) {

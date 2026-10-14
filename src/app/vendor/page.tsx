@@ -244,29 +244,20 @@ export default function VendorPortalPage() {
     else if (session.name) setCompanyName(session.name);
     if (session.instagram) setInstagram(session.instagram);
     if (session.phone) setPhone(session.phone);
+    if (session.city) setCity(session.city);
+    if (session.logoUrl) setLogoUrl(session.logoUrl);
 
-    // Refresh live vendor balance from database
-    authFetch('/api/vendors')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.vendors) {
-          const fresh = data.vendors.find((v: any) => isSameVendorId(v.id, session.id) || (session.email && v.email === session.email));
-          if (fresh) {
-            if (fresh.walletBalance !== undefined) setWalletBalance(fresh.walletBalance);
-            if (fresh.totalEarnings !== undefined) setTotalEarnings(fresh.totalEarnings);
-          }
-        }
-      })
-      .catch(() => {});
-
-    // If demo tester vendor account, populate sample mock stats
+    // If demo tester vendor account, populate initial fallback stats before DB refresh
     if (session.id === 'vendor_vows_co' || session.email === 'vendor@sudutbingkai.id') {
-      setWalletBalance(420000);
-      setTotalEarnings(1260000);
-      setReferralCode('VOWSANDCO');
-      setAccountNumber('8730129841');
-      setAccountHolder('Sarah Pramono');
-      setPayoutAmount(420000);
+      const initialBal = typeof session.walletBalance === 'number' ? session.walletBalance : 420000;
+      const initialEarn = typeof session.totalEarnings === 'number' ? session.totalEarnings : 1260000;
+      setWalletBalance(initialBal);
+      setTotalEarnings(initialEarn);
+      setReferralCode(session.referralCode || 'VOWSANDCO');
+      setBankName(session.bankDetails?.bankName || session.bankAccount?.bankName || 'BCA');
+      setAccountNumber(session.bankDetails?.accountNumber || session.bankAccount?.accountNumber || '8730129841');
+      setAccountHolder(session.bankDetails?.accountHolder || session.bankAccount?.accountHolder || 'Sarah Pramono');
+      setPayoutAmount(initialBal);
       setReferralHistory([
         {
           id: 'ref_001',
@@ -305,14 +296,47 @@ export default function VendorPortalPage() {
       } else if (session.name) {
         setReferralCode(session.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10));
       }
-      if (session.walletBalance) setWalletBalance(session.walletBalance);
-      if (session.totalEarnings) setTotalEarnings(session.totalEarnings);
-      if (session.bankAccount) {
-        if (session.bankAccount.bankName) setBankName(session.bankAccount.bankName);
-        if (session.bankAccount.accountNumber) setAccountNumber(session.bankAccount.accountNumber);
-        if (session.bankAccount.accountHolder) setAccountHolder(session.bankAccount.accountHolder);
+      if (typeof session.walletBalance === 'number') {
+        setWalletBalance(session.walletBalance);
+        setPayoutAmount(session.walletBalance);
+      }
+      if (typeof session.totalEarnings === 'number') setTotalEarnings(session.totalEarnings);
+      const bankObj = session.bankDetails || session.bankAccount;
+      if (bankObj) {
+        if (bankObj.bankName) setBankName(bankObj.bankName);
+        if (bankObj.accountNumber) setAccountNumber(bankObj.accountNumber);
+        if (bankObj.accountHolder) setAccountHolder(bankObj.accountHolder);
       }
     }
+
+    // Refresh live vendor balance and profile from database
+    authFetch('/api/vendors')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.vendors) {
+          const fresh = data.vendors.find((v: any) => isSameVendorId(v.id, session.id) || (session.email && v.email === session.email));
+          if (fresh) {
+            setVendor((prev: any) => ({ ...prev, ...fresh }));
+            if (typeof fresh.walletBalance === 'number') {
+              setWalletBalance(fresh.walletBalance);
+              setPayoutAmount(fresh.walletBalance);
+            }
+            if (typeof fresh.totalEarnings === 'number') setTotalEarnings(fresh.totalEarnings);
+            if (fresh.referralCode) setReferralCode(fresh.referralCode);
+            if (fresh.companyName) setCompanyName(fresh.companyName);
+            if (fresh.instagram) setInstagram(fresh.instagram);
+            if (fresh.phone) setPhone(fresh.phone);
+            if (fresh.city) setCity(fresh.city);
+            if (fresh.logoUrl) setLogoUrl(fresh.logoUrl);
+            if (fresh.bankDetails) {
+              if (fresh.bankDetails.bankName) setBankName(fresh.bankDetails.bankName);
+              if (fresh.bankDetails.accountNumber) setAccountNumber(fresh.bankDetails.accountNumber);
+              if (fresh.bankDetails.accountHolder) setAccountHolder(fresh.bankDetails.accountHolder);
+            }
+          }
+        }
+      })
+      .catch(() => {});
 
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);

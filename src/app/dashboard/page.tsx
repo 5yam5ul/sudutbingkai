@@ -1964,7 +1964,7 @@ export default function BrideDashboardPage() {
                       Ingin membebaskan tamu memilih berbagai roll film analog di ponsel mereka?
                     </span>
                     <Link 
-                      href={`/invoice/${event?.slug || event?.id}`}
+                      href="/#pricing"
                       style={{ fontSize: '11.5px', fontWeight: 600, color: '#C27803', textDecoration: 'underline', whiteSpace: 'nowrap' }}
                     >
                       Upgrade Paket →
@@ -2091,7 +2091,7 @@ export default function BrideDashboardPage() {
                         Butuh jatah foto lebih banyak atau kuota tamu lebih besar?
                       </span>
                       <Link 
-                        href={`/invoice/${event?.slug || event?.id}`}
+                        href="/#pricing"
                         style={{ fontSize: '11.5px', fontWeight: 600, color: '#C27803', textDecoration: 'underline', whiteSpace: 'nowrap' }}
                       >
                         Upgrade Paket →
@@ -2198,7 +2198,7 @@ export default function BrideDashboardPage() {
                                 setRevealTime('');
                                 setIsSavingSettings(true);
                                 try {
-                                  const res = await fetch('/api/events', {
+                                  const res = await authFetch('/api/events', {
                                     method: 'PATCH',
                                     headers: { 'Content-Type': 'application/json' },
                                     body: JSON.stringify({ id: event?.id, revealMode: 'instant', revealTime: '' })
@@ -2209,6 +2209,8 @@ export default function BrideDashboardPage() {
                                     setSaveSuccess(true);
                                     toast.success('Album langsung dibuka untuk seluruh tamu!');
                                     setTimeout(() => setSaveSuccess(false), 3000);
+                                  } else {
+                                    toast.error(d.error || 'Gagal membuka kunci album.');
                                   }
                                 } catch (e) {
                                   toast.error('Gagal membuka album.');

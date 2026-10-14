@@ -219,6 +219,39 @@ export async function POST(request: Request) {
     // 3. Check built-in system/master accounts first
     let authenticatedUser: UserAccount | null = authenticateUser(cleanEmail, cleanPassword, requestedRole);
 
+    if (authenticatedUser && authenticatedUser.role === 'vendor') {
+      const allVendors = await getAllVendors();
+      const dbVendor = allVendors.find(
+        (v) =>
+          v.id === authenticatedUser!.id ||
+          (v.email && v.email.trim().toLowerCase() === cleanEmail)
+      );
+      if (dbVendor) {
+        if (dbVendor.status === 'suspended') {
+          return NextResponse.json(
+            { success: false, error: 'Akun mitra vendor ini sedang ditangguhkan oleh Admin.' },
+            { status: 403 }
+          );
+        }
+        authenticatedUser = {
+          ...authenticatedUser,
+          id: dbVendor.id,
+          name: dbVendor.name || authenticatedUser.name,
+          companyName: dbVendor.companyName || authenticatedUser.companyName,
+          phone: dbVendor.phone || authenticatedUser.phone,
+          instagram: dbVendor.instagram || authenticatedUser.instagram,
+          city: dbVendor.city || authenticatedUser.city,
+          partnerTier: dbVendor.partnerTier || authenticatedUser.partnerTier || 'regular',
+          referralCode: dbVendor.referralCode || authenticatedUser.referralCode,
+          walletBalance: typeof dbVendor.walletBalance === 'number' ? dbVendor.walletBalance : (authenticatedUser.walletBalance || 0),
+          totalEarnings: typeof dbVendor.totalEarnings === 'number' ? dbVendor.totalEarnings : (authenticatedUser.totalEarnings || 0),
+          clientCount: typeof dbVendor.clientCount === 'number' ? dbVendor.clientCount : (authenticatedUser.clientCount || 0),
+          logoUrl: dbVendor.logoUrl || authenticatedUser.logoUrl,
+          bankDetails: dbVendor.bankDetails || authenticatedUser.bankDetails,
+        };
+      }
+    }
+
     // 4. If not a master/demo account, verify password via Supabase Auth before granting access to DB records
     if (!authenticatedUser && requestedRole !== 'admin') {
       if (cleanPassword.length < 6) {
@@ -281,6 +314,8 @@ export async function POST(request: Request) {
             walletBalance: matchedVendor.walletBalance || 0,
             totalEarnings: matchedVendor.totalEarnings || 0,
             clientCount: matchedVendor.clientCount || 0,
+            logoUrl: matchedVendor.logoUrl,
+            bankDetails: matchedVendor.bankDetails,
           };
         } else if (requestedRole === 'vendor') {
           return NextResponse.json(
