@@ -441,7 +441,29 @@ export async function deleteEvent(id: string): Promise<boolean> {
   const existing = await getEventById(id);
   const canonicalId = existing?.id || id;
 
-  // 0. Clean up event cover photo and custom frame PNG from Cloudflare R2
+  // 0a. Clawback available vendor commission if event is deleted while commissionStatus === 'available'
+  if (
+    existing?.paymentStatus === 'paid' &&
+    existing?.vendorId &&
+    existing?.commissionAmount &&
+    existing.commissionAmount > 0 &&
+    existing.commissionStatus === 'available'
+  ) {
+    try {
+      const allVendors = await getAllVendors();
+      const matchedVendor = allVendors.find(
+        v => v.id === existing.vendorId || v.id?.replace(/^v_/, 'vendor_') === existing.vendorId?.replace(/^v_/, 'vendor_')
+      );
+      if (matchedVendor) {
+        await updateVendor(matchedVendor.id, {
+          walletBalance: Math.max(0, (matchedVendor.walletBalance || 0) - existing.commissionAmount),
+          totalEarnings: Math.max(0, (matchedVendor.totalEarnings || 0) - existing.commissionAmount),
+        });
+      }
+    } catch {}
+  }
+
+  // 0b. Clean up event cover photo and custom frame PNG from Cloudflare R2
   try {
     if (existing?.coverUrl) {
       await deleteFromR2(existing.coverUrl);
@@ -2027,16 +2049,52 @@ async function resolveVendorLogoR2(vendorId: string, rawLogoUrl?: string | null)
   return rawLogoUrl;
 }
 
+async function syncVendorBrandingToEvents(
+  vendorId: string,
+  branding: { vendorLogo?: string; vendorName?: string; vendorInstagram?: string }
+) {
+  if (!vendorId) return;
+  const normalizedTarget = vendorId.replace(/^v_/, 'vendor_');
+  try {
+    const allEvents = await getAllEvents();
+    const matchingEvents = allEvents.filter(
+      e => e.vendorId && (e.vendorId === vendorId || e.vendorId.replace(/^v_/, 'vendor_') === normalizedTarget)
+    );
+    for (const ev of matchingEvents) {
+      const evUpdates: Partial<EventData> = {};
+      if (branding.vendorLogo !== undefined && ev.vendorLogo !== branding.vendorLogo) {
+        evUpdates.vendorLogo = branding.vendorLogo;
+      }
+      if (branding.vendorName !== undefined && ev.vendorName !== branding.vendorName) {
+        evUpdates.vendorName = branding.vendorName;
+      }
+      if (branding.vendorInstagram !== undefined && ev.vendorInstagram !== branding.vendorInstagram) {
+        evUpdates.vendorInstagram = branding.vendorInstagram;
+      }
+      if (Object.keys(evUpdates).length > 0) {
+        await updateEvent(ev.id, evUpdates);
+      }
+    }
+  } catch {}
+}
+
 export async function saveVendor(vendorData: any): Promise<any> {
   const vendorId = vendorData.id || `vendor_${Date.now()}`;
   let resolvedLogoUrl = vendorData.logoUrl || '';
 
   try {
     const existingVendors = await getAllVendors();
-    const prevVendor = existingVendors.find(v => v.id === vendorId);
+    const prevVendor = existingVendors.find(
+      v => v.id === vendorId || v.id?.replace(/^v_/, 'vendor_') === String(vendorId).replace(/^v_/, 'vendor_')
+    );
     if (resolvedLogoUrl && resolvedLogoUrl.startsWith('data:image')) {
       resolvedLogoUrl = await resolveVendorLogoR2(vendorId, resolvedLogoUrl);
     }
+    await syncVendorBrandingToEvents(prevVendor?.id || vendorId, {
+      vendorLogo: resolvedLogoUrl,
+      vendorName: vendorData.companyName || vendorData.name,
+      vendorInstagram: vendorData.instagram
+    });
     if (prevVendor?.logoUrl && prevVendor.logoUrl !== resolvedLogoUrl) {
       await deleteFromR2(prevVendor.logoUrl);
     }
@@ -2099,15 +2157,22 @@ export async function saveVendor(vendorData: any): Promise<any> {
 }
 
 export async function updateVendor(id: string, updates: any): Promise<any | null> {
-  // Check if logoUrl is being replaced so old R2 file is cleaned up and Base64 is uploaded to R2
-  if (updates.logoUrl !== undefined) {
+  // Check if logoUrl/branding is being updated so linked events are synced and old R2 logo is cleaned up
+  if (updates.logoUrl !== undefined || updates.companyName !== undefined || updates.instagram !== undefined) {
     try {
       if (updates.logoUrl && updates.logoUrl.startsWith('data:image')) {
         updates.logoUrl = await resolveVendorLogoR2(id, updates.logoUrl);
       }
       const existingVendors = await getAllVendors();
-      const prevVendor = existingVendors.find(v => v.id === id);
-      if (prevVendor?.logoUrl && prevVendor.logoUrl !== updates.logoUrl) {
+      const prevVendor = existingVendors.find(
+        v => v.id === id || v.id?.replace(/^v_/, 'vendor_') === String(id).replace(/^v_/, 'vendor_')
+      );
+      await syncVendorBrandingToEvents(prevVendor?.id || id, {
+        vendorLogo: updates.logoUrl,
+        vendorName: updates.companyName,
+        vendorInstagram: updates.instagram
+      });
+      if (updates.logoUrl !== undefined && prevVendor?.logoUrl && prevVendor.logoUrl !== updates.logoUrl) {
         await deleteFromR2(prevVendor.logoUrl);
       }
     } catch {}
@@ -2258,6 +2323,13 @@ export async function deleteVendor(id: string): Promise<boolean> {
 // ==========================================
 
 export async function getAllAddons(): Promise<EventAddonItem[]> {
+  let localList: EventAddonItem[] = [];
+  try {
+    ensureLocalDataFiles();
+    const raw = fs.existsSync(ADDONS_FILE) ? fs.readFileSync(ADDONS_FILE, 'utf8') : '[]';
+    localList = JSON.parse(raw);
+  } catch {}
+
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
@@ -2267,21 +2339,28 @@ export async function getAllAddons(): Promise<EventAddonItem[]> {
         .order('created_at', { ascending: true });
 
       if (!error && data && data.length > 0) {
-        return data.map(row => ({
-          id: row.id,
-          name: row.name,
-          category: row.category,
-          description: row.description || '',
-          price: Number(row.price),
-          priceFormatted: `Rp ${Number(row.price).toLocaleString('id-ID')}`,
-          costPrice: row.cost_price ? Number(row.cost_price) : undefined,
-          imagePreviewUrl: row.image_preview_url || row.image_url || undefined,
-          isActive: row.is_active !== false,
-          freeShippingJabodetabek: row.free_shipping_jabodetabek !== false,
-          unit: row.unit || '1 set',
-          isPopular: row.is_popular || false,
-          createdAt: row.created_at
-        }));
+        return data.map(row => {
+          const localMatch = localList.find(a => a.id === row.id);
+          return {
+            id: row.id,
+            name: row.name,
+            category: row.category,
+            description: row.description || '',
+            price: Number(row.price),
+            priceFormatted: `Rp ${Number(row.price).toLocaleString('id-ID')}`,
+            costPrice: row.cost_price !== undefined && row.cost_price !== null
+              ? Number(row.cost_price)
+              : localMatch?.costPrice,
+            imagePreviewUrl: row.image_preview_url || row.image_url || undefined,
+            isActive: row.is_active !== undefined && row.is_active !== null
+              ? row.is_active !== false
+              : (localMatch?.isActive !== undefined ? localMatch.isActive : true),
+            freeShippingJabodetabek: row.free_shipping_jabodetabek !== false,
+            unit: row.unit || '1 set',
+            isPopular: row.is_popular || false,
+            createdAt: row.created_at
+          };
+        });
       }
     } catch (e) {
       console.warn('Supabase getAllAddons fallback:', e);
@@ -2289,21 +2368,17 @@ export async function getAllAddons(): Promise<EventAddonItem[]> {
   }
 
   // 2. Local fallback
-  ensureLocalDataFiles();
-  try {
-    const raw = fs.existsSync(ADDONS_FILE) ? fs.readFileSync(ADDONS_FILE, 'utf8') : '[]';
-    return JSON.parse(raw);
-  } catch {
-    return [];
-  }
+  return localList;
 }
 
 export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> {
   const addonId = addon.id || `addon_${Date.now()}`;
   let resolvedImageUrl = addon.imagePreviewUrl;
 
-  if (resolvedImageUrl && resolvedImageUrl.startsWith('data:image/') && isR2Configured) {
-    try {
+  try {
+    const existingAddons = await getAllAddons();
+    const prevAddon = existingAddons.find(a => a.id === addonId);
+    if (resolvedImageUrl && resolvedImageUrl.startsWith('data:image/') && isR2Configured) {
       const matches = resolvedImageUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
       if (matches && matches.length === 3) {
         const mime = matches[1];
@@ -2314,9 +2389,12 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
           resolvedImageUrl = r2Url;
         }
       }
-    } catch (e) {
-      console.warn('R2 addon image upload failed, keeping fallback:', e);
     }
+    if (prevAddon?.imagePreviewUrl && prevAddon.imagePreviewUrl !== resolvedImageUrl) {
+      await deleteFromR2(prevAddon.imagePreviewUrl);
+    }
+  } catch (e) {
+    console.warn('R2 addon image upload/cleanup failed, keeping fallback:', e);
   }
 
   const newAddon: EventAddonItem = {
@@ -2336,13 +2414,22 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
         category: newAddon.category,
         description: newAddon.description || null,
         price: newAddon.price,
+        cost_price: newAddon.costPrice ?? null,
+        is_active: newAddon.isActive !== false,
         image_preview_url: newAddon.imagePreviewUrl || null,
         free_shipping_jabodetabek: newAddon.freeShippingJabodetabek !== false,
         unit: newAddon.unit || '1 set',
         is_popular: newAddon.isPopular || false
       };
 
-      const { data, error } = await supabase.from('addons').upsert(record).select().maybeSingle();
+      let { data, error } = await supabase.from('addons').upsert(record).select().maybeSingle();
+      if (error && (error.message?.includes('cost_price') || error.message?.includes('is_active') || error.code === 'PGRST204')) {
+        const { cost_price: _cp, is_active: _ia, ...fallbackRecord } = record;
+        const retry = await supabase.from('addons').upsert(fallbackRecord).select().maybeSingle();
+        data = retry.data;
+        error = retry.error;
+      }
+
       if (!error && data) {
         const savedItem: EventAddonItem = {
           id: data.id,
@@ -2351,9 +2438,9 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
           description: data.description || '',
           price: Number(data.price),
           priceFormatted: `Rp ${Number(data.price).toLocaleString('id-ID')}`,
-          costPrice: newAddon.costPrice,
+          costPrice: data.cost_price !== undefined && data.cost_price !== null ? Number(data.cost_price) : newAddon.costPrice,
           imagePreviewUrl: data.image_preview_url || data.image_url || undefined,
-          isActive: newAddon.isActive !== false,
+          isActive: data.is_active !== undefined && data.is_active !== null ? data.is_active !== false : (newAddon.isActive !== false),
           freeShippingJabodetabek: data.free_shipping_jabodetabek !== false,
           unit: data.unit || '1 set',
           isPopular: data.is_popular || false,
@@ -2399,9 +2486,10 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
 }
 
 export async function updateAddon(id: string, updates: Partial<EventAddonItem>): Promise<EventAddonItem | null> {
+  let existingAddon: EventAddonItem | undefined;
   try {
     const allAddons = await getAllAddons();
-    const existing = allAddons.find(a => a.id === id);
+    existingAddon = allAddons.find(a => a.id === id);
     if (updates.imagePreviewUrl !== undefined) {
       if (updates.imagePreviewUrl && updates.imagePreviewUrl.startsWith('data:image/') && isR2Configured) {
         const matches = updates.imagePreviewUrl.match(/^data:(image\/[a-zA-Z0-9+.-]+);base64,(.+)$/);
@@ -2415,8 +2503,8 @@ export async function updateAddon(id: string, updates: Partial<EventAddonItem>):
           }
         }
       }
-      if (existing?.imagePreviewUrl && existing.imagePreviewUrl !== updates.imagePreviewUrl) {
-        await deleteFromR2(existing.imagePreviewUrl);
+      if (existingAddon?.imagePreviewUrl && existingAddon.imagePreviewUrl !== updates.imagePreviewUrl) {
+        await deleteFromR2(existingAddon.imagePreviewUrl);
       }
     }
   } catch {}
@@ -2429,12 +2517,22 @@ export async function updateAddon(id: string, updates: Partial<EventAddonItem>):
       if (updates.category !== undefined) dbUpdates.category = updates.category;
       if (updates.description !== undefined) dbUpdates.description = updates.description;
       if (updates.price !== undefined) dbUpdates.price = updates.price;
+      if (updates.costPrice !== undefined) dbUpdates.cost_price = updates.costPrice;
+      if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
       if (updates.imagePreviewUrl !== undefined) dbUpdates.image_preview_url = updates.imagePreviewUrl || null;
       if (updates.freeShippingJabodetabek !== undefined) dbUpdates.free_shipping_jabodetabek = updates.freeShippingJabodetabek;
       if (updates.unit !== undefined) dbUpdates.unit = updates.unit;
       if (updates.isPopular !== undefined) dbUpdates.is_popular = updates.isPopular;
 
-      const { data, error } = await supabase.from('addons').update(dbUpdates).eq('id', id).select().maybeSingle();
+      let { data, error } = await supabase.from('addons').update(dbUpdates).eq('id', id).select().maybeSingle();
+      if (error && (error.message?.includes('cost_price') || error.message?.includes('is_active') || error.code === 'PGRST204')) {
+        const { cost_price: _cp, is_active: _ia, ...fallbackUpdates } = dbUpdates;
+        if (Object.keys(fallbackUpdates).length > 0) {
+          const retry = await supabase.from('addons').update(fallbackUpdates).eq('id', id).select().maybeSingle();
+          data = retry.data;
+          error = retry.error;
+        }
+      }
       if (!error && data) {
         const updated: EventAddonItem = {
           id: data.id,
@@ -2443,9 +2541,13 @@ export async function updateAddon(id: string, updates: Partial<EventAddonItem>):
           description: data.description || '',
           price: Number(data.price),
           priceFormatted: `Rp ${Number(data.price).toLocaleString('id-ID')}`,
-          costPrice: updates.costPrice,
+          costPrice: updates.costPrice !== undefined
+            ? updates.costPrice
+            : (data.cost_price !== undefined && data.cost_price !== null ? Number(data.cost_price) : existingAddon?.costPrice),
           imagePreviewUrl: data.image_preview_url || data.image_url || undefined,
-          isActive: updates.isActive !== undefined ? updates.isActive : true,
+          isActive: updates.isActive !== undefined
+            ? updates.isActive
+            : (data.is_active !== undefined && data.is_active !== null ? data.is_active !== false : (existingAddon?.isActive ?? true)),
           freeShippingJabodetabek: data.free_shipping_jabodetabek !== false,
           unit: data.unit || '1 set',
           isPopular: data.is_popular || false,

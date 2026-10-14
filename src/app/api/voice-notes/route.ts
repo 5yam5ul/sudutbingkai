@@ -56,25 +56,31 @@ export async function GET(request: Request) {
     guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan'
   );
 
-  if (!isSpecificNamedGuestQuery && targetEvent && targetEvent.revealMode === 'delayed' && targetEvent.revealTime) {
-    const isDelayedLocked = Date.now() < new Date(targetEvent.revealTime).getTime();
-    if (isDelayedLocked) {
-      const isAuthorizedManager = Boolean(
-        session &&
-          (session.role === 'admin' ||
-            (session.role === 'host' &&
-              targetEvent.hostEmail &&
-              session.email.toLowerCase() === targetEvent.hostEmail.toLowerCase()) ||
-            (session.role === 'vendor' && isSameVendorId(session.id, targetEvent.vendorId)))
-      );
-      if (!isAuthorizedManager) {
-        return NextResponse.json({
-          success: true,
-          voiceNotes: [],
-          isLocked: true,
-        });
-      }
-    }
+  const isDelayedLocked = Boolean(
+    targetEvent &&
+      targetEvent.revealMode === 'delayed' &&
+      targetEvent.revealTime &&
+      Date.now() < new Date(targetEvent.revealTime).getTime()
+  );
+
+  const isAuthorizedManager = Boolean(
+    session &&
+      targetEvent &&
+      (session.role === 'admin' ||
+        (session.role === 'host' &&
+          targetEvent.hostEmail &&
+          session.email.toLowerCase() === targetEvent.hostEmail.toLowerCase()) ||
+        (session.role === 'vendor' && isSameVendorId(session.id, targetEvent.vendorId)))
+  );
+
+  const shouldMaskAudio = isDelayedLocked && !isAuthorizedManager;
+
+  if (shouldMaskAudio && !isSpecificNamedGuestQuery) {
+    return NextResponse.json({
+      success: true,
+      voiceNotes: [],
+      isLocked: true,
+    });
   }
 
   // 1. Supabase
@@ -98,11 +104,11 @@ export async function GET(request: Request) {
           id: item.id,
           eventId: item.event_id,
           guestName: item.guest_name,
-          audioUrl: item.audio_url,
+          audioUrl: shouldMaskAudio ? '' : item.audio_url,
           duration: item.duration,
           timestamp: item.timestamp
         }));
-        return NextResponse.json({ success: true, voiceNotes: formatted });
+        return NextResponse.json({ success: true, voiceNotes: formatted, isLocked: shouldMaskAudio || undefined });
       }
     } catch (e) {
       console.warn('Supabase voice_notes GET error:', e);
@@ -121,7 +127,10 @@ export async function GET(request: Request) {
       if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
         notes = notes.filter((n: any) => n.guestName?.toLowerCase() === guestNameParam.trim().toLowerCase());
       }
-      return NextResponse.json({ success: true, voiceNotes: notes });
+      if (shouldMaskAudio) {
+        notes = notes.map((n: any) => ({ ...n, audioUrl: '' }));
+      }
+      return NextResponse.json({ success: true, voiceNotes: notes, isLocked: shouldMaskAudio || undefined });
     }
   } catch {}
   return NextResponse.json({ success: true, voiceNotes: [] });
@@ -137,58 +146,78 @@ export async function POST(request: Request) {
     const duration = Math.min(Math.max(1, rawDuration), 15);
 
     const event = await getEventById(eventId);
-    const targetEventId = event ? event.id : eventId;
+    if (!event) {
+      return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
+    }
+    const targetEventId = event.id;
 
-    if (event) {
-      if (event.packageTier !== 'starter' && event.paymentStatus === 'pending' && isMayarConfigured) {
-        return NextResponse.json({
-          success: false,
-          error: 'Album acara ini sedang menunggu penyelesaian pembayaran.'
-        }, { status: 403 });
-      }
-      const retention = getEventRetentionInfo(event.eventDate, event.packageTier);
-      if (retention.status === 'expired') {
-        return NextResponse.json({
-          success: false,
-          error: 'Masa aktif album acara ini telah berakhir.'
-        }, { status: 403 });
-      }
+    if (event.packageTier !== 'starter' && event.paymentStatus === 'pending' && isMayarConfigured) {
+      return NextResponse.json({
+        success: false,
+        error: 'Album acara ini sedang menunggu penyelesaian pembayaran.'
+      }, { status: 403 });
+    }
+    const retention = getEventRetentionInfo(event.eventDate, event.packageTier);
+    if (retention.status === 'expired') {
+      return NextResponse.json({
+        success: false,
+        error: 'Masa aktif album acara ini telah berakhir.'
+      }, { status: 403 });
+    }
+    if (event.allowVoiceNote === false || event.closingWishType === 'none') {
+      return NextResponse.json({
+        success: false,
+        error: 'Fitur pesan suara dinonaktifkan untuk acara ini.'
+      }, { status: 403 });
     }
 
-    // Rate Limit / Spam Guard: 1 Voice Note per Named Guest per Event
+    const maxCapacity = (event.maxGuests || 5) + (event.additionalPax || 0);
+
+    // Rate Limit / Spam Guard: 1 Voice Note per Named Guest per Event + Total Event Capacity Cap
     const isNamed = guestName && 
       guestName.trim().toLowerCase() !== 'tamu' && 
       guestName.trim().toLowerCase() !== 'tamu undangan';
 
-    if (isNamed) {
-      if (isSupabaseConfigured && supabase) {
-        const { data: existingNotes } = await supabase
-          .from('voice_notes')
-          .select('id')
-          .eq('event_id', targetEventId)
-          .ilike('guest_name', guestName.trim())
-          .limit(1);
+    if (isSupabaseConfigured && supabase) {
+      const { data: allEventNotes } = await supabase
+        .from('voice_notes')
+        .select('id, guest_name')
+        .eq('event_id', targetEventId);
 
-        if (existingNotes && existingNotes.length > 0) {
+      if (allEventNotes) {
+        if (allEventNotes.length >= maxCapacity) {
+          return NextResponse.json({
+            success: false,
+            error: `Kapasitas pesan suara untuk acara ini telah penuh (${maxCapacity} tamu).`
+          }, { status: 403 });
+        }
+        if (isNamed && allEventNotes.some(n => n.guest_name?.toLowerCase() === guestName.trim().toLowerCase())) {
           return NextResponse.json({
             success: false,
             alreadySent: true,
             error: 'Anda sudah mengirimkan pesan suara untuk acara ini. Terima kasih atas ucapan dan doa terbaik Anda!'
           }, { status: 400 });
         }
-      } else {
-        ensureVoiceStorage();
-        if (fs.existsSync(VOICES_JSON)) {
-          const raw = fs.readFileSync(VOICES_JSON, 'utf8');
-          const notes = JSON.parse(raw);
-          const already = notes.some((n: any) => n.eventId === targetEventId && n.guestName?.toLowerCase() === guestName.trim().toLowerCase());
-          if (already) {
-            return NextResponse.json({
-              success: false,
-              alreadySent: true,
-              error: 'Anda sudah mengirimkan pesan suara untuk acara ini. Terima kasih atas ucapan dan doa terbaik Anda!'
-            }, { status: 400 });
-          }
+      }
+    } else {
+      ensureVoiceStorage();
+      if (fs.existsSync(VOICES_JSON)) {
+        const raw = fs.readFileSync(VOICES_JSON, 'utf8');
+        const notes = JSON.parse(raw);
+        const eventNotes = notes.filter((n: any) => n.eventId === targetEventId);
+        if (eventNotes.length >= maxCapacity) {
+          return NextResponse.json({
+            success: false,
+            error: `Kapasitas pesan suara untuk acara ini telah penuh (${maxCapacity} tamu).`
+          }, { status: 403 });
+        }
+        const already = isNamed && eventNotes.some((n: any) => n.guestName?.toLowerCase() === guestName.trim().toLowerCase());
+        if (already) {
+          return NextResponse.json({
+            success: false,
+            alreadySent: true,
+            error: 'Anda sudah mengirimkan pesan suara untuk acara ini. Terima kasih atas ucapan dan doa terbaik Anda!'
+          }, { status: 400 });
         }
       }
     }

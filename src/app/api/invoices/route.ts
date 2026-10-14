@@ -196,7 +196,13 @@ export async function PATCH(request: Request) {
         if (linkedEvent) {
           if (updates.status === 'paid' && linkedEvent.paymentStatus !== 'paid') {
             const eventUpdates: any = { paymentStatus: 'paid' };
-            if (linkedEvent.vendorId && linkedEvent.commissionAmount && linkedEvent.commissionAmount > 0 && linkedEvent.commissionStatus !== 'available') {
+            if (
+              linkedEvent.vendorId &&
+              linkedEvent.commissionAmount &&
+              linkedEvent.commissionAmount > 0 &&
+              linkedEvent.commissionStatus !== 'available' &&
+              linkedEvent.commissionStatus !== 'withdrawn'
+            ) {
               const vendors = await getAllVendors();
               const matchedVendor = vendors.find(v => isSameVendorId(v.id, linkedEvent.vendorId));
               if (matchedVendor && matchedVendor.status !== 'suspended') {

@@ -3998,7 +3998,13 @@ export default function SuperAdminDashboard() {
               <input
                 type="text"
                 value={approvePayoutModal.proofUrl}
-                onChange={(e) => setApprovePayoutModal(prev => ({ ...prev, proofUrl: e.target.value }))}
+                onChange={(e) => {
+                  const nextVal = e.target.value;
+                  if (unsavedProofUploadRef.current && unsavedProofUploadRef.current !== nextVal) {
+                    cleanupUnsavedProof();
+                  }
+                  setApprovePayoutModal(prev => ({ ...prev, proofUrl: nextVal }));
+                }}
                 placeholder="Atau tempel tautan URL bukti transfer..."
                 style={{
                   width: '100%',

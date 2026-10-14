@@ -97,7 +97,13 @@ export async function POST(request: Request) {
           }
 
           // Disburse vendor partner commission if referral was used
-          if (event.vendorId && event.commissionAmount && event.commissionAmount > 0 && event.commissionStatus !== 'available') {
+          if (
+            event.vendorId &&
+            event.commissionAmount &&
+            event.commissionAmount > 0 &&
+            event.commissionStatus !== 'available' &&
+            event.commissionStatus !== 'withdrawn'
+          ) {
             try {
               const vendors = await getAllVendors();
               const matchedVendor = vendors.find(v => isSameVendorId(v.id, event.vendorId));

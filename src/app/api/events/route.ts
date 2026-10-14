@@ -36,7 +36,8 @@ export async function GET(request: Request) {
           commissionAmount: undefined,
           commissionStatus: undefined,
           paymentStatus: undefined,
-          referralCodeUsed: undefined
+          referralCodeUsed: undefined,
+          guestPin: undefined
         };
         return NextResponse.json({ success: true, event: guestSafeEvent });
       }
@@ -120,6 +121,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Sesi login diperlukan untuk membuat acara baru.'
+      }, { status: 401 });
+    }
+
     const body = await request.json();
 
     if (!body.title || !body.coupleOrHost) {
@@ -134,16 +143,34 @@ export async function POST(request: Request) {
 
     const tierKey = (body.packageTier || 'wedding') as EventPackageTier;
     const tierConfig = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.starter;
-    const session = getServerSession(request);
-    const isAdmin = session?.role === 'admin';
+    const isAdmin = session.role === 'admin';
+
+    if (session.role === 'vendor') {
+      const vendors = await getAllVendors();
+      const callerVendor = vendors.find(
+        v => isSameVendorId(v.id, session.id) || (session.email && v.email?.toLowerCase() === session.email.toLowerCase())
+      );
+      if (callerVendor?.status === 'suspended') {
+        return NextResponse.json({
+          success: false,
+          error: 'Akun mitra vendor Anda sedang ditangguhkan (suspended) dan tidak dapat membuat acara baru.'
+        }, { status: 403 });
+      }
+    }
+
+    const resolvedHostEmail =
+      session.role === 'host'
+        ? session.email.trim().toLowerCase()
+        : (body.hostEmail ? String(body.hostEmail).trim().toLowerCase() : session.email.trim().toLowerCase());
 
     const defaultShots = tierConfig.shotsPerGuest;
     const requestedShots = body.shotsPerGuest !== undefined ? Number(body.shotsPerGuest) : defaultShots;
     const safeShots = isAdmin ? requestedShots : Math.min(requestedShots, tierConfig.shotsPerGuest);
 
+    const safeAdditionalPax = isAdmin ? (Number(body.additionalPax) || 0) : 0;
     const defaultGuests = tierConfig.maxGuests;
     const requestedGuests = body.maxGuests !== undefined ? Number(body.maxGuests) : defaultGuests;
-    const safeGuests = isAdmin ? requestedGuests : Math.min(requestedGuests, tierConfig.maxGuests + (Number(body.additionalPax) || 0));
+    const safeGuests = isAdmin ? requestedGuests : Math.min(requestedGuests, tierConfig.maxGuests + safeAdditionalPax);
 
     const chosenPreset = body.preset || 'portra';
     const maxP = tierConfig.maxPresets || 1;
@@ -229,7 +256,7 @@ export async function POST(request: Request) {
       allowGuestPresetSwitch: safeAllowGuestSwitch,
       packageTier: tierKey,
       maxGuests: safeGuests,
-      additionalPax: Number(body.additionalPax) || 0,
+      additionalPax: safeAdditionalPax,
       shotsPerGuest: safeShots,
       revealMode: body.revealMode || 'instant',
       revealTime: body.revealTime,
@@ -241,7 +268,7 @@ export async function POST(request: Request) {
       allowGuestFrameToggle: body.allowGuestFrameToggle !== false,
       closingWishType: body.closingWishType || (tierKey === 'wedding' || tierKey === 'unlimited' ? 'video' : 'voice'),
       createdAt: new Date().toISOString(),
-      hostEmail: body.hostEmail,
+      hostEmail: resolvedHostEmail,
       paymentStatus: resolvedPaymentStatus,
       referralCodeUsed: verifiedReferralCode,
       commissionAmount: finalCommissionAmount > 0 ? finalCommissionAmount : undefined,
@@ -497,7 +524,13 @@ export async function PATCH(request: Request) {
     if (updates.paymentStatus === 'paid' && existingEvent.paymentStatus !== 'paid') {
       const targetVendorId = updates.vendorId || existingEvent.vendorId;
       const targetCommission = updates.commissionAmount !== undefined ? updates.commissionAmount : existingEvent.commissionAmount;
-      if (targetVendorId && targetCommission && targetCommission > 0 && existingEvent.commissionStatus !== 'available') {
+      if (
+        targetVendorId &&
+        targetCommission &&
+        targetCommission > 0 &&
+        existingEvent.commissionStatus !== 'available' &&
+        existingEvent.commissionStatus !== 'withdrawn'
+      ) {
         try {
           const vendors = await getAllVendors();
           const matchedVendor = vendors.find(v => isSameVendorId(v.id, targetVendorId));
@@ -625,7 +658,33 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Gagal menghapus acara' }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true, message: 'Acara berhasil dihapus' });
+    let sessionToken: string | undefined;
+    let updatedWalletBalance: number | undefined;
+    let updatedTotalEarnings: number | undefined;
+    if (session.role === 'vendor') {
+      try {
+        const vendors = await getAllVendors();
+        const matchedVendor = vendors.find(v => isSameVendorId(v.id, session.id));
+        if (matchedVendor) {
+          updatedWalletBalance = matchedVendor.walletBalance ?? session.walletBalance;
+          updatedTotalEarnings = matchedVendor.totalEarnings ?? session.totalEarnings;
+          const vendorSessionUser = {
+            ...session,
+            walletBalance: updatedWalletBalance,
+            totalEarnings: updatedTotalEarnings,
+          };
+          sessionToken = signSessionPayload(JSON.stringify(vendorSessionUser));
+        }
+      } catch {}
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Acara berhasil dihapus',
+      sessionToken,
+      walletBalance: updatedWalletBalance,
+      totalEarnings: updatedTotalEarnings,
+    });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
   }

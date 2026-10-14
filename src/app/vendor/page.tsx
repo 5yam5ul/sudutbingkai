@@ -686,7 +686,17 @@ export default function VendorPortalPage() {
         setClients(prev => prev.filter(c => c.id !== clientId));
         toast.success(`Acara "${clientTitle}" berhasil dihapus.`);
         try {
-          await authFetch(`/api/events?id=${clientId}`, { method: 'DELETE' });
+          const res = await authFetch(`/api/events?id=${clientId}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success && data.sessionToken) {
+            const updatedVendor: UserAccount = {
+              ...vendor,
+              walletBalance: data.walletBalance !== undefined ? data.walletBalance : vendor.walletBalance,
+              totalEarnings: data.totalEarnings !== undefined ? data.totalEarnings : vendor.totalEarnings,
+            };
+            setVendor(updatedVendor);
+            setClientSession(updatedVendor, data.sessionToken);
+          }
         } catch (e) {
           console.error('Gagal menghapus event klien:', e);
         }
@@ -2350,7 +2360,7 @@ export default function VendorPortalPage() {
                     Upload File Logo Brand WO
                   </strong>
                   <p style={{ fontSize: '12.5px', color: '#6E6E73', marginBottom: '12px' }}>
-                    Format PNG transparan atau JPG persegi (rekomendasi 500x500px, maks 2MB).
+                    Format PNG transparan atau JPG persegi (rekomendasi 500x500px, tanpa batas ukuran file).
                   </p>
 
                   <input

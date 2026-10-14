@@ -50,7 +50,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     retentionLabel: '3 Hari (Uji Coba)',
     retentionDays: 3,
     storageCapacity: 'Resolusi Asli Penuh',
-    maxFileSize: '10 MB / foto',
+    maxFileSize: 'Tanpa Batas Ukuran',
     maxVoiceDuration: '15 detik / pesan suara',
     isFree: true
   },
@@ -69,7 +69,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     retentionLabel: '14 Hari Pasca Acara (2 Minggu)',
     retentionDays: 14,
     storageCapacity: 'Resolusi Asli Penuh',
-    maxFileSize: '10 MB / foto',
+    maxFileSize: 'Tanpa Batas Ukuran',
     maxVoiceDuration: '15 detik / pesan suara'
   },
   mini: {
@@ -87,7 +87,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     retentionLabel: '7 Hari Pasca Acara',
     retentionDays: 7,
     storageCapacity: 'Resolusi Asli Penuh',
-    maxFileSize: '10 MB / foto',
+    maxFileSize: 'Tanpa Batas Ukuran',
     maxVoiceDuration: '15 detik / pesan suara'
   },
   small: {
@@ -105,7 +105,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     retentionLabel: '14 Hari Pasca Acara',
     retentionDays: 14,
     storageCapacity: 'Resolusi Asli Penuh',
-    maxFileSize: '10 MB / foto',
+    maxFileSize: 'Tanpa Batas Ukuran',
     maxVoiceDuration: '15 detik / pesan suara'
   },
   party: {
@@ -123,7 +123,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     retentionLabel: '30 Hari Pasca Acara (1 Bulan)',
     retentionDays: 30,
     storageCapacity: 'Resolusi Asli Penuh',
-    maxFileSize: '10 MB / foto',
+    maxFileSize: 'Tanpa Batas Ukuran',
     maxVoiceDuration: '15 detik / pesan suara'
   },
   event: {
@@ -141,7 +141,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     retentionLabel: '30 Hari Pasca Acara (1 Bulan)',
     retentionDays: 30,
     storageCapacity: 'Resolusi Asli Penuh',
-    maxFileSize: '10 MB / foto',
+    maxFileSize: 'Tanpa Batas Ukuran',
     maxVoiceDuration: '15 detik / pesan suara'
   },
   wedding: {
@@ -159,7 +159,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     retentionLabel: '30 Hari Pasca Acara (1 Bulan Penuh)',
     retentionDays: 30,
     storageCapacity: 'Resolusi Asli Penuh',
-    maxFileSize: '10 MB / foto',
+    maxFileSize: 'Tanpa Batas Ukuran',
     maxVoiceDuration: '15 detik / video ucapan (Reels VHS)',
     popular: true
   },
@@ -178,7 +178,7 @@ export const PACKAGE_TIERS: Record<EventPackageTier, {
     retentionLabel: '30 Hari Pasca Acara (1 Bulan Penuh)',
     retentionDays: 30,
     storageCapacity: 'Resolusi Asli Penuh',
-    maxFileSize: '10 MB / foto',
+    maxFileSize: 'Tanpa Batas Ukuran',
     maxVoiceDuration: '15 detik / video ucapan (Reels VHS)'
   }
 };

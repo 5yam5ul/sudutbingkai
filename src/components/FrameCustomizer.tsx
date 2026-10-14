@@ -79,11 +79,6 @@ export default function FrameCustomizer({
     setSelectedFrame(initialFrameId);
   }, [initialFrameId]);
 
-  useEffect(() => {
-    setCustomFrameUrl(initialCustomFrameUrl || '');
-    unsavedFrameUploadRef.current = '';
-  }, [initialCustomFrameUrl]);
-
   const cleanupUnsavedFrame = React.useCallback(() => {
     const pendingUrl = unsavedFrameUploadRef.current;
     if (pendingUrl) {
@@ -94,6 +89,14 @@ export default function FrameCustomizer({
       }).catch(() => {});
     }
   }, []);
+
+  useEffect(() => {
+    const nextUrl = initialCustomFrameUrl || '';
+    if (unsavedFrameUploadRef.current && unsavedFrameUploadRef.current !== nextUrl) {
+      cleanupUnsavedFrame();
+    }
+    setCustomFrameUrl(nextUrl);
+  }, [initialCustomFrameUrl, cleanupUnsavedFrame]);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -392,9 +395,32 @@ export default function FrameCustomizer({
             </label>
 
             {customFrameUrl && (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', marginTop: '8px', fontSize: '11px', color: '#27AE60', fontWeight: 600 }}>
-                <Check size={12} strokeWidth={2.5} /> Bingkai khusus aktif ({customFrameUrl.split('/').pop()})
-              </span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', marginTop: '8px' }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#27AE60', fontWeight: 600 }}>
+                  <Check size={12} strokeWidth={2.5} /> Bingkai khusus aktif ({customFrameUrl.split('/').pop()})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    cleanupUnsavedFrame();
+                    setCustomFrameUrl('');
+                    if (selectedFrame === 'custom') {
+                      setSelectedFrame('minimal-gold');
+                    }
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#FF3B30',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    padding: 0
+                  }}
+                >
+                  Hapus File PNG
+                </button>
+              </div>
             )}
           </div>
         </div>

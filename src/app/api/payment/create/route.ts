@@ -19,8 +19,8 @@ const TIER_PRICES: Record<EventPackageTier, number> = {
 const ADDON_PAX_PRICES: Record<number, number> = {
   25: 49000,
   50: 89000,
-  100: 159000,
-  250: 349000,
+  100: 149000,
+  250: 249000,
 };
 
 export async function POST(request: Request) {

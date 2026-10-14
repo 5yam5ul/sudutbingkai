@@ -173,8 +173,15 @@ export default function BrideDashboardPage() {
     setEventDate(selected.eventDate || '');
     setAllowGuestFrameToggle(selected.allowGuestFrameToggle !== false);
     setAllowVoiceNote(selected.allowVoiceNote !== false);
+    if (unsavedCoverUploadRef.current) {
+      const pendingUrl = unsavedCoverUploadRef.current;
+      unsavedCoverUploadRef.current = '';
+      authFetch(`/api/upload?url=${encodeURIComponent(pendingUrl)}`, {
+        method: 'DELETE',
+        keepalive: true,
+      }).catch(() => {});
+    }
     setCoverUrl(selected.coverUrl || '');
-    unsavedCoverUploadRef.current = '';
     setEventSlug(selected.slug || '');
 
     // Fetch all photos including hidden for host moderation
@@ -1732,7 +1739,12 @@ export default function BrideDashboardPage() {
                   <input
                     type="url"
                     value={coverUrl}
-                    onChange={(e) => setCoverUrl(e.target.value)}
+                    onChange={(e) => {
+                      if (unsavedCoverUploadRef.current && unsavedCoverUploadRef.current !== e.target.value) {
+                        cleanupUnsavedCover();
+                      }
+                      setCoverUrl(e.target.value);
+                    }}
                     placeholder="https://... (URL foto prewedding)"
                     style={{
                       width: '100%',

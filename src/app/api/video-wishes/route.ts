@@ -42,33 +42,40 @@ export async function GET(request: Request) {
       if (targetEvent) canonicalEventId = targetEvent.id;
     }
 
+    const isDelayedLocked = Boolean(
+      targetEvent &&
+        targetEvent.revealMode === 'delayed' &&
+        targetEvent.revealTime &&
+        Date.now() < new Date(targetEvent.revealTime).getTime()
+    );
+    const isAuthorizedManager = Boolean(
+      session &&
+        targetEvent &&
+        (session.role === 'admin' ||
+          (session.role === 'host' &&
+            targetEvent.hostEmail &&
+            session.email.toLowerCase() === targetEvent.hostEmail.toLowerCase()) ||
+          (session.role === 'vendor' && isSameVendorId(session.id, targetEvent.vendorId)))
+    );
+    const shouldMaskVideo = isDelayedLocked && !isAuthorizedManager;
+
     let wishes = await getVideoWishes(canonicalEventId);
     if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
       wishes = wishes.filter(w => w.guestName && w.guestName.toLowerCase() === guestNameParam.trim().toLowerCase());
-      return NextResponse.json({ success: true, wishes, videoWishes: wishes });
+      if (shouldMaskVideo) {
+        wishes = wishes.map(w => ({ ...w, videoUrl: '', thumbnailUrl: undefined }));
+      }
+      return NextResponse.json({ success: true, wishes, videoWishes: wishes, isLocked: shouldMaskVideo || undefined });
     }
 
-    if (targetEvent && targetEvent.revealMode === 'delayed' && targetEvent.revealTime) {
-      const isDelayedLocked = Date.now() < new Date(targetEvent.revealTime).getTime();
-      if (isDelayedLocked) {
-        const isAuthorizedManager = Boolean(
-          session &&
-            (session.role === 'admin' ||
-              (session.role === 'host' &&
-                targetEvent.hostEmail &&
-                session.email.toLowerCase() === targetEvent.hostEmail.toLowerCase()) ||
-              (session.role === 'vendor' && isSameVendorId(session.id, targetEvent.vendorId)))
-        );
-        if (!isAuthorizedManager) {
-          return NextResponse.json({
-            success: true,
-            wishes: [],
-            videoWishes: [],
-            count: wishes.length,
-            isLocked: true,
-          });
-        }
-      }
+    if (shouldMaskVideo) {
+      return NextResponse.json({
+        success: true,
+        wishes: [],
+        videoWishes: [],
+        count: wishes.length,
+        isLocked: true,
+      });
     }
 
     return NextResponse.json({ success: true, wishes, videoWishes: wishes });
@@ -113,13 +120,28 @@ export async function POST(request: Request) {
       }, { status: 403 });
     }
 
+    if (event.closingWishType === 'none' || (event.closingWishType && event.closingWishType !== 'video')) {
+      return NextResponse.json({
+        success: false,
+        error: 'Fitur video ucapan tidak aktif untuk paket acara ini.'
+      }, { status: 403 });
+    }
+
+    const maxCapacity = (event.maxGuests || 5) + (event.additionalPax || 0);
+    const existingWishes = await getVideoWishes(event.id);
+    if (existingWishes.length >= maxCapacity) {
+      return NextResponse.json({
+        success: false,
+        error: `Kapasitas video ucapan untuk acara ini telah penuh (${maxCapacity} tamu).`
+      }, { status: 403 });
+    }
+
     // Rate Limit / Spam Guard: 1 Video Wish per Named Guest per Event
     const isNamed = guestName && 
       guestName.trim().toLowerCase() !== 'tamu' && 
       guestName.trim().toLowerCase() !== 'tamu undangan';
 
     if (isNamed) {
-      const existingWishes = await getVideoWishes(event.id);
       const already = existingWishes.some(w => w.guestName && w.guestName.toLowerCase() === guestName.trim().toLowerCase());
       if (already) {
         return NextResponse.json({

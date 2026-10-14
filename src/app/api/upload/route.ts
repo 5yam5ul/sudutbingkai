@@ -63,7 +63,7 @@ export async function POST(request: Request) {
         const r2Url = await uploadBufferToR2(buffer, storagePath, mime || 'image/png');
         if (r2Url) {
           if (oldUrl && oldUrl !== r2Url) {
-            await deleteFromR2(oldUrl).catch(() => {});
+            await deleteOrphanUploadUrl(oldUrl).catch(() => {});
           }
           return NextResponse.json({
             success: true,
@@ -92,6 +92,10 @@ export async function POST(request: Request) {
             .from('photos')
             .getPublicUrl(storagePath);
 
+          if (oldUrl && oldUrl !== publicUrlData.publicUrl) {
+            await deleteOrphanUploadUrl(oldUrl).catch(() => {});
+          }
+
           return NextResponse.json({
             success: true,
             url: publicUrlData.publicUrl,
@@ -117,13 +121,8 @@ export async function POST(request: Request) {
 
       const publicUrl = `/uploads/${subFolder}/${filename}`;
 
-      if (oldUrl && oldUrl !== publicUrl && oldUrl.startsWith('/uploads/')) {
-        try {
-          const oldLocalPath = path.join(process.cwd(), 'public', oldUrl.replace(/^\//, ''));
-          if (fs.existsSync(oldLocalPath)) {
-            fs.unlinkSync(oldLocalPath);
-          }
-        } catch {}
+      if (oldUrl && oldUrl !== publicUrl) {
+        await deleteOrphanUploadUrl(oldUrl).catch(() => {});
       }
 
       return NextResponse.json({
@@ -144,6 +143,65 @@ export async function POST(request: Request) {
   }
 }
 
+const UPLOAD_ASSET_FOLDER_REGEX = /(?:^|\/)(frames|covers|logos|proofs|addons|general)\/[a-zA-Z0-9._-]+$/;
+
+async function canSafelyDeleteUploadUrl(targetUrl: string): Promise<{ allowed: boolean; reason?: string }> {
+  const clean = targetUrl.trim().split('?')[0];
+  if (!clean || !UPLOAD_ASSET_FOLDER_REGEX.test(clean)) {
+    return { allowed: false, reason: 'Hanya aset unggahan sementara (frame, cover, logo, proof, addon) yang dapat dibersihkan melalui endpoint ini.' };
+  }
+
+  const [events, vendors, payouts, addons] = await Promise.all([
+    getAllEvents().catch(() => []),
+    getAllVendors().catch(() => []),
+    getPayoutRequests().catch(() => []),
+    getAllAddons().catch(() => [])
+  ]);
+
+  const isActivelyReferenced =
+    events.some(e => e.coverUrl === targetUrl || e.customFrameUrl === targetUrl || e.vendorLogo === targetUrl) ||
+    vendors.some(v => v.logoUrl === targetUrl) ||
+    payouts.some(p => p.proofUrl === targetUrl) ||
+    addons.some(a => a.imagePreviewUrl === targetUrl);
+
+  if (isActivelyReferenced) {
+    return { allowed: false, reason: 'Aset sedang digunakan secara aktif oleh data yang telah disimpan.' };
+  }
+
+  return { allowed: true };
+}
+
+async function deleteOrphanUploadUrl(targetUrl: string): Promise<boolean> {
+  const check = await canSafelyDeleteUploadUrl(targetUrl);
+  if (!check.allowed) return false;
+
+  // 1. Delete from Cloudflare R2
+  await deleteFromR2(targetUrl).catch(() => {});
+
+  // 2. Delete from Supabase Storage if applicable
+  if (isSupabaseConfigured && supabase && targetUrl.includes('/photos/')) {
+    try {
+      const pathPart = targetUrl.split('/photos/')[1];
+      if (pathPart) {
+        await supabase.storage.from('photos').remove([pathPart]);
+      }
+    } catch {}
+  }
+
+  // 3. Delete from local /public/uploads if applicable
+  if (targetUrl.startsWith('/uploads/')) {
+    try {
+      const uploadsRoot = path.resolve(process.cwd(), 'public', 'uploads');
+      const resolvedLocal = path.resolve(process.cwd(), 'public', targetUrl.replace(/^\//, ''));
+      if (resolvedLocal.startsWith(uploadsRoot) && fs.existsSync(resolvedLocal)) {
+        fs.unlinkSync(resolvedLocal);
+      }
+    } catch {}
+  }
+
+  return true;
+}
+
 export async function DELETE(request: Request) {
   try {
     const session = getServerSession(request);
@@ -157,52 +215,16 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Parameter url diperlukan.' }, { status: 400 });
     }
 
-    // Protect persisted assets: verify targetUrl is not actively used by any saved event, vendor, payout, or addon
-    const [events, vendors, payouts, addons] = await Promise.all([
-      getAllEvents().catch(() => []),
-      getAllVendors().catch(() => []),
-      getPayoutRequests().catch(() => []),
-      getAllAddons().catch(() => [])
-    ]);
-
-    const isActivelyReferenced =
-      events.some(e => e.coverUrl === targetUrl || e.customFrameUrl === targetUrl || e.vendorLogo === targetUrl) ||
-      vendors.some(v => v.logoUrl === targetUrl) ||
-      payouts.some(p => p.proofUrl === targetUrl) ||
-      addons.some(a => a.imagePreviewUrl === targetUrl);
-
-    if (isActivelyReferenced) {
+    const check = await canSafelyDeleteUploadUrl(targetUrl);
+    if (!check.allowed) {
       return NextResponse.json({
         success: true,
         skipped: true,
-        message: 'Aset sedang digunakan secara aktif oleh data yang telah disimpan.'
+        message: check.reason
       });
     }
 
-    // 1. Delete from Cloudflare R2
-    await deleteFromR2(targetUrl).catch(() => {});
-
-    // 2. Delete from Supabase Storage if applicable
-    if (isSupabaseConfigured && supabase && targetUrl.includes('/photos/')) {
-      try {
-        const pathPart = targetUrl.split('/photos/')[1];
-        if (pathPart) {
-          await supabase.storage.from('photos').remove([pathPart]);
-        }
-      } catch {}
-    }
-
-    // 3. Delete from local /public/uploads if applicable
-    if (targetUrl.startsWith('/uploads/')) {
-      try {
-        const uploadsRoot = path.resolve(process.cwd(), 'public', 'uploads');
-        const resolvedLocal = path.resolve(process.cwd(), 'public', targetUrl.replace(/^\//, ''));
-        if (resolvedLocal.startsWith(uploadsRoot) && fs.existsSync(resolvedLocal)) {
-          fs.unlinkSync(resolvedLocal);
-        }
-      } catch {}
-    }
-
+    await deleteOrphanUploadUrl(targetUrl);
     return NextResponse.json({ success: true, deleted: targetUrl });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });

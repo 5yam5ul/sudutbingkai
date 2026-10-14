@@ -567,10 +567,10 @@ export default function EventDashboardPage() {
         setShowTopUpPaxModal(false);
         setPaymentModalOpen(true);
       } else {
-        executeTopUpPax(additionalPaxAmount);
+        toast.error('Gagal menginisiasi pembayaran Top Up: ' + (payData.error || 'Terjadi kesalahan'));
       }
-    } catch {
-      executeTopUpPax(additionalPaxAmount);
+    } catch (err: unknown) {
+      toast.error('Gagal menghubungi layanan pembayaran: ' + (err as Error).message);
     } finally {
       setIsUpdatingPax(false);
     }

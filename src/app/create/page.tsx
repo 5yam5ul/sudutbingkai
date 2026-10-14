@@ -264,9 +264,9 @@ function CreateEventForm() {
     }
 
     const res = await authFetch('/api/events', {
-      method: 'POST',
+      method: createdDraftEventId ? 'PATCH' : 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(eventPayload),
+      body: JSON.stringify(createdDraftEventId ? { id: createdDraftEventId, ...eventPayload } : eventPayload),
     });
 
     const data = await res.json();
