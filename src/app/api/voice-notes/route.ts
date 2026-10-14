@@ -256,11 +256,17 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const session = getServerSession(request);
+  if (!session || (session.role !== 'host' && session.role !== 'vendor' && session.role !== 'admin')) {
+    return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Penyelenggara Acara atau Admin yang dapat menghapus pesan suara.' }, { status: 403 });
+  }
+
   const { searchParams } = new URL(request.url);
   const id = searchParams.get('id');
   if (!id) {
     return NextResponse.json({ success: false, error: 'ID pesan suara diperlukan' }, { status: 400 });
   }
+
 
   // 1. Supabase
   if (isSupabaseConfigured && supabase) {

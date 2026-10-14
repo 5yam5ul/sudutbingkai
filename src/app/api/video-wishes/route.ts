@@ -140,6 +140,11 @@ export async function POST(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session || (session.role !== 'host' && session.role !== 'vendor' && session.role !== 'admin')) {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Penyelenggara Acara atau Admin yang dapat menghapus video ucapan.' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     if (!id) {
@@ -152,3 +157,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }
 }
+

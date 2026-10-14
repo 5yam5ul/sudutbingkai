@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
-import { getAllPhotos, savePhoto, updatePhoto, deletePhoto, getEventById } from '@/lib/db';
+import { getAllPhotos, savePhoto, updatePhoto, deletePhoto, getEventById, getPhotoById } from '@/lib/db';
 import { PhotoRecord } from '@/lib/types';
+
 import { getServerSession } from '@/lib/auth';
 
 export async function GET(request: Request) {
@@ -192,6 +193,27 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'ID foto diperlukan' }, { status: 400 });
     }
 
+    const targetPhoto = await getPhotoById(body.id);
+    if (!targetPhoto) {
+      return NextResponse.json({ success: false, error: 'Foto tidak ditemukan' }, { status: 404 });
+    }
+
+    const session = getServerSession(request);
+    const event = await getEventById(targetPhoto.eventId);
+    const isHost = session?.role === 'host' && (
+      session.email?.toLowerCase() === event?.hostEmail?.toLowerCase() ||
+      session.id === event?.hostEmail
+    );
+    const isVendor = session?.role === 'vendor' && session.id === event?.vendorId;
+    const isAdmin = session?.role === 'admin';
+
+    if (!isHost && !isVendor && !isAdmin) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Hanya Penyelenggara Acara atau Admin yang dapat memoderasi foto ini.'
+      }, { status: 403 });
+    }
+
     const updates: Partial<PhotoRecord> = {};
     if (typeof body.isHidden === 'boolean') {
       updates.isHidden = body.isHidden;
@@ -219,6 +241,27 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'ID foto diperlukan' }, { status: 400 });
     }
 
+    const targetPhoto = await getPhotoById(id);
+    if (!targetPhoto) {
+      return NextResponse.json({ success: false, error: 'Foto tidak ditemukan' }, { status: 404 });
+    }
+
+    const session = getServerSession(request);
+    const event = await getEventById(targetPhoto.eventId);
+    const isHost = session?.role === 'host' && (
+      session.email?.toLowerCase() === event?.hostEmail?.toLowerCase() ||
+      session.id === event?.hostEmail
+    );
+    const isVendor = session?.role === 'vendor' && session.id === event?.vendorId;
+    const isAdmin = session?.role === 'admin';
+
+    if (!isHost && !isVendor && !isAdmin) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Hanya Penyelenggara Acara atau Admin yang dapat menghapus foto ini.'
+      }, { status: 403 });
+    }
+
     const deleted = await deletePhoto(id);
     if (!deleted) {
       return NextResponse.json({ success: false, error: 'Foto tidak ditemukan atau gagal dihapus' }, { status: 404 });
@@ -229,3 +272,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 400 });
   }
 }
+

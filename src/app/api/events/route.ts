@@ -16,8 +16,32 @@ export async function GET(request: Request) {
       if (!event) {
         return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
       }
+
+      // Check caller authorization
+      const session = getServerSession(request);
+      const isAuthorizedHost = session?.role === 'host' && (
+        session.email?.toLowerCase() === event.hostEmail?.toLowerCase() ||
+        session.id === event.hostEmail
+      );
+      const isAuthorizedVendor = session?.role === 'vendor' && session.id === event.vendorId;
+      const isAdmin = session?.role === 'admin';
+
+      // If caller is a Guest / public visitor: strictly strip private host and financial data
+      if (!isAuthorizedHost && !isAuthorizedVendor && !isAdmin) {
+        const guestSafeEvent = {
+          ...event,
+          hostEmail: undefined,
+          commissionAmount: undefined,
+          commissionStatus: undefined,
+          paymentStatus: undefined,
+          referralCodeUsed: undefined
+        };
+        return NextResponse.json({ success: true, event: guestSafeEvent });
+      }
+
       return NextResponse.json({ success: true, event });
     }
+
 
     // 2. Unparameterized query: Strictly restricted to Super Admin
     if (!hostEmail && !vendorId) {
