@@ -1,11 +1,21 @@
 import { NextResponse } from 'next/server';
 import { getAllAddons, saveAddon, updateAddon, deleteAddon } from '@/lib/db';
 import { EventAddonItem } from '@/lib/types';
+import { getServerSession } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
+    const session = getServerSession(req);
     const addons = await getAllAddons();
-    return NextResponse.json({ success: true, addons });
+
+    // 1. Super Admin sees complete financial details including costPrice
+    if (session?.role === 'admin') {
+      return NextResponse.json({ success: true, addons });
+    }
+
+    // 2. Public / Non-Admin: Mask costPrice to protect platform profit margins
+    const publicAddons = addons.map(({ costPrice, ...publicItem }) => publicItem);
+    return NextResponse.json({ success: true, addons: publicAddons });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -13,8 +23,14 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const session = getServerSession(req);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat menambahkan add-on katalog.' }, { status: 403 });
+    }
+
     const body = await req.json();
     const { name, category, description, price, costPrice, unit, freeShippingJabodetabek, imagePreviewUrl, isPopular } = body;
+
 
     if (!name || price === undefined) {
       return NextResponse.json({ success: false, error: 'Nama dan harga add-on wajib diisi' }, { status: 400 });
@@ -46,6 +62,11 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   try {
+    const session = getServerSession(req);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat memperbarui add-on katalog.' }, { status: 403 });
+    }
+
     const body = await req.json();
     if (!body.id) {
       return NextResponse.json({ success: false, error: 'ID add-on diperlukan' }, { status: 400 });
@@ -79,6 +100,11 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const session = getServerSession(req);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat menghapus add-on katalog.' }, { status: 403 });
+    }
+
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
     if (!id) {
@@ -95,3 +121,4 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
 }
+

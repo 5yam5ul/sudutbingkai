@@ -2,26 +2,55 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getServerSession } from '@/lib/auth';
+
+const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB max
+const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
 
 export async function POST(request: Request) {
   try {
+    const session = getServerSession(request);
+    // Ensure caller is authenticated (host, vendor, or admin)
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Autentikasi sesi diperlukan untuk mengunggah berkas.' }, { status: 401 });
+    }
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
-    const type = (formData.get('type') as string) || 'frame';
+    const rawType = (formData.get('type') as string) || 'frame';
+    const type = ['frame', 'cover', 'logo', 'general'].includes(rawType) ? rawType : 'general';
 
     if (!file) {
       return NextResponse.json({ success: false, error: 'File tidak ditemukan' }, { status: 400 });
     }
 
-    const mime = file.type;
+    // 1. Strict Size Limit
+    if (file.size > MAX_UPLOAD_SIZE) {
+      return NextResponse.json({
+        success: false,
+        error: `Ukuran berkas melebihi batas maksimal 10MB (${(file.size / (1024 * 1024)).toFixed(1)}MB)`
+      }, { status: 413 });
+    }
+
+    // 2. Strict MIME Type Whitelist
+    const mime = (file.type || '').toLowerCase();
+    if (!ALLOWED_MIME_TYPES.has(mime)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Format berkas tidak diizinkan. Hanya gambar PNG, JPG, dan WebP yang diperbolehkan.'
+      }, { status: 400 });
+    }
+
     if (type === 'frame' && !mime.includes('png')) {
       return NextResponse.json({ success: false, error: 'Bingkai khusus harus berformat PNG dengan background transparan' }, { status: 400 });
     }
 
+    // 3. Safe Extension derived from verified MIME (prevent double extension & executable tricks)
+    const ext = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
     const buffer = Buffer.from(await file.arrayBuffer());
-    const ext = file.name.split('.').pop() || 'png';
-    const subFolder = type === 'frame' ? 'frames' : 'general';
+    const subFolder = type === 'frame' ? 'frames' : type === 'cover' ? 'covers' : type === 'logo' ? 'logos' : 'general';
     const filename = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
+
 
     // 1. Try upload to Supabase Storage if configured
     if (isSupabaseConfigured && supabase) {

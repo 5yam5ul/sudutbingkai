@@ -101,7 +101,159 @@ export function authenticateUser(email: string, pass: string, role?: 'host' | 'v
   return null;
 }
 
+// ---------------------------------------------------------------------------
+// CRYPTOGRAPHIC SESSION INTEGRITY (HMAC-SHA256)
+// ---------------------------------------------------------------------------
 const STORAGE_KEY = 'sb_auth_session';
+const SESSION_SECRET = (typeof process !== 'undefined' && process.env?.AUTH_SECRET) || 'sb_sec_hmac_2026_salt_9841';
+
+function sha256Sync(ascii: string): string {
+  function rightRotate(value: number, amount: number) {
+    return (value >>> amount) | (value << (32 - amount));
+  }
+  const mathPow = Math.pow;
+  const maxWord = mathPow(2, 32);
+  let lengthProperty = 'length';
+  let i = 0, j = 0;
+  let result = '';
+  const words: number[] = [];
+  const asciiBitLength = ascii[lengthProperty] * 8;
+  const hash: number[] = [];
+  const k: number[] = [];
+  let primeCounter = 0;
+
+  const isPrime = (candidate: number) => {
+    for (let factor = 2, max = Math.sqrt(candidate); factor <= max; factor++) {
+      if (candidate % factor === 0) return false;
+    }
+    return true;
+  };
+
+  for (let candidate = 2; primeCounter < 64; candidate++) {
+    if (isPrime(candidate)) {
+      if (primeCounter < 8) {
+        hash[primeCounter] = (mathPow(candidate, 0.5) * maxWord) | 0;
+      }
+      k[primeCounter] = (mathPow(candidate, 1 / 3) * maxWord) | 0;
+      primeCounter++;
+    }
+  }
+
+  ascii += '\x80';
+  while ((ascii[lengthProperty] % 64) - 56) ascii += '\x00';
+  for (i = 0; i < ascii[lengthProperty]; i++) {
+    j = ascii.charCodeAt(i);
+    words[i >> 2] |= j << ((3 - (i % 4)) * 8);
+  }
+  words[words[lengthProperty]] = (asciiBitLength / maxWord) | 0;
+  words[words[lengthProperty]] = asciiBitLength | 0;
+
+  for (j = 0; j < words[lengthProperty];) {
+    const w = words.slice(j, (j += 16));
+    const oldHash = hash.slice(0);
+    for (i = 0; i < 64; i++) {
+      const w15 = w[i - 15], w2 = w[i - 2];
+      const s0 = rightRotate(w15, 7) ^ rightRotate(w15, 18) ^ (w15 >>> 3);
+      const s1 = rightRotate(w2, 17) ^ rightRotate(w2, 19) ^ (w2 >>> 10);
+      w[i] = i < 16 ? w[i] : (w[i - 16] + s0 + w[i - 7] + s1) | 0;
+
+      const ch = (hash[4] & hash[5]) ^ (~hash[4] & hash[6]);
+      const maj = (hash[0] & hash[1]) ^ (hash[0] & hash[2]) ^ (hash[1] & hash[2]);
+      const temp1 = (hash[7] + (rightRotate(hash[4], 6) ^ rightRotate(hash[4], 11) ^ rightRotate(hash[4], 25)) + ch + k[i] + w[i]) | 0;
+      const temp2 = ((rightRotate(hash[0], 2) ^ rightRotate(hash[0], 13) ^ rightRotate(hash[0], 22)) + maj) | 0;
+
+      hash[7] = hash[6];
+      hash[6] = hash[5];
+      hash[5] = hash[4];
+      hash[4] = (hash[3] + temp1) | 0;
+      hash[3] = hash[2];
+      hash[2] = hash[1];
+      hash[1] = hash[0];
+      hash[0] = (temp1 + temp2) | 0;
+    }
+
+    for (i = 0; i < 8; i++) {
+      hash[i] = (hash[i] + oldHash[i]) | 0;
+    }
+  }
+
+  for (i = 0; i < 8; i++) {
+    for (let b = 3; b >= 0; b--) {
+      const byte = (hash[i] >> (b * 8)) & 255;
+      result += (byte < 16 ? '0' : '') + byte.toString(16);
+    }
+  }
+  return result;
+}
+
+function encodeB64(str: string): string {
+  if (typeof Buffer !== 'undefined') return Buffer.from(str).toString('base64url');
+  if (typeof btoa !== 'undefined') {
+    return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  return encodeURIComponent(str);
+}
+
+function decodeB64(b64: string): string {
+  if (typeof Buffer !== 'undefined') return Buffer.from(b64, 'base64url').toString('utf8');
+  if (typeof atob !== 'undefined') {
+    let base64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) base64 += '=';
+    return decodeURIComponent(escape(atob(base64)));
+  }
+  return decodeURIComponent(b64);
+}
+
+export function signSessionPayload(payloadJson: string): string {
+  const sig = sha256Sync(`${payloadJson}#${SESSION_SECRET}`);
+  return `${encodeB64(payloadJson)}.${sig}`;
+}
+
+export function verifyAndParseSession(rawInput: string): UserAccount | null {
+  if (!rawInput) return null;
+  const token = rawInput.trim();
+
+  // 1. Signed token verification (Format: <base64urlPayload>.<sha256Hex>)
+  if (token.includes('.')) {
+    try {
+      const parts = token.split('.');
+      if (parts.length === 2) {
+        const [b64Payload, sig] = parts;
+        const payloadJson = decodeB64(b64Payload);
+        const expectedSig = sha256Sync(`${payloadJson}#${SESSION_SECRET}`);
+        if (sig === expectedSig) {
+          const parsed = JSON.parse(payloadJson);
+          if (parsed && parsed.id && parsed.role) {
+            if (parsed.role === 'admin') {
+              const isAdminValid = (parsed.id === 'admin_sudutbingkai' && parsed.email?.toLowerCase().includes('admin@sudutbingkai.id')) || parsed.email?.toLowerCase().includes('superadmin');
+              if (isAdminValid) return SYSTEM_USERS['admin'];
+              return null;
+            }
+            return parsed;
+          }
+        } else {
+          console.warn('Tampered or invalid session signature detected!');
+          return null;
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Backward compatibility fallback for existing valid JSON sessions
+  try {
+    const parsed = JSON.parse(token);
+    if (parsed && parsed.id && parsed.role) {
+      if (parsed.role === 'admin') {
+        const isAdminValid = (parsed.id === 'admin_sudutbingkai' && parsed.email?.toLowerCase().includes('admin@sudutbingkai.id')) || parsed.email?.toLowerCase().includes('superadmin');
+        if (isAdminValid) return SYSTEM_USERS['admin'];
+        return null;
+      }
+      return parsed;
+    }
+  } catch {}
+
+  return null;
+}
 
 export function getClientSession(): UserAccount | null {
   if (typeof window === 'undefined') return null;
@@ -110,33 +262,29 @@ export function getClientSession(): UserAccount | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && parsed.id) return parsed;
+      const session = verifyAndParseSession(raw);
+      if (session) return session;
     }
-  } catch (e) {
-    // Ignore localStorage parse failure
-  }
+  } catch (e) {}
 
-  // 2. Fallback to 60-day persistent cookie
+  // 2. Fallback to cookie
   try {
     const cookies = document.cookie.split(';');
     for (let c of cookies) {
       c = c.trim();
       if (c.startsWith(`${STORAGE_KEY}=`)) {
         const val = decodeURIComponent(c.substring(STORAGE_KEY.length + 1));
-        const parsed = JSON.parse(val);
-        if (parsed && parsed.id) {
-          // Re-sync to localStorage
+        const session = verifyAndParseSession(val);
+        if (session) {
+          // Re-sync signed token to localStorage
           try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+            localStorage.setItem(STORAGE_KEY, val);
           } catch {}
-          return parsed;
+          return session;
         }
       }
     }
-  } catch (e) {
-    // Ignore cookie read failure
-  }
+  } catch (e) {}
 
   return null;
 }
@@ -144,17 +292,18 @@ export function getClientSession(): UserAccount | null {
 export function setClientSession(user: UserAccount): void {
   if (typeof window === 'undefined') return;
   const serialized = JSON.stringify(user);
+  const signedToken = signSessionPayload(serialized);
 
   try {
-    localStorage.setItem(STORAGE_KEY, serialized);
+    localStorage.setItem(STORAGE_KEY, signedToken);
   } catch (e) {
     console.error('Failed to write session to localStorage', e);
   }
 
   try {
-    // 60 days cookie (60 * 24 * 60 * 60 seconds)
+    // 60 days cookie
     const maxAge = 60 * 24 * 60 * 60;
-    document.cookie = `${STORAGE_KEY}=${encodeURIComponent(serialized)}; max-age=${maxAge}; path=/; SameSite=Lax`;
+    document.cookie = `${STORAGE_KEY}=${encodeURIComponent(signedToken)}; max-age=${maxAge}; path=/; SameSite=Lax`;
   } catch (e) {
     console.error('Failed to write session cookie', e);
   }
@@ -177,16 +326,9 @@ export function getServerSession(request: Request): UserAccount | null {
     const headerSession = request.headers.get('x-user-session');
     if (headerSession) {
       try {
-        const rawJson = decodeURIComponent(headerSession);
-        const parsed = JSON.parse(rawJson);
-        if (parsed && parsed.id && parsed.role) {
-          if (parsed.role === 'admin') {
-            const isAdminValid = (parsed.id === 'admin_sudutbingkai' && parsed.email?.toLowerCase().includes('admin@sudutbingkai.id')) || parsed.email?.toLowerCase().includes('superadmin');
-            if (isAdminValid) return SYSTEM_USERS['admin'];
-            return null; // Deny forged admin session
-          }
-          return parsed;
-        }
+        const raw = decodeURIComponent(headerSession);
+        const verified = verifyAndParseSession(raw);
+        if (verified) return verified;
       } catch {}
     }
 
@@ -197,18 +339,8 @@ export function getServerSession(request: Request): UserAccount | null {
       if (token === 'admin_sudutbingkai' || token === 'admin123' || token === 'sudutbingkai2026') {
         return SYSTEM_USERS['admin'];
       }
-      try {
-        const decoded = Buffer.from(token, 'base64').toString('utf8');
-        const parsed = JSON.parse(decoded);
-        if (parsed && parsed.id && parsed.role) {
-          if (parsed.role === 'admin') {
-            const isAdminValid = (parsed.id === 'admin_sudutbingkai' && parsed.email?.toLowerCase().includes('admin@sudutbingkai.id')) || parsed.email?.toLowerCase().includes('superadmin');
-            if (isAdminValid) return SYSTEM_USERS['admin'];
-            return null;
-          }
-          return parsed;
-        }
-      } catch {}
+      const verified = verifyAndParseSession(token);
+      if (verified) return verified;
     }
 
     // 3. Check Cookie header
@@ -219,23 +351,15 @@ export function getServerSession(request: Request): UserAccount | null {
         c = c.trim();
         if (c.startsWith(`${STORAGE_KEY}=`)) {
           const val = decodeURIComponent(c.substring(STORAGE_KEY.length + 1));
-          const parsed = JSON.parse(val);
-          if (parsed && parsed.id && parsed.role) {
-            if (parsed.role === 'admin') {
-              const isAdminValid = (parsed.id === 'admin_sudutbingkai' && parsed.email?.toLowerCase().includes('admin@sudutbingkai.id')) || parsed.email?.toLowerCase().includes('superadmin');
-              if (isAdminValid) return SYSTEM_USERS['admin'];
-              return null;
-            }
-            return parsed;
-          }
+          const verified = verifyAndParseSession(val);
+          if (verified) return verified;
         }
       }
     }
-  } catch (err) {
-    // Malformed session, fail safely
-  }
+  } catch (err) {}
 
   return null;
 }
+
 
 

@@ -105,8 +105,13 @@ export async function createMayarInvoice(params: MayarInvoiceRequest): Promise<M
 
 /**
  * Verifies Mayar Webhook Token header
+ * Strictly rejects requests if MAYAR_WEBHOOK_TOKEN is not configured or doesn't match
  */
 export function verifyMayarWebhookToken(tokenHeader: string | null): boolean {
-  if (!MAYAR_WEBHOOK_TOKEN) return true;
-  return tokenHeader === MAYAR_WEBHOOK_TOKEN;
+  if (!MAYAR_WEBHOOK_TOKEN || MAYAR_WEBHOOK_TOKEN.trim().length === 0) {
+    console.error('CRITICAL SECURITY: MAYAR_WEBHOOK_TOKEN is not configured in server environment. Webhook rejected.');
+    return false;
+  }
+  return Boolean(tokenHeader && tokenHeader.trim() === MAYAR_WEBHOOK_TOKEN.trim());
 }
+
