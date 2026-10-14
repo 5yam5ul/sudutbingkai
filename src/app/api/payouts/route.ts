@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getPayoutRequests, createPayoutRequest, updatePayoutStatus, deletePayout } from '@/lib/db';
+import { getPayoutRequests, createPayoutRequest, updatePayoutStatus, deletePayout, getAllVendors, updateVendor } from '@/lib/db';
 import { getServerSession } from '@/lib/auth';
 
 export async function GET(request: Request) {
@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const vendorId = searchParams.get('vendorId') || undefined;
     const session = getServerSession(request);
 
-    // If no vendorId specified, strictly require Super Admin session
+    // 1. If no vendorId specified, strictly require Super Admin session
     if (!vendorId) {
       if (!session || session.role !== 'admin') {
         return NextResponse.json({
@@ -21,15 +21,25 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: true, payouts: allPayouts });
     }
 
-    // If vendorId is specified, ensure caller is the matching vendor or Super Admin
-    if (session && session.role === 'vendor') {
-      const isSelf = session.id === vendorId || (session.email && session.email.toLowerCase() === vendorId.toLowerCase());
-      if (!isSelf) {
-        return NextResponse.json({
-          success: false,
-          error: 'Akses ditolak: Anda tidak memiliki akses ke riwayat penarikan vendor lain.'
-        }, { status: 403 });
-      }
+    // 2. If vendorId is specified, strictly require authenticated session of matching Vendor or Super Admin
+    if (!session) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Sesi login diperlukan untuk melihat riwayat penarikan.'
+      }, { status: 401 });
+    }
+
+    const isAdmin = session.role === 'admin';
+    const isSelf = session.role === 'vendor' && (
+      session.id === vendorId ||
+      (session.email && session.email.toLowerCase() === vendorId.toLowerCase())
+    );
+
+    if (!isAdmin && !isSelf) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Anda tidak memiliki akses ke riwayat penarikan vendor lain.'
+      }, { status: 403 });
     }
 
     const payouts = await getPayoutRequests(vendorId);
@@ -41,6 +51,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Sesi login diperlukan untuk mengajukan penarikan komisi.'
+      }, { status: 401 });
+    }
+
     const body = await request.json();
     const { vendorId, vendorEmail, vendorName, companyName, amount, bankDetails, notes } = body;
 
@@ -48,16 +66,53 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Data penarikan tidak lengkap' }, { status: 400 });
     }
 
-    if (amount < 100000) {
+    const isAdmin = session.role === 'admin';
+    const isSelf = session.role === 'vendor' && (
+      session.id === vendorId ||
+      (session.email && vendorEmail && session.email.toLowerCase() === vendorEmail.toLowerCase())
+    );
+
+    if (!isAdmin && !isSelf) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Anda hanya dapat mengajukan penarikan untuk akun vendor Anda sendiri.'
+      }, { status: 403 });
+    }
+
+    const requestedAmount = Number(amount);
+    if (isNaN(requestedAmount) || requestedAmount < 100000) {
       return NextResponse.json({ success: false, error: 'Batas minimal penarikan adalah Rp 100.000' }, { status: 400 });
+    }
+
+    // Verify vendor balance in database (except demo account vendor_vows_co if not yet persisted)
+    const allVendors = await getAllVendors();
+    const matchedVendor = allVendors.find(v => v.id === vendorId || (vendorEmail && v.email?.toLowerCase() === vendorEmail.toLowerCase()));
+
+    if (matchedVendor) {
+      const availableBalance = Number(matchedVendor.walletBalance || 0);
+      if (!isAdmin && requestedAmount > availableBalance) {
+        return NextResponse.json({
+          success: false,
+          error: `Saldo komisi tidak mencukupi (Tersedia: Rp ${availableBalance.toLocaleString('id-ID')}).`
+        }, { status: 400 });
+      }
+      // Deduct balance upon payout request creation to prevent double withdrawal
+      await updateVendor(matchedVendor.id, {
+        walletBalance: Math.max(0, availableBalance - requestedAmount)
+      });
+    } else if (!isAdmin && vendorId !== 'vendor_vows_co') {
+      return NextResponse.json({
+        success: false,
+        error: 'Akun mitra vendor tidak ditemukan atau belum memiliki saldo komisi terverifikasi.'
+      }, { status: 400 });
     }
 
     const payout = await createPayoutRequest({
       vendorId,
-      vendorEmail: vendorEmail || 'vendor@sudutbingkai.id',
-      vendorName: vendorName || 'Mitra Vendor',
+      vendorEmail: vendorEmail || session.email || 'vendor@sudutbingkai.id',
+      vendorName: vendorName || session.name || 'Mitra Vendor',
       companyName,
-      amount: Number(amount),
+      amount: requestedAmount,
       bankDetails,
       notes
     });

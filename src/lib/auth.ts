@@ -307,9 +307,20 @@ export function clearClientSession(): void {
   } catch (e) {}
 }
 
+export function getSignedClientToken(): string {
+  if (typeof window === 'undefined') return '';
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw && verifyAndParseSession(raw)) {
+      return raw;
+    }
+  } catch {}
+  return '';
+}
+
 export function getServerSession(request: Request): UserAccount | null {
   try {
-    // 1. Check custom x-user-session header
+    // 1. Check custom x-user-session header (must be cryptographically signed)
     const headerSession = request.headers.get('x-user-session');
     if (headerSession) {
       try {
@@ -319,18 +330,15 @@ export function getServerSession(request: Request): UserAccount | null {
       } catch {}
     }
 
-    // 2. Check Authorization Bearer header
+    // 2. Check Authorization Bearer header (must be cryptographically signed)
     const authHeader = request.headers.get('authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       const token = authHeader.substring(7).trim();
-      if (token === 'admin_sudutbingkai' || token === 'admin123' || token === 'sudutbingkai2026') {
-        return SYSTEM_USERS['admin'];
-      }
       const verified = verifyAndParseSession(token);
       if (verified) return verified;
     }
 
-    // 3. Check Cookie header
+    // 3. Check Cookie header (must be cryptographically signed)
     const cookieHeader = request.headers.get('cookie');
     if (cookieHeader) {
       const cookies = cookieHeader.split(';');

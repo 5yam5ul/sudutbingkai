@@ -11,7 +11,7 @@ import {
   Edit, Pencil, ArrowUpRight, ArrowDownRight, Layers, CreditCard,
   Mic, Volume2, Film, Play, Clock
 } from 'lucide-react';
-import { getClientSession, clearClientSession } from '@/lib/auth';
+import { getClientSession, clearClientSession, getSignedClientToken } from '@/lib/auth';
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -133,11 +133,11 @@ export default function SuperAdminDashboard() {
   const loadAllAdminData = async () => {
     setLoading(true);
     try {
-      const session = getClientSession();
-      const adminHeaders: HeadersInit = {
-        'x-user-session': session ? encodeURIComponent(JSON.stringify(session)) : '',
-        'Authorization': 'Bearer admin_sudutbingkai'
-      };
+      const signedToken = getSignedClientToken();
+      const adminHeaders: HeadersInit = signedToken ? {
+        'x-user-session': encodeURIComponent(signedToken),
+        'Authorization': `Bearer ${signedToken}`
+      } : {};
 
       const [resE, resP, resI, resPay, resT, resV, resAdd, resVid, resVoi] = await Promise.allSettled([
         fetch('/api/events', { headers: adminHeaders }).then(r => r.json()),

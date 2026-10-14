@@ -19,14 +19,22 @@ export async function GET(request: Request) {
 
     let testimonials = [];
     if (vendorId) {
-      if (session && session.role === 'vendor') {
-        const isSelf = session.id === vendorId || (session.email && session.email.toLowerCase() === vendorId.toLowerCase());
-        if (!isSelf) {
-          return NextResponse.json({
-            success: false,
-            error: 'Akses ditolak: Anda tidak memiliki akses ke testimoni vendor lain.'
-          }, { status: 403 });
-        }
+      if (!session) {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Sesi login diperlukan untuk melihat daftar testimoni vendor.'
+        }, { status: 401 });
+      }
+      const isAdmin = session.role === 'admin';
+      const isSelf = session.role === 'vendor' && (
+        session.id === vendorId ||
+        (session.email && session.email.toLowerCase() === vendorId.toLowerCase())
+      );
+      if (!isAdmin && !isSelf) {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Anda tidak memiliki akses ke testimoni vendor lain.'
+        }, { status: 403 });
       }
       testimonials = await getTestimonialsByVendor(vendorId);
     } else if (eventId) {
@@ -64,18 +72,33 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const session = getServerSession(request);
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Akses ditolak: Sesi login diperlukan untuk mengirim video testimoni.' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       eventId,
       submitterType = 'vendor',
-      submitterId = 'vendor-1',
-      submitterName = 'Mitra Vendor',
-      submitterEmail,
+      submitterId = session.id || 'vendor-1',
+      submitterName = session.name || 'Mitra Vendor',
+      submitterEmail = session.email,
       videoType = 'link',
       videoUrl,
       durationSeconds = 60,
       caption
     } = body;
+
+    if (session.role !== 'admin' && submitterId !== session.id && submitterEmail !== session.email) {
+      return NextResponse.json(
+        { success: false, error: 'Akses ditolak: Identitas pengirim tidak sesuai dengan sesi login aktif.' },
+        { status: 403 }
+      );
+    }
 
     if (!eventId || !videoUrl) {
       return NextResponse.json(

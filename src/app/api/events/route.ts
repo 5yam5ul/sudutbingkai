@@ -133,7 +133,8 @@ export async function POST(request: Request) {
 
     const tierKey = (body.packageTier || 'wedding') as EventPackageTier;
     const tierConfig = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.starter;
-    const isAdmin = body.adminAuthorized === true;
+    const session = getServerSession(request);
+    const isAdmin = session?.role === 'admin';
 
     const defaultShots = tierConfig.shotsPerGuest;
     const requestedShots = body.shotsPerGuest !== undefined ? Number(body.shotsPerGuest) : defaultShots;
