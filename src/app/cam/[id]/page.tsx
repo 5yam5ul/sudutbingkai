@@ -24,7 +24,7 @@ import {
   hapticLightTap 
 } from '@/lib/haptics';
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
-import { addPhotoToOfflineQueue, flushOfflineQueue, getOfflinePhotosQueue } from '@/lib/offlineQueue';
+import { addPhotoToOfflineQueue, flushOfflineQueue, getOfflinePhotosQueue, removeOfflinePhoto } from '@/lib/offlineQueue';
 import ConfirmModal from '@/components/ConfirmModal';
 import VideoWishRecorder from '@/components/VideoWishRecorder';
 
@@ -351,7 +351,8 @@ export default function GuestCameraPage() {
                       if (event?.id) localStorage.setItem(`sb_my_shots_${event.id}`, JSON.stringify(persistentShots));
                     } catch {}
                   } else {
-                    getOfflinePhotosQueue(eventId).then(queue => {
+                    getOfflinePhotosQueue(canonicalId, eventId).then(queue => {
+                      setOfflineCount(queue.length);
                       if (queue.length === 0) {
                         setShotCount(0);
                         setMyPhotos([]);
@@ -362,6 +363,14 @@ export default function GuestCameraPage() {
                           localStorage.removeItem(`sb_my_shots_${eventId}`);
                           localStorage.removeItem(`sb_my_shots_${canonicalId}`);
                         } catch {}
+                      } else if (typeof navigator !== 'undefined' && navigator.onLine) {
+                        flushOfflineQueue(() => {
+                          setOfflineCount(prev => Math.max(0, prev - 1));
+                        }).then(count => {
+                          if (count > 0) {
+                            toast.success(`${count} foto offline berhasil disinkronkan ke album!`);
+                          }
+                        });
                       }
                     }).catch(() => {});
                   }
@@ -399,7 +408,7 @@ export default function GuestCameraPage() {
     }
 
     // Check offline queue
-    getOfflinePhotosQueue(eventId).then(queue => {
+    getOfflinePhotosQueue(event?.id || eventId, eventId).then(queue => {
       setOfflineCount(queue.length);
     });
 
@@ -606,6 +615,33 @@ export default function GuestCameraPage() {
 
     const targetEventId = event?.id || eventId;
     if (clean && clean !== 'Tamu' && clean !== 'Tamu Undangan') {
+      const activeSession = guestSessionId || getOrCreateGuestSession(targetEventId, eventId);
+      fetch(`/api/photos?eventId=${targetEventId}&sessionId=${encodeURIComponent(activeSession)}&guestName=${encodeURIComponent(clean)}`)
+        .then(res => res.json())
+        .then(pData => {
+          if (pData.success && Array.isArray(pData.photos) && pData.photos.length > 0) {
+            const serverPhotos = pData.photos.map((p: any) => ({
+              id: p.id,
+              eventId: p.eventId || targetEventId,
+              guestName: p.guestName,
+              imageData: p.imageData || p.url,
+              filter: p.filter || 'Disposable',
+              timestamp: p.timestamp
+            })).sort((a: any, b: any) => a.timestamp - b.timestamp);
+            setShotCount(serverPhotos.length);
+            setMyPhotos(serverPhotos);
+            setLastShotThumb(serverPhotos[serverPhotos.length - 1].imageData);
+            try {
+              localStorage.setItem(`sb_shot_count_${targetEventId}`, String(serverPhotos.length));
+              localStorage.setItem(`sb_shot_count_${eventId}`, String(serverPhotos.length));
+              const persistentShots = serverPhotos.slice(-50);
+              localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
+              localStorage.setItem(`sb_my_shots_${targetEventId}`, JSON.stringify(persistentShots));
+            } catch {}
+          }
+        })
+        .catch(() => {});
+
       fetch(`/api/voice-notes?eventId=${targetEventId}&guestName=${encodeURIComponent(clean)}`)
         .then(res => res.json())
         .then(vData => {
@@ -958,6 +994,11 @@ export default function GuestCameraPage() {
           console.error(e);
         }
         if (!isDemo && photoId) {
+          removeOfflinePhoto(photoId)
+            .then(() => getOfflinePhotosQueue(canonicalId, eventId))
+            .then(q => setOfflineCount(q.length))
+            .catch(() => {});
+
           const activeSess = guestSessionId || getOrCreateGuestSession(canonicalId, eventId);
           const delParams = new URLSearchParams({
             id: photoId,

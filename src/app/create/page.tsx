@@ -1170,12 +1170,12 @@ function CreateEventForm() {
               initialCustomFrameUrl={customFrameUrl}
               initialCoupleName={coupleOrHost || 'Nama Acara'}
               initialEventDate={eventDate}
-              initialTagline="The Beginning of Forever"
+              initialTagline={frameText || 'The Beginning of Forever'}
               initialAllowGuestToggle={allowGuestFrameToggle}
-              onUpdate={({ frameId: fId, customFrameUrl: cUrl, coupleName: cName, eventDate: eDate, tagline: tLine, allowGuestFrameToggle: aToggle }) => {
+              onUpdate={({ frameId: fId, customFrameUrl: cUrl, tagline: tLine, allowGuestFrameToggle: aToggle }) => {
                 setFrameId(fId);
                 setCustomFrameUrl(cUrl || '');
-                setFrameText(`${cName} • ${eDate} • ${tLine}`);
+                setFrameText(tLine);
                 setAllowGuestFrameToggle(aToggle);
               }}
             />

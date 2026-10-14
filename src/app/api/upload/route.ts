@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { uploadBufferToR2, isR2Configured } from '@/lib/r2';
+import { uploadBufferToR2, isR2Configured, deleteFromR2 } from '@/lib/r2';
 import { getServerSession } from '@/lib/auth';
 
 const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
@@ -18,6 +18,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const rawType = (formData.get('type') as string) || 'frame';
+    const oldUrl = (formData.get('oldUrl') as string | null)?.trim() || '';
     const type = ['frame', 'cover', 'logo', 'general'].includes(rawType) ? rawType : 'general';
 
     if (!file) {
@@ -49,6 +50,9 @@ export async function POST(request: Request) {
       try {
         const r2Url = await uploadBufferToR2(buffer, storagePath, mime || 'image/png');
         if (r2Url) {
+          if (oldUrl && oldUrl !== r2Url) {
+            await deleteFromR2(oldUrl).catch(() => {});
+          }
           return NextResponse.json({
             success: true,
             url: r2Url,

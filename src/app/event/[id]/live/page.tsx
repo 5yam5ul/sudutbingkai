@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { EventData, PhotoRecord } from '@/lib/types';
+import { authFetch } from '@/lib/auth';
 
 export type SlideshowMode = 
   | 'polaroid' 
@@ -41,6 +42,7 @@ export default function LiveProjectorWallPage() {
 
   const [event, setEvent] = useState<EventData | null>(null);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
+  const [totalPhotoCount, setTotalPhotoCount] = useState<number>(0);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [qrDataUrl, setQrDataUrl] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -70,6 +72,7 @@ export default function LiveProjectorWallPage() {
   // Countdown Timer State for Delayed Mode (Anti-Leak Shield)
   const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number } | null>(null);
   const [isDelayedAndLocked, setIsDelayedAndLocked] = useState(false);
+  const wasLockedRef = useRef<boolean>(false);
 
   // Persistent reference to track previous photo count without stale closure
   const lastCountRef = useRef<number>(-1);
@@ -123,8 +126,8 @@ export default function LiveProjectorWallPage() {
     if (typeof document !== 'undefined' && document.hidden) return;
     try {
       const [resE, resP] = await Promise.all([
-        fetch(`/api/events?id=${eventId}`),
-        fetch(`/api/photos?eventId=${eventId}`),
+        authFetch(`/api/events?id=${eventId}`),
+        authFetch(`/api/photos?eventId=${eventId}`),
       ]);
       const [dataE, dataP] = await Promise.all([resE.json(), resP.json()]);
       let currentlyLocked = isDelayedAndLocked;
@@ -140,6 +143,7 @@ export default function LiveProjectorWallPage() {
       if (dataP.success) {
         const newPhotos: PhotoRecord[] = dataP.photos || [];
         setPhotos(newPhotos);
+        setTotalPhotoCount(typeof dataP.count === 'number' ? dataP.count : newPhotos.length);
 
         // Fire celebration confetti & display real-time live toast ONLY if NOT locked in Delayed Reveal!
         if (!currentlyLocked && !dataP.isLocked && lastCountRef.current !== -1 && newPhotos.length > lastCountRef.current) {
@@ -333,7 +337,12 @@ export default function LiveProjectorWallPage() {
       if (diff <= 0) {
         setIsDelayedAndLocked(false);
         setTimeLeft(null);
+        if (wasLockedRef.current) {
+          wasLockedRef.current = false;
+          fetchData();
+        }
       } else {
+        wasLockedRef.current = true;
         setIsDelayedAndLocked(true);
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
@@ -465,7 +474,7 @@ export default function LiveProjectorWallPage() {
               {event?.title || 'Live Photo Wall'}
             </span>
             <span style={{ fontSize: '11.5px', color: '#A1A1A6' }}>
-              ({photos.length > 0 ? currentIndex + 1 : 0} / {photos.length} foto)
+              ({photos.length > 0 ? currentIndex + 1 : 0} / {Math.max(photos.length, totalPhotoCount)} foto)
             </span>
           </div>
 
@@ -1053,7 +1062,7 @@ export default function LiveProjectorWallPage() {
               color: '#E4E4E7'
             }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 8px #10B981' }} />
-              <span><strong>{photos.length} Foto Candid</strong> telah masuk ke rol rahasia</span>
+              <span><strong>{Math.max(photos.length, totalPhotoCount)} Foto Candid</strong> telah masuk ke rol rahasia</span>
             </div>
 
             <p style={{ fontSize: '13px', color: '#A1A1A6', margin: 0 }}>

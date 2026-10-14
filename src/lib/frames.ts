@@ -173,9 +173,24 @@ export async function applyFrameToCanvas(
   }
 
   const border = Math.floor(width * 0.038);
-  const formattedDate = eventDate 
-    ? new Date(eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
-    : new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+  const formatSafeFrameDate = (rawDate?: string): string => {
+    if (!rawDate || !rawDate.trim()) {
+      return new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    const trimmed = rawDate.trim();
+    // Only convert ISO-style dates (YYYY-MM-DD...); keep custom formatted strings (e.g. "12 . 10 . 2026") intact
+    if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+      const parsed = new Date(trimmed);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+      }
+    }
+    return trimmed;
+  };
+  const formattedDate = formatSafeFrameDate(eventDate);
+  const cleanTagline = tagline && tagline.includes('•')
+    ? (tagline.split('•').pop()?.trim() || '')
+    : (tagline?.trim() || '');
 
   ctx.save();
 
@@ -248,7 +263,7 @@ export async function applyFrameToCanvas(
       ctx.fillStyle = '#C27803';
       const subFontSize = Math.max(10, Math.floor(plaqueH * 0.24));
       ctx.font = `500 ${subFontSize}px "JetBrains Mono", monospace`;
-      ctx.fillText(`${formattedDate}   •   ${tagline || 'THE BEGINNING OF FOREVER'}`, width / 2, plaqueY + plaqueH * 0.82);
+      ctx.fillText(`${formattedDate}   •   ${cleanTagline || 'THE BEGINNING OF FOREVER'}`, width / 2, plaqueY + plaqueH * 0.82);
       break;
     }
 
@@ -287,7 +302,7 @@ export async function applyFrameToCanvas(
       ctx.fillStyle = '#78716C';
       const tagFont = Math.max(11, Math.floor(bottomChin * 0.16));
       ctx.font = `400 ${tagFont}px "Courier New", monospace`;
-      ctx.fillText(`♥ ${tagline || formattedDate} ♥`, width / 2, height - bottomChin * 0.25);
+      ctx.fillText(`♥ ${cleanTagline || formattedDate} ♥`, width / 2, height - bottomChin * 0.25);
       break;
     }
 
@@ -366,7 +381,7 @@ export async function applyFrameToCanvas(
 
       ctx.fillStyle = '#78716C';
       ctx.font = `italic 500 ${Math.max(10, Math.floor(plaqueH * 0.25))}px "Georgia", serif`;
-      ctx.fillText(`${formattedDate} • ${tagline || 'In Loving Celebration'}`, width / 2, height - m - plaqueH * 0.16);
+      ctx.fillText(`${formattedDate} • ${cleanTagline || 'In Loving Celebration'}`, width / 2, height - m - plaqueH * 0.16);
       break;
     }
 

@@ -69,9 +69,12 @@ export default function BrideDashboardPage() {
   const [frameId, setFrameId] = useState<FrameId>('minimal-gold');
   const [customFrameUrl, setCustomFrameUrl] = useState('');
   const [frameText, setFrameText] = useState('');
+  const [coupleOrHost, setCoupleOrHost] = useState('');
+  const [eventDate, setEventDate] = useState('');
   const [allowGuestFrameToggle, setAllowGuestFrameToggle] = useState(true);
   const [allowVoiceNote, setAllowVoiceNote] = useState(true);
   const [coverUrl, setCoverUrl] = useState<string>('');
+  const unsavedCoverUploadRef = React.useRef<string>('');
   const [isUploadingCover, setIsUploadingCover] = useState<boolean>(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
@@ -164,10 +167,14 @@ export default function BrideDashboardPage() {
     }
     setFrameId(selected.frameId || 'minimal-gold');
     setCustomFrameUrl(selected.customFrameUrl || '');
-    setFrameText(selected.frameText || '');
+    const rawTagline = selected.frameText || '';
+    setFrameText(rawTagline.includes('•') ? (rawTagline.split('•').pop()?.trim() || '') : rawTagline);
+    setCoupleOrHost(selected.coupleOrHost || '');
+    setEventDate(selected.eventDate || '');
     setAllowGuestFrameToggle(selected.allowGuestFrameToggle !== false);
     setAllowVoiceNote(selected.allowVoiceNote !== false);
     setCoverUrl(selected.coverUrl || '');
+    unsavedCoverUploadRef.current = '';
     setEventSlug(selected.slug || '');
 
     // Fetch all photos including hidden for host moderation
@@ -428,12 +435,16 @@ export default function BrideDashboardPage() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('type', 'cover');
+      if (unsavedCoverUploadRef.current) {
+        formData.append('oldUrl', unsavedCoverUploadRef.current);
+      }
       const res = await authFetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
       const data = await res.json();
       if (data.success && data.url) {
+        unsavedCoverUploadRef.current = data.url;
         setCoverUrl(data.url);
         toast.success('Foto cover berhasil diunggah! Jangan lupa klik Simpan Pengaturan di bawah.');
       } else {
@@ -466,6 +477,8 @@ export default function BrideDashboardPage() {
         body: JSON.stringify({
           id: event.id,
           slug: cleanSlug || undefined,
+          coupleOrHost: coupleOrHost.trim() || event.coupleOrHost,
+          eventDate: eventDate || event.eventDate,
           shotsPerGuest: safeShots,
           revealMode,
           revealTime: revealMode === 'delayed' ? revealTime : '',
@@ -482,6 +495,7 @@ export default function BrideDashboardPage() {
       });
       const data = await res.json();
       if (data.success && data.event) {
+        unsavedCoverUploadRef.current = '';
         setEvent(data.event);
         if (data.event.slug) setEventSlug(data.event.slug);
         setSaveSuccess(true);
@@ -1785,14 +1799,16 @@ export default function BrideDashboardPage() {
               <FrameCustomizer
                 initialFrameId={frameId}
                 initialCustomFrameUrl={customFrameUrl}
-                initialCoupleName={event?.coupleOrHost || 'Nama Acara'}
-                initialEventDate={event?.eventDate || ''}
-                initialTagline="The Beginning of Forever"
+                initialCoupleName={coupleOrHost || event?.coupleOrHost || 'Nama Acara'}
+                initialEventDate={eventDate || event?.eventDate || ''}
+                initialTagline={frameText || 'The Beginning of Forever'}
                 initialAllowGuestToggle={allowGuestFrameToggle}
                 onUpdate={({ frameId: fId, customFrameUrl: cUrl, coupleName: cName, eventDate: eDate, tagline: tLine, allowGuestFrameToggle: aToggle }) => {
                   setFrameId(fId);
                   setCustomFrameUrl(cUrl || '');
-                  setFrameText(`${cName} • ${eDate} • ${tLine}`);
+                  setCoupleOrHost(cName);
+                  setEventDate(eDate);
+                  setFrameText(tLine);
                   setAllowGuestFrameToggle(aToggle);
                 }}
               />

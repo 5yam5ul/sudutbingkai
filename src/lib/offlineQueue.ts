@@ -55,7 +55,7 @@ export async function addPhotoToOfflineQueue(photo: OfflinePhotoPayload): Promis
   }
 }
 
-export async function getOfflinePhotosQueue(eventId?: string): Promise<OfflinePhotoPayload[]> {
+export async function getOfflinePhotosQueue(eventId?: string, altEventId?: string): Promise<OfflinePhotoPayload[]> {
   try {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -65,7 +65,7 @@ export async function getOfflinePhotosQueue(eventId?: string): Promise<OfflinePh
       req.onsuccess = () => {
         const results: OfflinePhotoPayload[] = req.result || [];
         if (eventId) {
-          resolve(results.filter(p => p.eventId === eventId));
+          resolve(results.filter(p => p.eventId === eventId || (altEventId && p.eventId === altEventId)));
         } else {
           resolve(results);
         }

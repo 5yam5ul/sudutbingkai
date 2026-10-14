@@ -32,12 +32,22 @@ export default function FrameCustomizer({
   initialAllowGuestToggle = true,
   onUpdate
 }: FrameCustomizerProps) {
+  const extractCleanTagline = (raw?: string) => {
+    if (!raw) return 'The Beginning of Forever';
+    return raw.includes('•') ? (raw.split('•').pop()?.trim() || 'The Beginning of Forever') : raw;
+  };
+
   const [selectedFrame, setSelectedFrame] = useState<FrameId>(initialFrameId);
   const [customFrameUrl, setCustomFrameUrl] = useState(initialCustomFrameUrl);
   const [coupleName, setCoupleName] = useState(initialCoupleName);
   const [eventDate, setEventDate] = useState(initialEventDate);
-  const [tagline, setTagline] = useState(initialTagline);
+  const [tagline, setTagline] = useState(() => extractCleanTagline(initialTagline));
   const [allowGuestToggle, setAllowGuestToggle] = useState(initialAllowGuestToggle);
+
+  const [isCoupleEdited, setIsCoupleEdited] = useState(false);
+  const [isDateEdited, setIsDateEdited] = useState(false);
+  const [isTaglineEdited, setIsTaglineEdited] = useState(false);
+  const unsavedFrameUploadRef = useRef<string>('');
 
   const [activeCategory, setActiveCategory] = useState<'all' | 'wedding' | 'classic' | 'retro' | 'party'>('all');
   const [sampleModel, setSampleModel] = useState<'couple' | 'guests'>('couple');
@@ -45,6 +55,37 @@ export default function FrameCustomizer({
   const [showGuideModal, setShowGuideModal] = useState(false);
 
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Sync from parent when user edits Section 1 fields or switches events in Dashboard
+  useEffect(() => {
+    if (!isCoupleEdited && initialCoupleName) {
+      setCoupleName(initialCoupleName);
+    }
+  }, [initialCoupleName, isCoupleEdited]);
+
+  useEffect(() => {
+    if (!isDateEdited && initialEventDate !== undefined) {
+      setEventDate(initialEventDate);
+    }
+  }, [initialEventDate, isDateEdited]);
+
+  useEffect(() => {
+    if (!isTaglineEdited && initialTagline !== undefined) {
+      setTagline(extractCleanTagline(initialTagline));
+    }
+  }, [initialTagline, isTaglineEdited]);
+
+  useEffect(() => {
+    setSelectedFrame(initialFrameId);
+  }, [initialFrameId]);
+
+  useEffect(() => {
+    setCustomFrameUrl(initialCustomFrameUrl || '');
+  }, [initialCustomFrameUrl]);
+
+  useEffect(() => {
+    setAllowGuestToggle(initialAllowGuestToggle);
+  }, [initialAllowGuestToggle]);
 
   // Notify parent whenever values change
   useEffect(() => {
@@ -134,6 +175,9 @@ export default function FrameCustomizer({
       const formData = new FormData();
       formData.append('file', file);
       formData.append('type', 'frame');
+      if (unsavedFrameUploadRef.current) {
+        formData.append('oldUrl', unsavedFrameUploadRef.current);
+      }
 
       const res = await authFetch('/api/upload', {
         method: 'POST',
@@ -141,6 +185,7 @@ export default function FrameCustomizer({
       });
       const data = await res.json();
       if (data.success && data.url) {
+        unsavedFrameUploadRef.current = data.url;
         setCustomFrameUrl(data.url);
         setSelectedFrame('custom');
         toast.success('Bingkai custom berhasil diunggah!');
@@ -414,7 +459,10 @@ export default function FrameCustomizer({
                 type="text"
                 placeholder="Contoh: Kevin & Cindy"
                 value={coupleName}
-                onChange={(e) => setCoupleName(e.target.value)}
+                onChange={(e) => {
+                  setIsCoupleEdited(true);
+                  setCoupleName(e.target.value);
+                }}
                 className="glass-input"
                 style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '10px' }}
               />
@@ -429,7 +477,10 @@ export default function FrameCustomizer({
                   type="text"
                   placeholder="12 . 10 . 2026"
                   value={eventDate}
-                  onChange={(e) => setEventDate(e.target.value)}
+                  onChange={(e) => {
+                    setIsDateEdited(true);
+                    setEventDate(e.target.value);
+                  }}
                   className="glass-input"
                   style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '10px' }}
                 />
@@ -443,7 +494,10 @@ export default function FrameCustomizer({
                   type="text"
                   placeholder="The Beginning of Forever"
                   value={tagline}
-                  onChange={(e) => setTagline(e.target.value)}
+                  onChange={(e) => {
+                    setIsTaglineEdited(true);
+                    setTagline(e.target.value);
+                  }}
                   className="glass-input"
                   style={{ width: '100%', padding: '8px 12px', fontSize: '13px', borderRadius: '10px' }}
                 />

@@ -85,6 +85,7 @@ export default function EventDashboardPage() {
 
   const [event, setEvent] = useState<EventData | null>(null);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
+  const [totalPhotoCount, setTotalPhotoCount] = useState<number>(0);
   const [voiceNotes, setVoiceNotes] = useState<VoiceNoteRecord[]>([]);
   const [videoWishes, setVideoWishes] = useState<VideoWishRecord[]>([]);
   const [showStoriesPlayer, setShowStoriesPlayer] = useState(false);
@@ -94,6 +95,7 @@ export default function EventDashboardPage() {
   const [isZipping, setIsZipping] = useState(false);
   const [zipProgress, setZipProgress] = useState('');
   const [isHost, setIsHost] = useState(false);
+  const wasRollLockedRef = React.useRef<boolean>(false);
 
   // Custom Glass Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -241,7 +243,9 @@ export default function EventDashboardPage() {
 
       const dataPhotos = await resPhotos.json();
       if (dataPhotos.success) {
-        setPhotos(dataPhotos.photos || []);
+        const fetchedPhotos = dataPhotos.photos || [];
+        setPhotos(fetchedPhotos);
+        setTotalPhotoCount(typeof dataPhotos.count === 'number' ? dataPhotos.count : fetchedPhotos.length);
       }
 
       if (shouldFetchSecondary) {
@@ -291,7 +295,12 @@ export default function EventDashboardPage() {
       const diff = target - now;
       if (diff <= 0) {
         setCountdown({ hours: 0, minutes: 0, seconds: 0, isExpired: true });
+        if (wasRollLockedRef.current) {
+          wasRollLockedRef.current = false;
+          fetchEventData(false);
+        }
       } else {
+        wasRollLockedRef.current = true;
         const hours = Math.floor(diff / (1000 * 60 * 60));
         const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -936,7 +945,7 @@ export default function EventDashboardPage() {
               }}
             >
               <Camera size={13} color="#E5C07B" />
-              <span><strong>{photos.length}</strong> Momen Terabadikan</span>
+              <span><strong>{Math.max(photos.length, totalPhotoCount)}</strong> Momen Terabadikan</span>
             </div>
 
             {event?.vendorName && (
@@ -1078,7 +1087,7 @@ export default function EventDashboardPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               <h2 className="font-display-serif" style={{ fontSize: '26px', fontWeight: 700, color: '#1D1D1F' }}>
-                Roll Foto Bersama <em>({displayedPhotos.length}{selectedGuest !== 'all' ? ` / ${photos.length}` : ''})</em>
+                Roll Foto Bersama <em>({selectedGuest === 'all' ? Math.max(displayedPhotos.length, totalPhotoCount) : `${displayedPhotos.length} / ${Math.max(photos.length, totalPhotoCount)}`})</em>
               </h2>
               {selectedGuest !== 'all' && (
                 <span style={{ fontSize: '13px', color: '#C27803', fontWeight: 600 }}>
@@ -1102,7 +1111,7 @@ export default function EventDashboardPage() {
                   <span>Bersihkan Filter</span>
                 </button>
               )}
-              {photos.length > 0 && (
+              {photos.length > 0 && !isRollLocked && (
                 <button
                   type="button"
                   onClick={() => downloadAllPhotosAsZip(displayedPhotos)}
@@ -1177,7 +1186,7 @@ export default function EventDashboardPage() {
                     fontSize: '11px',
                     fontFamily: 'var(--font-mono)'
                   }}>
-                    {photos.length}
+                    {Math.max(photos.length, totalPhotoCount)}
                   </span>
                 </button>
 
@@ -1242,7 +1251,47 @@ export default function EventDashboardPage() {
             </div>
           )}
 
-          {photos.length === 0 ? (
+          {isRollLocked && photos.length === 0 && totalPhotoCount > 0 ? (
+            <div className="glass-card" style={{ padding: '64px 24px', textAlign: 'center', borderRadius: '28px', maxWidth: '640px', margin: '0 auto', border: '1px solid rgba(194, 120, 3, 0.25)', background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFBF5 100%)' }}>
+              <div
+                style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: 'rgba(194, 120, 3, 0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                  color: '#C27803'
+                }}
+              >
+                <Lock size={30} />
+              </div>
+              <h3 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: '24px', fontWeight: 700, marginBottom: '10px', color: '#1D1D1F' }}>
+                {totalPhotoCount} Jepretan Tamu Sedang Dicuci di Kamar Gelap
+              </h3>
+              <p style={{ color: '#6E6E73', fontSize: '14.5px', lineHeight: 1.6, maxWidth: '480px', margin: '0 auto 26px' }}>
+                Para tamu undangan telah mengabadikan <strong>{totalPhotoCount} momen candid</strong> sejauh ini! Seluruh hasil foto dirahasiakan dan akan terbuka serentak saat waktu cuci roll selesai.
+              </p>
+              <Link
+                href={`/cam/${event?.slug || eventId}`}
+                className="btn-apple-black"
+                style={{
+                  padding: '12px 28px',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  borderRadius: '999px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Camera size={16} />
+                <span>Ikut Memotret Momen Sekarang</span>
+              </Link>
+            </div>
+          ) : photos.length === 0 ? (
             <div className="glass-card" style={{ padding: '72px 24px', textAlign: 'center', borderRadius: '28px', maxWidth: '640px', margin: '0 auto' }}>
               <div
                 style={{

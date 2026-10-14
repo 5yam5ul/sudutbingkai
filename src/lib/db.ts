@@ -310,6 +310,16 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
   const existing = await getEventById(id);
   const canonicalId = existing?.id || id;
 
+  // Clean up replaced coverUrl or customFrameUrl from Cloudflare R2
+  try {
+    if (updates.coverUrl !== undefined && existing?.coverUrl && existing.coverUrl !== updates.coverUrl) {
+      await deleteFromR2(existing.coverUrl);
+    }
+    if (updates.customFrameUrl !== undefined && existing?.customFrameUrl && existing.customFrameUrl !== updates.customFrameUrl) {
+      await deleteFromR2(existing.customFrameUrl);
+    }
+  } catch {}
+
   if (isSupabaseConfigured && supabase) {
     try {
       const dbUpdates: Record<string, any> = {};
@@ -1433,6 +1443,13 @@ export async function updatePayoutStatus(
     const existingList = await getPayoutRequests();
     const existingPayout = existingList.find(p => p.id === id);
     previousStatus = existingPayout?.status;
+    if (existingPayout?.proofUrl) {
+      const isProofReplaced = Boolean(proofUrl && existingPayout.proofUrl !== proofUrl);
+      const isRejectedWithoutNewProof = status === 'rejected' && !proofUrl;
+      if (isProofReplaced || isRejectedWithoutNewProof) {
+        await deleteFromR2(existingPayout.proofUrl);
+      }
+    }
   } catch {}
 
   const refundRejectedVendorPayout = async (vendorId: string, vendorEmail: string, amount: number) => {
