@@ -140,10 +140,19 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const eventId = formData.get('eventId') as string;
-    const guestName = (formData.get('guestName') as string) || 'Tamu';
-    const audioFile = formData.get('audio') as File;
+    const rawGuestName = ((formData.get('guestName') as string) || 'Tamu').trim().slice(0, 80);
+    const guestName = rawGuestName || 'Tamu';
+    const audioFile = formData.get('audio') as File | null;
     const rawDuration = Number(formData.get('duration')) || 15;
     const duration = Math.min(Math.max(1, rawDuration), 15);
+
+    if (!audioFile || !eventId) {
+      return NextResponse.json({ success: false, error: 'File audio dan eventId wajib disertakan' }, { status: 400 });
+    }
+
+    if (audioFile.type && !audioFile.type.startsWith('audio/') && !audioFile.type.startsWith('video/')) {
+      return NextResponse.json({ success: false, error: 'Format file audio tidak valid' }, { status: 400 });
+    }
 
     const event = await getEventById(eventId);
     if (!event) {
@@ -164,10 +173,18 @@ export async function POST(request: Request) {
         error: 'Masa aktif album acara ini telah berakhir.'
       }, { status: 403 });
     }
-    if (event.allowVoiceNote === false || event.closingWishType === 'none') {
+
+    const isVipVideoTier = event.packageTier === 'wedding' || event.packageTier === 'unlimited';
+    const effectiveWishType = (event.allowVoiceNote === false || event.closingWishType === 'none')
+      ? 'none'
+      : (event.closingWishType
+          ? (isVipVideoTier ? event.closingWishType : 'voice')
+          : (isVipVideoTier ? 'video' : 'voice'));
+
+    if (effectiveWishType !== 'voice') {
       return NextResponse.json({
         success: false,
-        error: 'Fitur pesan suara dinonaktifkan untuk acara ini.'
+        error: 'Fitur pesan suara tidak aktif untuk acara ini.'
       }, { status: 403 });
     }
 

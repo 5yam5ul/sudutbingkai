@@ -13,6 +13,7 @@ import {
   Trash2, RefreshCw, Eye
 } from 'lucide-react';
 import { EventData } from '@/lib/types';
+import { authFetch } from '@/lib/auth';
 
 type CardFormat = 'tent' | 'standing' | 'mini';
 type CardTheme = 'cream' | 'kraft' | 'charcoal';
@@ -131,8 +132,8 @@ export default function PrintTableCardPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Fetch event details
-    fetch(`/api/events?id=${eventId}`)
+    // Fetch event details with authentication token
+    authFetch(`/api/events?id=${eventId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.event) {
@@ -970,6 +971,54 @@ export default function PrintTableCardPage() {
           </button>
         </div>
       </div>
+
+      {/* Pending Payment Warning Banner (Hidden when printing) */}
+      {event && event.packageTier !== 'starter' && event.paymentStatus === 'pending' && (
+        <div
+          className="no-print"
+          style={{
+            maxWidth: '1300px',
+            margin: '18px auto 0',
+            padding: '0 20px'
+          }}
+        >
+          <div
+            style={{
+              background: 'rgba(245, 158, 11, 0.12)',
+              border: '1px solid rgba(245, 158, 11, 0.45)',
+              borderRadius: '16px',
+              padding: '12px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#92400E', fontWeight: 500 }}>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D97706', flexShrink: 0 }} />
+              <span>
+                <strong>Perhatian Sebelum Mencetak:</strong> Status pembayaran album ini masih <strong>Menunggu Pelunasan</strong>. Kartu QR meja sudah dapat dicetak, namun kamera tamu baru akan terbuka setelah pembayaran diselesaikan.
+              </span>
+            </div>
+            <Link
+              href={`/event/${event.slug || event.id}`}
+              style={{
+                padding: '7px 14px',
+                borderRadius: '10px',
+                background: '#D97706',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Lihat Status Album
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Main Workspace Layout (Sidebar Controls + Live Preview) */}
       <div

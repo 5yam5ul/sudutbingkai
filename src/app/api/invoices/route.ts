@@ -254,9 +254,62 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Parameter id diperlukan' }, { status: 400 });
     }
 
+    const targetInvoice = await getInvoice(id);
     const success = await deleteInvoice(id);
     if (!success) {
       return NextResponse.json({ success: false, error: 'Gagal menghapus invoice' }, { status: 400 });
+    }
+
+    // Synchronize linked event paymentStatus, additionalPax, or vendor commission if a paid invoice was deleted
+    if (targetInvoice && targetInvoice.status === 'paid' && targetInvoice.eventId) {
+      try {
+        const linkedEvent = await getEventById(targetInvoice.eventId);
+        if (linkedEvent) {
+          const isTopUpInvoice = targetInvoice.id.startsWith('inv_topup_') || (targetInvoice.tierName || '').includes('Top Up Kuota Tamu');
+          if (isTopUpInvoice) {
+            const paxMatch = (targetInvoice.tierName || '').match(/\+(\d+)\s*Pax/i);
+            const topUpPax = paxMatch ? Number(paxMatch[1]) : 0;
+            if (topUpPax > 0 && (linkedEvent.additionalPax || 0) > 0) {
+              await updateEvent(linkedEvent.id, {
+                additionalPax: Math.max(0, (linkedEvent.additionalPax || 0) - topUpPax)
+              });
+            }
+          } else {
+            const remainingInvoices = await getAllInvoices();
+            const hasOtherPaidPackageInvoice = remainingInvoices.some(
+              inv =>
+                inv.id !== targetInvoice.id &&
+                inv.eventId === linkedEvent.id &&
+                inv.status === 'paid' &&
+                !inv.id.startsWith('inv_topup_') &&
+                !(inv.tierName || '').includes('Top Up Kuota Tamu')
+            );
+
+            if (!hasOtherPaidPackageInvoice && linkedEvent.paymentStatus === 'paid' && linkedEvent.packageTier !== 'starter') {
+              const revertUpdates: any = { paymentStatus: 'pending' };
+              if (
+                linkedEvent.vendorId &&
+                linkedEvent.commissionAmount &&
+                linkedEvent.commissionAmount > 0 &&
+                linkedEvent.commissionStatus === 'available'
+              ) {
+                const vendors = await getAllVendors();
+                const matchedVendor = vendors.find(v => isSameVendorId(v.id, linkedEvent.vendorId));
+                if (matchedVendor) {
+                  await updateVendor(matchedVendor.id, {
+                    walletBalance: Math.max(0, (matchedVendor.walletBalance || 0) - linkedEvent.commissionAmount),
+                    totalEarnings: Math.max(0, (matchedVendor.totalEarnings || 0) - linkedEvent.commissionAmount)
+                  });
+                }
+                revertUpdates.commissionStatus = 'pending';
+              }
+              await updateEvent(linkedEvent.id, revertUpdates);
+            }
+          }
+        }
+      } catch (syncErr) {
+        console.warn('Gagal menyinkronkan status acara setelah hapus invoice:', syncErr);
+      }
     }
 
     return NextResponse.json({ success: true, message: 'Invoice berhasil dihapus' });

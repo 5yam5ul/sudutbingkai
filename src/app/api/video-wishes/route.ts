@@ -90,14 +90,19 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const videoFile = formData.get('video') as Blob | null;
     const eventIdParam = formData.get('eventId') as string | null;
-    const guestName = (formData.get('guestName') as string) || 'Tamu Undangan';
-    const tableNumber = (formData.get('tableNumber') as string) || '';
+    const rawGuestName = ((formData.get('guestName') as string) || 'Tamu Undangan').trim().slice(0, 80);
+    const guestName = rawGuestName || 'Tamu Undangan';
+    const tableNumber = ((formData.get('tableNumber') as string) || '').trim().slice(0, 40);
     const thumbnailUrl = (formData.get('thumbnail') as string) || '';
     const rawDuration = Number(formData.get('duration')) || 15;
     const duration = Math.min(Math.max(1, rawDuration), 15);
 
     if (!videoFile || !eventIdParam) {
       return NextResponse.json({ success: false, error: 'File video dan eventId wajib disertakan' }, { status: 400 });
+    }
+
+    if (videoFile.type && !videoFile.type.startsWith('video/') && !videoFile.type.startsWith('audio/')) {
+      return NextResponse.json({ success: false, error: 'Format file video tidak valid' }, { status: 400 });
     }
 
     const event = await getEventById(eventIdParam);
@@ -120,7 +125,14 @@ export async function POST(request: Request) {
       }, { status: 403 });
     }
 
-    if (event.closingWishType === 'none' || (event.closingWishType && event.closingWishType !== 'video')) {
+    const isVipVideoTier = event.packageTier === 'wedding' || event.packageTier === 'unlimited';
+    const effectiveWishType = (event.allowVoiceNote === false || event.closingWishType === 'none')
+      ? 'none'
+      : (event.closingWishType
+          ? (isVipVideoTier ? event.closingWishType : 'voice')
+          : (isVipVideoTier ? 'video' : 'voice'));
+
+    if (effectiveWishType !== 'video') {
       return NextResponse.json({
         success: false,
         error: 'Fitur video ucapan tidak aktif untuk paket acara ini.'

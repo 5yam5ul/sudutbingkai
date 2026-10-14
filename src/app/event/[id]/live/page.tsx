@@ -157,8 +157,8 @@ export default function LiveProjectorWallPage() {
             origin: { y: 0.6 }
           });
 
-          // Most recent photo in chronological array
-          const latestPhoto = newPhotos[newPhotos.length - 1];
+          // Most recent photo is at index 0 (sorted newest-first by API)
+          const latestPhoto = newPhotos[0];
           if (latestPhoto) {
             setNewPhotoToast({
               id: latestPhoto.id,
@@ -169,7 +169,7 @@ export default function LiveProjectorWallPage() {
             });
 
             // Automatically switch to the new photo so the audience sees it live
-            setCurrentIndex(newPhotos.length - 1);
+            setCurrentIndex(0);
 
             // Auto-dismiss the toast banner after 6 seconds
             setTimeout(() => {

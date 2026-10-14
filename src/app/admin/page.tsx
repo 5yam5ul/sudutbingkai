@@ -128,7 +128,7 @@ export default function SuperAdminDashboard() {
     location: '',
     packageTier: 'wedding',
     maxGuests: 300,
-    shotsPerGuest: 25,
+    shotsPerGuest: 36,
     preset: 'portra',
     revealMode: 'instant'
   });
@@ -322,6 +322,7 @@ export default function SuperAdminDashboard() {
         toast.success(`Perubahan acara "${eventToEdit.title}" berhasil disimpan!`);
         setEvents(prev => prev.map(item => item.id === eventToEdit.id ? data.event : item));
         setEditEventModalOpen(false);
+        loadAllAdminData();
       } else {
         toast.error(data.error || 'Gagal menyimpan perubahan acara.');
       }
@@ -355,10 +356,11 @@ export default function SuperAdminDashboard() {
           location: '',
           packageTier: 'wedding',
           maxGuests: 300,
-          shotsPerGuest: 25,
+          shotsPerGuest: 36,
           preset: 'portra',
           revealMode: 'instant'
         });
+        loadAllAdminData();
       } else {
         toast.error(data.error || 'Gagal membuat acara baru.');
       }
@@ -382,6 +384,7 @@ export default function SuperAdminDashboard() {
           if (data.success) {
             toast.success(`Acara "${title}" beserta seluruh aset medianya berhasil dihapus.`);
             setEvents(prev => prev.filter(e => e.id !== eventId));
+            loadAllAdminData();
           } else {
             toast.error(data.error || 'Gagal menghapus acara.');
           }
@@ -577,6 +580,7 @@ export default function SuperAdminDashboard() {
           if (data.success) {
             toast.success(`Mitra "${name}" berhasil dihapus.`);
             setVendors(prev => prev.filter(v => v.id !== vendorId));
+            loadAllAdminData();
           } else {
             toast.error(data.error || 'Gagal menghapus vendor.');
           }
@@ -605,6 +609,7 @@ export default function SuperAdminDashboard() {
         toast.success(`Invoice "${invoiceToEdit.invoiceNumber}" berhasil diperbarui!`);
         setInvoices(prev => prev.map(inv => inv.id === invoiceToEdit.id ? data.invoice : inv));
         setEditInvoiceModalOpen(false);
+        loadAllAdminData();
       } else {
         toast.error(data.error || 'Gagal menyimpan invoice.');
       }
@@ -704,6 +709,7 @@ export default function SuperAdminDashboard() {
           if (data.success) {
             toast.success(`Invoice ${invoiceNum} dihapus.`);
             setInvoices(prev => prev.filter(i => i.id !== invoiceId));
+            loadAllAdminData();
           } else {
             toast.error(data.error || 'Gagal menghapus invoice.');
           }
@@ -2550,19 +2556,34 @@ export default function SuperAdminDashboard() {
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Paket Tier</label>
                   <select
                     value={eventToEdit.packageTier || 'wedding'}
-                    onChange={(e) => setEventToEdit({ ...eventToEdit, packageTier: e.target.value as EventPackageTier })}
+                    onChange={(e) => {
+                      const tierKey = e.target.value as EventPackageTier;
+                      const defaults: Record<string, { maxGuests: number; shotsPerGuest: number }> = {
+                        starter: { maxGuests: 5, shotsPerGuest: 10 },
+                        intimate: { maxGuests: 50, shotsPerGuest: 20 },
+                        party: { maxGuests: 75, shotsPerGuest: 25 },
+                        event: { maxGuests: 150, shotsPerGuest: 30 },
+                        wedding: { maxGuests: 300, shotsPerGuest: 36 },
+                        unlimited: { maxGuests: 2000, shotsPerGuest: 99 },
+                      };
+                      const def = defaults[tierKey];
+                      setEventToEdit({
+                        ...eventToEdit,
+                        packageTier: tierKey,
+                        ...(def ? { maxGuests: def.maxGuests, shotsPerGuest: def.shotsPerGuest } : {})
+                      });
+                    }}
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
                     <option value="starter">Starter / Gratis (5 Tamu - Rp 0)</option>
                     <option value="intimate">Intimate Party (50 Tamu - Rp 129.000)</option>
+                    <option value="party">Party (75 Tamu - Rp 179.000)</option>
+                    <option value="event">Event (150 Tamu - Rp 269.000)</option>
                     <option value="wedding">Wedding Resepsi (300 Tamu - Rp 499.000)</option>
-                    <option value="unlimited">Grand / Unlimited (1000 Tamu - Rp 999.000)</option>
-                    <option value="free">Legacy: Free Test (2 Tamu)</option>
-                    <option value="mini">Legacy: Mini (25 Tamu)</option>
-                    <option value="small">Legacy: Small (50 Tamu)</option>
-                    <option value="party">Legacy: Party (75 Tamu)</option>
-                    <option value="event">Legacy: Event (150 Tamu)</option>
+                    <option value="unlimited">Grand / Unlimited (2000 Tamu - Rp 999.000)</option>
+                    <option value="mini">Legacy: Mini (15 Tamu)</option>
+                    <option value="small">Legacy: Small (35 Tamu)</option>
                   </select>
                 </div>
                 <div>
@@ -2763,7 +2784,7 @@ export default function SuperAdminDashboard() {
                       const defaults: Record<string, { maxGuests: number; shotsPerGuest: number }> = {
                         starter: { maxGuests: 5, shotsPerGuest: 10 },
                         intimate: { maxGuests: 50, shotsPerGuest: 20 },
-                        party: { maxGuests: 75, shotsPerGuest: 24 },
+                        party: { maxGuests: 75, shotsPerGuest: 25 },
                         event: { maxGuests: 150, shotsPerGuest: 30 },
                         wedding: { maxGuests: 300, shotsPerGuest: 36 },
                         unlimited: { maxGuests: 2000, shotsPerGuest: 99 },
@@ -2780,8 +2801,10 @@ export default function SuperAdminDashboard() {
                   >
                     <option value="starter">Starter / Gratis (5 Tamu - Rp 0)</option>
                     <option value="intimate">Intimate Party (50 Tamu - Rp 129.000)</option>
+                    <option value="party">Party (75 Tamu - Rp 179.000)</option>
+                    <option value="event">Event (150 Tamu - Rp 269.000)</option>
                     <option value="wedding">Wedding Resepsi (300 Tamu - Rp 499.000)</option>
-                    <option value="unlimited">Grand / Unlimited (1000 Tamu - Rp 999.000)</option>
+                    <option value="unlimited">Grand / Unlimited (2000 Tamu - Rp 999.000)</option>
                   </select>
                 </div>
                 <div>
@@ -3422,7 +3445,7 @@ export default function SuperAdminDashboard() {
                     value={newInvoiceForm.tierId}
                     onChange={(e) => {
                       const tier = e.target.value as any;
-                      const price = tier === 'party' ? 179000 : tier === 'event' ? 269000 : tier === 'wedding' ? 499000 : 999000;
+                      const price = tier === 'intimate' ? 129000 : tier === 'party' ? 179000 : tier === 'event' ? 269000 : tier === 'wedding' ? 499000 : 999000;
                       setNewInvoiceForm({
                         ...newInvoiceForm,
                         tierId: tier,
@@ -3434,6 +3457,7 @@ export default function SuperAdminDashboard() {
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
+                    <option value="intimate">Intimate Party (Rp 129.000)</option>
                     <option value="party">Party (Rp 179.000)</option>
                     <option value="event">Event (Rp 269.000)</option>
                     <option value="wedding">Wedding (Rp 499.000)</option>

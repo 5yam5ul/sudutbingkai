@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     if (eventId) {
       const event = await getEventById(eventId);
       if (event) {
-        // If it was an add-on pax payment: increment additionalPax ONLY
+        // If it was an add-on pax payment: increment additionalPax AND create official InvoiceRecord
         if (description.includes('Top Up Kuota Tamu')) {
           const paxMatch = description.match(/\+(\d+)\s*Pax/i);
           const addedPax = paxMatch ? Number(paxMatch[1]) : 25;
@@ -54,6 +54,32 @@ export async function POST(request: Request) {
             additionalPax: currentAdditional + addedPax
           });
           console.log(`Event ${event.id} credited with +${addedPax} pax (total additional: ${currentAdditional + addedPax})`);
+
+          try {
+            const topUpPrices: Record<number, number> = { 25: 49000, 50: 89000, 100: 149000, 250: 249000 };
+            const paidTopUpAmount = Number(payload?.data?.amount) || topUpPrices[addedPax] || 49000;
+            const topUpSuffix = String(txId || Date.now()).replace(/[^a-zA-Z0-9_-]/g, '').slice(-10);
+            await createInvoice({
+              id: `inv_topup_${event.id}_${topUpSuffix}`,
+              eventId: event.id,
+              orderId: String(txId || `ord_topup_${topUpSuffix}`),
+              buyerType: event.vendorId ? 'vendor' : 'client',
+              buyerName: event.coupleOrHost || event.title,
+              buyerEmail: event.hostEmail || payload?.data?.email || 'pengantin@sudutbingkai.id',
+              companyName: event.vendorName,
+              tierId: (event.packageTier || 'wedding') as EventPackageTier,
+              tierName: `Top Up Kuota Tamu +${addedPax} Pax`,
+              originalPrice: paidTopUpAmount,
+              discountAmount: 0,
+              finalAmount: paidTopUpAmount,
+              paymentMethod: 'qris',
+              status: 'paid',
+              paidAt: new Date().toISOString(),
+              createdAt: new Date().toISOString()
+            });
+          } catch (topUpInvErr) {
+            console.warn('Error creating top-up invoice in webhook:', topUpInvErr);
+          }
         } else {
           // It was a package purchase: activate event and disburse partner commission if applicable
           await updateEvent(event.id, {

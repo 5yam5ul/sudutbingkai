@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent, getAllVendors, updateVendor, getInvoice, createInvoice, updateInvoice } from '@/lib/db';
+import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent, getAllVendors, updateVendor, getInvoice, createInvoice, updateInvoice, getAllAddons } from '@/lib/db';
 import { EventData, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 import { getServerSession, signSessionPayload, isSameVendorId } from '@/lib/auth';
 import { isMayarConfigured } from '@/lib/mayar';
@@ -319,11 +319,24 @@ export async function POST(request: Request) {
     try {
       const existingInv = await getInvoice(saved.id);
       if (!existingInv) {
-        const rawPrice = tierConfig.isFree || tierKey === 'starter'
+        const baseTierPrice = tierConfig.isFree || tierKey === 'starter'
           ? 0
           : (parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0);
+        let addonsPrice = 0;
+        if (Array.isArray(saved.addons) && saved.addons.length > 0) {
+          try {
+            const catalogAddons = await getAllAddons();
+            for (const addonId of saved.addons) {
+              const matchedAddon = catalogAddons.find(a => a.id === addonId && a.isActive !== false);
+              if (matchedAddon && matchedAddon.price > 0) {
+                addonsPrice += Number(matchedAddon.price);
+              }
+            }
+          } catch {}
+        }
+        const rawPrice = baseTierPrice + addonsPrice;
         const isHostReferralDiscount = Boolean(saved.referralCodeUsed && session?.role !== 'vendor');
-        const discount = isHostReferralDiscount ? Math.round(rawPrice * 0.1) : 0;
+        const discount = isHostReferralDiscount ? Math.round(baseTierPrice * 0.1) : 0;
         const finalAmount = rawPrice - discount;
         const isEventPaid = tierConfig.isFree || tierKey === 'starter' || saved.paymentStatus === 'paid';
 
@@ -593,10 +606,24 @@ export async function PATCH(request: Request) {
             });
           }
         } else {
-          const rawPrice = tierConfig.isFree || currentTier === 'starter'
+          const baseTierPrice = tierConfig.isFree || currentTier === 'starter'
             ? 0
             : (parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0);
-          const discount = existingEvent.referralCodeUsed ? Math.round(rawPrice * 0.1) : 0;
+          let addonsPrice = 0;
+          const activeAddons = Array.isArray(updates.addons) ? updates.addons : existingEvent.addons;
+          if (Array.isArray(activeAddons) && activeAddons.length > 0) {
+            try {
+              const catalogAddons = await getAllAddons();
+              for (const addonId of activeAddons) {
+                const matchedAddon = catalogAddons.find(a => a.id === addonId && a.isActive !== false);
+                if (matchedAddon && matchedAddon.price > 0) {
+                  addonsPrice += Number(matchedAddon.price);
+                }
+              }
+            } catch {}
+          }
+          const rawPrice = baseTierPrice + addonsPrice;
+          const discount = existingEvent.referralCodeUsed ? Math.round(baseTierPrice * 0.1) : 0;
           await createInvoice({
             id: `inv_${existingEvent.id}`,
             eventId: existingEvent.id,

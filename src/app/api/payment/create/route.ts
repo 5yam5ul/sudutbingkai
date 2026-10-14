@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createMayarInvoice, isMayarConfigured } from '@/lib/mayar';
 import { EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
-import { getEventById, getAllVendors } from '@/lib/db';
-import { getServerSession } from '@/lib/auth';
+import { getEventById, getAllVendors, getAllAddons } from '@/lib/db';
+import { getServerSession, isSameVendorId } from '@/lib/auth';
 
 // Price map in IDR (synced with PACKAGE_TIERS)
 const TIER_PRICES: Record<EventPackageTier, number> = {
@@ -26,7 +26,14 @@ const ADDON_PAX_PRICES: Record<number, number> = {
 export async function POST(request: Request) {
   try {
     const session = getServerSession(request);
-    const isVendorDirectPurchase = session?.role === 'vendor';
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Akses ditolak: Silakan login terlebih dahulu untuk membuat transaksi pembayaran' },
+        { status: 401 }
+      );
+    }
+
+    const isVendorDirectPurchase = session.role === 'vendor';
     const body = await request.json();
     const {
       packageTier = 'wedding',
@@ -50,16 +57,67 @@ export async function POST(request: Request) {
         existingEvent = await getEventById(eventId);
         if (existingEvent?.slug) targetEventSlugOrId = existingEvent.slug;
       } catch {}
+
+      if (existingEvent) {
+        const isAuthorizedHost = session.role === 'host' && (
+          session.email?.toLowerCase() === existingEvent.hostEmail?.toLowerCase() ||
+          session.id === existingEvent.hostEmail
+        );
+        const isAuthorizedVendor = session.role === 'vendor' && isSameVendorId(session.id, existingEvent.vendorId);
+        const isAdmin = session.role === 'admin';
+
+        if (!isAuthorizedHost && !isAuthorizedVendor && !isAdmin) {
+          return NextResponse.json(
+            { success: false, error: 'Akses ditolak: Anda bukan pemilik sah acara ini' },
+            { status: 403 }
+          );
+        }
+      } else if (isAddonPax) {
+        return NextResponse.json(
+          { success: false, error: 'Acara tidak ditemukan untuk penambahan kuota tamu' },
+          { status: 404 }
+        );
+      }
+    } else if (isAddonPax) {
+      return NextResponse.json(
+        { success: false, error: 'ID Acara diperlukan untuk penambahan kuota tamu' },
+        { status: 400 }
+      );
     }
 
     if (isAddonPax) {
-      const safePax = Number(paxAmount) || 25;
-      amount = ADDON_PAX_PRICES[safePax] || Math.max(25, safePax) * 2000;
-      description = `Top Up Kuota Tamu +${safePax} Pax - SudutBingkai (${eventId || 'Acara'})`;
+      const safePax = Number(paxAmount);
+      if (!safePax || !ADDON_PAX_PRICES[safePax]) {
+        return NextResponse.json(
+          { success: false, error: 'Pilihan kuota Top Up tidak valid (pilih 25, 50, 100, atau 250 Pax)' },
+          { status: 400 }
+        );
+      }
+      amount = ADDON_PAX_PRICES[safePax];
+      description = `Top Up Kuota Tamu +${safePax} Pax - SudutBingkai (${existingEvent?.id || eventId})`;
     } else {
       const tierKey = (existingEvent?.packageTier || packageTier) as EventPackageTier;
       const tierInfo = PACKAGE_TIERS[tierKey];
       const basePrice = TIER_PRICES[tierKey] ?? 499000;
+
+      // Sum any selected catalog add-ons attached to the event or request
+      let addonsPrice = 0;
+      const selectedAddonIds: string[] = Array.isArray(existingEvent?.addons)
+        ? existingEvent.addons
+        : Array.isArray(body.addons)
+          ? body.addons
+          : [];
+      if (selectedAddonIds.length > 0) {
+        try {
+          const allAddons = await getAllAddons();
+          for (const addonId of selectedAddonIds) {
+            const matchedAddon = allAddons.find(a => a.id === addonId && a.isActive !== false);
+            if (matchedAddon && matchedAddon.price > 0) {
+              addonsPrice += Number(matchedAddon.price);
+            }
+          }
+        } catch {}
+      }
 
       // Validate referral code server-side for legitimate 10% host partner discount (not applied to direct Vendor Mode purchases)
       let hasValidReferral = false;
@@ -86,8 +144,9 @@ export async function POST(request: Request) {
         }
       }
 
-      amount = hasValidReferral ? Math.round(basePrice * 0.9) : basePrice;
-      description = `Paket ${tierInfo?.name || 'Wedding'} (${tierInfo?.guestsLabel || '300 Tamu'}) - SudutBingkai (${eventId || 'event'})`;
+      const discountedBasePrice = hasValidReferral ? Math.round(basePrice * 0.9) : basePrice;
+      amount = discountedBasePrice + addonsPrice;
+      description = `Paket ${tierInfo?.name || 'Wedding'} (${tierInfo?.guestsLabel || '300 Tamu'}) - SudutBingkai (${existingEvent?.id || eventId || 'event'})`;
     }
 
     // Free starter tier doesn't need payment
