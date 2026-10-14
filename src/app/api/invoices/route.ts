@@ -208,8 +208,20 @@ export async function PATCH(request: Request) {
               }
             }
             await updateEvent(linkedEvent.id, eventUpdates);
-          } else if (updates.status === 'pending' && linkedEvent.paymentStatus === 'paid') {
-            await updateEvent(linkedEvent.id, { paymentStatus: 'pending' });
+          } else if ((updates.status === 'pending' || updates.status === 'cancelled') && linkedEvent.paymentStatus === 'paid') {
+            const revertUpdates: any = { paymentStatus: 'pending' };
+            if (linkedEvent.vendorId && linkedEvent.commissionAmount && linkedEvent.commissionAmount > 0 && linkedEvent.commissionStatus === 'available') {
+              const vendors = await getAllVendors();
+              const matchedVendor = vendors.find(v => isSameVendorId(v.id, linkedEvent.vendorId));
+              if (matchedVendor) {
+                await updateVendor(matchedVendor.id, {
+                  walletBalance: Math.max(0, (matchedVendor.walletBalance || 0) - linkedEvent.commissionAmount),
+                  totalEarnings: Math.max(0, (matchedVendor.totalEarnings || 0) - linkedEvent.commissionAmount)
+                });
+              }
+              revertUpdates.commissionStatus = 'pending';
+            }
+            await updateEvent(linkedEvent.id, revertUpdates);
           }
         }
       } catch (e) {

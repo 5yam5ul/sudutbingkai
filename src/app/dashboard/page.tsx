@@ -427,6 +427,28 @@ export default function BrideDashboardPage() {
     });
   };
 
+  const cleanupUnsavedCover = React.useCallback(() => {
+    const pendingUrl = unsavedCoverUploadRef.current;
+    if (pendingUrl) {
+      unsavedCoverUploadRef.current = '';
+      authFetch(`/api/upload?url=${encodeURIComponent(pendingUrl)}`, {
+        method: 'DELETE',
+        keepalive: true,
+      }).catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      cleanupUnsavedCover();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanupUnsavedCover();
+    };
+  }, [cleanupUnsavedCover]);
+
   const handleUploadCover = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -1726,7 +1748,10 @@ export default function BrideDashboardPage() {
                     {coverUrl && (
                       <button
                         type="button"
-                        onClick={() => setCoverUrl('')}
+                        onClick={() => {
+                          cleanupUnsavedCover();
+                          setCoverUrl('');
+                        }}
                         style={{
                           background: 'none',
                           border: 'none',
@@ -1760,6 +1785,7 @@ export default function BrideDashboardPage() {
                       key={idx}
                       type="button"
                       onClick={() => {
+                        cleanupUnsavedCover();
                         setCoverUrl(p.url);
                         toast.success(`Foto cover diubah ke "${p.label}". Simpan pengaturan di bawah.`);
                       }}

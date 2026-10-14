@@ -948,7 +948,7 @@ export default function EventDashboardPage() {
               <span><strong>{Math.max(photos.length, totalPhotoCount)}</strong> Momen Terabadikan</span>
             </div>
 
-            {event?.vendorName && (
+            {event?.vendorName && event?.vendorCoBranding?.showLogoOnGallery !== false && (
               <div
                 style={{
                   display: 'inline-flex',

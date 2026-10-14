@@ -582,7 +582,7 @@ export default function VendorPortalPage() {
           referralCode: generatedRef,
           partnerTier: 'regular',
           tier: 'starter',
-          commissionRate: 0.15
+          commissionRate: 0.12
         })
       });
 
@@ -618,6 +618,28 @@ export default function VendorPortalPage() {
       setIsRegistering(false);
     }
   };
+
+  const cleanupUnsavedLogo = React.useCallback(() => {
+    const pendingUrl = unsavedLogoUploadRef.current;
+    if (pendingUrl) {
+      unsavedLogoUploadRef.current = null;
+      authFetch(`/api/upload?url=${encodeURIComponent(pendingUrl)}`, {
+        method: 'DELETE',
+        keepalive: true,
+      }).catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      cleanupUnsavedLogo();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanupUnsavedLogo();
+    };
+  }, [cleanupUnsavedLogo]);
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

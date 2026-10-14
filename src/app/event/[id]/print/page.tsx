@@ -138,7 +138,7 @@ export default function PrintTableCardPage() {
         if (data.success && data.event) {
           setEvent(data.event);
           setCustomTitle(data.event.title || 'Momen Spesial');
-          if (data.event.vendorLogo) {
+          if (data.event.vendorLogo && data.event.vendorCoBranding?.showLogoOnPrint !== false) {
             setCustomLogoUrl(data.event.vendorLogo);
           }
           const cleanHost = data.event.coupleOrHost?.replace(/[^a-zA-Z0-9]/g, '') || '';
@@ -645,7 +645,7 @@ export default function PrintTableCardPage() {
               gap: '2px'
             }}
           >
-            {event?.vendorName && (
+            {event?.vendorName && event?.vendorCoBranding?.showLogoOnPrint !== false && (
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginBottom: '1px' }}>
                 <span style={{ fontWeight: 700, color: ts.textColor, fontSize: isCompact ? '7.5px' : (isTent ? '8.5px' : '10px'), letterSpacing: '0.5px' }}>
                   Organized with love by {event.vendorName}

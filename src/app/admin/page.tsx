@@ -905,8 +905,36 @@ export default function SuperAdminDashboard() {
   // -------------------------------------------------------------
   // 6. PAYOUTS & TESTIMONIALS
   // -------------------------------------------------------------
+  const cleanupUnsavedProof = React.useCallback(() => {
+    const pendingUrl = unsavedProofUploadRef.current;
+    if (pendingUrl) {
+      unsavedProofUploadRef.current = null;
+      authFetch(`/api/upload?url=${encodeURIComponent(pendingUrl)}`, {
+        method: 'DELETE',
+        keepalive: true,
+      }).catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      cleanupUnsavedProof();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      cleanupUnsavedProof();
+    };
+  }, [cleanupUnsavedProof]);
+
+  const handleCancelApprovePayout = () => {
+    if (approvePayoutModal.isSubmitting) return;
+    cleanupUnsavedProof();
+    setApprovePayoutModal(prev => ({ ...prev, isOpen: false, proofUrl: '' }));
+  };
+
   const handleApprovePayout = (payoutId: string, vendorName: string, amount: number) => {
-    unsavedProofUploadRef.current = null;
+    cleanupUnsavedProof();
     setApprovePayoutModal({
       isOpen: true,
       payoutId,
@@ -3897,7 +3925,7 @@ export default function SuperAdminDashboard() {
             justifyContent: 'center',
             padding: '20px'
           }}
-          onClick={() => !approvePayoutModal.isSubmitting && setApprovePayoutModal(prev => ({ ...prev, isOpen: false }))}
+          onClick={() => !approvePayoutModal.isSubmitting && handleCancelApprovePayout()}
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -3917,7 +3945,7 @@ export default function SuperAdminDashboard() {
               </h3>
               <button
                 type="button"
-                onClick={() => setApprovePayoutModal(prev => ({ ...prev, isOpen: false }))}
+                onClick={handleCancelApprovePayout}
                 style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
               >
                 <X size={20} />
@@ -4007,7 +4035,7 @@ export default function SuperAdminDashboard() {
               <button
                 type="button"
                 disabled={approvePayoutModal.isSubmitting}
-                onClick={() => setApprovePayoutModal(prev => ({ ...prev, isOpen: false }))}
+                onClick={handleCancelApprovePayout}
                 style={{
                   padding: '10px 16px',
                   borderRadius: '12px',

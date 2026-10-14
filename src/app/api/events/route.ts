@@ -192,7 +192,7 @@ export async function POST(request: Request) {
           const netPrice = cleanRef && !body.vendorId ? Math.round(basePrice * 0.9) : basePrice;
           serverCommissionAmount = Math.round(netPrice * rateDecimal);
         }
-      } else if (cleanRef === 'VOWSANDCO' || cleanRef === 'VOWSANDCO10' || cleanRef === 'KREATIV10') {
+      } else if (!matchedVendor && (cleanRef === 'VOWSANDCO' || cleanRef === 'VOWSANDCO10' || cleanRef === 'KREATIV10')) {
         verifiedReferralCode = cleanRef;
         verifiedVendorId = body.vendorId || (cleanRef === 'KREATIV10' ? 'vendor_kreativ' : 'vendor_vows_co');
         verifiedVendorName = body.vendorName || (cleanRef === 'KREATIV10' ? 'Kreativ Wedding Studio' : 'Vows & Co. Wedding Planner');

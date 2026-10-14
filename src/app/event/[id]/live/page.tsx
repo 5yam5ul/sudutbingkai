@@ -2330,7 +2330,7 @@ export default function LiveProjectorWallPage() {
       )}
 
       {/* Partner Co-Branding Watermark */}
-      {event?.vendorName && (
+      {event?.vendorName && event?.vendorCoBranding?.showLogoOnLive !== false && (
         <div style={{
           position: 'fixed',
           bottom: '22px',

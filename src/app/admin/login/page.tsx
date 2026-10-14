@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shield, ArrowRight, ArrowLeft, Lock, AlertCircle, KeyRound, CheckCircle2 } from 'lucide-react';
-import { authenticateUser, setClientSession, getClientSession } from '@/lib/auth';
+import { setClientSession, getClientSession } from '@/lib/auth';
 import { toast } from 'sonner';
 
 export default function AdminLoginPage() {
@@ -37,30 +37,16 @@ export default function AdminLoginPage() {
       });
       const data = await res.json();
 
-      if (res.ok && data.success && data.user && data.user.role === 'admin') {
+      if (res.ok && data.success && data.user && data.user.role === 'admin' && data.token) {
         setClientSession(data.user, data.token);
         toast.success('Otentikasi Super Admin Berhasil!');
         router.push('/admin');
         return;
       }
 
-      const fallbackAdmin = authenticateUser(cleanEmail, cleanPass, 'admin');
-      if (fallbackAdmin && fallbackAdmin.role === 'admin') {
-        setClientSession(fallbackAdmin);
-        toast.success('Otentikasi Super Admin Berhasil!');
-        router.push('/admin');
-      } else {
-        setErrorMsg(data.error || 'Kredensial Super Admin tidak valid atau tidak memiliki hak akses.');
-      }
+      setErrorMsg(data.error || 'Kredensial Super Admin tidak valid atau tidak memiliki hak akses.');
     } catch {
-      const fallbackAdmin = authenticateUser(cleanEmail, cleanPass, 'admin');
-      if (fallbackAdmin && fallbackAdmin.role === 'admin') {
-        setClientSession(fallbackAdmin);
-        toast.success('Otentikasi Super Admin Berhasil!');
-        router.push('/admin');
-      } else {
-        setErrorMsg('Kredensial Super Admin tidak valid atau tidak memiliki hak akses.');
-      }
+      setErrorMsg('Gagal menghubungi server otentikasi. Periksa koneksi Anda.');
     } finally {
       setLoading(false);
     }

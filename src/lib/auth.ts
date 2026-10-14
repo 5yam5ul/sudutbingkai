@@ -55,15 +55,15 @@ export function authenticateUser(email: string, pass: string, role?: 'host' | 'v
   // Check Super Admin - STRICT SECURITY: Admin role MUST match authorized credentials
   const isAdminEmail = cleanEmail === 'admin@sudutbingkai.id' || cleanEmail === 'superadmin@sudutbingkai.id' || cleanEmail === 'admin';
   if (role === 'admin' || isAdminEmail) {
-    const masterAdminPass = (typeof process !== 'undefined' && process.env?.ADMIN_MASTER_PASSWORD) || '';
-    if (
-      isAdminEmail &&
-      (cleanPass === 'admin123' || cleanPass === 'adminpass2026' || cleanPass === 'sudutbingkai2026' || (masterAdminPass && cleanPass === masterAdminPass))
-    ) {
+    const masterAdminPass = (typeof process !== 'undefined' && process.env?.ADMIN_MASTER_PASSWORD?.trim()) || '';
+    const isPasswordValid = masterAdminPass.length > 0
+      ? cleanPass === masterAdminPass
+      : (cleanPass === 'admin123' || cleanPass === 'adminpass2026' || cleanPass === 'sudutbingkai2026');
+    if (isAdminEmail && isPasswordValid) {
       const { password: _, ...safeAdmin } = SYSTEM_USERS['admin'];
       return safeAdmin;
     }
-    // Deny immediately if password doesn't match master admin password
+    // Deny immediately if password doesn't match authorized admin password
     return null;
   }
 
