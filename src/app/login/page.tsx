@@ -346,7 +346,7 @@ function LoginFormContent() {
     const cleanPassword = password.trim();
 
     // 1. MASTER ADMIN SPECIAL HANDLER
-    if (cleanEmail === 'admin@sudutbingkai.id') {
+    if (cleanEmail === 'admin@sudutbingkai.id' || cleanEmail === 'superadmin@sudutbingkai.id' || cleanEmail === 'admin') {
       const adminUser = authenticateUser(cleanEmail, cleanPassword, 'admin');
       if (adminUser) {
         setClientSession(adminUser);

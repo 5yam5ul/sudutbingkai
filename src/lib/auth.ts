@@ -57,7 +57,7 @@ export function authenticateUser(email: string, pass: string, role?: 'host' | 'v
   const cleanPass = pass.trim();
 
   // Check Super Admin - STRICT SECURITY: Admin role MUST match authorized credentials
-  const isAdminEmail = cleanEmail === 'admin@sudutbingkai.id' || cleanEmail === 'superadmin@sudutbingkai.id';
+  const isAdminEmail = cleanEmail === 'admin@sudutbingkai.id' || cleanEmail === 'superadmin@sudutbingkai.id' || cleanEmail === 'admin';
   if (role === 'admin' || isAdminEmail) {
     if (
       isAdminEmail &&
@@ -187,19 +187,23 @@ function sha256Sync(ascii: string): string {
 }
 
 function encodeB64(str: string): string {
-  if (typeof Buffer !== 'undefined') return Buffer.from(str).toString('base64url');
   if (typeof btoa !== 'undefined') {
     return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(str, 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   }
   return encodeURIComponent(str);
 }
 
 function decodeB64(b64: string): string {
-  if (typeof Buffer !== 'undefined') return Buffer.from(b64, 'base64url').toString('utf8');
+  let base64 = b64.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4) base64 += '=';
   if (typeof atob !== 'undefined') {
-    let base64 = b64.replace(/-/g, '+').replace(/_/g, '/');
-    while (base64.length % 4) base64 += '=';
     return decodeURIComponent(escape(atob(base64)));
+  }
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(base64, 'base64').toString('utf8');
   }
   return decodeURIComponent(b64);
 }
