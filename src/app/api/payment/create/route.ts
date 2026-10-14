@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createMayarInvoice, isMayarConfigured } from '@/lib/mayar';
 import { EventPackageTier, PACKAGE_TIERS } from '@/lib/types';
-import { getEventById } from '@/lib/db';
+import { getEventById, getAllVendors } from '@/lib/db';
 
-// Price map in IDR
+// Price map in IDR (synced with PACKAGE_TIERS)
 const TIER_PRICES: Record<EventPackageTier, number> = {
   starter: 0,
   intimate: 129000,
@@ -25,33 +25,57 @@ const ADDON_PAX_PRICES: Record<number, number> = {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { 
-      packageTier = 'wedding', 
-      name = 'Tuan Rumah', 
-      email = 'customer@sudutbingkai.id', 
-      mobile, 
-      eventId, 
-      isAddonPax = false, 
-      paxAmount = 25, 
-      isWholesale = false,
-      wholesaleTitle = 'Paket Grosir',
-      eventsCount = 5,
-      redirectUrl 
+    const {
+      packageTier = 'wedding',
+      name = 'Tuan Rumah',
+      email = 'customer@sudutbingkai.id',
+      mobile,
+      eventId,
+      isAddonPax = false,
+      paxAmount = 25,
+      referralCode,
+      redirectUrl,
     } = body;
 
     let amount = 0;
     let description = '';
+    let targetEventSlugOrId = eventId;
+    let existingEvent = null;
 
-    if (isWholesale) {
-      amount = Number(body.amount) || 1120000;
-      description = `Paket Grosir WO ${wholesaleTitle} (${eventsCount} Acara) - SudutBingkai (${body.vendorId || 'vendor'})`;
-    } else if (isAddonPax) {
-      amount = ADDON_PAX_PRICES[paxAmount] || (paxAmount * 2000);
-      description = `Top Up Kuota Tamu +${paxAmount} Pax - SudutBingkai (${eventId || 'Acara'})`;
+    if (eventId) {
+      try {
+        existingEvent = await getEventById(eventId);
+        if (existingEvent?.slug) targetEventSlugOrId = existingEvent.slug;
+      } catch {}
+    }
+
+    if (isAddonPax) {
+      const safePax = Number(paxAmount) || 25;
+      amount = ADDON_PAX_PRICES[safePax] || Math.max(25, safePax) * 2000;
+      description = `Top Up Kuota Tamu +${safePax} Pax - SudutBingkai (${eventId || 'Acara'})`;
     } else {
-      const tierKey = packageTier as EventPackageTier;
-      amount = Number(body.amount) > 0 ? Number(body.amount) : (TIER_PRICES[tierKey] ?? 349000);
+      const tierKey = (existingEvent?.packageTier || packageTier) as EventPackageTier;
       const tierInfo = PACKAGE_TIERS[tierKey];
+      const basePrice = TIER_PRICES[tierKey] ?? 499000;
+
+      // Validate referral code server-side for legitimate 10% partner discount
+      let hasValidReferral = Boolean(existingEvent?.referralCodeUsed && existingEvent?.vendorId);
+      const codeToCheck = (referralCode || existingEvent?.referralCodeUsed || '').trim().toUpperCase();
+
+      if (!hasValidReferral && codeToCheck && basePrice > 0) {
+        if (codeToCheck === 'VOWSANDCO10' || codeToCheck === 'KREATIV10') {
+          hasValidReferral = true;
+        } else {
+          try {
+            const allVendors = await getAllVendors();
+            hasValidReferral = allVendors.some(
+              (v) => v.referralCode?.toUpperCase() === codeToCheck && v.status !== 'suspended'
+            );
+          } catch {}
+        }
+      }
+
+      amount = hasValidReferral ? Math.round(basePrice * 0.9) : basePrice;
       description = `Paket ${tierInfo?.name || 'Wedding'} (${tierInfo?.guestsLabel || '300 Tamu'}) - SudutBingkai (${eventId || 'event'})`;
     }
 
@@ -61,24 +85,16 @@ export async function POST(request: Request) {
         success: true,
         isFree: true,
         amount: 0,
-        message: 'Paket Starter gratis aktif tanpa pembayaran.'
+        message: 'Paket Starter gratis aktif tanpa pembayaran.',
       });
     }
 
     const hostUrl = request.headers.get('origin') || 'http://localhost:3000';
-    let targetEventSlugOrId = eventId;
-    if (eventId) {
-      try {
-        const ev = await getEventById(eventId);
-        if (ev?.slug) targetEventSlugOrId = ev.slug;
-      } catch {}
-    }
-
-    const finalRedirectUrl = redirectUrl || (
-      isWholesale ? `${hostUrl}/vendor?paid=true` :
-      targetEventSlugOrId ? `${hostUrl}/event/${targetEventSlugOrId}?paid=true` : 
-      `${hostUrl}/create?tier=${packageTier}&paid=true`
-    );
+    const finalRedirectUrl =
+      redirectUrl ||
+      (targetEventSlugOrId
+        ? `${hostUrl}/event/${targetEventSlugOrId}?paid=true`
+        : `${hostUrl}/create?tier=${packageTier}&paid=true`);
 
     const invoiceResult = await createMayarInvoice({
       name,
@@ -87,15 +103,16 @@ export async function POST(request: Request) {
       amount,
       description,
       redirectUrl: finalRedirectUrl,
-      packageTier: isWholesale ? 'wedding' : packageTier,
+      packageTier,
       eventId,
       isAddonPax,
-      paxAmount
+      paxAmount,
     });
 
     return NextResponse.json({
       ...invoiceResult,
-      isConfigured: isMayarConfigured
+      amount,
+      isConfigured: isMayarConfigured,
     });
   } catch (error: unknown) {
     console.error('Payment create error:', error);
@@ -105,3 +122,4 @@ export async function POST(request: Request) {
     );
   }
 }
+

@@ -20,7 +20,7 @@ import ConfirmModal from '@/components/ConfirmModal';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import VideoWishStoriesPlayer from '@/components/VideoWishStoriesPlayer';
 import { toast } from 'sonner';
-import { getClientSession } from '@/lib/auth';
+import { getClientSession, authFetch } from '@/lib/auth';
 
 interface VoiceNoteRecord {
   id: string;
@@ -217,23 +217,24 @@ export default function EventDashboardPage() {
     }
   }, [activePhoto]);
 
-  const fetchEventData = async () => {
+  const fetchEventData = async (isBackgroundPoll = false) => {
+    if (isBackgroundPoll && typeof document !== 'undefined' && document.hidden) return;
     try {
-      const resEvents = await fetch(`/api/events?id=${eventId}`);
+      const resEvents = await authFetch(`/api/events?id=${eventId}`);
       const dataEvents = await resEvents.json();
       if (dataEvents.success && dataEvents.event) {
         setEvent(dataEvents.event);
       }
 
-      const resPhotos = await fetch(`/api/photos?eventId=${eventId}`);
+      const resPhotos = await authFetch(`/api/photos?eventId=${eventId}`);
       const dataPhotos = await resPhotos.json();
       if (dataPhotos.success) {
-        setPhotos(dataPhotos.photos);
+        setPhotos(dataPhotos.photos || []);
       }
 
       // Fetch voice notes
       try {
-        const resVoices = await fetch(`/api/voice-notes?eventId=${eventId}`);
+        const resVoices = await authFetch(`/api/voice-notes?eventId=${eventId}`);
         const dataVoices = await resVoices.json();
         if (dataVoices.success && dataVoices.voiceNotes) {
           setVoiceNotes(dataVoices.voiceNotes);
@@ -244,7 +245,7 @@ export default function EventDashboardPage() {
 
       // Fetch video wishes (Premium Tiers)
       try {
-        const resVideos = await fetch(`/api/video-wishes?eventId=${eventId}`);
+        const resVideos = await authFetch(`/api/video-wishes?eventId=${eventId}`);
         const dataVideos = await resVideos.json();
         if (dataVideos.success && dataVideos.videoWishes) {
           setVideoWishes(dataVideos.videoWishes);
@@ -260,8 +261,8 @@ export default function EventDashboardPage() {
   };
 
   useEffect(() => {
-    fetchEventData();
-    const interval = setInterval(fetchEventData, 6000);
+    fetchEventData(false);
+    const interval = setInterval(() => fetchEventData(true), 6000);
     return () => clearInterval(interval);
   }, [eventId]);
 
@@ -298,7 +299,7 @@ export default function EventDashboardPage() {
       onConfirm: async () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
         try {
-          const res = await fetch('/api/events', {
+          const res = await authFetch('/api/events', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: eventId, revealMode: 'instant' })
@@ -489,7 +490,7 @@ export default function EventDashboardPage() {
     try {
       const currentAdditional = event.additionalPax || 0;
       const newAdditional = currentAdditional + additionalPaxAmount;
-      const res = await fetch('/api/events', {
+      const res = await authFetch('/api/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: event.id, additionalPax: newAdditional })
@@ -514,7 +515,7 @@ export default function EventDashboardPage() {
 
     setIsUpdatingPax(true);
     try {
-      const payRes = await fetch('/api/payment/create', {
+      const payRes = await authFetch('/api/payment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -556,7 +557,7 @@ export default function EventDashboardPage() {
     setIsUpdatingPresetMode(true);
     try {
       const nextSwitchState = !event.allowGuestPresetSwitch;
-      const res = await fetch('/api/events', {
+      const res = await authFetch('/api/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: event.id, allowGuestPresetSwitch: nextSwitchState })
@@ -586,36 +587,38 @@ export default function EventDashboardPage() {
       const zip = new JSZip();
       const folderName = `sudutbingkai-${event?.slug || event?.id || 'album'}-${cleanTag}`;
       const folder = zip.folder(folderName);
+      const BATCH_SIZE = 4;
+      let completed = 0;
 
-      for (let i = 0; i < targetPhotos.length; i++) {
-        const photo = targetPhotos[i];
-        setZipProgress(`Mengemas foto (${i + 1}/${targetPhotos.length})...`);
-        try {
-          let blob: Blob;
-          if (photo.imageData.startsWith('data:image')) {
-            const matches = photo.imageData.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-            const ext = matches && matches[1] === 'png' ? 'png' : 'jpg';
-            const base64 = matches ? matches[2] : photo.imageData.replace(/^data:image\/\w+;base64,/, '');
-            const byteChars = atob(base64);
-            const byteNumbers = new Array(byteChars.length);
-            for (let j = 0; j < byteChars.length; j++) {
-              byteNumbers[j] = byteChars.charCodeAt(j);
+      for (let i = 0; i < targetPhotos.length; i += BATCH_SIZE) {
+        const batch = targetPhotos.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async (photo, batchIdx) => {
+            const globalIdx = i + batchIdx;
+            try {
+              let blob: Blob;
+              if (photo.imageData.startsWith('data:image')) {
+                const res = await fetch(photo.imageData);
+                blob = await res.blob();
+              } else {
+                const res = await fetch(photo.imageData);
+                blob = await res.blob();
+              }
+
+              const safeGuest = (photo.guestName || 'tamu').replace(/[^a-zA-Z0-9_\-]/g, '_');
+              folder?.file(`${globalIdx + 1}_${safeGuest}_jepretan${photo.shotNumber}.jpg`, blob, { compression: 'STORE' });
+            } catch (err) {
+              console.warn('Gagal memproses foto:', photo.id, err);
+            } finally {
+              completed++;
+              setZipProgress(`Mengemas foto (${completed}/${targetPhotos.length})...`);
             }
-            blob = new Blob([new Uint8Array(byteNumbers)], { type: `image/${ext}` });
-          } else {
-            const res = await fetch(photo.imageData);
-            blob = await res.blob();
-          }
-
-          const safeGuest = (photo.guestName || 'tamu').replace(/[^a-zA-Z0-9_\-]/g, '_');
-          folder?.file(`${i + 1}_${safeGuest}_jepretan${photo.shotNumber}.jpg`, blob);
-        } catch (err) {
-          console.warn('Gagal memproses foto:', photo.id, err);
-        }
+          })
+        );
       }
 
-      setZipProgress('Mengompresi file ZIP...');
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      setZipProgress('Menyusun file ZIP...');
+      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
       const downloadUrl = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = downloadUrl;
@@ -623,7 +626,7 @@ export default function EventDashboardPage() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 3000);
       toast.success('File ZIP berhasil diunduh!');
     } catch (err: unknown) {
       toast.error('Gagal membuat file ZIP: ' + (err as Error).message);
@@ -1095,7 +1098,7 @@ export default function EventDashboardPage() {
                   <span>{isZipping ? zipProgress : 'Unduh ZIP'}</span>
                 </button>
               )}
-              <button onClick={fetchEventData} className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <button onClick={() => fetchEventData(false)} className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
                 <RefreshCw size={12} />
                 <span>Perbarui</span>
               </button>

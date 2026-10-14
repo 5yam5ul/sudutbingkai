@@ -11,8 +11,9 @@ import {
   Edit, Pencil, ArrowUpRight, ArrowDownRight, Layers, CreditCard,
   Mic, Volume2, Film, Play, Clock
 } from 'lucide-react';
-import { getClientSession, clearClientSession, getSignedClientToken } from '@/lib/auth';
+import { getClientSession, clearClientSession, getSignedClientToken, authFetch } from '@/lib/auth';
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
+import ConfirmModal from '@/components/ConfirmModal';
 import { toast } from 'sonner';
 
 export type AdminTab = 'overview' | 'events' | 'moderation' | 'vendors' | 'invoices' | 'payouts' | 'testimonials' | 'addons';
@@ -193,6 +194,23 @@ export default function SuperAdminDashboard() {
   const [inspectPhotoModalOpen, setInspectPhotoModalOpen] = useState(false);
   const [photoToInspect, setPhotoToInspect] = useState<PhotoRecord | null>(null);
 
+  // 7. Custom Confirm Modal State
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    confirmText?: string;
+    variant?: 'danger' | 'warning' | 'primary';
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    confirmText: 'Lanjutkan',
+    variant: 'primary',
+    onConfirm: () => {}
+  });
+
   // Load Session and All Data on mount
   useEffect(() => {
     const session = getClientSession();
@@ -207,22 +225,16 @@ export default function SuperAdminDashboard() {
   const loadAllAdminData = async () => {
     setLoading(true);
     try {
-      const signedToken = getSignedClientToken();
-      const adminHeaders: HeadersInit = signedToken ? {
-        'x-user-session': encodeURIComponent(signedToken),
-        'Authorization': `Bearer ${signedToken}`
-      } : {};
-
       const [resE, resP, resI, resPay, resT, resV, resAdd, resVid, resVoi] = await Promise.allSettled([
-        fetch('/api/events', { headers: adminHeaders }).then(r => r.json()),
-        fetch('/api/photos?includeHidden=true', { headers: adminHeaders }).then(r => r.json()),
-        fetch('/api/invoices', { headers: adminHeaders }).then(r => r.json()),
-        fetch('/api/payouts', { headers: adminHeaders }).then(r => r.json()),
-        fetch('/api/testimonials', { headers: adminHeaders }).then(r => r.json()),
-        fetch('/api/vendors', { headers: adminHeaders }).then(r => r.json()),
-        fetch('/api/addons', { headers: adminHeaders }).then(r => r.json()),
-        fetch('/api/video-wishes', { headers: adminHeaders }).then(r => r.json()),
-        fetch('/api/voice-notes', { headers: adminHeaders }).then(r => r.json())
+        authFetch('/api/events').then(r => r.json()),
+        authFetch('/api/photos?includeHidden=true').then(r => r.json()),
+        authFetch('/api/invoices').then(r => r.json()),
+        authFetch('/api/payouts').then(r => r.json()),
+        authFetch('/api/testimonials').then(r => r.json()),
+        authFetch('/api/vendors').then(r => r.json()),
+        authFetch('/api/addons').then(r => r.json()),
+        authFetch('/api/video-wishes').then(r => r.json()),
+        authFetch('/api/voice-notes').then(r => r.json())
       ]);
 
 
@@ -255,7 +267,7 @@ export default function SuperAdminDashboard() {
     if (!eventToEdit) return;
 
     try {
-      const res = await fetch('/api/events', {
+      const res = await authFetch('/api/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -284,7 +296,7 @@ export default function SuperAdminDashboard() {
     }
 
     try {
-      const res = await fetch('/api/events', {
+      const res = await authFetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...newEventForm, adminAuthorized: true })
@@ -313,40 +325,58 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleDeleteEvent = async (eventId: string, title: string) => {
-    if (!confirm(`PERINGATAN KERAS:\nHapus permanen acara "${title}" beserta seluruh arsip fotonya di server?\nTindakan ini tidak dapat dibatalkan.`)) return;
-    try {
-      const res = await fetch(`/api/events?id=${encodeURIComponent(eventId)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Acara "${title}" berhasil dihapus.`);
-        setEvents(prev => prev.filter(e => e.id !== eventId));
-      } else {
-        toast.error(data.error || 'Gagal menghapus acara.');
+  const handleDeleteEvent = (eventId: string, title: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Acara Permanen?',
+      description: `PERINGATAN KERAS: Hapus permanen acara "${title}" beserta seluruh arsip foto, pesan suara, dan video ucapan di Cloudflare R2 & database? Tindakan ini tidak dapat dibatalkan.`,
+      confirmText: 'Hapus Permanen',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch(`/api/events?id=${encodeURIComponent(eventId)}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Acara "${title}" beserta seluruh aset medianya berhasil dihapus.`);
+            setEvents(prev => prev.filter(e => e.id !== eventId));
+          } else {
+            toast.error(data.error || 'Gagal menghapus acara.');
+          }
+        } catch {
+          toast.error('Gagal menghapus acara.');
+        }
       }
-    } catch {
-      toast.error('Gagal menghapus acara.');
-    }
+    });
   };
 
-  const handleForceCuciRoll = async (eventId: string, title: string) => {
-    if (!confirm(`Paksa cuci roll & buka seluruh foto acara "${title}" sekarang juga?`)) return;
-    try {
-      const res = await fetch('/api/events', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: eventId, revealMode: 'instant', adminAuthorized: true })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Cuci roll instan aktif untuk "${title}". Tamu sudah dapat melihat semua foto!`);
-        setEvents(prev => prev.map(e => e.id === eventId ? { ...e, revealMode: 'instant' } : e));
-      } else {
-        toast.error(data.error || 'Gagal mengubah status cuci roll.');
+  const handleForceCuciRoll = (eventId: string, title: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Paksa Cuci Roll Instan?',
+      description: `Paksa cuci roll & buka seluruh foto acara "${title}" sekarang juga untuk seluruh tamu?`,
+      confirmText: 'Buka Roll Sekarang',
+      variant: 'warning',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch('/api/events', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: eventId, revealMode: 'instant', adminAuthorized: true })
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Cuci roll instan aktif untuk "${title}". Tamu sudah dapat melihat semua foto!`);
+            setEvents(prev => prev.map(e => e.id === eventId ? { ...e, revealMode: 'instant' } : e));
+          } else {
+            toast.error(data.error || 'Gagal mengubah status cuci roll.');
+          }
+        } catch {
+          toast.error('Terjadi kesalahan jaringan.');
+        }
       }
-    } catch {
-      toast.error('Terjadi kesalahan jaringan.');
-    }
+    });
   };
 
   const handleAddPax = async (eventId: string, currentPax: number, title: string) => {
@@ -359,7 +389,7 @@ export default function SuperAdminDashboard() {
     }
     const newTotal = currentPax + toAdd;
     try {
-      const res = await fetch('/api/events', {
+      const res = await authFetch('/api/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: eventId, maxGuests: newTotal, adminAuthorized: true })
@@ -382,7 +412,7 @@ export default function SuperAdminDashboard() {
     if (!vendorToEdit) return;
 
     try {
-      const res = await fetch('/api/vendors', {
+      const res = await authFetch('/api/vendors', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(vendorToEdit)
@@ -423,7 +453,7 @@ export default function SuperAdminDashboard() {
         }
       };
 
-      const res = await fetch('/api/vendors', {
+      const res = await authFetch('/api/vendors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -459,7 +489,7 @@ export default function SuperAdminDashboard() {
 
     const delta = walletAdjustType === 'add' ? walletAdjustAmount : -walletAdjustAmount;
     try {
-      const res = await fetch('/api/vendors', {
+      const res = await authFetch('/api/vendors', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -480,20 +510,29 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleDeleteVendor = async (vendorId: string, name: string) => {
-    if (!confirm(`Hapus mitra vendor "${name}" dari sistem platform? Seluruh referral dan riwayatnya akan terhapus.`)) return;
-    try {
-      const res = await fetch(`/api/vendors?id=${encodeURIComponent(vendorId)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Mitra "${name}" berhasil dihapus.`);
-        setVendors(prev => prev.filter(v => v.id !== vendorId));
-      } else {
-        toast.error(data.error || 'Gagal menghapus vendor.');
+  const handleDeleteVendor = (vendorId: string, name: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Mitra Vendor?',
+      description: `Hapus mitra vendor "${name}" dari sistem platform? Seluruh profil dan logo di R2 akan terhapus.`,
+      confirmText: 'Hapus Mitra',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch(`/api/vendors?id=${encodeURIComponent(vendorId)}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Mitra "${name}" berhasil dihapus.`);
+            setVendors(prev => prev.filter(v => v.id !== vendorId));
+          } else {
+            toast.error(data.error || 'Gagal menghapus vendor.');
+          }
+        } catch {
+          toast.error('Gagal menghapus vendor.');
+        }
       }
-    } catch {
-      toast.error('Gagal menghapus vendor.');
-    }
+    });
   };
 
   // -------------------------------------------------------------
@@ -504,7 +543,7 @@ export default function SuperAdminDashboard() {
     if (!invoiceToEdit) return;
 
     try {
-      const res = await fetch('/api/invoices', {
+      const res = await authFetch('/api/invoices', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(invoiceToEdit)
@@ -538,7 +577,7 @@ export default function SuperAdminDashboard() {
         orderId: `ord_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`
       };
 
-      const res = await fetch('/api/invoices', {
+      const res = await authFetch('/api/invoices', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
@@ -568,40 +607,58 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleForcePaidInvoice = async (invoiceId: string, invoiceNum: string) => {
-    if (!confirm(`Konfirmasi pembayaran manual untuk Invoice ${invoiceNum}? Status akan langsung menjadi Lunas.`)) return;
-    try {
-      const res = await fetch('/api/invoices', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: invoiceId, status: 'paid', paidAt: new Date().toISOString() })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Invoice ${invoiceNum} berhasil ditandai LUNAS!`);
-        setInvoices(prev => prev.map(i => i.id === invoiceId ? { ...i, status: 'paid', paidAt: new Date().toISOString() } : i));
-      } else {
-        toast.error(data.error || 'Gagal memperbarui status invoice.');
+  const handleForcePaidInvoice = (invoiceId: string, invoiceNum: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Konfirmasi Pembayaran Manual?',
+      description: `Konfirmasi pembayaran manual untuk Invoice ${invoiceNum}? Status akan langsung menjadi Lunas.`,
+      confirmText: 'Tandai Lunas',
+      variant: 'primary',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch('/api/invoices', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: invoiceId, status: 'paid', paidAt: new Date().toISOString() })
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Invoice ${invoiceNum} berhasil ditandai LUNAS!`);
+            setInvoices(prev => prev.map(i => i.id === invoiceId ? { ...i, status: 'paid', paidAt: new Date().toISOString() } : i));
+          } else {
+            toast.error(data.error || 'Gagal memperbarui status invoice.');
+          }
+        } catch {
+          toast.error('Gagal memperbarui status invoice.');
+        }
       }
-    } catch {
-      toast.error('Gagal memperbarui status invoice.');
-    }
+    });
   };
 
-  const handleDeleteInvoice = async (invoiceId: string, invoiceNum: string) => {
-    if (!confirm(`Hapus invoice ${invoiceNum} secara permanen?`)) return;
-    try {
-      const res = await fetch(`/api/invoices?id=${encodeURIComponent(invoiceId)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Invoice ${invoiceNum} dihapus.`);
-        setInvoices(prev => prev.filter(i => i.id !== invoiceId));
-      } else {
-        toast.error(data.error || 'Gagal menghapus invoice.');
+  const handleDeleteInvoice = (invoiceId: string, invoiceNum: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Invoice?',
+      description: `Hapus invoice ${invoiceNum} secara permanen dari sistem?`,
+      confirmText: 'Hapus Invoice',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch(`/api/invoices?id=${encodeURIComponent(invoiceId)}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Invoice ${invoiceNum} dihapus.`);
+            setInvoices(prev => prev.filter(i => i.id !== invoiceId));
+          } else {
+            toast.error(data.error || 'Gagal menghapus invoice.');
+          }
+        } catch {
+          toast.error('Gagal menghapus invoice.');
+        }
       }
-    } catch {
-      toast.error('Gagal menghapus invoice.');
-    }
+    });
   };
 
   // -------------------------------------------------------------
@@ -612,7 +669,7 @@ export default function SuperAdminDashboard() {
     if (!addonToEdit) return;
 
     try {
-      const res = await fetch('/api/addons', {
+      const res = await authFetch('/api/addons', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(addonToEdit)
@@ -638,7 +695,7 @@ export default function SuperAdminDashboard() {
     }
 
     try {
-      const res = await fetch('/api/addons', {
+      const res = await authFetch('/api/addons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newAddonForm)
@@ -667,20 +724,29 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleDeleteAddon = async (addonId: string, name: string) => {
-    if (!confirm(`Hapus add-on "${name}" dari katalog platform?`)) return;
-    try {
-      const res = await fetch(`/api/addons?id=${encodeURIComponent(addonId)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Add-on "${name}" berhasil dihapus.`);
-        setAddons(prev => prev.filter(a => a.id !== addonId));
-      } else {
-        toast.error(data.error || 'Gagal menghapus add-on.');
+  const handleDeleteAddon = (addonId: string, name: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Add-on?',
+      description: `Hapus add-on "${name}" dari katalog platform?`,
+      confirmText: 'Hapus Add-on',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch(`/api/addons?id=${encodeURIComponent(addonId)}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Add-on "${name}" berhasil dihapus.`);
+            setAddons(prev => prev.filter(a => a.id !== addonId));
+          } else {
+            toast.error(data.error || 'Gagal menghapus add-on.');
+          }
+        } catch {
+          toast.error('Gagal menghapus add-on.');
+        }
       }
-    } catch {
-      toast.error('Gagal menghapus add-on.');
-    }
+    });
   };
 
   // -------------------------------------------------------------
@@ -689,7 +755,7 @@ export default function SuperAdminDashboard() {
   const handleToggleHidePhoto = async (photoId: string, currentHidden: boolean) => {
     const newStatus = !currentHidden;
     try {
-      const res = await fetch('/api/photos', {
+      const res = await authFetch('/api/photos', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: photoId, isHidden: newStatus })
@@ -707,126 +773,173 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleDeletePhoto = async (photoId: string) => {
-    if (!confirm('Hapus foto ini secara permanen dari server?')) return;
-    try {
-      const res = await fetch(`/api/photos?id=${encodeURIComponent(photoId)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        toast.success('Foto dihapus permanen.');
-        setPhotos(prev => prev.filter(p => p.id !== photoId));
-        if (photoToInspect?.id === photoId) {
-          setInspectPhotoModalOpen(false);
+  const handleDeletePhoto = (photoId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Foto Permanen?',
+      description: 'Hapus foto ini secara permanen dari server dan Cloudflare R2?',
+      confirmText: 'Hapus Permanen',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch(`/api/photos?id=${encodeURIComponent(photoId)}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success('Foto dihapus permanen dari database & Cloudflare R2.');
+            setPhotos(prev => prev.filter(p => p.id !== photoId));
+            if (photoToInspect?.id === photoId) {
+              setInspectPhotoModalOpen(false);
+            }
+          }
+        } catch {
+          toast.error('Gagal menghapus foto.');
         }
       }
-    } catch {
-      toast.error('Gagal menghapus foto.');
-    }
+    });
   };
 
-  const handleDeleteVideoWish = async (wishId: string) => {
-    if (!confirm('Hapus video ucapan ini secara permanen dari server?')) return;
-    try {
-      const res = await fetch(`/api/video-wishes?id=${encodeURIComponent(wishId)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        toast.success('Video ucapan berhasil dihapus.');
-        setVideoWishes(prev => prev.filter(w => w.id !== wishId));
-      } else {
-        toast.error(data.error || 'Gagal menghapus video.');
+  const handleDeleteVideoWish = (wishId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Video Ucapan?',
+      description: 'Hapus video ucapan ini secara permanen dari server dan Cloudflare R2?',
+      confirmText: 'Hapus Video',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch(`/api/video-wishes?id=${encodeURIComponent(wishId)}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success('Video ucapan berhasil dihapus dari database & Cloudflare R2.');
+            setVideoWishes(prev => prev.filter(w => w.id !== wishId));
+          } else {
+            toast.error(data.error || 'Gagal menghapus video.');
+          }
+        } catch {
+          toast.error('Gagal menghubungi server.');
+        }
       }
-    } catch {
-      toast.error('Gagal menghubungi server.');
-    }
+    });
   };
 
-  const handleDeleteVoiceNote = async (voiceId: string) => {
-    if (!confirm('Hapus pesan suara ini secara permanen dari server?')) return;
-    try {
-      const res = await fetch(`/api/voice-notes?id=${encodeURIComponent(voiceId)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        toast.success('Pesan suara berhasil dihapus.');
-        setVoiceNotes(prev => prev.filter(v => v.id !== voiceId));
-      } else {
-        toast.error(data.error || 'Gagal menghapus pesan suara.');
+  const handleDeleteVoiceNote = (voiceId: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Pesan Suara?',
+      description: 'Hapus pesan suara ini secara permanen dari server dan Cloudflare R2?',
+      confirmText: 'Hapus Pesan Suara',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch(`/api/voice-notes?id=${encodeURIComponent(voiceId)}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success('Pesan suara berhasil dihapus dari database & Cloudflare R2.');
+            setVoiceNotes(prev => prev.filter(v => v.id !== voiceId));
+          } else {
+            toast.error(data.error || 'Gagal menghapus pesan suara.');
+          }
+        } catch {
+          toast.error('Gagal menghubungi server.');
+        }
       }
-    } catch {
-      toast.error('Gagal menghubungi server.');
-    }
+    });
   };
 
   // -------------------------------------------------------------
   // 6. PAYOUTS & TESTIMONIALS
   // -------------------------------------------------------------
-  const handleApprovePayout = async (payoutId: string, vendorName: string, amount: number) => {
-    if (!confirm(`Setujui pencairan komisi Rp ${amount.toLocaleString('id-ID')} untuk ${vendorName}? Pastikan Anda telah mentransfer dana ke rekening yang tertera.`)) return;
-    try {
-      const res = await fetch('/api/payouts', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: payoutId,
-          status: 'approved',
-          notes: 'Transfer bank berhasil diproses oleh Super Admin.'
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Payout ${vendorName} berhasil disetujui & dicatat lunas.`);
-        setPayouts(prev => prev.map(p => p.id === payoutId ? { ...p, status: 'approved', processedAt: new Date().toISOString() } : p));
+  const handleApprovePayout = (payoutId: string, vendorName: string, amount: number) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Setujui Pencairan Komisi?',
+      description: `Setujui pencairan komisi Rp ${amount.toLocaleString('id-ID')} untuk ${vendorName}? Pastikan Anda telah mentransfer dana ke rekening yang tertera.`,
+      confirmText: 'Setujui & Tandai Lunas',
+      variant: 'primary',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch('/api/payouts', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: payoutId,
+              status: 'approved',
+              notes: 'Transfer bank berhasil diproses oleh Super Admin.'
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Payout ${vendorName} berhasil disetujui & dicatat lunas.`);
+            setPayouts(prev => prev.map(p => p.id === payoutId ? { ...p, status: 'approved', processedAt: new Date().toISOString() } : p));
+          }
+        } catch {
+          toast.error('Gagal memproses payout.');
+        }
       }
-    } catch {
-      toast.error('Gagal memproses payout.');
-    }
+    });
   };
 
   const handleRejectPayout = async (payoutId: string) => {
-    const reason = prompt('Masukkan alasan penolakan pencairan dana:', 'Nomor rekening bank tidak valid / nama tidak sesuai');
+    const reason = prompt('Masukkan alasan penolakan pencairan dana (saldo akan otomatis dikembalikan ke dompet vendor):', 'Nomor rekening bank tidak valid / nama tidak sesuai');
     if (!reason) return;
     try {
-      const res = await fetch('/api/payouts', {
+      const res = await authFetch('/api/payouts', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: payoutId, status: 'rejected', notes: reason })
       });
       const data = await res.json();
       if (data.success) {
-        toast.error('Permintaan payout ditolak.');
+        toast.error('Permintaan payout ditolak & saldo dikembalikan ke dompet vendor.');
         setPayouts(prev => prev.map(p => p.id === payoutId ? { ...p, status: 'rejected', notes: reason } : p));
+        loadAllAdminData();
       }
     } catch {
       toast.error('Gagal menolak payout.');
     }
   };
 
-  const handleApproveTestimonial = async (testiId: string, submitterName: string) => {
-    if (!confirm(`Setujui video testimoni dari ${submitterName}? Bonus komisi Rp 50.000 akan otomatis dicairkan ke saldo mitra.`)) return;
-    try {
-      const res = await fetch('/api/testimonials', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: testiId,
-          status: 'approved',
-          adminNotes: 'Video jernih, durasi memenuhi syarat minimal 60 detik.'
-        })
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Testimoni disetujui! Reward Rp 50.000 dikreditkan.`);
-        setTestimonials(prev => prev.map(t => t.id === testiId ? { ...t, status: 'approved', rewardPaidAt: new Date().toISOString() } : t));
+  const handleApproveTestimonial = (testiId: string, submitterName: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Setujui Video Testimoni?',
+      description: `Setujui video testimoni dari ${submitterName}? Bonus komisi Rp 50.000 akan otomatis dicairkan ke saldo mitra.`,
+      confirmText: 'Setujui & Cairkan Bonus',
+      variant: 'primary',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch('/api/testimonials', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: testiId,
+              status: 'approved',
+              adminNotes: 'Video jernih, durasi memenuhi syarat minimal 60 detik.'
+            })
+          });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Testimoni disetujui! Reward Rp 50.000 dikreditkan.`);
+            setTestimonials(prev => prev.map(t => t.id === testiId ? { ...t, status: 'approved', rewardPaidAt: new Date().toISOString() } : t));
+            loadAllAdminData();
+          }
+        } catch {
+          toast.error('Gagal menyetujui video testimoni.');
+        }
       }
-    } catch {
-      toast.error('Gagal menyetujui video testimoni.');
-    }
+    });
   };
 
   const handleRejectTestimonial = async (testiId: string) => {
     const reason = prompt('Masukkan alasan penolakan kurasi:', 'Durasi video kurang dari 60 detik / visual buram');
     if (!reason) return;
     try {
-      const res = await fetch('/api/testimonials', {
+      const res = await authFetch('/api/testimonials', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: testiId, status: 'rejected', adminNotes: reason })
@@ -841,36 +954,54 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleDeletePayout = async (payoutId: string, vendorName: string, amount: number) => {
-    if (!confirm(`Hapus data penarikan komisi Rp ${amount.toLocaleString('id-ID')} untuk ${vendorName}? Data akan dihapus permanen.`)) return;
-    try {
-      const res = await fetch(`/api/payouts?id=${encodeURIComponent(payoutId)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Data penarikan ${vendorName} berhasil dihapus.`);
-        setPayouts(prev => prev.filter(p => p.id !== payoutId));
-      } else {
-        toast.error(data.error || 'Gagal menghapus penarikan.');
+  const handleDeletePayout = (payoutId: string, vendorName: string, amount: number) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Data Penarikan?',
+      description: `Hapus data penarikan komisi Rp ${amount.toLocaleString('id-ID')} untuk ${vendorName}? Data akan dihapus permanen.`,
+      confirmText: 'Hapus Permanen',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch(`/api/payouts?id=${encodeURIComponent(payoutId)}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Data penarikan ${vendorName} berhasil dihapus.`);
+            setPayouts(prev => prev.filter(p => p.id !== payoutId));
+          } else {
+            toast.error(data.error || 'Gagal menghapus penarikan.');
+          }
+        } catch {
+          toast.error('Gagal menghubungi server.');
+        }
       }
-    } catch {
-      toast.error('Gagal menghubungi server.');
-    }
+    });
   };
 
-  const handleDeleteTestimonial = async (testiId: string, submitterName: string) => {
-    if (!confirm(`Hapus video testimoni dari ${submitterName}?`)) return;
-    try {
-      const res = await fetch(`/api/testimonials?id=${encodeURIComponent(testiId)}`, { method: 'DELETE' });
-      const data = await res.json();
-      if (data.success) {
-        toast.success(`Video testimoni dari ${submitterName} berhasil dihapus.`);
-        setTestimonials(prev => prev.filter(t => t.id !== testiId));
-      } else {
-        toast.error(data.error || 'Gagal menghapus video testimoni.');
+  const handleDeleteTestimonial = (testiId: string, submitterName: string) => {
+    setConfirmModal({
+      isOpen: true,
+      title: 'Hapus Video Testimoni?',
+      description: `Hapus video testimoni dari ${submitterName}?`,
+      confirmText: 'Hapus Testimoni',
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        try {
+          const res = await authFetch(`/api/testimonials?id=${encodeURIComponent(testiId)}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (data.success) {
+            toast.success(`Video testimoni dari ${submitterName} berhasil dihapus.`);
+            setTestimonials(prev => prev.filter(t => t.id !== testiId));
+          } else {
+            toast.error(data.error || 'Gagal menghapus video testimoni.');
+          }
+        } catch {
+          toast.error('Gagal menghubungi server.');
+        }
       }
-    } catch {
-      toast.error('Gagal menghubungi server.');
-    }
+    });
   };
 
   // -------------------------------------------------------------
@@ -3499,6 +3630,16 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={confirmModal.isOpen}
+        title={confirmModal.title}
+        description={confirmModal.description}
+        confirmText={confirmModal.confirmText}
+        variant={confirmModal.variant}
+        onConfirm={confirmModal.onConfirm}
+        onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

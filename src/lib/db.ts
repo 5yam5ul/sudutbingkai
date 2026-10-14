@@ -395,27 +395,28 @@ export async function deleteEvent(id: string): Promise<boolean> {
   const existing = await getEventById(id);
   const canonicalId = existing?.id || id;
 
+  // 0. Clean up event cover photo and custom frame PNG from Cloudflare R2
+  try {
+    if (existing?.coverUrl) {
+      await deleteFromR2(existing.coverUrl);
+    }
+    if (existing?.customFrameUrl) {
+      await deleteFromR2(existing.customFrameUrl);
+    }
+  } catch {}
+
   // 1. Cascade cleanup: delete all photo files from Cloudflare R2, Supabase Storage, and local uploads
   try {
     const eventPhotos = await getAllPhotos(canonicalId, true);
     for (const p of eventPhotos) {
       if (p.imageData) {
-        // Cloudflare R2 cleanup
-        if (isR2Configured && (p.imageData.includes('.r2.dev') || p.imageData.includes('r2.cloudflarestorage.com') || p.imageData.includes('/events/'))) {
-          try {
-            const urlObj = new URL(p.imageData);
-            const r2Key = urlObj.pathname.replace(/^\/+/, '');
-            await deleteFromR2(r2Key);
-          } catch {}
-        }
-        // Supabase storage cleanup
+        await deleteFromR2(p.imageData);
         if (isSupabaseConfigured && supabase && p.imageData.includes('/photos/')) {
           try {
             const pathPart = p.imageData.split('/photos/')[1];
             if (pathPart) await supabase.storage.from('photos').remove([pathPart]);
           } catch {}
         }
-        // Local upload cleanup
         if (p.imageData.startsWith('/uploads/')) {
           try {
             const localPath = path.join(process.cwd(), 'public', p.imageData.replace(/^\//, ''));
@@ -423,33 +424,75 @@ export async function deleteEvent(id: string): Promise<boolean> {
           } catch {}
         }
       }
+      if (p.voiceNoteUrl) {
+        await deleteFromR2(p.voiceNoteUrl);
+      }
     }
   } catch (cleanErr) {
     console.warn(`Error cleaning photo files for event ${canonicalId}:`, cleanErr);
   }
 
-  // 2. Cascade cleanup for video wishes and voice notes
+  // 2. Cascade cleanup for video wishes and voice notes (Cloudflare R2 + Supabase Storage + local)
   try {
     const wishes = await getVideoWishes(canonicalId);
     for (const w of wishes) {
-      if (w.videoUrl && w.videoUrl.startsWith('/uploads/')) {
-        try {
-          const vPath = path.join(process.cwd(), 'public', w.videoUrl.replace(/^\//, ''));
-          if (fs.existsSync(vPath)) fs.unlinkSync(vPath);
-        } catch {}
+      if (w.videoUrl) {
+        await deleteFromR2(w.videoUrl);
+        if (isSupabaseConfigured && supabase && w.videoUrl.includes('/videos/')) {
+          try {
+            const pathPart = w.videoUrl.split('/videos/')[1];
+            if (pathPart) await supabase.storage.from('videos').remove([pathPart]);
+          } catch {}
+        }
+        if (w.videoUrl.startsWith('/uploads/')) {
+          try {
+            const vPath = path.join(process.cwd(), 'public', w.videoUrl.replace(/^\//, ''));
+            if (fs.existsSync(vPath)) fs.unlinkSync(vPath);
+          } catch {}
+        }
+      }
+      if (w.thumbnailUrl) {
+        await deleteFromR2(w.thumbnailUrl);
       }
     }
+
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data: supaVoices } = await supabase
+          .from('voice_notes')
+          .select('audio_url')
+          .eq('event_id', canonicalId);
+        if (supaVoices && supaVoices.length > 0) {
+          for (const v of supaVoices) {
+            if (v.audio_url) {
+              await deleteFromR2(v.audio_url);
+              if (v.audio_url.includes('/voices/')) {
+                try {
+                  const pathPart = v.audio_url.split('/voices/')[1];
+                  if (pathPart) await supabase.storage.from('voices').remove([pathPart]);
+                } catch {}
+              }
+            }
+          }
+        }
+      } catch {}
+    }
+
     // Delete local voice files if any
     if (fs.existsSync(VOICES_FILE)) {
       const rawV = fs.readFileSync(VOICES_FILE, 'utf8');
       const allVoices: any[] = JSON.parse(rawV);
       const eventVoices = allVoices.filter(v => v.eventId === canonicalId);
       for (const v of eventVoices) {
-        if (v.audioUrl && v.audioUrl.startsWith('/uploads/')) {
-          try {
-            const aPath = path.join(process.cwd(), 'public', v.audioUrl.replace(/^\//, ''));
-            if (fs.existsSync(aPath)) fs.unlinkSync(aPath);
-          } catch {}
+        const aUrl = v.audioUrl || v.audio_url;
+        if (aUrl) {
+          await deleteFromR2(aUrl);
+          if (aUrl.startsWith('/uploads/')) {
+            try {
+              const aPath = path.join(process.cwd(), 'public', aUrl.replace(/^\//, ''));
+              if (fs.existsSync(aPath)) fs.unlinkSync(aPath);
+            } catch {}
+          }
         }
       }
       const keptVoices = allVoices.filter(v => v.eventId !== canonicalId);
@@ -733,7 +776,7 @@ export async function deletePhoto(id: string): Promise<boolean> {
     try {
       const { data: target } = await supabase
         .from('photos')
-        .select('image_url')
+        .select('image_url, voice_note_url')
         .eq('id', id)
         .maybeSingle();
 
@@ -743,21 +786,17 @@ export async function deletePhoto(id: string): Promise<boolean> {
         .eq('id', id);
 
       if (!error) {
-        // Try deleting from Supabase storage if it was stored there
         if (target?.image_url) {
+          await deleteFromR2(target.image_url);
           if (target.image_url.includes('/photos/')) {
             const pathPart = target.image_url.split('/photos/')[1];
             if (pathPart) {
               await supabase.storage.from('photos').remove([pathPart]);
             }
           }
-          if (isR2Configured && (target.image_url.includes('.r2.dev') || target.image_url.includes('r2.cloudflarestorage.com') || target.image_url.includes('/events/'))) {
-            try {
-              const urlObj = new URL(target.image_url);
-              const r2Key = urlObj.pathname.replace(/^\/+/, '');
-              await deleteFromR2(r2Key);
-            } catch {}
-          }
+        }
+        if ((target as any)?.voice_note_url) {
+          await deleteFromR2((target as any).voice_note_url);
         }
         // Also sync local cache
         try {
@@ -784,11 +823,17 @@ export async function deletePhoto(id: string): Promise<boolean> {
     const target = photos.find(p => p.id === id);
     if (!target) return false;
 
-    if (target.imageData && target.imageData.startsWith('/uploads/')) {
-      const filePath = path.join(process.cwd(), 'public', target.imageData.replace(/^\//, ''));
-      if (fs.existsSync(filePath)) {
-        try { fs.unlinkSync(filePath); } catch {}
+    if (target.imageData) {
+      await deleteFromR2(target.imageData);
+      if (target.imageData.startsWith('/uploads/')) {
+        const filePath = path.join(process.cwd(), 'public', target.imageData.replace(/^\//, ''));
+        if (fs.existsSync(filePath)) {
+          try { fs.unlinkSync(filePath); } catch {}
+        }
       }
+    }
+    if (target.voiceNoteUrl) {
+      await deleteFromR2(target.voiceNoteUrl);
     }
 
     photos = photos.filter(p => p.id !== id);
@@ -1377,6 +1422,31 @@ export async function updatePayoutStatus(
 ): Promise<PayoutRequest | null> {
   const processedAt = new Date().toISOString();
 
+  // Check existing payout first to prevent double-refund and properly refund rejected pending payouts
+  let previousStatus: string | undefined;
+  try {
+    const existingList = await getPayoutRequests();
+    const existingPayout = existingList.find(p => p.id === id);
+    previousStatus = existingPayout?.status;
+  } catch {}
+
+  const refundRejectedVendorPayout = async (vendorId: string, vendorEmail: string, amount: number) => {
+    if (status !== 'rejected' || previousStatus !== 'pending' || amount <= 0) return;
+    try {
+      const vendors = await getAllVendors();
+      const matchedVendor = vendors.find(
+        v => v.id === vendorId || (vendorEmail && v.email?.toLowerCase() === vendorEmail.toLowerCase())
+      );
+      if (matchedVendor) {
+        await updateVendor(matchedVendor.id, {
+          walletBalance: (matchedVendor.walletBalance || 0) + amount
+        });
+      }
+    } catch (refundErr) {
+      console.warn('Failed to refund rejected payout to vendor wallet:', refundErr);
+    }
+  };
+
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
@@ -1408,6 +1478,8 @@ export async function updatePayoutStatus(
           processedAt: data.processed_at || undefined
         };
 
+        await refundRejectedVendorPayout(updatedPayout.vendorId, updatedPayout.vendorEmail, updatedPayout.amount);
+
         // Also sync local cache safely
         try {
           ensureLocalDataFiles();
@@ -1437,12 +1509,14 @@ export async function updatePayoutStatus(
     const index = payouts.findIndex(p => p.id === id);
     if (index === -1) return null;
 
+    if (!previousStatus) previousStatus = payouts[index].status;
     payouts[index].status = status;
     payouts[index].processedAt = processedAt;
     if (proofUrl) payouts[index].proofUrl = proofUrl;
     if (notes) payouts[index].notes = notes;
 
     fs.writeFileSync(PAYOUTS_FILE, JSON.stringify(payouts, null, 2), 'utf8');
+    await refundRejectedVendorPayout(payouts[index].vendorId, payouts[index].vendorEmail, payouts[index].amount);
     return payouts[index];
   } catch {
     return null;
@@ -1450,6 +1524,14 @@ export async function updatePayoutStatus(
 }
 
 export async function deletePayout(id: string): Promise<boolean> {
+  try {
+    const allPayouts = await getPayoutRequests();
+    const target = allPayouts.find(p => p.id === id);
+    if (target?.proofUrl) {
+      await deleteFromR2(target.proofUrl);
+    }
+  } catch {}
+
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
@@ -1600,6 +1682,16 @@ export async function updateTestimonialStatus(
   status: 'approved' | 'rejected',
   adminNotes?: string
 ): Promise<VideoTestimonialSubmission | null> {
+  // Check existing testimonial first to prevent double-rewarding a previously approved submission
+  let alreadyRewarded = false;
+  try {
+    const existingList = await getAllTestimonials();
+    const existingTesti = existingList.find(t => t.id === id);
+    if (existingTesti && (existingTesti.status === 'approved' || Boolean(existingTesti.rewardPaidAt))) {
+      alreadyRewarded = true;
+    }
+  } catch {}
+
   const rewardPaidAt = status === 'approved' ? new Date().toISOString() : undefined;
 
   // 1. Try Supabase
@@ -1636,8 +1728,8 @@ export async function updateTestimonialStatus(
           submittedAt: data.submitted_at || data.created_at || new Date().toISOString()
         };
 
-        // If approved and submitter is a vendor, disburse the reward to vendor wallet
-        if (status === 'approved' && updatedTesti.submitterType === 'vendor' && updatedTesti.submitterId) {
+        // If newly approved (not already rewarded) and submitter is a vendor, disburse the reward to vendor wallet
+        if (status === 'approved' && !alreadyRewarded && updatedTesti.submitterType === 'vendor' && updatedTesti.submitterId) {
           try {
             const vendors = await getAllVendors();
             const matchedVendor = vendors.find(v => v.id === updatedTesti.submitterId || (updatedTesti.submitterEmail && v.email === updatedTesti.submitterEmail));
@@ -1682,14 +1774,18 @@ export async function updateTestimonialStatus(
     const index = list.findIndex(t => t.id === id);
     if (index === -1) return null;
 
+    if (list[index].status === 'approved' || Boolean(list[index].rewardPaidAt)) {
+      alreadyRewarded = true;
+    }
+
     list[index].status = status;
     if (adminNotes) list[index].adminNotes = adminNotes;
     if (rewardPaidAt) list[index].rewardPaidAt = rewardPaidAt;
 
     fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(list, null, 2), 'utf8');
 
-    // 3. If approved and submitter is a vendor, disburse the reward to vendor wallet
-    if (status === 'approved') {
+    // 3. If newly approved and submitter is a vendor, disburse the reward to vendor wallet
+    if (status === 'approved' && !alreadyRewarded) {
       try {
         const currentTesti = list[index];
         if (currentTesti && currentTesti.submitterType === 'vendor' && currentTesti.submitterId) {
@@ -1715,6 +1811,14 @@ export async function updateTestimonialStatus(
 }
 
 export async function deleteTestimonial(id: string): Promise<boolean> {
+  try {
+    const allTestimonials = await getAllTestimonials();
+    const target = allTestimonials.find(t => t.id === id);
+    if (target?.videoUrl) {
+      await deleteFromR2(target.videoUrl);
+    }
+  } catch {}
+
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
@@ -1776,7 +1880,6 @@ export async function getAllVendors(): Promise<any[]> {
           commissionRate: Number(v.commission_rate ?? 0.12),
           walletBalance: Number(v.wallet_balance ?? 0),
           totalEarnings: Number(v.total_earnings ?? 0),
-          wholesaleTokens: Number(v.wholesale_tokens ?? 0),
           bankDetails: {
             bankName: v.bank_name || 'BCA',
             accountNumber: v.bank_account_number || '',
@@ -1826,7 +1929,6 @@ export async function saveVendor(vendorData: any): Promise<any> {
         commission_rate: newVendor.commissionRate || 0.12,
         wallet_balance: newVendor.walletBalance || 0,
         total_earnings: newVendor.totalEarnings || 0,
-        wholesale_tokens: newVendor.wholesaleTokens || 0,
         bank_name: newVendor.bankDetails?.bankName || null,
         bank_account_number: newVendor.bankDetails?.accountNumber || null,
         bank_account_holder: newVendor.bankDetails?.accountHolder || null,
@@ -1859,6 +1961,17 @@ export async function saveVendor(vendorData: any): Promise<any> {
 }
 
 export async function updateVendor(id: string, updates: any): Promise<any | null> {
+  // Check if logoUrl is being replaced so old R2 file is cleaned up
+  if (updates.logoUrl !== undefined) {
+    try {
+      const existingVendors = await getAllVendors();
+      const prevVendor = existingVendors.find(v => v.id === id);
+      if (prevVendor?.logoUrl && prevVendor.logoUrl !== updates.logoUrl) {
+        await deleteFromR2(prevVendor.logoUrl);
+      }
+    } catch {}
+  }
+
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
@@ -1875,7 +1988,6 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       if (updates.commissionRate !== undefined) dbUpdates.commission_rate = updates.commissionRate;
       if (updates.walletBalance !== undefined) dbUpdates.wallet_balance = updates.walletBalance;
       if (updates.totalEarnings !== undefined) dbUpdates.total_earnings = updates.totalEarnings;
-      if (updates.wholesaleTokens !== undefined) dbUpdates.wholesale_tokens = updates.wholesaleTokens;
       if (updates.clientCount !== undefined) dbUpdates.client_count = updates.clientCount;
       if (updates.city !== undefined) dbUpdates.city = updates.city;
       if (updates.bankDetails) {
@@ -1906,7 +2018,6 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
           commissionRate: Number(data.commission_rate ?? 0.12),
           walletBalance: Number(data.wallet_balance ?? 0),
           totalEarnings: Number(data.total_earnings ?? 0),
-          wholesaleTokens: Number(data.wholesale_tokens ?? 0),
           bankDetails: {
             bankName: data.bank_name || 'BCA',
             accountNumber: data.bank_account_number || '',
@@ -1956,6 +2067,14 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
 }
 
 export async function deleteVendor(id: string): Promise<boolean> {
+  try {
+    const allVendors = await getAllVendors();
+    const target = allVendors.find(v => v.id === id);
+    if (target?.logoUrl) {
+      await deleteFromR2(target.logoUrl);
+    }
+  } catch {}
+
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
@@ -2306,16 +2425,16 @@ export async function getVideoWishes(eventId?: string): Promise<VideoWishRecord[
 }
 
 export async function deleteVideoWish(id: string): Promise<boolean> {
-  // Clean up media file from R2 or local uploads
+  // Clean up media file from R2, Supabase Storage, or local uploads
   try {
     const all = await getVideoWishes();
     const target = all.find(w => w.id === id);
     if (target?.videoUrl) {
-      if (isR2Configured && (target.videoUrl.includes('.r2.dev') || target.videoUrl.includes('r2.cloudflarestorage.com') || target.videoUrl.includes('/videos/'))) {
+      await deleteFromR2(target.videoUrl);
+      if (isSupabaseConfigured && supabase && target.videoUrl.includes('/videos/')) {
         try {
-          const urlObj = new URL(target.videoUrl);
-          const r2Key = urlObj.pathname.replace(/^\/+/, '');
-          await deleteFromR2(r2Key);
+          const pathPart = target.videoUrl.split('/videos/')[1];
+          if (pathPart) await supabase.storage.from('videos').remove([pathPart]);
         } catch {}
       }
       if (target.videoUrl.startsWith('/uploads/')) {
@@ -2324,6 +2443,9 @@ export async function deleteVideoWish(id: string): Promise<boolean> {
           if (fs.existsSync(localPath)) fs.unlinkSync(localPath);
         } catch {}
       }
+    }
+    if (target?.thumbnailUrl) {
+      await deleteFromR2(target.thumbnailUrl);
     }
   } catch {}
 

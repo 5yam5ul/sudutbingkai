@@ -36,40 +36,11 @@ export async function POST(request: Request) {
       }
     }
 
-    // 1. Check if webhook relates to Wholesale WO Packages
-    if (description.includes('Paket Grosir WO')) {
-      const countMatch = description.match(/\((\d+)\s*Acara\)/i);
-      const addedTokens = countMatch ? Number(countMatch[1]) : 5;
-      const vendorMatch = description.match(/\((vendor_[a-zA-Z0-9_\-]+)\)/);
-      const vendorId = vendorMatch ? vendorMatch[1] : undefined;
-      const customerEmail = (payload?.data?.email || payload?.email || '').trim().toLowerCase();
-
-      try {
-        const vendors = await getAllVendors();
-        const matchedVendor = vendors.find(v => 
-          (vendorId && v.id === vendorId) || 
-          (customerEmail && v.email && v.email.toLowerCase() === customerEmail)
-        );
-
-        if (matchedVendor) {
-          const currentTokens = Number(matchedVendor.wholesaleTokens || 0);
-          const currentClients = Number(matchedVendor.clientCount || 0);
-          await updateVendor(matchedVendor.id, {
-            wholesaleTokens: currentTokens + addedTokens,
-            clientCount: currentClients + addedTokens
-          });
-          console.log(`Mitra ${matchedVendor.name} (${matchedVendor.id}) credited with +${addedTokens} wholesale vouchers from Mayar`);
-        }
-      } catch (err) {
-        console.warn('Error crediting wholesale tokens in webhook:', err);
-      }
-    }
-
-    // 2. Check if webhook relates to an eventId (Top Up Pax or Package Activation)
+    // Check if webhook relates to an eventId (Top Up Pax or Package Activation)
     const eventMatch = description.match(/\((sb-[a-zA-Z0-9\-]+|wedding-[a-zA-Z0-9\-]+|event-[a-zA-Z0-9\-]+|[a-zA-Z0-9\-]+)\)/);
     const eventId = eventMatch ? eventMatch[1] : undefined;
 
-    if (eventId && !description.includes('Paket Grosir WO')) {
+    if (eventId) {
       const event = await getEventById(eventId);
       if (event) {
         // If it was an add-on pax payment: FIX double capacity bug by incrementing additionalPax ONLY

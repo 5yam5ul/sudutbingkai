@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     const isAdmin = session?.role === 'admin';
 
     const body = await req.json();
-    const { name, companyName, email, phone, instagram, logoUrl, tier, partnerTier, referralCode, commissionRate, walletBalance, wholesaleTokens, bankDetails, city } = body;
+    const { name, companyName, email, phone, instagram, logoUrl, tier, partnerTier, referralCode, commissionRate, walletBalance, bankDetails, city } = body;
 
     if (!name) {
       return NextResponse.json({ success: false, error: 'Nama vendor / PIC wajib diisi' }, { status: 400 });
@@ -99,8 +99,7 @@ export async function POST(req: Request) {
         // Financial & tier fields strictly preserved unless Super Admin
         partnerTier: isAdmin && partnerTier ? partnerTier : existing.partnerTier,
         commissionRate: isAdmin && commissionRate !== undefined ? Number(commissionRate) : existing.commissionRate,
-        walletBalance: isAdmin && walletBalance !== undefined ? Number(walletBalance) : existing.walletBalance,
-        wholesaleTokens: isAdmin && wholesaleTokens !== undefined ? Number(wholesaleTokens) : existing.wholesaleTokens
+        walletBalance: isAdmin && walletBalance !== undefined ? Number(walletBalance) : existing.walletBalance
       };
 
       const saved = await saveVendor(updatedVendor);
@@ -127,7 +126,6 @@ export async function POST(req: Request) {
       commissionRate: safeCommissionRate,
       walletBalance: isAdmin && walletBalance !== undefined ? Number(walletBalance) : 0,
       totalEarnings: 0,
-      wholesaleTokens: isAdmin && wholesaleTokens !== undefined ? Number(wholesaleTokens) : 0,
       bankDetails: bankDetails || {
         bankName: 'BCA',
         accountNumber: '',
@@ -202,18 +200,11 @@ export async function PATCH(req: Request) {
       if (body.commissionRate !== undefined) updates.commissionRate = Number(body.commissionRate);
       if (body.walletBalance !== undefined) updates.walletBalance = Number(body.walletBalance);
       if (body.totalEarnings !== undefined) updates.totalEarnings = Number(body.totalEarnings);
-      if (body.wholesaleTokens !== undefined) updates.wholesaleTokens = Number(body.wholesaleTokens);
 
       // Handle relative balance adjustment if passed by Admin
       if (body.adjustBalance !== undefined) {
         const currentBal = current.walletBalance || 0;
         updates.walletBalance = Math.max(0, currentBal + Number(body.adjustBalance));
-      }
-
-      // Handle relative wholesale tokens adjustment if passed by Admin
-      if (body.adjustTokens !== undefined) {
-        const currentTokens = current.wholesaleTokens || 0;
-        updates.wholesaleTokens = Math.max(0, currentTokens + Number(body.adjustTokens));
       }
     } else if (!isMayarConfigured && isSelf) {
       // Only in local sandbox simulation mode when Mayar is not configured
@@ -229,14 +220,12 @@ export async function PATCH(req: Request) {
       if (
         body.walletBalance !== undefined ||
         body.adjustBalance !== undefined ||
-        body.wholesaleTokens !== undefined ||
-        body.adjustTokens !== undefined ||
         body.partnerTier !== undefined ||
         body.commissionRate !== undefined
       ) {
         return NextResponse.json({
           success: false,
-          error: 'Akses ditolak: Perubahan saldo komisi, kuota grosir, dan tingkatan kemitraan hanya dapat diproses oleh sistem pembayaran resmi atau Super Admin.'
+          error: 'Akses ditolak: Perubahan saldo komisi dan tingkatan kemitraan hanya dapat diproses oleh sistem pembayaran resmi atau Super Admin.'
         }, { status: 403 });
       }
     }

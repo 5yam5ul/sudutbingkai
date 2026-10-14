@@ -120,21 +120,28 @@ export default function LiveProjectorWallPage() {
 
   // Fetch event and photos
   const fetchData = async () => {
+    if (typeof document !== 'undefined' && document.hidden) return;
     try {
       const resE = await fetch(`/api/events?id=${eventId}`);
       const dataE = await resE.json();
+      let currentlyLocked = isDelayedAndLocked;
       if (dataE.success && dataE.event) {
         setEvent(dataE.event);
+        if (dataE.event.revealMode === 'delayed' && dataE.event.revealTime) {
+          currentlyLocked = new Date(dataE.event.revealTime).getTime() > Date.now();
+        } else {
+          currentlyLocked = false;
+        }
       }
 
       const resP = await fetch(`/api/photos?eventId=${eventId}`);
       const dataP = await resP.json();
       if (dataP.success) {
-        const newPhotos: PhotoRecord[] = dataP.photos;
+        const newPhotos: PhotoRecord[] = dataP.photos || [];
         setPhotos(newPhotos);
 
-        // Fire celebration confetti & display real-time live toast if new photos arrived!
-        if (lastCountRef.current !== -1 && newPhotos.length > lastCountRef.current) {
+        // Fire celebration confetti & display real-time live toast ONLY if NOT locked in Delayed Reveal!
+        if (!currentlyLocked && !dataP.isLocked && lastCountRef.current !== -1 && newPhotos.length > lastCountRef.current) {
           confetti({
             particleCount: 80,
             spread: 90,
@@ -170,7 +177,7 @@ export default function LiveProjectorWallPage() {
 
   useEffect(() => {
     fetchData();
-    const interval = setInterval(fetchData, 4000);
+    const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, [eventId]);
 

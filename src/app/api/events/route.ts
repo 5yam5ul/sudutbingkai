@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
-import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent } from '@/lib/db';
+import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent, getAllVendors, updateVendor } from '@/lib/db';
 import { EventData, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 import { getServerSession } from '@/lib/auth';
 import { isMayarConfigured } from '@/lib/mayar';
+import { deleteFromR2 } from '@/lib/r2';
 
 export async function GET(request: Request) {
   try {
@@ -179,7 +180,12 @@ export async function POST(request: Request) {
       closingWishType: body.closingWishType || (tierKey === 'wedding' || tierKey === 'unlimited' ? 'video' : 'voice'),
       createdAt: new Date().toISOString(),
       hostEmail: body.hostEmail,
-      paymentStatus: body.paymentStatus || 'paid',
+      paymentStatus:
+        tierKey === 'starter' || isAdmin
+          ? (body.paymentStatus || 'paid')
+          : isMayarConfigured
+            ? 'pending'
+            : (body.paymentStatus || 'pending'),
       referralCodeUsed: body.referralCodeUsed,
       commissionAmount: body.commissionAmount,
       commissionStatus: body.commissionStatus || (body.commissionAmount ? 'pending' : undefined),
@@ -314,14 +320,24 @@ export async function PATCH(request: Request) {
     if (body.revealMode) updates.revealMode = body.revealMode;
     if (body.revealTime !== undefined) updates.revealTime = body.revealTime;
     if (body.frameId) updates.frameId = body.frameId;
-    if (body.customFrameUrl !== undefined) updates.customFrameUrl = body.customFrameUrl;
+    if (body.customFrameUrl !== undefined) {
+      if (existingEvent.customFrameUrl && existingEvent.customFrameUrl !== body.customFrameUrl) {
+        await deleteFromR2(existingEvent.customFrameUrl);
+      }
+      updates.customFrameUrl = body.customFrameUrl;
+    }
     if (body.frameText !== undefined) updates.frameText = body.frameText;
     if (body.allowVoiceNote !== undefined) updates.allowVoiceNote = body.allowVoiceNote;
     if (body.allowGuestFrameToggle !== undefined) updates.allowGuestFrameToggle = body.allowGuestFrameToggle;
     if (body.closingWishType !== undefined) updates.closingWishType = body.closingWishType;
-    if (body.coverUrl !== undefined) updates.coverUrl = body.coverUrl;
+    if (body.coverUrl !== undefined) {
+      if (existingEvent.coverUrl && existingEvent.coverUrl !== body.coverUrl) {
+        await deleteFromR2(existingEvent.coverUrl);
+      }
+      updates.coverUrl = body.coverUrl;
+    }
 
-    // Administrative & financial fields: strictly restricted to Admin
+    // Administrative & financial fields: restricted to Admin (or sandbox simulation when !isMayarConfigured)
     if (isCallerAdmin) {
       if (body.paymentStatus !== undefined) updates.paymentStatus = body.paymentStatus;
       if (body.referralCodeUsed !== undefined) updates.referralCodeUsed = body.referralCodeUsed;
@@ -329,6 +345,22 @@ export async function PATCH(request: Request) {
       if (body.commissionStatus !== undefined) updates.commissionStatus = body.commissionStatus;
       if (body.vendorId !== undefined) updates.vendorId = body.vendorId;
       if (body.hostEmail !== undefined) updates.hostEmail = body.hostEmail;
+    } else if (!isMayarConfigured && body.paymentStatus === 'paid' && existingEvent.paymentStatus === 'pending') {
+      updates.paymentStatus = 'paid';
+      // Disburse vendor commission in sandbox mode if referral was used
+      if (existingEvent.vendorId && existingEvent.commissionAmount && existingEvent.commissionAmount > 0 && existingEvent.commissionStatus !== 'available') {
+        try {
+          const vendors = await getAllVendors();
+          const matchedVendor = vendors.find(v => v.id === existingEvent.vendorId);
+          if (matchedVendor) {
+            await updateVendor(matchedVendor.id, {
+              walletBalance: (matchedVendor.walletBalance || 0) + existingEvent.commissionAmount,
+              totalEarnings: (matchedVendor.totalEarnings || 0) + existingEvent.commissionAmount
+            });
+            updates.commissionStatus = 'available';
+          }
+        } catch {}
+      }
     }
 
     const updated = await updateEvent(existingEvent.id, updates);

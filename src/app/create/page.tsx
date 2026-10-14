@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FilmPresetId, EventPackageTier, PACKAGE_TIERS, PRIMARY_PACKAGE_TIER_KEYS, UserAccount } from '@/lib/types';
-import { getClientSession, setClientSession } from '@/lib/auth';
+import { getClientSession, setClientSession, authFetch } from '@/lib/auth';
 import { FrameId } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
@@ -264,7 +264,7 @@ function CreateEventForm() {
       eventPayload.commissionAmount = referralDiscount?.commissionAmount;
     }
 
-    const res = await fetch('/api/events', {
+    const res = await authFetch('/api/events', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(eventPayload),
@@ -322,15 +322,15 @@ function CreateEventForm() {
         throw new Error('Gagal mencatat rincian album sebelum pembayaran.');
       }
 
-      // 3. Initiate Mayar Checkout with accurate canonical eventId & final price
+      // 3. Initiate Mayar Checkout with accurate canonical eventId & server-validated price
       const hostUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.vercel.app';
-      const basePackagePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 499000;
+      const basePackagePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 349000;
       const finalChargedAmount = referralDiscount?.valid ? referralDiscount.finalPrice : basePackagePrice;
       const redirectSuccessUrl = isVendor
         ? `${hostUrl}/vendor?tab=clients&newClient=${eventId}&paid=true`
         : `${hostUrl}/dashboard?eventId=${eventId}&paid=true`;
 
-      const payRes = await fetch('/api/payment/create', {
+      const payRes = await authFetch('/api/payment/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -338,6 +338,7 @@ function CreateEventForm() {
           name: coupleOrHost || title,
           email: cleanEmail,
           eventId,
+          referralCode: isVendor ? currentUser?.referralCode : (referralDiscount?.valid ? referralCode.toUpperCase().trim() : undefined),
           amount: finalChargedAmount,
           redirectUrl: redirectSuccessUrl
         })
@@ -1687,6 +1688,21 @@ function CreateEventForm() {
           setPaymentModalOpen(false);
           toast.success('Pembayaran Terkonfirmasi!');
 
+          if (createdDraftEventId) {
+            try {
+              await authFetch('/api/events', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: createdDraftEventId,
+                  paymentStatus: 'paid',
+                }),
+              });
+            } catch (evErr) {
+              console.warn('Failed to mark draft event as paid:', evErr);
+            }
+          }
+
           if (isVendor && currentUser) {
             const newBal = (currentUser.walletBalance || 0) + vendorCommissionAmount;
             const newEarnings = (currentUser.totalEarnings || 0) + vendorCommissionAmount;
@@ -1698,20 +1714,6 @@ function CreateEventForm() {
             };
             setClientSession(updatedUser);
             setCurrentUser(updatedUser);
-
-            try {
-              await fetch('/api/vendors', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  id: currentUser.id,
-                  adjustBalance: vendorCommissionAmount,
-                  totalEarnings: newEarnings
-                })
-              });
-            } catch (vErr) {
-              console.warn('Failed to update vendor balance in DB:', vErr);
-            }
 
             toast.success(`Komisi sebesar Rp ${vendorCommissionAmount.toLocaleString('id-ID')} berhasil masuk ke saldo dompet Anda!`);
             router.push(`/vendor?tab=clients&newClient=${createdDraftEventId || ''}&paid=true`);

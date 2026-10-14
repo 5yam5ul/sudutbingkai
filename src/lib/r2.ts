@@ -64,15 +64,59 @@ export async function uploadBufferToR2(
 }
 
 /**
- * Delete an object from Cloudflare R2 bucket
+ * Extract the canonical R2 object key from a public URL or storage path
  */
-export async function deleteFromR2(key: string): Promise<boolean> {
+export function extractR2KeyFromUrl(urlOrKey?: string | null): string | null {
+  if (!urlOrKey || typeof urlOrKey !== 'string') return null;
+  const trimmed = urlOrKey.trim();
+  if (!trimmed || trimmed.startsWith('data:') || trimmed.startsWith('/uploads/')) return null;
+
+  // If it's already a relative R2 key
+  if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+    return trimmed.replace(/^\/+/, '');
+  }
+
+  try {
+    const activePublicUrl = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || process.env.R2_PUBLIC_URL || r2PublicUrl || '').replace(/\/+$/, '');
+    if (activePublicUrl && trimmed.startsWith(activePublicUrl)) {
+      return trimmed.substring(activePublicUrl.length).replace(/^\/+/, '');
+    }
+
+    const urlObj = new URL(trimmed);
+    const host = urlObj.hostname.toLowerCase();
+    const pathname = urlObj.pathname.replace(/^\/+/, '');
+
+    // Match R2 custom domains, .r2.dev, .r2.cloudflarestorage.com, or standard SudutBingkai key prefixes
+    if (
+      host.includes('.r2.dev') ||
+      host.includes('r2.cloudflarestorage.com') ||
+      pathname.startsWith('events/') ||
+      pathname.startsWith('voices/') ||
+      pathname.startsWith('videos/')
+    ) {
+      // Avoid deleting Supabase storage URLs (which contain /storage/v1/object/public/)
+      if (pathname.includes('storage/v1/object/')) return null;
+      return pathname;
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+/**
+ * Delete an object from Cloudflare R2 bucket (accepts either a raw R2 key or a full R2 public URL)
+ */
+export async function deleteFromR2(keyOrUrl: string): Promise<boolean> {
   if (!r2Client) return false;
+  const resolvedKey = extractR2KeyFromUrl(keyOrUrl);
+  if (!resolvedKey) return false;
 
   try {
     const command = new DeleteObjectCommand({
       Bucket: r2BucketName,
-      Key: key,
+      Key: resolvedKey,
     });
     await r2Client.send(command);
     return true;
@@ -81,3 +125,4 @@ export async function deleteFromR2(key: string): Promise<boolean> {
     return false;
   }
 }
+

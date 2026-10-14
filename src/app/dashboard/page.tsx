@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play, Link2, Globe, Copy } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
-import { getClientSession, setClientSession, clearClientSession, DEMO_USERS } from '@/lib/auth';
+import { getClientSession, setClientSession, clearClientSession, DEMO_USERS, authFetch } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FrameId, FRAME_TEMPLATES } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
@@ -155,7 +155,7 @@ export default function BrideDashboardPage() {
 
     // Fetch all photos including hidden for host moderation
     try {
-      const resPhotos = await fetch(`/api/photos?eventId=${selected.id}&includeHidden=true`);
+      const resPhotos = await authFetch(`/api/photos?eventId=${selected.id}&includeHidden=true`);
       const dataPhotos = await resPhotos.json();
       if (dataPhotos.success && dataPhotos.photos) {
         setPhotos(dataPhotos.photos);
@@ -168,7 +168,7 @@ export default function BrideDashboardPage() {
 
     // Fetch voice notes
     try {
-      const resVoices = await fetch(`/api/voice-notes?eventId=${selected.id}`);
+      const resVoices = await authFetch(`/api/voice-notes?eventId=${selected.id}`);
       const dataVoices = await resVoices.json();
       if (dataVoices.success && dataVoices.voiceNotes) {
         setVoiceNotes(dataVoices.voiceNotes);
@@ -182,7 +182,7 @@ export default function BrideDashboardPage() {
 
     // Fetch video wishes
     try {
-      const resVideos = await fetch(`/api/video-wishes?eventId=${selected.id}`);
+      const resVideos = await authFetch(`/api/video-wishes?eventId=${selected.id}`);
       const dataVideos = await resVideos.json();
       if (dataVideos.success && (dataVideos.videoWishes || dataVideos.wishes)) {
         setVideoWishes(dataVideos.videoWishes || dataVideos.wishes || []);
@@ -206,13 +206,13 @@ export default function BrideDashboardPage() {
         ? `/api/events?vendorId=${encodeURIComponent(vendorId)}`
         : `/api/events?hostEmail=${encodeURIComponent(email)}`;
 
-      const resEvents = await fetch(queryUrl);
+      const resEvents = await authFetch(queryUrl);
       let dataEvents = await resEvents.json();
 
       // Smart recovery: If active role is 'vendor' but 0 vendor events, check if host events exist under this email
       if (activeRole === 'vendor' && (!dataEvents.events || dataEvents.events.length === 0) && email) {
         try {
-          const fallbackRes = await fetch(`/api/events?hostEmail=${encodeURIComponent(email)}`);
+          const fallbackRes = await authFetch(`/api/events?hostEmail=${encodeURIComponent(email)}`);
           const fallbackData = await fallbackRes.json();
           if (fallbackData.success && fallbackData.events && fallbackData.events.length > 0) {
             dataEvents = fallbackData;
@@ -232,7 +232,7 @@ export default function BrideDashboardPage() {
       } else {
         if (targetEventId) {
           try {
-            const singleRes = await fetch(`/api/events?id=${encodeURIComponent(targetEventId)}`);
+            const singleRes = await authFetch(`/api/events?id=${encodeURIComponent(targetEventId)}`);
             const singleData = await singleRes.json();
             if (singleData.success && singleData.event) {
               selected = singleData.event;
@@ -278,7 +278,7 @@ export default function BrideDashboardPage() {
     }));
 
     try {
-      await fetch('/api/photos', {
+      await authFetch('/api/photos', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: photoId, isHidden: !currentHidden })
@@ -292,7 +292,7 @@ export default function BrideDashboardPage() {
     setConfirmModal({
       isOpen: true,
       title: 'Hapus Foto Permanen?',
-      description: 'Foto ini akan dihapus dari album dan tidak dapat dipulihkan kembali.',
+      description: 'Foto ini akan dihapus dari album dan penyimpanan cloud serta tidak dapat dipulihkan kembali.',
       confirmText: 'Hapus Foto',
       variant: 'danger',
       onConfirm: async () => {
@@ -301,7 +301,7 @@ export default function BrideDashboardPage() {
         if (activePhoto?.id === photoId) setActivePhoto(null);
         toast.success('Foto berhasil dihapus.');
         try {
-          await fetch(`/api/photos?id=${photoId}`, { method: 'DELETE' });
+          await authFetch(`/api/photos?id=${photoId}`, { method: 'DELETE' });
         } catch (err) {
           console.error('Gagal menghapus foto:', err);
         }
@@ -319,46 +319,41 @@ export default function BrideDashboardPage() {
 
     try {
       const zip = new JSZip();
-      const folderName = `sudutbingkai-${event?.id || 'album'}`;
+      const folderName = `sudutbingkai-${event?.slug || event?.id || 'album'}`;
       const folder = zip.folder(folderName);
+      const BATCH_SIZE = 4;
+      let completed = 0;
 
-      for (let i = 0; i < photos.length; i++) {
-        const photo = photos[i];
-        setZipProgress(`Mengemas foto (${i + 1}/${photos.length})...`);
-        try {
-          let blob: Blob;
-          if (photo.imageData.startsWith('data:image')) {
-            const matches = photo.imageData.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
-            const ext = matches && matches[1] === 'png' ? 'png' : 'jpg';
-            const base64 = matches ? matches[2] : photo.imageData.replace(/^data:image\/\w+;base64,/, '');
-            const byteChars = atob(base64);
-            const byteNumbers = new Array(byteChars.length);
-            for (let j = 0; j < byteChars.length; j++) {
-              byteNumbers[j] = byteChars.charCodeAt(j);
+      for (let i = 0; i < photos.length; i += BATCH_SIZE) {
+        const batch = photos.slice(i, i + BATCH_SIZE);
+        await Promise.all(
+          batch.map(async (photo, batchIdx) => {
+            const globalIdx = i + batchIdx;
+            try {
+              const res = await fetch(photo.imageData);
+              const blob = await res.blob();
+              const safeGuest = (photo.guestName || 'tamu').replace(/[^a-zA-Z0-9_\-]/g, '_');
+              folder?.file(`${globalIdx + 1}_${safeGuest}_jepretan${photo.shotNumber}.jpg`, blob, { compression: 'STORE' });
+            } catch (err) {
+              console.warn('Gagal memproses foto:', photo.id, err);
+            } finally {
+              completed++;
+              setZipProgress(`Mengemas foto (${completed}/${photos.length})...`);
             }
-            blob = new Blob([new Uint8Array(byteNumbers)], { type: `image/${ext}` });
-          } else {
-            const res = await fetch(photo.imageData);
-            blob = await res.blob();
-          }
-
-          const safeGuest = photo.guestName.replace(/[^a-zA-Z0-9_\-]/g, '_');
-          folder?.file(`${i + 1}_${safeGuest}_jepretan${photo.shotNumber}.jpg`, blob);
-        } catch (err) {
-          console.warn('Gagal memproses foto:', photo.id, err);
-        }
+          })
+        );
       }
 
-      setZipProgress('Mengompresi file ZIP...');
-      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      setZipProgress('Menyusun file ZIP...');
+      const zipBlob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
       const downloadUrl = URL.createObjectURL(zipBlob);
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `sudutbingkai-${event?.id || 'wedding'}-semua-foto.zip`;
+      a.download = `sudutbingkai-${event?.slug || event?.id || 'wedding'}-semua-foto.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(downloadUrl);
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 3000);
       toast.success('File ZIP berhasil diunduh!');
     } catch (err: unknown) {
       toast.error('Gagal membuat file ZIP: ' + (err as Error).message);
@@ -372,7 +367,7 @@ export default function BrideDashboardPage() {
     setConfirmModal({
       isOpen: true,
       title: 'Hapus Pesan Suara?',
-      description: 'Pesan suara dari tamu ini akan dihapus dari arsip kenangan Anda.',
+      description: 'Pesan suara dari tamu ini akan dihapus permanen dari arsip kenangan dan penyimpanan cloud.',
       confirmText: 'Hapus Suara',
       variant: 'danger',
       onConfirm: async () => {
@@ -380,7 +375,7 @@ export default function BrideDashboardPage() {
         setVoiceNotes(prev => prev.filter(n => n.id !== noteId));
         toast.success('Pesan suara berhasil dihapus.');
         try {
-          await fetch(`/api/voice-notes?id=${noteId}`, { method: 'DELETE' });
+          await authFetch(`/api/voice-notes?id=${noteId}`, { method: 'DELETE' });
         } catch (err) {
           console.error('Gagal menghapus pesan suara:', err);
         }
@@ -392,7 +387,7 @@ export default function BrideDashboardPage() {
     setConfirmModal({
       isOpen: true,
       title: 'Hapus Video Ucapan?',
-      description: 'Video ucapan hangat dari tamu ini akan dihapus permanen dari album kenangan acara Anda.',
+      description: 'Video ucapan hangat dari tamu ini akan dihapus permanen dari album kenangan dan penyimpanan cloud.',
       confirmText: 'Hapus Video',
       variant: 'danger',
       onConfirm: async () => {
@@ -400,7 +395,7 @@ export default function BrideDashboardPage() {
         setVideoWishes(prev => prev.filter(w => w.id !== wishId));
         toast.success('Video ucapan berhasil dihapus.');
         try {
-          await fetch(`/api/video-wishes?id=${wishId}`, { method: 'DELETE' });
+          await authFetch(`/api/video-wishes?id=${wishId}`, { method: 'DELETE' });
         } catch (err) {
           console.error('Gagal menghapus video ucapan:', err);
         }
@@ -416,7 +411,7 @@ export default function BrideDashboardPage() {
       const formData = new FormData();
       formData.append('file', file);
       formData.append('type', 'cover');
-      const res = await fetch('/api/upload', {
+      const res = await authFetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -448,7 +443,7 @@ export default function BrideDashboardPage() {
     const cleanSlug = eventSlug.trim().toLowerCase().replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
 
     try {
-      const res = await fetch('/api/events', {
+      const res = await authFetch('/api/events', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

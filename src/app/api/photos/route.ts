@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAllPhotos, savePhoto, updatePhoto, deletePhoto, getEventById, getPhotoById } from '@/lib/db';
-import { PhotoRecord } from '@/lib/types';
-
+import { PhotoRecord, getEventRetentionInfo } from '@/lib/types';
 import { getServerSession } from '@/lib/auth';
+import { isMayarConfigured } from '@/lib/mayar';
 
 export async function GET(request: Request) {
   try {
@@ -30,32 +30,48 @@ export async function GET(request: Request) {
       resolvedEventId = targetEvent.id;
     }
 
-    // Only host of this event, vendor of this event, or admin can view hidden photos
-    let safeIncludeHidden = false;
-    if (requestedIncludeHidden) {
-      if (session) {
-        const isAuthorizedHost = session.role === 'host' && (
-          session.email?.toLowerCase() === targetEvent?.hostEmail?.toLowerCase() ||
-          session.id === targetEvent?.hostEmail
-        );
-        const isAuthorizedVendor = session.role === 'vendor' && session.id === targetEvent?.vendorId;
-        const isAdmin = session.role === 'admin';
+    // Check if caller is authorized Host, Vendor, or Admin for this event
+    const isAuthorizedHost = Boolean(
+      session?.role === 'host' && (
+        session.email?.toLowerCase() === targetEvent?.hostEmail?.toLowerCase() ||
+        session.id === targetEvent?.hostEmail
+      )
+    );
+    const isAuthorizedVendor = Boolean(session?.role === 'vendor' && session.id === targetEvent?.vendorId);
+    const isAdmin = session?.role === 'admin';
+    const isOwnerOrAdmin = isAdmin || isAuthorizedHost || isAuthorizedVendor;
 
-        if (isAdmin || isAuthorizedHost || isAuthorizedVendor) {
-          safeIncludeHidden = true;
-        }
-      }
-    }
+    const safeIncludeHidden = requestedIncludeHidden && isOwnerOrAdmin;
 
     const sessionId = searchParams.get('sessionId');
     const guestName = searchParams.get('guestName');
+    const isPersonalRollQuery = Boolean(sessionId || (guestName && guestName.trim() !== 'Tamu' && guestName.trim() !== 'Tamu Undangan'));
 
     let photos = await getAllPhotos(resolvedEventId, safeIncludeHidden);
+    const totalCount = photos.length;
 
-    if (sessionId || (guestName && guestName.trim() !== 'Tamu')) {
+    // Server-side Delayed Reveal protection: do not leak other guests' photos before revealTime
+    const isDelayedAndLocked = Boolean(
+      targetEvent &&
+      targetEvent.revealMode === 'delayed' &&
+      targetEvent.revealTime &&
+      new Date(targetEvent.revealTime).getTime() > Date.now()
+    );
+
+    if (isDelayedAndLocked && !isOwnerOrAdmin && !isPersonalRollQuery) {
+      return NextResponse.json({
+        success: true,
+        photos: [],
+        count: totalCount,
+        isLocked: true,
+        revealTime: targetEvent?.revealTime
+      });
+    }
+
+    if (isPersonalRollQuery) {
       photos = photos.filter(p => 
         (sessionId && p.sessionId === sessionId) ||
-        (guestName && guestName.trim() !== 'Tamu' && p.guestName && p.guestName.toLowerCase() === guestName.trim().toLowerCase())
+        (guestName && guestName.trim() !== 'Tamu' && guestName.trim() !== 'Tamu Undangan' && p.guestName && p.guestName.toLowerCase() === guestName.trim().toLowerCase())
       );
     }
 
@@ -83,9 +99,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
     }
 
-    // Safety check on base64 payload size (max 20MB)
-    if (typeof body.imageData === 'string' && body.imageData.length > 20 * 1024 * 1024) {
-      return NextResponse.json({ success: false, error: 'Ukuran foto melebihi batas maksimal' }, { status: 413 });
+    if (event.packageTier !== 'starter' && event.paymentStatus === 'pending' && isMayarConfigured) {
+      return NextResponse.json({
+        success: false,
+        error: 'Album acara ini sedang menunggu penyelesaian pembayaran.'
+      }, { status: 403 });
+    }
+
+    const retention = getEventRetentionInfo(event.eventDate, event.packageTier);
+    if (retention.status === 'expired') {
+      return NextResponse.json({
+        success: false,
+        error: 'Masa aktif album acara ini telah berakhir.'
+      }, { status: 403 });
     }
 
     // 1. Enforce individual guest quota (shotsPerGuest)

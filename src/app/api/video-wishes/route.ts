@@ -4,6 +4,8 @@ import path from 'path';
 import { getVideoWishes, saveVideoWish, deleteVideoWish, getEventById } from '@/lib/db';
 import { uploadBufferToR2, isR2Configured } from '@/lib/r2';
 import { getServerSession } from '@/lib/auth';
+import { getEventRetentionInfo } from '@/lib/types';
+import { isMayarConfigured } from '@/lib/mayar';
 
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 const VIDEOS_DIR = path.join(UPLOADS_DIR, 'videos');
@@ -59,7 +61,8 @@ export async function POST(request: Request) {
     const guestName = (formData.get('guestName') as string) || 'Tamu Undangan';
     const tableNumber = (formData.get('tableNumber') as string) || '';
     const thumbnailUrl = (formData.get('thumbnail') as string) || '';
-    const duration = Number(formData.get('duration')) || 15;
+    const rawDuration = Number(formData.get('duration')) || 15;
+    const duration = Math.min(Math.max(1, rawDuration), 15);
 
     if (!videoFile || !eventIdParam) {
       return NextResponse.json({ success: false, error: 'File video dan eventId wajib disertakan' }, { status: 400 });
@@ -68,6 +71,21 @@ export async function POST(request: Request) {
     const event = await getEventById(eventIdParam);
     if (!event) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
+    }
+
+    if (event.packageTier !== 'starter' && event.paymentStatus === 'pending' && isMayarConfigured) {
+      return NextResponse.json({
+        success: false,
+        error: 'Album acara ini sedang menunggu penyelesaian pembayaran.'
+      }, { status: 403 });
+    }
+
+    const retention = getEventRetentionInfo(event.eventDate, event.packageTier);
+    if (retention.status === 'expired') {
+      return NextResponse.json({
+        success: false,
+        error: 'Masa aktif album acara ini telah berakhir.'
+      }, { status: 403 });
     }
 
     // Rate Limit / Spam Guard: 1 Video Wish per Named Guest per Event
@@ -96,7 +114,7 @@ export async function POST(request: Request) {
     const extension = mime.includes('mp4') ? 'mp4' : mime.includes('quicktime') ? 'mov' : 'webm';
     const fileName = `${wishId}.${extension}`;
 
-    let videoUrl = `/uploads/videos/${fileName}`;
+    let videoUrl = '';
 
     // Upload to Cloudflare R2 if configured
     if (isR2Configured) {
@@ -111,13 +129,16 @@ export async function POST(request: Request) {
       }
     }
 
-    // Always keep a local copy as well
-    try {
-      ensureVideosDir();
-      const localFilePath = path.join(VIDEOS_DIR, fileName);
-      fs.writeFileSync(localFilePath, buffer);
-    } catch (e) {
-      console.warn('Local video write skipped:', e);
+    // Fallback to local copy only when R2 is not configured or upload failed
+    if (!videoUrl) {
+      videoUrl = `/uploads/videos/${fileName}`;
+      try {
+        ensureVideosDir();
+        const localFilePath = path.join(VIDEOS_DIR, fileName);
+        fs.writeFileSync(localFilePath, buffer);
+      } catch (e) {
+        console.warn('Local video write skipped:', e);
+      }
     }
 
     const newWish = await saveVideoWish({

@@ -353,7 +353,6 @@ export interface UserAccount {
   walletBalance?: number;
   totalEarnings?: number;
   bankAccount?: PartnerBankAccount;
-  eventQuotaTokens?: Record<string, number>;
   clientCount?: number;
 }
 

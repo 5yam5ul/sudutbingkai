@@ -14,7 +14,7 @@ import {
   Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo } from '@/lib/types';
-import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
+import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS, authFetch } from '@/lib/auth';
 import ConfirmModal from '@/components/ConfirmModal';
 import { toast } from 'sonner';
 
@@ -149,7 +149,7 @@ export default function VendorPortalPage() {
     setIsRequestingPayout(true);
     try {
       const vendorId = vendor.id || 'vendor_vows_co';
-      const res = await fetch('/api/payouts', {
+      const res = await authFetch('/api/payouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -241,7 +241,7 @@ export default function VendorPortalPage() {
     if (session.phone) setPhone(session.phone);
 
     // Refresh live vendor balance from database
-    fetch('/api/vendors')
+    authFetch('/api/vendors')
       .then(res => res.json())
       .then(data => {
         if (data.success && data.vendors) {
@@ -320,7 +320,7 @@ export default function VendorPortalPage() {
       }
     }
 
-    fetch('/api/vendors')
+    authFetch('/api/vendors')
       .then(res => res.json())
       .then(data => {
         if (data.success && data.vendors && data.vendors.length > 0) {
@@ -341,7 +341,7 @@ export default function VendorPortalPage() {
 
     const vendorId = session?.id || '';
     if (vendorId) {
-      fetch(`/api/events?vendorId=${encodeURIComponent(vendorId)}`)
+      authFetch(`/api/events?vendorId=${encodeURIComponent(vendorId)}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.events) {
@@ -373,7 +373,7 @@ export default function VendorPortalPage() {
         .catch(console.error);
 
       // Fetch vendor payout history
-      fetch(`/api/payouts?vendorId=${encodeURIComponent(vendorId)}`)
+      authFetch(`/api/payouts?vendorId=${encodeURIComponent(vendorId)}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.payouts) {
@@ -383,7 +383,7 @@ export default function VendorPortalPage() {
         .catch(console.error);
 
       // Fetch vendor video testimonials
-      fetch(`/api/testimonials?vendorId=${encodeURIComponent(vendorId)}`)
+      authFetch(`/api/testimonials?vendorId=${encodeURIComponent(vendorId)}`)
         .then(res => res.json())
         .then(data => {
           if (data.success && data.testimonials) {
@@ -411,7 +411,7 @@ export default function VendorPortalPage() {
 
     setIsSubmittingTesti(true);
     try {
-      const res = await fetch('/api/testimonials', {
+      const res = await authFetch('/api/testimonials', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -473,7 +473,7 @@ export default function VendorPortalPage() {
       const cleanCompany = regCompanyName.trim();
       const generatedRef = cleanCompany.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || `WO${Date.now().toString().slice(-4)}`;
 
-      const res = await fetch('/api/vendors', {
+      const res = await authFetch('/api/vendors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -552,7 +552,7 @@ export default function VendorPortalPage() {
         setClients(prev => prev.filter(c => c.id !== clientId));
         toast.success(`Acara "${clientTitle}" berhasil dihapus.`);
         try {
-          await fetch(`/api/events?id=${clientId}`, { method: 'DELETE' });
+          await authFetch(`/api/events?id=${clientId}`, { method: 'DELETE' });
         } catch (e) {
           console.error('Gagal menghapus event klien:', e);
         }
@@ -566,7 +566,7 @@ export default function VendorPortalPage() {
 
     try {
       const vendorId = vendor.id || `vendor_${Date.now()}`;
-      const res = await fetch('/api/vendors', {
+      const res = await authFetch('/api/vendors', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

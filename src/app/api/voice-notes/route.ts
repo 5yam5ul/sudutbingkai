@@ -3,8 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getEventById } from '@/lib/db';
-import { uploadBufferToR2, isR2Configured } from '@/lib/r2';
+import { uploadBufferToR2, deleteFromR2, isR2Configured } from '@/lib/r2';
 import { getServerSession } from '@/lib/auth';
+import { getEventRetentionInfo } from '@/lib/types';
+import { isMayarConfigured } from '@/lib/mayar';
 
 const VOICES_DIR = path.join(process.cwd(), 'public', 'uploads', 'voices');
 const VOICES_JSON = path.join(process.cwd(), 'data', 'voice_notes.json');
@@ -106,10 +108,27 @@ export async function POST(request: Request) {
     const eventId = formData.get('eventId') as string;
     const guestName = (formData.get('guestName') as string) || 'Tamu';
     const audioFile = formData.get('audio') as File;
-    const duration = Number(formData.get('duration')) || 0;
+    const rawDuration = Number(formData.get('duration')) || 15;
+    const duration = Math.min(Math.max(1, rawDuration), 15);
 
     const event = await getEventById(eventId);
     const targetEventId = event ? event.id : eventId;
+
+    if (event) {
+      if (event.packageTier !== 'starter' && event.paymentStatus === 'pending' && isMayarConfigured) {
+        return NextResponse.json({
+          success: false,
+          error: 'Album acara ini sedang menunggu penyelesaian pembayaran.'
+        }, { status: 403 });
+      }
+      const retention = getEventRetentionInfo(event.eventDate, event.packageTier);
+      if (retention.status === 'expired') {
+        return NextResponse.json({
+          success: false,
+          error: 'Masa aktif album acara ini telah berakhir.'
+        }, { status: 403 });
+      }
+    }
 
     // Rate Limit / Spam Guard: 1 Voice Note per Named Guest per Event
     const isNamed = guestName && 
@@ -298,12 +317,23 @@ export async function DELETE(request: Request) {
           .eq('id', id);
 
         if (!error) {
-          if (target.audio_url && target.audio_url.includes('/photos/')) {
-            const pathPart = target.audio_url.split('/photos/')[1];
-            if (pathPart) {
-              await supabase.storage.from('photos').remove([pathPart]);
+          if (target.audio_url) {
+            await deleteFromR2(target.audio_url);
+            if (target.audio_url.includes('/photos/')) {
+              const pathPart = target.audio_url.split('/photos/')[1];
+              if (pathPart) {
+                await supabase.storage.from('photos').remove([pathPart]);
+              }
             }
           }
+          try {
+            if (fs.existsSync(VOICES_JSON)) {
+              const raw = fs.readFileSync(VOICES_JSON, 'utf8');
+              const notes = JSON.parse(raw);
+              const remaining = notes.filter((n: any) => n.id !== id);
+              fs.writeFileSync(VOICES_JSON, JSON.stringify(remaining, null, 2), 'utf8');
+            }
+          } catch {}
           return NextResponse.json({ success: true, message: 'Pesan suara berhasil dihapus' });
         }
       }
@@ -336,6 +366,10 @@ export async function DELETE(request: Request) {
             error: 'Akses ditolak: Anda tidak memiliki wewenang untuk menghapus pesan suara dari acara ini.'
           }, { status: 403 });
         }
+      }
+
+      if (target.audioUrl) {
+        await deleteFromR2(target.audioUrl);
       }
 
       try {

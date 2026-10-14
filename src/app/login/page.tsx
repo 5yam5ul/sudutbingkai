@@ -347,6 +347,22 @@ function LoginFormContent() {
 
     // 1. MASTER ADMIN SPECIAL HANDLER
     if (cleanEmail === 'admin@sudutbingkai.id' || cleanEmail === 'superadmin@sudutbingkai.id' || cleanEmail === 'admin') {
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, password: cleanPassword, role: 'admin' }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success && data.user) {
+          setClientSession(data.user, data.token);
+          toast.success('Masuk sebagai Super Admin');
+          router.push('/admin');
+          setLoading(false);
+          return;
+        }
+      } catch {}
+
       const adminUser = authenticateUser(cleanEmail, cleanPassword, 'admin');
       if (adminUser) {
         setClientSession(adminUser);
@@ -431,8 +447,22 @@ function LoginFormContent() {
         }
         return;
       } else {
-        // VENDOR LOGIN
-        setTimeout(() => {
+        // VENDOR LOGIN (Server-verified against registered vendors + master account)
+        try {
+          const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: cleanEmail, password: cleanPassword, role: 'vendor' }),
+          });
+          const data = await res.json();
+          if (res.ok && data.success && data.user) {
+            setClientSession(data.user, data.token);
+            toast.success(`Selamat datang di Portal Mitra, ${data.user.companyName || data.user.name}`);
+            router.push(resolveRedirectDestination('/vendor', 'vendor'));
+          } else {
+            setErrorMsg(data.error || 'Email atau kata sandi tidak cocok. Silakan periksa kembali atau daftarkan agensi baru.');
+          }
+        } catch {
           const vendorUser = authenticateUser(cleanEmail, cleanPassword, 'vendor');
           if (vendorUser) {
             setClientSession(vendorUser);
@@ -441,8 +471,9 @@ function LoginFormContent() {
           } else {
             setErrorMsg('Email atau kata sandi tidak cocok. Silakan periksa kembali atau daftarkan agensi baru.');
           }
+        } finally {
           setLoading(false);
-        }, 350);
+        }
         return;
       }
     }
@@ -489,20 +520,27 @@ function LoginFormContent() {
         setLoading(false);
       }
     } else {
-      // HOST LOGIN
-      setTimeout(() => {
-        // If user typed vendor email while in host tab, smartly route to vendor
-        if (cleanEmail === 'vendor@sudutbingkai.id' || cleanEmail.includes('@vowsandco')) {
-          const vendorUser = authenticateUser(cleanEmail, cleanPassword, 'vendor');
-          if (vendorUser) {
-            setClientSession(vendorUser);
-            toast.success(`Selamat datang di Portal Mitra, ${vendorUser.name}`);
+      // HOST LOGIN (Server-verified against Supabase Auth / registered host events / master account)
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: cleanEmail, password: cleanPassword, role: 'host' }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success && data.user) {
+          setClientSession(data.user, data.token);
+          if (data.user.role === 'vendor') {
+            toast.success(`Selamat datang di Portal Mitra, ${data.user.companyName || data.user.name}`);
             router.push(resolveRedirectDestination('/vendor', 'vendor'));
-            setLoading(false);
-            return;
+          } else {
+            toast.success(`Berhasil masuk sebagai ${data.user.name}`);
+            router.push(resolveRedirectDestination('/dashboard', 'host'));
           }
+        } else {
+          setErrorMsg(data.error || 'Email atau kata sandi tidak cocok. Silakan daftar akun baru atau gunakan Masuk dengan Google.');
         }
-
+      } catch {
         const user = authenticateUser(cleanEmail, cleanPassword, 'host');
         if (user) {
           setClientSession(user);
@@ -511,8 +549,9 @@ function LoginFormContent() {
         } else {
           setErrorMsg('Email atau kata sandi tidak cocok. Silakan periksa kembali atau gunakan Masuk dengan Google.');
         }
+      } finally {
         setLoading(false);
-      }, 350);
+      }
     }
   };
 

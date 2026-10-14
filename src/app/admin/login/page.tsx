@@ -21,25 +21,49 @@ export default function AdminLoginPage() {
     }
   }, [router]);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setLoading(true);
 
-    setTimeout(() => {
-      const cleanEmail = email.trim().toLowerCase();
-      const cleanPass = password.trim();
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = password.trim();
 
-      const user = authenticateUser(cleanEmail, cleanPass, 'admin');
-      if (user && user.role === 'admin') {
-        setClientSession(user);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password: cleanPass, role: 'admin' }),
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success && data.user && data.user.role === 'admin') {
+        setClientSession(data.user, data.token);
+        toast.success('Otentikasi Super Admin Berhasil!');
+        router.push('/admin');
+        return;
+      }
+
+      const fallbackAdmin = authenticateUser(cleanEmail, cleanPass, 'admin');
+      if (fallbackAdmin && fallbackAdmin.role === 'admin') {
+        setClientSession(fallbackAdmin);
+        toast.success('Otentikasi Super Admin Berhasil!');
+        router.push('/admin');
+      } else {
+        setErrorMsg(data.error || 'Kredensial Super Admin tidak valid atau tidak memiliki hak akses.');
+      }
+    } catch {
+      const fallbackAdmin = authenticateUser(cleanEmail, cleanPass, 'admin');
+      if (fallbackAdmin && fallbackAdmin.role === 'admin') {
+        setClientSession(fallbackAdmin);
         toast.success('Otentikasi Super Admin Berhasil!');
         router.push('/admin');
       } else {
         setErrorMsg('Kredensial Super Admin tidak valid atau tidak memiliki hak akses.');
       }
+    } finally {
       setLoading(false);
-    }, 400);
+    }
   };
 
 
