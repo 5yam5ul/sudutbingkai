@@ -95,13 +95,6 @@ export default function EventDashboardPage() {
   const [zipProgress, setZipProgress] = useState('');
   const [isHost, setIsHost] = useState(false);
 
-  useEffect(() => {
-    const session = getClientSession();
-    if (session && (session.role === 'host' || session.role === 'vendor' || session.role === 'admin')) {
-      setIsHost(true);
-    }
-  }, []);
-
   // Custom Glass Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -233,7 +226,16 @@ export default function EventDashboardPage() {
       if (resEvents) {
         const dataEvents = await resEvents.json();
         if (dataEvents.success && dataEvents.event) {
-          setEvent(dataEvents.event);
+          const ev = dataEvents.event;
+          setEvent(ev);
+          const session = getClientSession();
+          const isVerifiedOwner = Boolean(
+            session &&
+              (session.role === 'admin' ||
+                Boolean(ev.hostEmail) ||
+                (session.role === 'vendor' && ev.vendorId && session.id === ev.vendorId))
+          );
+          setIsHost(isVerifiedOwner);
         }
       }
 
@@ -1056,14 +1058,16 @@ export default function EventDashboardPage() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleForceReveal}
-                  className="glass-pill"
-                  style={{ padding: '9px 16px', fontSize: '12.5px', color: '#F59E0B', cursor: 'pointer', background: 'rgba(245, 158, 11, 0.12)', borderColor: 'rgba(245, 158, 11, 0.4)', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Unlock size={14} />
-                  <span>Buka Sekarang</span>
-                </button>
+                {isHost && (
+                  <button
+                    onClick={handleForceReveal}
+                    className="glass-pill"
+                    style={{ padding: '9px 16px', fontSize: '12.5px', color: '#F59E0B', cursor: 'pointer', background: 'rgba(245, 158, 11, 0.12)', borderColor: 'rgba(245, 158, 11, 0.4)', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Unlock size={14} />
+                    <span>Buka Sekarang</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1417,7 +1421,7 @@ export default function EventDashboardPage() {
         </div>
 
         {/* Guest Video Wishes Section (Premium Tiers) */}
-        {videoWishes.length > 0 && (
+        {(!isRollLocked || isHost) && videoWishes.length > 0 && (
           <div className="glass-card" style={{ padding: '32px', borderRadius: '28px', marginBottom: '32px', background: 'linear-gradient(145deg, #1C1917, #0F0E0D)', border: '1px solid rgba(229, 192, 123, 0.3)', color: '#FFFFFF' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -1561,7 +1565,7 @@ export default function EventDashboardPage() {
         )}
 
         {/* Guest Voice Notes Section */}
-        {voiceNotes.length > 0 && (
+        {(!isRollLocked || isHost) && voiceNotes.length > 0 && (
           <div className="glass-card" style={{ padding: '32px', borderRadius: '28px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
               <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(194, 120, 3, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

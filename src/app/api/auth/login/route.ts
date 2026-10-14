@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authenticateUser, signSessionPayload, SYSTEM_USERS } from '@/lib/auth';
+import { authenticateUser, signSessionPayload, getServerSession } from '@/lib/auth';
 import { getAllVendors, getAllEvents } from '@/lib/db';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { UserAccount } from '@/lib/types';
@@ -19,27 +19,158 @@ export async function POST(request: Request) {
       );
     }
 
-    // Handle Host Registration or Google OAuth Session Signing (strictly non-admin)
-    if ((mode === 'register' || mode === 'oauth') && requestedRole !== 'admin' && !cleanEmail.includes('admin@sudutbingkai.id')) {
+    // 1. Handle OAuth Session Signing or Authenticated Role Switch (strictly non-admin)
+    if (mode === 'oauth') {
+      if (requestedRole === 'admin' || cleanEmail.includes('admin@sudutbingkai.id')) {
+        return NextResponse.json(
+          { success: false, error: 'Akses ditolak untuk peran Admin melalui OAuth.' },
+          { status: 403 }
+        );
+      }
+
+      const existingSession = getServerSession(request);
+      let isVerifiedIdentity = Boolean(
+        existingSession && existingSession.email && existingSession.email.trim().toLowerCase() === cleanEmail
+      );
+
+      if (!isVerifiedIdentity && body.accessToken && supabase && isSupabaseConfigured) {
+        try {
+          const { data: oauthData, error: oauthErr } = await supabase.auth.getUser(String(body.accessToken));
+          if (!oauthErr && oauthData?.user?.email?.trim().toLowerCase() === cleanEmail) {
+            isVerifiedIdentity = true;
+          }
+        } catch {}
+      }
+
+      if (!isVerifiedIdentity) {
+        return NextResponse.json(
+          { success: false, error: 'Sesi OAuth tidak valid atau telah kedaluwarsa. Silakan masuk kembali.' },
+          { status: 401 }
+        );
+      }
+
+      const allVendors = await getAllVendors();
+      const matchedVendor = allVendors.find(
+        (v) => v.email && v.email.trim().toLowerCase() === cleanEmail
+      );
+
+      if (requestedRole === 'vendor' && matchedVendor?.status === 'suspended') {
+        return NextResponse.json(
+          { success: false, error: 'Akun mitra vendor ini sedang ditangguhkan oleh Admin.' },
+          { status: 403 }
+        );
+      }
+
+      const userObj: UserAccount =
+        requestedRole === 'vendor' && matchedVendor
+          ? {
+              id: matchedVendor.id,
+              name: matchedVendor.name || matchedVendor.companyName || (body.name || cleanEmail.split('@')[0]).trim(),
+              companyName: matchedVendor.companyName || matchedVendor.name,
+              email: cleanEmail,
+              role: 'vendor',
+              phone: matchedVendor.phone || '',
+              instagram: matchedVendor.instagram || '',
+              city: matchedVendor.city || 'Jakarta',
+              partnerTier: matchedVendor.partnerTier || 'regular',
+              referralCode: matchedVendor.referralCode,
+              walletBalance: matchedVendor.walletBalance || 0,
+              totalEarnings: matchedVendor.totalEarnings || 0,
+              clientCount: matchedVendor.clientCount || 0,
+            }
+          : {
+              id: body.id || existingSession?.id || 'usr_' + cleanEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),
+              name: (body.name || existingSession?.name || cleanEmail.split('@')[0]).trim(),
+              email: cleanEmail,
+              role: requestedRole === 'vendor' ? 'vendor' : 'host',
+              companyName: matchedVendor?.companyName || existingSession?.companyName,
+              phone: matchedVendor?.phone || existingSession?.phone,
+              instagram: matchedVendor?.instagram || existingSession?.instagram,
+              city: matchedVendor?.city || existingSession?.city,
+              partnerTier: matchedVendor?.partnerTier || existingSession?.partnerTier,
+              referralCode: matchedVendor?.referralCode || existingSession?.referralCode,
+              walletBalance: matchedVendor?.walletBalance ?? existingSession?.walletBalance ?? 0,
+              totalEarnings: matchedVendor?.totalEarnings ?? existingSession?.totalEarnings ?? 0,
+            };
+
+      const token = signSessionPayload(JSON.stringify(userObj));
+      const response = NextResponse.json({
+        success: true,
+        user: userObj,
+        token,
+        sessionToken: token,
+      });
+      const maxAge = 60 * 24 * 60 * 60;
+      response.cookies.set('sb_auth_session', token, {
+        path: '/',
+        maxAge,
+        sameSite: 'lax',
+        httpOnly: false,
+      });
+      return response;
+    }
+
+    // 2. Handle New Host Registration (strictly non-admin)
+    if (mode === 'register') {
+      if (requestedRole === 'admin' || cleanEmail.includes('admin@sudutbingkai.id')) {
+        return NextResponse.json(
+          { success: false, error: 'Tidak dapat mendaftarkan akun Admin.' },
+          { status: 403 }
+        );
+      }
+
+      if (cleanPassword && cleanPassword.length < 6) {
+        return NextResponse.json(
+          { success: false, error: 'Kata sandi minimal 6 karakter.' },
+          { status: 400 }
+        );
+      }
+
+      const [allVendors, allEvents] = await Promise.all([getAllVendors(), getAllEvents()]);
+      const existingVendor = allVendors.find(
+        (v) => v.email && v.email.trim().toLowerCase() === cleanEmail
+      );
+      const existingHostEvents = allEvents.filter(
+        (ev) => ev.hostEmail && ev.hostEmail.trim().toLowerCase() === cleanEmail
+      );
+
+      if (existingVendor || existingHostEvents.length > 0) {
+        // Only allow if password matches in Supabase Auth
+        let passwordVerified = false;
+        if (cleanPassword && supabase && isSupabaseConfigured) {
+          try {
+            const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+              email: cleanEmail,
+              password: cleanPassword,
+            });
+            if (!authErr && authData?.user) {
+              passwordVerified = true;
+            }
+          } catch {}
+        }
+        if (!passwordVerified) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Email ini sudah terdaftar di sistem. Silakan masuk menggunakan kata sandi Anda.',
+            },
+            { status: 409 }
+          );
+        }
+      }
+
       const userObj: UserAccount = {
-        id: body.id || 'usr_' + cleanEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),
+        id: 'usr_' + cleanEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),
         name: (body.name || cleanEmail.split('@')[0]).trim(),
         email: cleanEmail,
-        role: requestedRole === 'vendor' ? 'vendor' : 'host',
-        companyName: body.companyName,
-        phone: body.phone,
-        instagram: body.instagram,
-        city: body.city,
-        partnerTier: body.partnerTier,
-        referralCode: body.referralCode,
-        walletBalance: body.walletBalance,
-        totalEarnings: body.totalEarnings,
+        role: 'host',
       };
       const token = signSessionPayload(JSON.stringify(userObj));
       const response = NextResponse.json({
         success: true,
         user: userObj,
         token,
+        sessionToken: token,
       });
       const maxAge = 60 * 24 * 60 * 60;
       response.cookies.set('sb_auth_session', token, {
@@ -58,16 +189,29 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Check built-in system/master accounts first
+    // 3. Check built-in system/master accounts first
     let authenticatedUser: UserAccount | null = authenticateUser(cleanEmail, cleanPassword, requestedRole);
 
-    // 2. If not a master/demo account, verify against registered database records (NEVER allow admin fallback)
+    // 4. If not a master/demo account, verify password via Supabase Auth before granting access to DB records
     if (!authenticatedUser && requestedRole !== 'admin') {
       if (cleanPassword.length < 6) {
         return NextResponse.json(
           { success: false, error: 'Kata sandi minimal 6 karakter.' },
           { status: 401 }
         );
+      }
+
+      let supabaseVerifiedUser: any = null;
+      if (supabase && isSupabaseConfigured) {
+        try {
+          const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
+            email: cleanEmail,
+            password: cleanPassword,
+          });
+          if (!authErr && authData?.user) {
+            supabaseVerifiedUser = authData.user;
+          }
+        } catch {}
       }
 
       // Check if email belongs to a registered Vendor in DB
@@ -84,6 +228,18 @@ export async function POST(request: Request) {
               { status: 403 }
             );
           }
+
+          // Require verified Supabase credentials when Supabase is configured
+          if (isSupabaseConfigured && !supabaseVerifiedUser) {
+            return NextResponse.json(
+              {
+                success: false,
+                error: 'Email atau kata sandi tidak cocok. Silakan gunakan tombol Masuk dengan Google jika Anda mendaftar melalui Google.',
+              },
+              { status: 401 }
+            );
+          }
+
           authenticatedUser = {
             id: matchedVendor.id,
             name: matchedVendor.name || matchedVendor.companyName || cleanEmail.split('@')[0],
@@ -110,30 +266,20 @@ export async function POST(request: Request) {
         }
       }
 
-      // Check Host authentication via Supabase Auth or registered Host Events
+      // Check Host authentication via verified Supabase Auth or local fallback when Supabase is not configured
       if (!authenticatedUser && requestedRole === 'host') {
-        if (supabase && isSupabaseConfigured) {
-          try {
-            const { data: authData, error: authErr } = await supabase.auth.signInWithPassword({
-              email: cleanEmail,
-              password: cleanPassword,
-            });
-            if (!authErr && authData?.user) {
-              const fullName =
-                authData.user.user_metadata?.full_name ||
-                authData.user.user_metadata?.name ||
-                cleanEmail.split('@')[0];
-              authenticatedUser = {
-                id: 'usr_' + authData.user.id.substring(0, 10),
-                name: fullName,
-                email: cleanEmail,
-                role: 'host',
-              };
-            }
-          } catch {}
-        }
-
-        if (!authenticatedUser) {
+        if (supabaseVerifiedUser) {
+          const fullName =
+            supabaseVerifiedUser.user_metadata?.full_name ||
+            supabaseVerifiedUser.user_metadata?.name ||
+            cleanEmail.split('@')[0];
+          authenticatedUser = {
+            id: 'usr_' + supabaseVerifiedUser.id.substring(0, 10),
+            name: fullName,
+            email: cleanEmail,
+            role: 'host',
+          };
+        } else if (!isSupabaseConfigured) {
           const allEvents = await getAllEvents();
           const hostEvents = allEvents.filter(
             (ev) => ev.hostEmail && ev.hostEmail.trim().toLowerCase() === cleanEmail
@@ -171,6 +317,7 @@ export async function POST(request: Request) {
       success: true,
       user: safeUser,
       token,
+      sessionToken: token,
     });
 
     const maxAge = 60 * 24 * 60 * 60;

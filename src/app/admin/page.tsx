@@ -1799,7 +1799,7 @@ export default function SuperAdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Mitra Vendor & Wedding Organizer ({vendors.length})</h2>
-                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Atur tier komisi (12%/15%/20%), sesuaikan saldo dompet, kuota grosir, & rekening</span>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Atur tier komisi (12%/15%/20%), sesuaikan saldo dompet, status akun, & rekening</span>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <div style={{ position: 'relative', width: '240px' }}>
@@ -1832,7 +1832,7 @@ export default function SuperAdminDashboard() {
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>NAMA AGENSI / WO</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>KONTAK & INSTAGRAM</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>TIER & REFERRAL</th>
-                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>SALDO & GROSIR</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>SALDO & PERFORMA</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>AKSI ADMIN (CRUD)</th>
                     </tr>
                   </thead>
@@ -1840,7 +1840,14 @@ export default function SuperAdminDashboard() {
                     {filteredVendors.map(v => (
                       <tr key={v.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <td style={{ padding: '16px 18px' }}>
-                          <strong style={{ fontSize: '14px', display: 'block' }}>{v.companyName || v.name}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <strong style={{ fontSize: '14px' }}>{v.companyName || v.name}</strong>
+                            {v.status === 'suspended' && (
+                              <span style={{ background: 'rgba(239, 68, 68, 0.12)', color: '#DC2626', fontSize: '10px', fontWeight: 700, padding: '2px 6px', borderRadius: '999px' }}>
+                                DITANGGUHKAN
+                              </span>
+                            )}
+                          </div>
                           <span style={{ fontSize: '11px', color: '#86868B' }}>PIC: {v.name} • {v.email}</span>
                         </td>
                         <td style={{ padding: '16px 18px' }}>
@@ -1866,7 +1873,7 @@ export default function SuperAdminDashboard() {
                             Rp {(v.walletBalance || 0).toLocaleString('id-ID')}
                           </strong>
                           <span style={{ fontSize: '11px', color: '#86868B' }}>
-                            Token: <strong>{v.wholesaleTokens || 0}</strong> • Total Dihasilkan: Rp {(v.totalEarnings || 0).toLocaleString('id-ID')}
+                            Klien: <strong>{v.clientCount || 0}</strong> • Total Dihasilkan: Rp {(v.totalEarnings || 0).toLocaleString('id-ID')}
                           </span>
                         </td>
                         <td style={{ padding: '16px 18px' }}>
@@ -2800,14 +2807,16 @@ export default function SuperAdminDashboard() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kuota Token Grosir (Acara Gratis)</label>
-                  <input
-                    type="number"
-                    value={vendorToEdit.wholesaleTokens || 0}
-                    onChange={(e) => setVendorToEdit({ ...vendorToEdit, wholesaleTokens: Number(e.target.value) })}
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Status Akun Mitra</label>
+                  <select
+                    value={vendorToEdit.status || 'active'}
+                    onChange={(e) => setVendorToEdit({ ...vendorToEdit, status: e.target.value })}
                     className="glass-input"
-                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
-                  />
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="active">Aktif (Normal)</option>
+                    <option value="suspended">Ditangguhkan (Suspended)</option>
+                  </select>
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Instagram Agensi</label>
@@ -3157,7 +3166,6 @@ export default function SuperAdminDashboard() {
                     <option value="bca_va">BCA Virtual Account</option>
                     <option value="mandiri_va">Mandiri Virtual Account</option>
                     <option value="manual">Transfer Manual Bank</option>
-                    <option value="partner_token">Token Grosir Mitra</option>
                   </select>
                 </div>
               </div>
@@ -3335,7 +3343,6 @@ export default function SuperAdminDashboard() {
                   >
                     <option value="manual">Transfer Bank BCA Manual</option>
                     <option value="qris">QRIS</option>
-                    <option value="partner_token">Token Grosir</option>
                   </select>
                 </div>
               </div>

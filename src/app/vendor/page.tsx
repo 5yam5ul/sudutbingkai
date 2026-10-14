@@ -456,7 +456,7 @@ export default function VendorPortalPage() {
     };
     let signedToken: string | undefined;
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await authFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -467,8 +467,8 @@ export default function VendorPortalPage() {
         })
       });
       const data = await res.json();
-      if (data.success && data.sessionToken) {
-        signedToken = data.sessionToken;
+      if (data.success && (data.token || data.sessionToken)) {
+        signedToken = data.token || data.sessionToken;
       }
     } catch {}
     setClientSession(updated, signedToken);

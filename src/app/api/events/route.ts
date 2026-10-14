@@ -181,8 +181,12 @@ export async function POST(request: Request) {
         }
         if (tierKey !== 'starter' && !tierConfig.isFree) {
           const basePrice = parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0;
-          const ratePercent = matchedVendor.commissionRate || (matchedVendor.partnerTier === 'vip' ? 25 : 20);
-          serverCommissionAmount = Math.round(basePrice * (ratePercent / 100));
+          const rawRate = Number(matchedVendor.commissionRate) || 0;
+          const rateDecimal = rawRate > 0
+            ? (rawRate <= 1 ? rawRate : rawRate / 100)
+            : (matchedVendor.partnerTier === 'vip' ? 0.20 : matchedVendor.partnerTier === 'pro' ? 0.15 : 0.12);
+          const netPrice = cleanRef && !body.vendorId ? Math.round(basePrice * 0.9) : basePrice;
+          serverCommissionAmount = Math.round(netPrice * rateDecimal);
         }
       } else if (cleanRef === 'VOWSANDCO' || cleanRef === 'VOWSANDCO10' || cleanRef === 'KREATIV10') {
         verifiedReferralCode = cleanRef;
@@ -192,7 +196,8 @@ export async function POST(request: Request) {
         verifiedVendorInstagram = body.vendorInstagram;
         if (tierKey !== 'starter' && !tierConfig.isFree) {
           const basePrice = parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0;
-          serverCommissionAmount = Math.round(basePrice * 0.2);
+          const netPrice = !body.vendorId ? Math.round(basePrice * 0.9) : basePrice;
+          serverCommissionAmount = Math.round(netPrice * 0.15);
         }
       }
     }

@@ -72,8 +72,12 @@ export async function POST(request: Request) {
     const discountPercent = 10;
     const discountAmount = Math.round((originalPrice * discountPercent) / 100);
     const finalPrice = Math.max(0, originalPrice - discountAmount);
-    const commissionPercent = matchedVendor.partnerTier === 'vip' ? 20 : matchedVendor.partnerTier === 'pro' ? 15 : 12;
-    const commissionAmount = Math.round((finalPrice * commissionPercent) / 100);
+    const rawRate = Number(matchedVendor.commissionRate) || 0;
+    const rateDecimal = rawRate > 0
+      ? (rawRate <= 1 ? rawRate : rawRate / 100)
+      : (matchedVendor.partnerTier === 'vip' ? 0.20 : matchedVendor.partnerTier === 'pro' ? 0.15 : 0.12);
+    const commissionPercent = Math.round(rateDecimal * 100);
+    const commissionAmount = Math.round(finalPrice * rateDecimal);
 
     return NextResponse.json({
       success: true,

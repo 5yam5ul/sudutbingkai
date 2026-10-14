@@ -223,6 +223,7 @@ export async function PATCH(req: Request) {
     if (isAdmin) {
       if (body.email !== undefined) updates.email = body.email.trim().toLowerCase();
       if (body.tier !== undefined) updates.tier = body.tier;
+      if (body.status !== undefined) updates.status = body.status === 'suspended' ? 'suspended' : 'active';
       if (body.partnerTier !== undefined) {
         updates.partnerTier = body.partnerTier;
         if (body.commissionRate === undefined) {

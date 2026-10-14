@@ -36,14 +36,39 @@ export async function GET(request: Request) {
     }
 
     let canonicalEventId = eventId;
+    let targetEvent = null;
     if (eventId) {
-      const ev = await getEventById(eventId);
-      if (ev) canonicalEventId = ev.id;
+      targetEvent = await getEventById(eventId);
+      if (targetEvent) canonicalEventId = targetEvent.id;
     }
 
     let wishes = await getVideoWishes(canonicalEventId);
     if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
       wishes = wishes.filter(w => w.guestName && w.guestName.toLowerCase() === guestNameParam.trim().toLowerCase());
+      return NextResponse.json({ success: true, wishes, videoWishes: wishes });
+    }
+
+    if (targetEvent && targetEvent.revealMode === 'delayed' && targetEvent.revealTime) {
+      const isDelayedLocked = Date.now() < new Date(targetEvent.revealTime).getTime();
+      if (isDelayedLocked) {
+        const isAuthorizedManager = Boolean(
+          session &&
+            (session.role === 'admin' ||
+              (session.role === 'host' &&
+                targetEvent.hostEmail &&
+                session.email.toLowerCase() === targetEvent.hostEmail.toLowerCase()) ||
+              (session.role === 'vendor' && targetEvent.vendorId && session.id === targetEvent.vendorId))
+        );
+        if (!isAuthorizedManager) {
+          return NextResponse.json({
+            success: true,
+            wishes: [],
+            videoWishes: [],
+            count: wishes.length,
+            isLocked: true,
+          });
+        }
+      }
     }
 
     return NextResponse.json({ success: true, wishes, videoWishes: wishes });

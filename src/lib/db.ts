@@ -1892,7 +1892,8 @@ export async function getAllVendors(): Promise<any[]> {
           phone: v.phone || '',
           instagram: v.instagram || '',
           logoUrl: v.logo_url || '',
-          tier: v.tier || 'pro',
+          tier: v.tier === 'suspended' ? 'pro' : (v.tier || 'pro'),
+          status: v.status || (v.tier === 'suspended' ? 'suspended' : 'active'),
           partnerTier: v.partner_tier || 'regular',
           referralCode: v.referral_code || '',
           commissionRate: Number(v.commission_rate ?? 0.12),
@@ -1962,6 +1963,7 @@ export async function saveVendor(vendorData: any): Promise<any> {
   const newVendor = {
     ...vendorData,
     id: vendorId,
+    status: vendorData.status || 'active',
     logoUrl: resolvedLogoUrl,
     createdAt: vendorData.createdAt || new Date().toISOString()
   };
@@ -1977,7 +1979,7 @@ export async function saveVendor(vendorData: any): Promise<any> {
         phone: newVendor.phone || null,
         instagram: newVendor.instagram || null,
         logo_url: newVendor.logoUrl || null,
-        tier: newVendor.tier || 'pro',
+        tier: newVendor.status === 'suspended' ? 'suspended' : (newVendor.tier || 'pro'),
         partner_tier: newVendor.partnerTier || 'regular',
         referral_code: newVendor.referralCode || null,
         commission_rate: newVendor.commissionRate || 0.12,
@@ -2040,6 +2042,9 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       if (updates.instagram !== undefined) dbUpdates.instagram = updates.instagram;
       if (updates.logoUrl !== undefined) dbUpdates.logo_url = updates.logoUrl;
       if (updates.tier !== undefined) dbUpdates.tier = updates.tier;
+      if (updates.status !== undefined) {
+        dbUpdates.tier = updates.status === 'suspended' ? 'suspended' : (updates.tier || 'pro');
+      }
       if (updates.partnerTier !== undefined) dbUpdates.partner_tier = updates.partnerTier;
       if (updates.referralCode !== undefined) dbUpdates.referral_code = updates.referralCode;
       if (updates.commissionRate !== undefined) dbUpdates.commission_rate = updates.commissionRate;
@@ -2069,7 +2074,8 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
           phone: data.phone || '',
           instagram: data.instagram || '',
           logoUrl: data.logo_url || '',
-          tier: data.tier || 'pro',
+          tier: data.tier === 'suspended' ? 'pro' : (data.tier || 'pro'),
+          status: updates.status || data.status || (data.tier === 'suspended' ? 'suspended' : 'active'),
           partnerTier: data.partner_tier || 'regular',
           referralCode: data.referral_code || '',
           commissionRate: Number(data.commission_rate ?? 0.12),

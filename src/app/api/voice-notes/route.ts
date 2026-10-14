@@ -34,10 +34,11 @@ export async function GET(request: Request) {
   const session = getServerSession(request);
 
   let resolvedEventId = eventIdParam;
+  let targetEvent = null;
   if (eventIdParam) {
-    const event = await getEventById(eventIdParam);
-    if (event) {
-      resolvedEventId = event.id;
+    targetEvent = await getEventById(eventIdParam);
+    if (targetEvent) {
+      resolvedEventId = targetEvent.id;
     }
   }
 
@@ -51,6 +52,30 @@ export async function GET(request: Request) {
     }
   }
 
+  const isSpecificNamedGuestQuery = Boolean(
+    guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan'
+  );
+
+  if (!isSpecificNamedGuestQuery && targetEvent && targetEvent.revealMode === 'delayed' && targetEvent.revealTime) {
+    const isDelayedLocked = Date.now() < new Date(targetEvent.revealTime).getTime();
+    if (isDelayedLocked) {
+      const isAuthorizedManager = Boolean(
+        session &&
+          (session.role === 'admin' ||
+            (session.role === 'host' &&
+              targetEvent.hostEmail &&
+              session.email.toLowerCase() === targetEvent.hostEmail.toLowerCase()) ||
+            (session.role === 'vendor' && targetEvent.vendorId && session.id === targetEvent.vendorId))
+      );
+      if (!isAuthorizedManager) {
+        return NextResponse.json({
+          success: true,
+          voiceNotes: [],
+          isLocked: true,
+        });
+      }
+    }
+  }
 
   // 1. Supabase
   if (isSupabaseConfigured && supabase) {
@@ -241,17 +266,19 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Local fallback
+    // 3. Local fallback (preserve R2 audioUrl if already uploaded)
     ensureVoiceStorage();
     try {
-      const filePath = path.join(VOICES_DIR, fileName);
-      fs.writeFileSync(filePath, buffer);
+      if (!audioUrl) {
+        const filePath = path.join(VOICES_DIR, fileName);
+        fs.writeFileSync(filePath, buffer);
+      }
 
       const newRecord = {
         id: noteId,
-        eventId,
+        eventId: targetEventId,
         guestName,
-        audioUrl: `/uploads/voices/${fileName}`,
+        audioUrl: audioUrl || `/uploads/voices/${fileName}`,
         duration,
         timestamp: new Date().toISOString()
       };

@@ -131,14 +131,14 @@ function LoginFormContent() {
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        handleSupabaseUserSession(session.user);
+        handleSupabaseUserSession(session.user, session.access_token);
       }
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
       const isPending = typeof window !== 'undefined' && sessionStorage.getItem('sb_oauth_pending') !== null;
       if (session?.user && (event === 'SIGNED_IN' || event === 'USER_UPDATED') && isPending) {
-        handleSupabaseUserSession(session.user);
+        handleSupabaseUserSession(session.user, session.access_token);
       }
     });
 
@@ -147,7 +147,7 @@ function LoginFormContent() {
     };
   }, [router, portalRole, searchParams]);
 
-  const handleSupabaseUserSession = async (user: any) => {
+  const handleSupabaseUserSession = async (user: any, accessToken?: string) => {
     const userEmail = (user.email || '').trim().toLowerCase();
     if (!userEmail) return;
 
@@ -186,10 +186,10 @@ function LoginFormContent() {
         const res = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...u, mode: 'oauth' }),
+          body: JSON.stringify({ ...u, mode: 'oauth', accessToken }),
         });
         const data = await res.json();
-        if (data.success && data.token) return data.token;
+        if (data.success && (data.token || data.sessionToken)) return data.token || data.sessionToken;
       } catch {}
       return undefined;
     };
@@ -412,6 +412,20 @@ function LoginFormContent() {
         }
 
         try {
+          if (supabase && isSupabaseConfigured) {
+            await supabase.auth.signUp({
+              email: cleanEmail,
+              password: cleanPassword,
+              options: {
+                data: {
+                  full_name: vendorPicName.trim(),
+                  company_name: vendorCompanyName.trim(),
+                  role: 'vendor',
+                },
+              },
+            });
+          }
+
           const generatedRef = vendorCompanyName
             .toUpperCase()
             .replace(/[^A-Z0-9]/g, '')
@@ -474,7 +488,7 @@ function LoginFormContent() {
           });
           const data = await res.json();
           if (res.ok && data.success && data.user) {
-            setClientSession(data.user, data.token);
+            setClientSession(data.user, data.token || data.sessionToken);
             toast.success(`Selamat datang di Portal Mitra, ${data.user.companyName || data.user.name}`);
             router.push(resolveRedirectDestination('/vendor', 'vendor'));
           } else {
@@ -529,23 +543,23 @@ function LoginFormContent() {
         };
 
         let serverToken: string | undefined;
-        try {
-          const regRes = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              mode: 'register',
-              role: 'host',
-              id: newUser.id,
-              name: newUser.name,
-              email: newUser.email,
-            }),
-          });
-          const regData = await regRes.json();
-          if (regData.success && regData.token) {
-            serverToken = regData.token;
-          }
-        } catch {}
+        const regRes = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            mode: 'register',
+            role: 'host',
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
+            password: cleanPassword,
+          }),
+        });
+        const regData = await regRes.json();
+        if (!regRes.ok || !regData.success) {
+          throw new Error(regData.error || 'Gagal mendaftarkan akun.');
+        }
+        serverToken = regData.token || regData.sessionToken;
 
         setClientSession(newUser, serverToken);
         toast.success(`Akun berhasil dibuat! Selamat datang, ${name.trim()}.`);

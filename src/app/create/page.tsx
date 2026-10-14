@@ -65,7 +65,7 @@ function CreateEventForm() {
 
   // Vendor Commission Calculations
   const isVendor = currentUser?.role === 'vendor';
-  const vendorCommissionRate = currentUser?.partnerTier === 'vip' ? 0.20 : currentUser?.partnerTier === 'pro' ? 0.15 : 0.15;
+  const vendorCommissionRate = currentUser?.partnerTier === 'vip' ? 0.20 : currentUser?.partnerTier === 'pro' ? 0.15 : 0.12;
   const basePackagePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 0;
   const vendorCommissionAmount = Math.round(basePackagePrice * vendorCommissionRate);
 
