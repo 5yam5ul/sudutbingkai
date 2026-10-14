@@ -1804,13 +1804,17 @@ export async function updateTestimonialStatus(
   status: 'approved' | 'rejected',
   adminNotes?: string
 ): Promise<VideoTestimonialSubmission | null> {
-  // Check existing testimonial first to prevent double-rewarding a previously approved submission
+  // Check existing testimonial first to prevent double-rewarding or handle rejection cleanup/clawback
   let alreadyRewarded = false;
+  let existingTesti: VideoTestimonialSubmission | undefined;
   try {
     const existingList = await getAllTestimonials();
-    const existingTesti = existingList.find(t => t.id === id);
+    existingTesti = existingList.find(t => t.id === id);
     if (existingTesti && (existingTesti.status === 'approved' || Boolean(existingTesti.rewardPaidAt))) {
       alreadyRewarded = true;
+    }
+    if (status === 'rejected' && existingTesti?.videoUrl) {
+      await deleteFromR2(existingTesti.videoUrl);
     }
   } catch {}
 
@@ -1865,6 +1869,20 @@ export async function updateTestimonialStatus(
           } catch (rewardErr) {
             console.warn('Failed to auto-disburse testimonial reward to vendor wallet:', rewardErr);
           }
+        } else if (status === 'rejected' && alreadyRewarded && updatedTesti.submitterType === 'vendor' && updatedTesti.submitterId) {
+          try {
+            const vendors = await getAllVendors();
+            const matchedVendor = vendors.find(v => isSameVendorId(v.id, updatedTesti.submitterId) || (updatedTesti.submitterEmail && v.email === updatedTesti.submitterEmail));
+            if (matchedVendor) {
+              const reward = updatedTesti.rewardAmount || 50000;
+              await updateVendor(matchedVendor.id, {
+                walletBalance: Math.max(0, (matchedVendor.walletBalance || 0) - reward),
+                totalEarnings: Math.max(0, (matchedVendor.totalEarnings || 0) - reward)
+              });
+            }
+          } catch (clawbackErr) {
+            console.warn('Failed to clawback rejected testimonial reward from vendor wallet:', clawbackErr);
+          }
         }
 
         // Also safely sync local cache
@@ -1902,14 +1920,18 @@ export async function updateTestimonialStatus(
 
     list[index].status = status;
     if (adminNotes) list[index].adminNotes = adminNotes;
-    if (rewardPaidAt) list[index].rewardPaidAt = rewardPaidAt;
+    if (rewardPaidAt) {
+      list[index].rewardPaidAt = rewardPaidAt;
+    } else if (status === 'rejected') {
+      delete list[index].rewardPaidAt;
+    }
 
     fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(list, null, 2), 'utf8');
 
-    // 3. If newly approved and submitter is a vendor, disburse the reward to vendor wallet
+    // 3. If newly approved and submitter is a vendor, disburse the reward to vendor wallet; if rejected after reward, claw back
+    const currentTesti = list[index];
     if (status === 'approved' && !alreadyRewarded) {
       try {
-        const currentTesti = list[index];
         if (currentTesti && currentTesti.submitterType === 'vendor' && currentTesti.submitterId) {
           const vendors = await getAllVendors();
           const matchedVendor = vendors.find(v => isSameVendorId(v.id, currentTesti.submitterId) || (currentTesti.submitterEmail && v.email === currentTesti.submitterEmail));
@@ -1923,6 +1945,22 @@ export async function updateTestimonialStatus(
         }
       } catch (rewardErr) {
         console.warn('Failed to auto-disburse testimonial reward to vendor wallet:', rewardErr);
+      }
+    } else if (status === 'rejected' && alreadyRewarded) {
+      try {
+        if (currentTesti && currentTesti.submitterType === 'vendor' && currentTesti.submitterId) {
+          const vendors = await getAllVendors();
+          const matchedVendor = vendors.find(v => isSameVendorId(v.id, currentTesti.submitterId) || (currentTesti.submitterEmail && v.email === currentTesti.submitterEmail));
+          if (matchedVendor) {
+            const reward = currentTesti.rewardAmount || 50000;
+            await updateVendor(matchedVendor.id, {
+              walletBalance: Math.max(0, (matchedVendor.walletBalance || 0) - reward),
+              totalEarnings: Math.max(0, (matchedVendor.totalEarnings || 0) - reward)
+            });
+          }
+        }
+      } catch (clawbackErr) {
+        console.warn('Failed to clawback rejected testimonial reward from vendor wallet:', clawbackErr);
       }
     }
 
@@ -1938,6 +1976,24 @@ export async function deleteTestimonial(id: string): Promise<boolean> {
     const target = allTestimonials.find(t => t.id === id);
     if (target?.videoUrl) {
       await deleteFromR2(target.videoUrl);
+    }
+    if (
+      target &&
+      (target.status === 'approved' || Boolean(target.rewardPaidAt)) &&
+      target.submitterType === 'vendor' &&
+      target.submitterId
+    ) {
+      const vendors = await getAllVendors();
+      const matchedVendor = vendors.find(
+        v => isSameVendorId(v.id, target.submitterId) || (target.submitterEmail && v.email === target.submitterEmail)
+      );
+      if (matchedVendor) {
+        const reward = target.rewardAmount || 50000;
+        await updateVendor(matchedVendor.id, {
+          walletBalance: Math.max(0, (matchedVendor.walletBalance || 0) - reward),
+          totalEarnings: Math.max(0, (matchedVendor.totalEarnings || 0) - reward)
+        });
+      }
     }
   } catch {}
 
@@ -2280,6 +2336,7 @@ export async function deleteVendor(id: string): Promise<boolean> {
   try {
     const allVendors = await getAllVendors();
     const target = allVendors.find(v => v.id === id);
+    await syncVendorBrandingToEvents(target?.id || id, { vendorLogo: '' });
     if (target?.logoUrl) {
       await deleteFromR2(target.logoUrl);
     }

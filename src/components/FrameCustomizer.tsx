@@ -94,6 +94,8 @@ export default function FrameCustomizer({
     const nextUrl = initialCustomFrameUrl || '';
     if (unsavedFrameUploadRef.current && unsavedFrameUploadRef.current !== nextUrl) {
       cleanupUnsavedFrame();
+    } else if (nextUrl && unsavedFrameUploadRef.current === nextUrl) {
+      unsavedFrameUploadRef.current = '';
     }
     setCustomFrameUrl(nextUrl);
   }, [initialCustomFrameUrl, cleanupUnsavedFrame]);
@@ -117,7 +119,7 @@ export default function FrameCustomizer({
   useEffect(() => {
     onUpdate({
       frameId: selectedFrame,
-      customFrameUrl: customFrameUrl || undefined,
+      customFrameUrl: selectedFrame === 'custom' ? (customFrameUrl || undefined) : undefined,
       coupleName,
       eventDate,
       tagline,

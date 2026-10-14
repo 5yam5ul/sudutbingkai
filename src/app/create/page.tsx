@@ -240,11 +240,15 @@ function CreateEventForm() {
       revealMode,
       revealTime: revealMode === 'delayed' ? revealTime : undefined,
       frameId,
-      customFrameUrl: customFrameUrl || undefined,
+      customFrameUrl: frameId === 'custom' ? (customFrameUrl || undefined) : undefined,
       frameText,
       allowGuestFrameToggle,
       allowVoiceNote,
-      closingWishType: (selectedTier === 'wedding' || selectedTier === 'unlimited') ? 'video' : (allowVoiceNote ? 'voice' : 'none'),
+      closingWishType: !allowVoiceNote
+        ? 'none'
+        : (selectedTier === 'wedding' || selectedTier === 'unlimited')
+          ? 'video'
+          : 'voice',
       hostEmail: cleanEmail,
       paymentStatus,
     };

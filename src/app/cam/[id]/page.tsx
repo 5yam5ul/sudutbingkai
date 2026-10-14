@@ -620,14 +620,21 @@ export default function GuestCameraPage() {
         .then(res => res.json())
         .then(pData => {
           if (pData.success && Array.isArray(pData.photos) && pData.photos.length > 0) {
-            const serverPhotos = pData.photos.map((p: any) => ({
+            const sortedRaw = [...pData.photos].sort(
+              (a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+            const serverPhotos = sortedRaw.map((p: any, idx: number) => ({
               id: p.id,
               eventId: p.eventId || targetEventId,
               guestName: p.guestName,
               imageData: p.imageData || p.url,
               filter: p.filter || 'Disposable',
-              timestamp: p.timestamp
-            })).sort((a: any, b: any) => a.timestamp - b.timestamp);
+              shotNumber: p.shotNumber || (idx + 1),
+              caption: p.caption || '',
+              timestamp: p.timestamp,
+              aspectRatio: p.aspectRatio || '3:4',
+              frameId: p.frameId || 'none'
+            }));
             setShotCount(serverPhotos.length);
             setMyPhotos(serverPhotos);
             setLastShotThumb(serverPhotos[serverPhotos.length - 1].imageData);
@@ -2649,7 +2656,14 @@ export default function GuestCameraPage() {
 
             {/* Subtle Voice/Video Status or Recorder */}
             {(() => {
-              const isVideoWishTier = event?.closingWishType === 'video' || event?.packageTier === 'wedding' || event?.packageTier === 'unlimited';
+              const isClosingWishEnabled = event?.allowVoiceNote !== false && event?.closingWishType !== 'none';
+              if (!isClosingWishEnabled) {
+                return null;
+              }
+
+              const isVideoWishTier =
+                event?.closingWishType === 'video' ||
+                (!event?.closingWishType && (event?.packageTier === 'wedding' || event?.packageTier === 'unlimited'));
 
               if (isVideoWishTier) {
                 if (hasSentVideoWish) {
@@ -2667,7 +2681,7 @@ export default function GuestCameraPage() {
                       marginBottom: '14px'
                     }}>
                       <Check size={12} color="#22C55E" />
-                      <span>Video ucapan tersimpan di galeri</span>
+                      <span>Ucapan tersimpan di galeri</span>
                     </div>
                   );
                 }
@@ -2686,13 +2700,43 @@ export default function GuestCameraPage() {
                           localStorage.setItem(`sb_has_sent_video_${eventId}`, 'true');
                         } catch {}
                       }}
-                      onSkipTextWish={() => {
+                      onSkipTextWish={(textWish?: string) => {
                         setHasSentVideoWish(true);
                         const canonicalId = event?.id || eventId;
                         try {
                           localStorage.setItem(`sb_has_sent_video_${canonicalId}`, 'true');
                           localStorage.setItem(`sb_has_sent_video_${eventId}`, 'true');
                         } catch {}
+                        const cleanTextWish = (textWish || '').trim();
+                        if (cleanTextWish && myPhotos.length > 0) {
+                          const targetPhoto = myPhotos[myPhotos.length - 1];
+                          const updatedCaption = targetPhoto.caption
+                            ? `${targetPhoto.caption} — "${cleanTextWish}"`
+                            : cleanTextWish;
+                          setMyPhotos(prev => {
+                            if (prev.length === 0) return prev;
+                            const next = [...prev];
+                            next[next.length - 1] = { ...next[next.length - 1], caption: updatedCaption };
+                            try {
+                              const persistentShots = next.slice(-50);
+                              localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
+                              localStorage.setItem(`sb_my_shots_${canonicalId}`, JSON.stringify(persistentShots));
+                            } catch {}
+                            return next;
+                          });
+                          if (targetPhoto.id) {
+                            fetch('/api/photos', {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                id: targetPhoto.id,
+                                caption: updatedCaption,
+                                sessionId: guestSessionId,
+                                guestName
+                              })
+                            }).catch(() => {});
+                          }
+                        }
                       }}
                     />
                   </div>
@@ -2700,7 +2744,7 @@ export default function GuestCameraPage() {
               }
 
               // Standard Voice Note Tier
-              if (event?.allowVoiceNote !== false && !hasSentVoice) {
+              if (!hasSentVoice) {
                 return (
                   <div style={{
                     background: 'rgba(255, 255, 255, 0.05)',

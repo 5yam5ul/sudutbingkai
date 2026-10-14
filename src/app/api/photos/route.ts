@@ -239,8 +239,17 @@ export async function PATCH(request: Request) {
     );
     const isVendor = session?.role === 'vendor' && isSameVendorId(session.id, event?.vendorId);
     const isAdmin = session?.role === 'admin';
+    const isGuestCaptionOwner =
+      typeof body.caption === 'string' &&
+      body.isHidden === undefined &&
+      Boolean(
+        (body.sessionId && targetPhoto.sessionId && String(body.sessionId) === String(targetPhoto.sessionId)) ||
+        (body.guestName &&
+          targetPhoto.guestName &&
+          String(body.guestName).trim().toLowerCase() === String(targetPhoto.guestName).trim().toLowerCase())
+      );
 
-    if (!isHost && !isVendor && !isAdmin) {
+    if (!isHost && !isVendor && !isAdmin && !isGuestCaptionOwner) {
       return NextResponse.json({
         success: false,
         error: 'Akses ditolak: Hanya Penyelenggara Acara atau Admin yang dapat memoderasi foto ini.'
@@ -248,11 +257,11 @@ export async function PATCH(request: Request) {
     }
 
     const updates: Partial<PhotoRecord> = {};
-    if (typeof body.isHidden === 'boolean') {
+    if (typeof body.isHidden === 'boolean' && (isHost || isVendor || isAdmin)) {
       updates.isHidden = body.isHidden;
     }
     if (typeof body.caption === 'string') {
-      updates.caption = body.caption;
+      updates.caption = body.caption.trim().slice(0, 500);
     }
 
     const updated = await updatePhoto(body.id, updates);

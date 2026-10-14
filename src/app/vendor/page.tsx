@@ -174,7 +174,19 @@ export default function VendorPortalPage() {
 
       const data = await res.json();
       if (data.success) {
-        setWalletBalance(prev => Math.max(0, prev - payoutAmount));
+        const nextBal = typeof data.walletBalance === 'number'
+          ? data.walletBalance
+          : Math.max(0, walletBalance - payoutAmount);
+        setWalletBalance(nextBal);
+        setPayoutAmount(nextBal);
+        const updatedVendorSession: UserAccount = {
+          ...vendor,
+          walletBalance: nextBal
+        };
+        setVendor(updatedVendorSession);
+        if (data.sessionToken) {
+          setClientSession(updatedVendorSession, data.sessionToken);
+        }
         setPayoutModalOpen(false);
         if (data.payout) {
           setPayoutsList(prev => [data.payout, ...prev]);
@@ -591,6 +603,7 @@ export default function VendorPortalPage() {
         throw new Error(data.error || 'Gagal mendaftarkan agensi.');
       }
 
+      const resolvedRefCode = data.vendor?.referralCode || generatedRef;
       const newVendorSession: UserAccount = {
         id: data.vendor?.id || `vendor_${Date.now()}`,
         name,
@@ -600,11 +613,12 @@ export default function VendorPortalPage() {
         phone: regPhone.trim(),
         city: regCity.trim() || 'Jakarta',
         partnerTier: 'regular',
-        referralCode: generatedRef,
+        referralCode: resolvedRefCode,
         walletBalance: 0,
         totalEarnings: 0
       };
 
+      setReferralCode(resolvedRefCode);
       setClientSession(newVendorSession, data.sessionToken);
       setVendor(newVendorSession);
       setCompanyName(cleanCompany);

@@ -234,7 +234,12 @@ export default function EventDashboardPage() {
           const isVerifiedOwner = Boolean(
             session &&
               (session.role === 'admin' ||
-                Boolean(ev.hostEmail) ||
+                (session.role === 'host' &&
+                  Boolean(
+                    ev.hostEmail &&
+                      session.email &&
+                      session.email.toLowerCase() === ev.hostEmail.toLowerCase()
+                  )) ||
                 (session.role === 'vendor' && isSameVendorId(session.id, ev.vendorId)))
           );
           setIsHost(isVerifiedOwner);

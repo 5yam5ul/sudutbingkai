@@ -244,6 +244,18 @@ export async function POST(request: Request) {
           ? 'pending'
           : (body.paymentStatus || 'pending');
 
+    const resolvedFrameId = body.frameId || 'minimal-gold';
+    const resolvedCustomFrameUrl = resolvedFrameId === 'custom' ? body.customFrameUrl : undefined;
+    if (resolvedFrameId !== 'custom' && body.customFrameUrl) {
+      await deleteFromR2(body.customFrameUrl);
+    }
+    const resolvedAllowVoiceNote = body.closingWishType === 'none' ? false : (body.allowVoiceNote !== false);
+    const resolvedClosingWishType = !resolvedAllowVoiceNote
+      ? 'none'
+      : (body.closingWishType && body.closingWishType !== 'none'
+          ? body.closingWishType
+          : (tierKey === 'wedding' || tierKey === 'unlimited' ? 'video' : 'voice'));
+
     const newEvent: EventData = {
       id,
       slug: cleanSlug,
@@ -261,12 +273,12 @@ export async function POST(request: Request) {
       revealMode: body.revealMode || 'instant',
       revealTime: body.revealTime,
       coverUrl: body.coverUrl,
-      frameId: body.frameId || 'minimal-gold',
-      customFrameUrl: body.customFrameUrl,
+      frameId: resolvedFrameId,
+      customFrameUrl: resolvedCustomFrameUrl,
       frameText: body.frameText,
-      allowVoiceNote: body.allowVoiceNote !== false,
+      allowVoiceNote: resolvedAllowVoiceNote,
       allowGuestFrameToggle: body.allowGuestFrameToggle !== false,
-      closingWishType: body.closingWishType || (tierKey === 'wedding' || tierKey === 'unlimited' ? 'video' : 'voice'),
+      closingWishType: resolvedClosingWishType,
       createdAt: new Date().toISOString(),
       hostEmail: resolvedHostEmail,
       paymentStatus: resolvedPaymentStatus,
@@ -479,16 +491,42 @@ export async function PATCH(request: Request) {
     if (body.revealMode) updates.revealMode = body.revealMode;
     if (body.revealTime !== undefined) updates.revealTime = body.revealTime;
     if (body.frameId) updates.frameId = body.frameId;
-    if (body.customFrameUrl !== undefined) {
+    const effectiveFrameId = updates.frameId || existingEvent.frameId || 'minimal-gold';
+    if (effectiveFrameId !== 'custom') {
+      if (existingEvent.customFrameUrl) {
+        await deleteFromR2(existingEvent.customFrameUrl);
+      }
+      if (body.customFrameUrl && body.customFrameUrl !== existingEvent.customFrameUrl) {
+        await deleteFromR2(body.customFrameUrl);
+      }
+      if (existingEvent.customFrameUrl || body.customFrameUrl !== undefined) {
+        updates.customFrameUrl = '';
+      }
+    } else if (body.customFrameUrl !== undefined) {
       if (existingEvent.customFrameUrl && existingEvent.customFrameUrl !== body.customFrameUrl) {
         await deleteFromR2(existingEvent.customFrameUrl);
       }
       updates.customFrameUrl = body.customFrameUrl;
     }
     if (body.frameText !== undefined) updates.frameText = body.frameText;
-    if (body.allowVoiceNote !== undefined) updates.allowVoiceNote = body.allowVoiceNote;
     if (body.allowGuestFrameToggle !== undefined) updates.allowGuestFrameToggle = body.allowGuestFrameToggle;
-    if (body.closingWishType !== undefined) updates.closingWishType = body.closingWishType;
+    const effectiveTier = updates.packageTier || currentTier;
+    if (body.closingWishType !== undefined) {
+      updates.closingWishType = body.closingWishType;
+      if (body.allowVoiceNote === undefined) {
+        updates.allowVoiceNote = body.closingWishType !== 'none';
+      }
+    }
+    if (body.allowVoiceNote !== undefined) {
+      updates.allowVoiceNote = body.allowVoiceNote;
+      if (body.closingWishType === undefined) {
+        if (!body.allowVoiceNote) {
+          updates.closingWishType = 'none';
+        } else if (!existingEvent.closingWishType || existingEvent.closingWishType === 'none') {
+          updates.closingWishType = (effectiveTier === 'wedding' || effectiveTier === 'unlimited') ? 'video' : 'voice';
+        }
+      }
+    }
     if (body.coverUrl !== undefined) {
       if (existingEvent.coverUrl && existingEvent.coverUrl !== body.coverUrl) {
         await deleteFromR2(existingEvent.coverUrl);

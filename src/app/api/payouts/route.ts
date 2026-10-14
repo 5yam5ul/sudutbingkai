@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getPayoutRequests, createPayoutRequest, updatePayoutStatus, deletePayout, getAllVendors, updateVendor } from '@/lib/db';
-import { getServerSession, isSameVendorId } from '@/lib/auth';
+import { getServerSession, isSameVendorId, signSessionPayload } from '@/lib/auth';
 
 export async function GET(request: Request) {
   try {
@@ -88,6 +88,9 @@ export async function POST(request: Request) {
     const allVendors = await getAllVendors();
     const matchedVendor = allVendors.find(v => isSameVendorId(v.id, vendorId) || (vendorEmail && v.email?.toLowerCase() === vendorEmail.toLowerCase()));
 
+    let nextBalance: number | undefined;
+    let sessionToken: string | undefined;
+
     if (matchedVendor) {
       if (!isAdmin && matchedVendor.status === 'suspended') {
         return NextResponse.json({
@@ -102,10 +105,29 @@ export async function POST(request: Request) {
           error: `Saldo komisi tidak mencukupi (Tersedia: Rp ${availableBalance.toLocaleString('id-ID')}).`
         }, { status: 400 });
       }
+      nextBalance = Math.max(0, availableBalance - requestedAmount);
       // Deduct balance upon payout request creation to prevent double withdrawal
-      await updateVendor(matchedVendor.id, {
-        walletBalance: Math.max(0, availableBalance - requestedAmount)
+      const updatedVendor = await updateVendor(matchedVendor.id, {
+        walletBalance: nextBalance
       });
+      if (isSelf && updatedVendor) {
+        const vendorSessionPayload = {
+          id: updatedVendor.id,
+          name: updatedVendor.name,
+          companyName: updatedVendor.companyName || updatedVendor.name,
+          email: updatedVendor.email,
+          role: 'vendor' as const,
+          phone: updatedVendor.phone || '',
+          instagram: updatedVendor.instagram || '',
+          city: updatedVendor.city || 'Jakarta',
+          logoUrl: updatedVendor.logoUrl,
+          partnerTier: updatedVendor.partnerTier || 'regular',
+          referralCode: updatedVendor.referralCode,
+          walletBalance: updatedVendor.walletBalance || 0,
+          totalEarnings: updatedVendor.totalEarnings || 0,
+        };
+        sessionToken = signSessionPayload(JSON.stringify(vendorSessionPayload));
+      }
     } else if (!isAdmin && vendorId !== 'vendor_vows_co') {
       return NextResponse.json({
         success: false,
@@ -123,7 +145,12 @@ export async function POST(request: Request) {
       notes
     });
 
-    return NextResponse.json({ success: true, payout });
+    return NextResponse.json({
+      success: true,
+      payout,
+      ...(nextBalance !== undefined ? { walletBalance: nextBalance } : {}),
+      ...(sessionToken ? { sessionToken } : {})
+    });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

@@ -128,6 +128,22 @@ export async function POST(req: Request) {
       ? Number(commissionRate)
       : (safePartnerTier === 'vip' ? 0.20 : safePartnerTier === 'pro' ? 0.15 : 0.12);
 
+    let normalizedRefCode = referralCode ? referralCode.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '') : undefined;
+    if (normalizedRefCode) {
+      const codeCollision = allVendors.some(
+        v => v.referralCode && v.referralCode.toUpperCase() === normalizedRefCode
+      );
+      if (codeCollision) {
+        if (isAdmin) {
+          return NextResponse.json({
+            success: false,
+            error: `Kode referral "${normalizedRefCode}" sudah digunakan oleh mitra vendor lain.`
+          }, { status: 400 });
+        }
+        normalizedRefCode = `${normalizedRefCode.slice(0, 7)}${Date.now().toString().slice(-3)}`;
+      }
+    }
+
     const newVendor = {
       id: vendorId,
       name: name.trim(),
@@ -138,7 +154,7 @@ export async function POST(req: Request) {
       logoUrl: logoUrl || '',
       tier: isAdmin ? (tier || 'pro') : 'starter',
       partnerTier: safePartnerTier,
-      referralCode: referralCode ? referralCode.trim().toUpperCase() : undefined,
+      referralCode: normalizedRefCode,
       commissionRate: safeCommissionRate,
       walletBalance: isAdmin && walletBalance !== undefined ? Number(walletBalance) : 0,
       totalEarnings: 0,
@@ -217,7 +233,21 @@ export async function PATCH(req: Request) {
     if (body.logoUrl !== undefined) updates.logoUrl = body.logoUrl;
     if (body.bankDetails !== undefined) updates.bankDetails = body.bankDetails;
     if (body.city !== undefined) updates.city = body.city;
-    if (body.referralCode !== undefined) updates.referralCode = body.referralCode.trim().toUpperCase();
+    if (body.referralCode !== undefined) {
+      const candidateCode = body.referralCode.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+      if (candidateCode) {
+        const duplicateOwner = allVendors.find(
+          v => !isSameVendorId(v.id, current.id) && v.referralCode && v.referralCode.toUpperCase() === candidateCode
+        );
+        if (duplicateOwner) {
+          return NextResponse.json({
+            success: false,
+            error: `Kode referral "${candidateCode}" sudah digunakan oleh mitra lain.`
+          }, { status: 400 });
+        }
+      }
+      updates.referralCode = candidateCode;
+    }
 
     // Sensitive administrative & financial fields: Strictly locked to Super Admin
     if (isAdmin) {
@@ -268,7 +298,24 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: 'Vendor tidak ditemukan' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, vendor: updated });
+    const vendorSessionPayload = {
+      id: updated.id,
+      name: updated.name,
+      companyName: updated.companyName || updated.name,
+      email: updated.email,
+      role: 'vendor' as const,
+      phone: updated.phone || '',
+      instagram: updated.instagram || '',
+      city: updated.city || 'Jakarta',
+      logoUrl: updated.logoUrl,
+      partnerTier: updated.partnerTier || 'regular',
+      referralCode: updated.referralCode,
+      walletBalance: updated.walletBalance || 0,
+      totalEarnings: updated.totalEarnings || 0,
+    };
+    const sessionToken = signSessionPayload(JSON.stringify(vendorSessionPayload));
+
+    return NextResponse.json({ success: true, vendor: updated, sessionToken });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

@@ -515,10 +515,15 @@ export default function BrideDashboardPage() {
           allowedPresets: safeAllowedPresets,
           allowGuestPresetSwitch: safeGuestSwitch,
           frameId,
-          customFrameUrl: customFrameUrl || '',
+          customFrameUrl: frameId === 'custom' ? (customFrameUrl || '') : '',
           frameText,
           allowGuestFrameToggle,
           allowVoiceNote,
+          closingWishType: !allowVoiceNote
+            ? 'none'
+            : (event.closingWishType && event.closingWishType !== 'none'
+                ? event.closingWishType
+                : (event.packageTier === 'wedding' || event.packageTier === 'unlimited' ? 'video' : 'voice')),
           coverUrl: coverUrl || ''
         })
       });

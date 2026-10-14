@@ -39,7 +39,37 @@ export async function GET(request: Request) {
       }
       testimonials = await getTestimonialsByVendor(vendorId);
     } else if (eventId) {
-      testimonials = await getTestimonialsByEvent(eventId);
+      const eventTestimonials = await getTestimonialsByEvent(eventId);
+      const isAdmin = session?.role === 'admin';
+      let isEventOwner = false;
+      if (session && !isAdmin) {
+        const targetEvent = await getEventById(eventId);
+        if (targetEvent) {
+          const isHostOwner = session.role === 'host' && Boolean(
+            targetEvent.hostEmail &&
+            session.email &&
+            session.email.toLowerCase() === targetEvent.hostEmail.toLowerCase()
+          );
+          const isVendorOwner = session.role === 'vendor' && isSameVendorId(session.id, targetEvent.vendorId);
+          isEventOwner = isHostOwner || isVendorOwner;
+        }
+      }
+      if (isAdmin || isEventOwner) {
+        testimonials = eventTestimonials;
+      } else {
+        testimonials = eventTestimonials
+          .filter(t => t.status === 'approved')
+          .map(t => ({
+            id: t.id,
+            eventTitle: t.eventTitle,
+            submitterName: t.submitterName,
+            videoUrl: t.videoUrl,
+            caption: t.caption,
+            durationSeconds: t.durationSeconds,
+            status: t.status,
+            submittedAt: t.submittedAt
+          }));
+      }
     } else {
       // If no filters provided: Admin sees all, public only sees approved social proof
       const all = await getAllTestimonials();

@@ -2625,7 +2625,14 @@ export default function SuperAdminDashboard() {
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Fitur Ucapan Penutup Rol Tamu</label>
                   <select
                     value={eventToEdit.closingWishType || (eventToEdit.packageTier === 'wedding' || eventToEdit.packageTier === 'unlimited' ? 'video' : 'voice')}
-                    onChange={(e) => setEventToEdit({ ...eventToEdit, closingWishType: e.target.value as any })}
+                    onChange={(e) => {
+                      const val = e.target.value as 'voice' | 'video' | 'none';
+                      setEventToEdit({
+                        ...eventToEdit,
+                        closingWishType: val,
+                        allowVoiceNote: val !== 'none'
+                      });
+                    }}
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
@@ -2640,7 +2647,16 @@ export default function SuperAdminDashboard() {
                     type="text"
                     placeholder="https://.../frame.png"
                     value={eventToEdit.customFrameUrl || ''}
-                    onChange={(e) => setEventToEdit({ ...eventToEdit, customFrameUrl: e.target.value })}
+                    onChange={(e) => {
+                      const url = e.target.value;
+                      setEventToEdit({
+                        ...eventToEdit,
+                        customFrameUrl: url,
+                        frameId: url.trim()
+                          ? 'custom'
+                          : (eventToEdit.frameId === 'custom' ? 'minimal-gold' : eventToEdit.frameId)
+                      });
+                    }}
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
                   />
@@ -2747,8 +2763,10 @@ export default function SuperAdminDashboard() {
                       const defaults: Record<string, { maxGuests: number; shotsPerGuest: number }> = {
                         starter: { maxGuests: 5, shotsPerGuest: 10 },
                         intimate: { maxGuests: 50, shotsPerGuest: 20 },
-                        wedding: { maxGuests: 300, shotsPerGuest: 25 },
-                        unlimited: { maxGuests: 1000, shotsPerGuest: 36 },
+                        party: { maxGuests: 75, shotsPerGuest: 24 },
+                        event: { maxGuests: 150, shotsPerGuest: 30 },
+                        wedding: { maxGuests: 300, shotsPerGuest: 36 },
+                        unlimited: { maxGuests: 2000, shotsPerGuest: 99 },
                       };
                       const def = defaults[tierKey];
                       setNewEventForm({
