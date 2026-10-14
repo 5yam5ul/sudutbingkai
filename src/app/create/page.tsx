@@ -274,14 +274,14 @@ function CreateEventForm() {
     if (data.success && data.event) {
       setCreatedDraftEventId(data.event.id);
       if (!isVendor) {
-        // Auto-login session for the host
+        // Auto-login session for the host with server-signed token
         const sessionUser: UserAccount = {
-          id: existingHost?.id || currentUser?.id || 'usr_' + Math.random().toString(36).substring(2, 9),
+          id: existingHost?.id || currentUser?.id || 'usr_' + cleanEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),
           name: coupleOrHost || title || cleanEmail.split('@')[0],
           email: cleanEmail,
           role: 'host'
         };
-        setClientSession(sessionUser);
+        setClientSession(sessionUser, data.sessionToken);
       }
       return data.event.id;
     } else {

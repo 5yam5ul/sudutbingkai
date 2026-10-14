@@ -9,6 +9,7 @@ import {
   Download, ExternalLink, MessageSquare, Tag
 } from 'lucide-react';
 import { InvoiceRecord } from '@/lib/types';
+import { authFetch } from '@/lib/auth';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import { toast } from 'sonner';
 
@@ -25,7 +26,7 @@ export default function InvoicePage() {
     async function fetchInvoice() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/invoices?id=${encodeURIComponent(invoiceId)}`);
+        const res = await authFetch(`/api/invoices?id=${encodeURIComponent(invoiceId)}`);
         const data = await res.json();
         if (data.success && data.invoice) {
           setInvoice(data.invoice);
@@ -50,13 +51,14 @@ export default function InvoicePage() {
 
   const handleShareWhatsApp = () => {
     if (!invoice) return;
+    const statusText = invoice.status === 'paid' ? 'LUNAS (PAID)' : 'MENUNGGU PEMBAYARAN (PENDING)';
     const text = encodeURIComponent(
       `*INVOICE PEMBAYARAN RESMI SUDUT BINGKAI*\n` +
       `No. Invoice: ${invoice.invoiceNumber}\n` +
       `Klien: ${invoice.buyerName}\n` +
       `Paket: ${invoice.tierName}\n` +
       `Total: Rp ${invoice.finalAmount.toLocaleString('id-ID')}\n` +
-      `Status: LUNAS (PAID)\n\n` +
+      `Status: ${statusText}\n\n` +
       `Lihat e-Receipt resmi di: ${window.location.href}`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank');

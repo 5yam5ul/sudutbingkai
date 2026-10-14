@@ -1905,10 +1905,46 @@ export async function getAllVendors(): Promise<any[]> {
   }
 }
 
+async function resolveVendorLogoR2(vendorId: string, rawLogoUrl?: string | null): Promise<string> {
+  if (!rawLogoUrl) return '';
+  if (!rawLogoUrl.startsWith('data:image')) return rawLogoUrl;
+
+  if (isR2Configured) {
+    try {
+      const matches = rawLogoUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      const mimeType = matches ? `image/${matches[1]}` : 'image/png';
+      const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
+      const base64Data = matches ? matches[2] : rawLogoUrl.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      const r2Key = `logos/vendor-${vendorId}-${Date.now()}.${ext}`;
+      const r2Url = await uploadBufferToR2(buffer, r2Key, mimeType);
+      if (r2Url) return r2Url;
+    } catch (err) {
+      console.warn('Vendor logo R2 upload fallback:', err);
+    }
+  }
+  return rawLogoUrl;
+}
+
 export async function saveVendor(vendorData: any): Promise<any> {
+  const vendorId = vendorData.id || `vendor_${Date.now()}`;
+  let resolvedLogoUrl = vendorData.logoUrl || '';
+
+  try {
+    const existingVendors = await getAllVendors();
+    const prevVendor = existingVendors.find(v => v.id === vendorId);
+    if (resolvedLogoUrl && resolvedLogoUrl.startsWith('data:image')) {
+      resolvedLogoUrl = await resolveVendorLogoR2(vendorId, resolvedLogoUrl);
+    }
+    if (prevVendor?.logoUrl && prevVendor.logoUrl !== resolvedLogoUrl) {
+      await deleteFromR2(prevVendor.logoUrl);
+    }
+  } catch {}
+
   const newVendor = {
     ...vendorData,
-    id: vendorData.id || `vendor_${Date.now()}`,
+    id: vendorId,
+    logoUrl: resolvedLogoUrl,
     createdAt: vendorData.createdAt || new Date().toISOString()
   };
 
@@ -1961,9 +1997,12 @@ export async function saveVendor(vendorData: any): Promise<any> {
 }
 
 export async function updateVendor(id: string, updates: any): Promise<any | null> {
-  // Check if logoUrl is being replaced so old R2 file is cleaned up
+  // Check if logoUrl is being replaced so old R2 file is cleaned up and Base64 is uploaded to R2
   if (updates.logoUrl !== undefined) {
     try {
+      if (updates.logoUrl && updates.logoUrl.startsWith('data:image')) {
+        updates.logoUrl = await resolveVendorLogoR2(id, updates.logoUrl);
+      }
       const existingVendors = await getAllVendors();
       const prevVendor = existingVendors.find(v => v.id === id);
       if (prevVendor?.logoUrl && prevVendor.logoUrl !== updates.logoUrl) {

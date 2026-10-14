@@ -118,12 +118,15 @@ export default function LiveProjectorWallPage() {
     }
   }, []);
 
-  // Fetch event and photos
+  // Fetch event and photos concurrently
   const fetchData = async () => {
     if (typeof document !== 'undefined' && document.hidden) return;
     try {
-      const resE = await fetch(`/api/events?id=${eventId}`);
-      const dataE = await resE.json();
+      const [resE, resP] = await Promise.all([
+        fetch(`/api/events?id=${eventId}`),
+        fetch(`/api/photos?eventId=${eventId}`),
+      ]);
+      const [dataE, dataP] = await Promise.all([resE.json(), resP.json()]);
       let currentlyLocked = isDelayedAndLocked;
       if (dataE.success && dataE.event) {
         setEvent(dataE.event);
@@ -134,8 +137,6 @@ export default function LiveProjectorWallPage() {
         }
       }
 
-      const resP = await fetch(`/api/photos?eventId=${eventId}`);
-      const dataP = await resP.json();
       if (dataP.success) {
         const newPhotos: PhotoRecord[] = dataP.photos || [];
         setPhotos(newPhotos);

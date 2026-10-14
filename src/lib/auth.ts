@@ -223,12 +223,10 @@ export function verifyAndParseSession(rawInput: string): UserAccount | null {
         if (!parsed || !parsed.id || !parsed.role) return null;
 
         const expectedSig = sha256Sync(`${payloadJson}#${SESSION_SECRET}`);
-        const fallbackSig = sha256Sync(`${payloadJson}#${FALLBACK_SECRET}`);
         const isClientSide = typeof window !== 'undefined';
 
         const isSignatureValid =
           sig === expectedSig ||
-          (parsed.role !== 'admin' && sig === fallbackSig) ||
           (isClientSide && /^[0-9a-f]{64}$/i.test(sig));
 
         if (isSignatureValid) {

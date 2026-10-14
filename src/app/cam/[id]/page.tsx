@@ -942,7 +942,15 @@ export default function GuestCameraPage() {
           console.error(e);
         }
         if (!isDemo && photoId) {
-          fetch(`/api/photos?id=${photoId}`, { method: 'DELETE' }).catch(err => console.warn('Delete server photo err:', err));
+          const activeSess = guestSessionId || getOrCreateGuestSession(canonicalId, eventId);
+          const delParams = new URLSearchParams({
+            id: photoId,
+            sessionId: activeSess
+          });
+          if (guestName && guestName.trim()) {
+            delParams.set('guestName', guestName.trim());
+          }
+          fetch(`/api/photos?${delParams.toString()}`, { method: 'DELETE' }).catch(err => console.warn('Delete server photo err:', err));
         }
         setPreviewPhoto(null);
         toast.success('Foto berhasil dihapus dari Rol Film Anda.');

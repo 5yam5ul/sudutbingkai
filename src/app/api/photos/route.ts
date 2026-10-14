@@ -191,12 +191,18 @@ export async function POST(request: Request) {
       }, { status: 403 });
     }
 
+    const maxExistingShot = guestExistingShots.reduce((max, p) => Math.max(max, Number(p.shotNumber) || 0), 0);
+    const safeShotNumber = Math.min(
+      allowedShotsPerGuest,
+      Math.max(guestExistingShots.length + 1, maxExistingShot + 1, requestedShotNumber)
+    );
+
     const newPhoto: PhotoRecord = {
       id: 'photo-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6),
       eventId: event.id,
       guestName: (body.guestName || 'Tamu').trim(),
       sessionId: body.sessionId || 'session-' + Date.now(),
-      shotNumber: guestExistingShots.length + 1,
+      shotNumber: safeShotNumber,
       imageData: body.imageData,
       timestamp: new Date().toISOString(),
       caption: (body.caption || '').trim(),
@@ -263,6 +269,9 @@ export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const sessionIdParam = (searchParams.get('sessionId') || '').trim();
+    const guestNameParam = (searchParams.get('guestName') || '').trim().toLowerCase();
+
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID foto diperlukan' }, { status: 400 });
     }
@@ -281,10 +290,16 @@ export async function DELETE(request: Request) {
     const isVendor = session?.role === 'vendor' && session.id === event?.vendorId;
     const isAdmin = session?.role === 'admin';
 
-    if (!isHost && !isVendor && !isAdmin) {
+    // Allow the guest who captured the photo in their own camera roll session to delete it
+    const isGuestOwner = Boolean(
+      (sessionIdParam && targetPhoto.sessionId && targetPhoto.sessionId === sessionIdParam) ||
+      (sessionIdParam && guestNameParam && guestNameParam !== 'tamu' && guestNameParam !== 'tamu undangan' && targetPhoto.guestName?.trim().toLowerCase() === guestNameParam)
+    );
+
+    if (!isHost && !isVendor && !isAdmin && !isGuestOwner) {
       return NextResponse.json({
         success: false,
-        error: 'Akses ditolak: Hanya Penyelenggara Acara atau Admin yang dapat menghapus foto ini.'
+        error: 'Akses ditolak: Hanya pemilik jepretan, Penyelenggara Acara, atau Admin yang dapat menghapus foto ini.'
       }, { status: 403 });
     }
 
@@ -293,7 +308,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ success: false, error: 'Foto tidak ditemukan atau gagal dihapus' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, message: 'Foto berhasil dihapus' });
+    return NextResponse.json({ success: true, message: 'Foto berhasil dihapus dari database dan Cloudflare R2' });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 400 });
   }

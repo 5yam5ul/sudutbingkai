@@ -181,6 +181,19 @@ function LoginFormContent() {
       }
     }
 
+    const signOAuthSessionOnServer = async (u: UserAccount): Promise<string | undefined> => {
+      try {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ...u, mode: 'oauth' }),
+        });
+        const data = await res.json();
+        if (data.success && data.token) return data.token;
+      } catch {}
+      return undefined;
+    };
+
     if (assignedRole === 'admin') {
       const adminUser: UserAccount = {
         id: 'admin_sudutbingkai',
@@ -227,24 +240,28 @@ function LoginFormContent() {
           totalEarnings: existingVendor.totalEarnings || 0,
           clientCount: existingVendor.clientCount || 0
         };
-        setClientSession(sessionUser);
+        const srvToken = await signOAuthSessionOnServer(sessionUser);
+        setClientSession(sessionUser, srvToken);
         toast.success(`Selamat datang kembali di Portal Mitra, ${sessionUser.companyName || fullName}!`);
         router.push(resolveRedirectDestination('/vendor', 'vendor'));
         return;
       } else {
         // Vendor NOT found in DB. Check if user has host events under this email first:
         try {
-          const evRes = await fetch(`/api/events?hostEmail=${encodeURIComponent(userEmail)}`);
+          const hostSession: UserAccount = {
+            id: 'usr_g_' + user.id.substring(0, 10),
+            name: fullName,
+            email: userEmail,
+            role: 'host'
+          };
+          const srvToken = await signOAuthSessionOnServer(hostSession);
+          const evRes = await fetch(`/api/events?hostEmail=${encodeURIComponent(userEmail)}`, {
+            headers: srvToken ? { Authorization: `Bearer ${srvToken}` } : undefined,
+          });
           const evData = await evRes.json();
           if (evData.success && evData.events && evData.events.length > 0) {
             // User is an existing host! DO NOT mutate to vendor!
-            const hostSession: UserAccount = {
-              id: 'usr_g_' + user.id.substring(0, 10),
-              name: fullName,
-              email: userEmail,
-              role: 'host'
-            };
-            setClientSession(hostSession);
+            setClientSession(hostSession, srvToken);
             toast.info(`Email Anda terdaftar sebagai Pengantin. Mengarahkan ke Dashboard Acara Anda...`);
             router.push(resolveRedirectDestination('/dashboard', 'host'));
             return;
@@ -280,7 +297,8 @@ function LoginFormContent() {
       role: 'host'
     };
 
-    setClientSession(sessionUser);
+    const srvToken = await signOAuthSessionOnServer(sessionUser);
+    setClientSession(sessionUser, srvToken);
     toast.success(`Selamat datang, ${fullName}!`);
     router.push(resolveRedirectDestination('/dashboard', 'host'));
   };
@@ -436,7 +454,7 @@ function LoginFormContent() {
             totalEarnings: 0
           };
 
-          setClientSession(newVendorSession);
+          setClientSession(newVendorSession, data.sessionToken);
           toast.success(`Selamat datang, ${vendorCompanyName.trim()}! Kemitraan Anda telah aktif.`);
           router.push(resolveRedirectDestination('/vendor', 'vendor'));
         } catch (err: any) {
@@ -504,13 +522,32 @@ function LoginFormContent() {
         }
 
         const newUser: UserAccount = {
-          id: 'usr_' + Date.now().toString(36),
+          id: 'usr_' + cleanEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),
           name: name.trim(),
           email: cleanEmail,
           role: 'host'
         };
 
-        setClientSession(newUser);
+        let serverToken: string | undefined;
+        try {
+          const regRes = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              mode: 'register',
+              role: 'host',
+              id: newUser.id,
+              name: newUser.name,
+              email: newUser.email,
+            }),
+          });
+          const regData = await regRes.json();
+          if (regData.success && regData.token) {
+            serverToken = regData.token;
+          }
+        } catch {}
+
+        setClientSession(newUser, serverToken);
         toast.success(`Akun berhasil dibuat! Selamat datang, ${name.trim()}.`);
         router.push(resolveRedirectDestination('/dashboard', 'host'));
       } catch (err: any) {

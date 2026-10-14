@@ -92,7 +92,12 @@ export function extractR2KeyFromUrl(urlOrKey?: string | null): string | null {
       host.includes('r2.cloudflarestorage.com') ||
       pathname.startsWith('events/') ||
       pathname.startsWith('voices/') ||
-      pathname.startsWith('videos/')
+      pathname.startsWith('videos/') ||
+      pathname.startsWith('covers/') ||
+      pathname.startsWith('frames/') ||
+      pathname.startsWith('logos/') ||
+      pathname.startsWith('vendors/') ||
+      pathname.startsWith('general/')
     ) {
       // Avoid deleting Supabase storage URLs (which contain /storage/v1/object/public/)
       if (pathname.includes('storage/v1/object/')) return null;

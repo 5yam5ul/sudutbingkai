@@ -81,24 +81,24 @@ export async function createMayarInvoice(params: MayarInvoiceRequest): Promise<M
       };
     }
 
-    console.warn('Mayar API non-ok response, falling back to sandbox simulation:', data);
+    console.error('Mayar API non-ok response:', data);
     return {
-      success: true,
-      isSimulation: true,
-      invoiceId: simulatedId,
+      success: false,
+      isSimulation: false,
+      invoiceId: '',
       amount: params.amount,
-      paymentUrl: `/payment/simulate?id=${simulatedId}&tier=${params.packageTier}&amount=${params.amount}&name=${encodeURIComponent(params.name)}`,
-      message: data?.message || 'Fallback to simulation mode'
+      paymentUrl: '',
+      message: data?.message || 'Gagal membuat tautan pembayaran Mayar. Silakan coba beberapa saat lagi.'
     };
   } catch (err: unknown) {
-    console.error('Mayar API call error, using sandbox fallback:', err);
+    console.error('Mayar API call error:', err);
     return {
-      success: true,
-      isSimulation: true,
-      invoiceId: simulatedId,
+      success: false,
+      isSimulation: false,
+      invoiceId: '',
       amount: params.amount,
-      paymentUrl: `/payment/simulate?id=${simulatedId}&tier=${params.packageTier}&amount=${params.amount}&name=${encodeURIComponent(params.name)}`,
-      message: (err as Error).message
+      paymentUrl: '',
+      message: (err as Error).message || 'Gagal menghubungi gateway pembayaran Mayar.'
     };
   }
 }

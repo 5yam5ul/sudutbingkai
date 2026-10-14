@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAllEvents, getEventById, saveEvent, updateEvent, deleteEvent, getAllVendors, updateVendor } from '@/lib/db';
 import { EventData, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
-import { getServerSession } from '@/lib/auth';
+import { getServerSession, signSessionPayload } from '@/lib/auth';
 import { isMayarConfigured } from '@/lib/mayar';
 import { deleteFromR2 } from '@/lib/r2';
 
@@ -196,7 +196,18 @@ export async function POST(request: Request) {
     };
 
     const saved = await saveEvent(newEvent);
-    return NextResponse.json({ success: true, event: saved });
+    let sessionToken: string | undefined;
+    if (saved.hostEmail && !isAdmin && session?.role !== 'vendor') {
+      const cleanHostEmail = saved.hostEmail.trim().toLowerCase();
+      const hostUser = {
+        id: session?.role === 'host' && session.id ? session.id : 'usr_' + cleanHostEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),
+        name: saved.coupleOrHost || saved.title || cleanHostEmail.split('@')[0],
+        email: cleanHostEmail,
+        role: 'host' as const,
+      };
+      sessionToken = signSessionPayload(JSON.stringify(hostUser));
+    }
+    return NextResponse.json({ success: true, event: saved, sessionToken });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 400 });
   }

@@ -56,6 +56,7 @@ export async function GET(request: Request) {
           : (parseInt(tierInfo.price.replace(/[^0-9]/g, ''), 10) || 0);
         const discount = event.referralCodeUsed ? Math.round(rawPrice * 0.1) : 0;
         const finalAmount = rawPrice - discount;
+        const isEventPaid = tierInfo.isFree || tierKey === 'starter' || event.paymentStatus === 'paid';
 
         invoice = await createInvoice({
           id: `inv_${event.id}`,
@@ -72,8 +73,8 @@ export async function GET(request: Request) {
           discountCode: event.referralCodeUsed,
           finalAmount: finalAmount,
           paymentMethod: 'qris',
-          status: 'paid',
-          paidAt: event.createdAt,
+          status: isEventPaid ? 'paid' : 'pending',
+          paidAt: isEventPaid ? event.createdAt : undefined,
           createdAt: event.createdAt
         });
       }

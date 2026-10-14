@@ -508,7 +508,7 @@ export default function VendorPortalPage() {
         totalEarnings: 0
       };
 
-      setClientSession(newVendorSession);
+      setClientSession(newVendorSession, data.sessionToken);
       setVendor(newVendorSession);
       setCompanyName(cleanCompany);
       setCurrentSession(newVendorSession);
@@ -522,14 +522,25 @@ export default function VendorPortalPage() {
     }
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      toast.error('Ukuran file logo maksimal 2MB.');
-      return;
-    }
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'logo');
+      const res = await authFetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        setLogoUrl(data.url);
+        toast.success('Logo agensi berhasil diunggah!');
+        return;
+      }
+    } catch {}
 
     const reader = new FileReader();
     reader.onload = (event) => {
@@ -592,10 +603,10 @@ export default function VendorPortalPage() {
           phone, 
           instagram, 
           city, 
-          logoUrl 
+          logoUrl: data.vendor?.logoUrl || logoUrl
         };
         setVendor(updated);
-        setClientSession(updated);
+        setClientSession(updated, data.sessionToken);
         toast.success('Pengaturan profil dan identitas agensi berhasil diperbarui!');
         setTimeout(() => setIsBrandingSaved(false), 3500);
       }

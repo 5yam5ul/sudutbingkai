@@ -10,8 +10,48 @@ export async function POST(request: Request) {
     const cleanEmail = (body.email || '').trim().toLowerCase();
     const cleanPassword = (body.password || '').trim();
     const requestedRole: 'host' | 'vendor' | 'admin' = body.role || 'host';
+    const mode: 'login' | 'register' | 'oauth' = body.mode || 'login';
 
-    if (!cleanEmail || !cleanPassword) {
+    if (!cleanEmail) {
+      return NextResponse.json(
+        { success: false, error: 'Email wajib diisi.' },
+        { status: 400 }
+      );
+    }
+
+    // Handle Host Registration or Google OAuth Session Signing (strictly non-admin)
+    if ((mode === 'register' || mode === 'oauth') && requestedRole !== 'admin' && !cleanEmail.includes('admin@sudutbingkai.id')) {
+      const userObj: UserAccount = {
+        id: body.id || 'usr_' + cleanEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),
+        name: (body.name || cleanEmail.split('@')[0]).trim(),
+        email: cleanEmail,
+        role: requestedRole === 'vendor' ? 'vendor' : 'host',
+        companyName: body.companyName,
+        phone: body.phone,
+        instagram: body.instagram,
+        city: body.city,
+        partnerTier: body.partnerTier,
+        referralCode: body.referralCode,
+        walletBalance: body.walletBalance,
+        totalEarnings: body.totalEarnings,
+      };
+      const token = signSessionPayload(JSON.stringify(userObj));
+      const response = NextResponse.json({
+        success: true,
+        user: userObj,
+        token,
+      });
+      const maxAge = 60 * 24 * 60 * 60;
+      response.cookies.set('sb_auth_session', token, {
+        path: '/',
+        maxAge,
+        sameSite: 'lax',
+        httpOnly: false,
+      });
+      return response;
+    }
+
+    if (!cleanPassword) {
       return NextResponse.json(
         { success: false, error: 'Email dan kata sandi wajib diisi.' },
         { status: 400 }

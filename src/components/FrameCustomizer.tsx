@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
 import { Upload, Image as ImageIcon, HelpCircle, Check, Sliders, Info, Download, Heart, Camera, Film, PartyPopper, X } from 'lucide-react';
+import { authFetch } from '@/lib/auth';
 import { toast } from 'sonner';
 
 interface FrameCustomizerProps {
@@ -134,7 +135,7 @@ export default function FrameCustomizer({
       formData.append('file', file);
       formData.append('type', 'frame');
 
-      const res = await fetch('/api/upload', {
+      const res = await authFetch('/api/upload', {
         method: 'POST',
         body: formData
       });

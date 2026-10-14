@@ -2,9 +2,9 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { uploadBufferToR2, isR2Configured } from '@/lib/r2';
 import { getServerSession } from '@/lib/auth';
 
-const MAX_UPLOAD_SIZE = 10 * 1024 * 1024; // 10MB max
 const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
 
 export async function POST(request: Request) {
@@ -24,15 +24,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'File tidak ditemukan' }, { status: 400 });
     }
 
-    // 1. Strict Size Limit
-    if (file.size > MAX_UPLOAD_SIZE) {
-      return NextResponse.json({
-        success: false,
-        error: `Ukuran berkas melebihi batas maksimal 10MB (${(file.size / (1024 * 1024)).toFixed(1)}MB)`
-      }, { status: 413 });
-    }
-
-    // 2. Strict MIME Type Whitelist
+    // 1. Strict MIME Type Whitelist
     const mime = (file.type || '').toLowerCase();
     if (!ALLOWED_MIME_TYPES.has(mime)) {
       return NextResponse.json({
@@ -45,17 +37,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Bingkai khusus harus berformat PNG dengan background transparan' }, { status: 400 });
     }
 
-    // 3. Safe Extension derived from verified MIME (prevent double extension & executable tricks)
+    // 2. Safe Extension derived from verified MIME (prevent double extension & executable tricks)
     const ext = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
     const buffer = Buffer.from(await file.arrayBuffer());
     const subFolder = type === 'frame' ? 'frames' : type === 'cover' ? 'covers' : type === 'logo' ? 'logos' : 'general';
     const filename = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
+    const storagePath = `${subFolder}/${filename}`;
 
+    // 1. Primary Upload: Cloudflare R2 (Zero-egress object storage)
+    if (isR2Configured) {
+      try {
+        const r2Url = await uploadBufferToR2(buffer, storagePath, mime || 'image/png');
+        if (r2Url) {
+          return NextResponse.json({
+            success: true,
+            url: r2Url,
+            filename,
+            size: file.size
+          });
+        }
+      } catch (r2Err) {
+        console.warn('Cloudflare R2 upload error in /api/upload, falling back:', r2Err);
+      }
+    }
 
-    // 1. Try upload to Supabase Storage if configured
+    // 2. Secondary Fallback: Supabase Storage
     if (isSupabaseConfigured && supabase) {
       try {
-        const storagePath = `${subFolder}/${filename}`;
         const { error: uploadError } = await supabase.storage
           .from('photos')
           .upload(storagePath, buffer, {
@@ -81,7 +89,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. Local fallback
+    // 3. Local disk fallback
     try {
       const targetDir = path.join(process.cwd(), 'public', 'uploads', subFolder);
       if (!fs.existsSync(targetDir)) {
@@ -103,7 +111,7 @@ export async function POST(request: Request) {
       console.error('Local fallback failed (likely read-only serverless environment):', fsErr);
       return NextResponse.json({
         success: false,
-        error: 'Penyimpanan file gagal. Pastikan Supabase Storage telah aktif.'
+        error: 'Penyimpanan file gagal. Pastikan Cloudflare R2 atau Supabase Storage telah aktif.'
       }, { status: 500 });
     }
   } catch (err: unknown) {

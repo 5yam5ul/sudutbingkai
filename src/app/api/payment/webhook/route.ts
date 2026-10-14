@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { verifyMayarWebhookToken } from '@/lib/mayar';
-import { getEventById, updateEvent, getAllVendors, updateVendor, isWebhookProcessed, markWebhookProcessed } from '@/lib/db';
-import { supabase, isSupabaseConfigured } from '@/lib/supabase';
+import { getEventById, updateEvent, getAllVendors, updateVendor, isWebhookProcessed, markWebhookProcessed, getInvoice, createInvoice, updateInvoiceStatus } from '@/lib/db';
+import { PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 
 export async function POST(request: Request) {
   try {
@@ -23,11 +23,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ received: true, status: 'ignored' });
     }
 
-    const description = payload?.data?.description || payload?.description || '';
+    const description: string = payload?.data?.description || payload?.description || '';
     const invoiceId = payload?.data?.id || payload?.id;
     const txId = payload?.data?.transactionId || payload?.data?.paymentId || invoiceId;
 
-    // Idempotency check: prevent duplicate credit of wholesale tokens or vendor commissions
+    // Idempotency check: prevent duplicate credit of vendor commissions or pax
     if (txId) {
       const alreadyProcessed = await isWebhookProcessed(String(txId));
       if (alreadyProcessed) {
@@ -36,14 +36,15 @@ export async function POST(request: Request) {
       }
     }
 
-    // Check if webhook relates to an eventId (Top Up Pax or Package Activation)
-    const eventMatch = description.match(/\((sb-[a-zA-Z0-9\-]+|wedding-[a-zA-Z0-9\-]+|event-[a-zA-Z0-9\-]+|[a-zA-Z0-9\-]+)\)/);
-    const eventId = eventMatch ? eventMatch[1] : undefined;
+    // Extract eventId from the LAST parenthesized token in description (e.g. "Paket Wedding (300 Tamu) - SudutBingkai (sb-123456)")
+    const parenMatches = Array.from(description.matchAll(/\(([^()]+)\)/g));
+    const lastParenValue = parenMatches.length > 0 ? parenMatches[parenMatches.length - 1][1].trim() : undefined;
+    const eventId = payload?.data?.extraData?.eventId || payload?.extraData?.eventId || lastParenValue;
 
     if (eventId) {
       const event = await getEventById(eventId);
       if (event) {
-        // If it was an add-on pax payment: FIX double capacity bug by incrementing additionalPax ONLY
+        // If it was an add-on pax payment: increment additionalPax ONLY
         if (description.includes('Top Up Kuota Tamu')) {
           const paxMatch = description.match(/\+(\d+)\s*Pax/i);
           const addedPax = paxMatch ? Number(paxMatch[1]) : 25;
@@ -57,6 +58,42 @@ export async function POST(request: Request) {
           await updateEvent(event.id, {
             paymentStatus: 'paid'
           });
+
+          // Ensure official InvoiceRecord is created or marked paid for Super Admin & Host receipt
+          try {
+            const existingInv = await getInvoice(event.id);
+            if (existingInv) {
+              await updateInvoiceStatus(existingInv.id, 'paid', new Date().toISOString());
+            } else {
+              const tierKey = (event.packageTier || 'wedding') as EventPackageTier;
+              const tierInfo = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.wedding;
+              const rawPrice = parseInt(tierInfo.price.replace(/[^0-9]/g, ''), 10) || Number(payload?.data?.amount) || 0;
+              const discount = event.referralCodeUsed ? Math.round(rawPrice * 0.1) : 0;
+              const finalAmount = Number(payload?.data?.amount) || Math.max(0, rawPrice - discount);
+
+              await createInvoice({
+                id: `inv_${event.id}`,
+                eventId: event.id,
+                orderId: String(txId || `ord_${event.id.substring(0, 10)}`),
+                buyerType: event.vendorId ? 'vendor' : 'client',
+                buyerName: event.coupleOrHost || event.title,
+                buyerEmail: event.hostEmail || payload?.data?.email || 'pengantin@sudutbingkai.id',
+                companyName: event.vendorName,
+                tierId: tierKey,
+                tierName: `${tierInfo.name} (${tierInfo.guestsLabel})`,
+                originalPrice: rawPrice,
+                discountAmount: discount,
+                discountCode: event.referralCodeUsed,
+                finalAmount,
+                paymentMethod: 'qris',
+                status: 'paid',
+                paidAt: new Date().toISOString(),
+                createdAt: new Date().toISOString()
+              });
+            }
+          } catch (invErr) {
+            console.warn('Error creating/updating invoice in webhook:', invErr);
+          }
 
           // Disburse vendor partner commission if referral was used
           if (event.vendorId && event.commissionAmount && event.commissionAmount > 0 && event.commissionStatus !== 'available') {

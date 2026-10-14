@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAllVendors, saveVendor, updateVendor, deleteVendor } from '@/lib/db';
-import { getServerSession } from '@/lib/auth';
+import { getServerSession, signSessionPayload } from '@/lib/auth';
 import { isMayarConfigured } from '@/lib/mayar';
 
 export async function GET(req: Request) {
@@ -103,7 +103,23 @@ export async function POST(req: Request) {
       };
 
       const saved = await saveVendor(updatedVendor);
-      return NextResponse.json({ success: true, vendor: saved });
+      const vendorSessionPayload = {
+        id: saved.id,
+        name: saved.name,
+        companyName: saved.companyName || saved.name,
+        email: saved.email,
+        role: 'vendor' as const,
+        phone: saved.phone || '',
+        instagram: saved.instagram || '',
+        city: saved.city || 'Jakarta',
+        logoUrl: saved.logoUrl,
+        partnerTier: saved.partnerTier || 'regular',
+        referralCode: saved.referralCode,
+        walletBalance: saved.walletBalance || 0,
+        totalEarnings: saved.totalEarnings || 0,
+      };
+      const sessionToken = signSessionPayload(JSON.stringify(vendorSessionPayload));
+      return NextResponse.json({ success: true, vendor: saved, sessionToken });
     }
 
     // New vendor registration: lock financial & tier privileges unless created by Super Admin
@@ -137,7 +153,23 @@ export async function POST(req: Request) {
     };
 
     const saved = await saveVendor(newVendor);
-    return NextResponse.json({ success: true, vendor: saved });
+    const vendorSessionPayload = {
+      id: saved.id,
+      name: saved.name,
+      companyName: saved.companyName || saved.name,
+      email: saved.email,
+      role: 'vendor' as const,
+      phone: saved.phone || '',
+      instagram: saved.instagram || '',
+      city: saved.city || 'Jakarta',
+      logoUrl: saved.logoUrl,
+      partnerTier: saved.partnerTier || 'regular',
+      referralCode: saved.referralCode,
+      walletBalance: saved.walletBalance || 0,
+      totalEarnings: saved.totalEarnings || 0,
+    };
+    const sessionToken = signSessionPayload(JSON.stringify(vendorSessionPayload));
+    return NextResponse.json({ success: true, vendor: saved, sessionToken });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

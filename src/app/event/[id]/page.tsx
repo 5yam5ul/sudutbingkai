@@ -217,41 +217,54 @@ export default function EventDashboardPage() {
     }
   }, [activePhoto]);
 
+  const pollTickRef = React.useRef<number>(0);
+
   const fetchEventData = async (isBackgroundPoll = false) => {
     if (isBackgroundPoll && typeof document !== 'undefined' && document.hidden) return;
     try {
-      const resEvents = await authFetch(`/api/events?id=${eventId}`);
-      const dataEvents = await resEvents.json();
-      if (dataEvents.success && dataEvents.event) {
-        setEvent(dataEvents.event);
+      pollTickRef.current += 1;
+      const shouldFetchSecondary = !isBackgroundPoll || pollTickRef.current % 3 === 0;
+
+      const [resEvents, resPhotos] = await Promise.all([
+        shouldFetchSecondary ? authFetch(`/api/events?id=${eventId}`) : Promise.resolve(null),
+        authFetch(`/api/photos?eventId=${eventId}`),
+      ]);
+
+      if (resEvents) {
+        const dataEvents = await resEvents.json();
+        if (dataEvents.success && dataEvents.event) {
+          setEvent(dataEvents.event);
+        }
       }
 
-      const resPhotos = await authFetch(`/api/photos?eventId=${eventId}`);
       const dataPhotos = await resPhotos.json();
       if (dataPhotos.success) {
         setPhotos(dataPhotos.photos || []);
       }
 
-      // Fetch voice notes
-      try {
-        const resVoices = await authFetch(`/api/voice-notes?eventId=${eventId}`);
-        const dataVoices = await resVoices.json();
-        if (dataVoices.success && dataVoices.voiceNotes) {
-          setVoiceNotes(dataVoices.voiceNotes);
-        }
-      } catch (vErr) {
-        console.warn('Voice notes not loaded:', vErr);
-      }
+      if (shouldFetchSecondary) {
+        const [resVoices, resVideos] = await Promise.all([
+          authFetch(`/api/voice-notes?eventId=${eventId}`).catch(() => null),
+          authFetch(`/api/video-wishes?eventId=${eventId}`).catch(() => null),
+        ]);
 
-      // Fetch video wishes (Premium Tiers)
-      try {
-        const resVideos = await authFetch(`/api/video-wishes?eventId=${eventId}`);
-        const dataVideos = await resVideos.json();
-        if (dataVideos.success && dataVideos.videoWishes) {
-          setVideoWishes(dataVideos.videoWishes);
+        if (resVoices) {
+          try {
+            const dataVoices = await resVoices.json();
+            if (dataVoices.success && dataVoices.voiceNotes) {
+              setVoiceNotes(dataVoices.voiceNotes);
+            }
+          } catch {}
         }
-      } catch (vidErr) {
-        console.warn('Video wishes not loaded:', vidErr);
+
+        if (resVideos) {
+          try {
+            const dataVideos = await resVideos.json();
+            if (dataVideos.success && dataVideos.videoWishes) {
+              setVideoWishes(dataVideos.videoWishes);
+            }
+          } catch {}
+        }
       }
     } catch (err) {
       console.error(err);
