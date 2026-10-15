@@ -230,6 +230,363 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
       },
     ],
   },
+  {
+    slug: 'cara-mengajak-tamu-aktif-memotret',
+    title: '5 Cara Mengajak Tamu Undangan Aktif Memotret di Meja Resepsi',
+    excerpt: 'Khawatir barcode QR kamera tamu diabaikan? Simak 5 strategi terbukti agar para tamu antusias memindai dan memotret ratusan momen candid seru sepanjang acara.',
+    tldr: 'Agar tamu antusias memotret, terapkan 5 trik teruji: briefing MC untuk pengumuman berkala yang asik, letakkan standee kartu QR di tengah meja prasmanan/round table, tampilkan siaran Live Slideshow di layar TV panggung utama, adakan mini game foto candid terlucu, dan pilih filter film analog yang membuat hasil jepretan tamu terlihat estetik seketika.',
+    category: 'Tips Resepsi',
+    readingTime: '4 menit baca',
+    publishedAt: '2026-10-15',
+    updatedAt: '2026-10-15',
+    coverImage: '/images/guides/cara-mengajak-tamu-aktif-memotret.jpg',
+    coverAlt: 'MC pernikahan mengajak tamu undangan memotret momen candid dengan scan QR kamera meja SudutBingkai',
+    author: {
+      name: 'Tim Redaksi SudutBingkai',
+      role: 'Wedding Tech Specialist',
+    },
+    keywords: [
+      'cara agar tamu foto di nikahan',
+      'tips interaksi tamu undangan pernikahan',
+      'ice breaking resepsi pernikahan',
+      'ide hiburan meja tamu wedding',
+      'kamera tamu pernikahan scan qr',
+    ],
+    content: {
+      intro: 'Salah satu kekhawatiran terbesar calon pengantin saat memilih konsep kamera tamu digital adalah: "Apakah para tamu benar-benar akan memindai barcode QR dan ikut memotret?". Berdasarkan pengalaman ratusan resepsi, tamu justru sangat senang jika diberikan arahan yang jelas dan menyenangkan. Berikut 5 strategi efektif untuk membuat seluruh meja tamu antusias membidik momen candid terbaik.',
+      sections: [
+        {
+          heading: '1. Briefing MC untuk Memberi Pengumuman Seru Berkala',
+          paragraphs: [
+            'Master of Ceremonies (MC) memegang peranan krusial dalam membangun mood ruangan. Minta MC Anda untuk mengumumkan keberadaan barcode di meja makan saat tamu mulai duduk menunggu hidangan atau saat sesi ramah tamah.',
+            'Contoh kalimat pengumuman yang terbukti efektif: "Bapak, Ibu, dan teman-teman semua, perhatikan kartu barcode unik di tengah meja Anda! Cukup arahkan kamera HP biasa tanpa perlu unduh aplikasi, dan yuk kita abadikan momen tertawa bersama dari sudut pandang kalian untuk Sarah & Budi!".',
+          ],
+          keyTakeaways: [
+            'Umumkan 2–3 kali di momen santai (saat hidangan pembuka dan menjelang lempar bunga).',
+            'Tekankan kata kunci: "Tanpa Download Aplikasi" agar tamu tidak merasa terbebani kuota.',
+          ],
+        },
+        {
+          heading: '2. Letakkan Kartu Standee QR di Posisi Eye-Level Meja',
+          paragraphs: [
+            'Penempatan kartu meja menentukan tingkat partisipasi tamu. Jangan letakkan kartu di balik vas bunga atau tertutup piring saji.',
+            'Gunakan standing acrylic transparan ukuran A6 atau A5 di tengah meja bundar (round table) tepat di samping nomor meja. Desain kartu SudutBingkai yang minimalis dengan aksen gold akan menyatu anggun dengan dekorasi bunga floral meja makan Anda.',
+          ],
+        },
+        {
+          heading: '3. Hubungkan Galeri ke Layar Live Slideshow TV Panggung',
+          paragraphs: [
+            'Tidak ada yang memicu rasa penasaran tamu lebih cepat daripada melihat foto jepretan mereka langsung terpampang di layar LED raksasa atau proyektor panggung!',
+            'Fitur Live Slideshow TV SudutBingkai memperbarui foto yang masuk secara real-time. Begitu tamu melihat foto meja sebelah muncul di layar panggung, meja-meja lain akan spontan berlomba-lomba memotret pose seru mereka.',
+          ],
+        },
+        {
+          heading: '4. Adakan Tantangan Mini: Foto Candid Paling Spontan',
+          paragraphs: [
+            'Berikan sedikit stimulus berupa hadiah kecil (misal: voucher kopi atau souvenir khusus) untuk 1 foto candid paling lucu atau paling mengharukan yang dipilih pengantin di akhir acara.',
+            'Tantangan kompetisi kecil ini sangat digemari oleh tamu usia muda, bridesmaid, dan groomsmen untuk berkreasi sekreatif mungkin.',
+          ],
+        },
+        {
+          heading: '5. Pilih Filter Film yang Otomatis Bikin Foto Cantik',
+          paragraphs: [
+            'Tamu sangat suka memotret jika mereka tahu hasilnya langsung estetik. Dengan filter emulasi Kodak Portra 400 atau Fuji Quicksnap bawaan SudutBingkai, warna kulit tamu akan terlihat halus, hangat, dan bernuansa film analog retro tanpa perlu diedit manual.',
+          ],
+        },
+      ],
+      conclusion: 'Dengan kombinasi arahan MC yang hangat, kartu meja yang jelas, dan siaran langsung di proyektor panggung, kamera tamu digital akan menjadi salah satu hiburan paling berkesan dan dibicarakan oleh para undangan resepsi Anda.',
+    },
+    faqMicro: [
+      {
+        question: 'Kapan waktu terbaik MC mengumumkan barcode kamera tamu?',
+        answer: 'Saat tamu mulai menikmati hidangan prasmanan dan saat jeda pergantian sesi busana pengantin, ketika tamu memiliki waktu luang santai di meja makan.',
+      },
+      {
+        question: 'Apakah tamu perlu login email untuk memotret?',
+        answer: 'Sama sekali tidak. Tamu cukup memindai QR code kamera langsung aktif di browser HP tanpa formulir pendaftaran apa pun.',
+      },
+    ],
+  },
+  {
+    slug: 'rincian-biaya-dokumentasi-pernikahan',
+    title: 'Rincian Biaya Dokumentasi Pernikahan 2026 & Trik Cerdas Menghematnya',
+    excerpt: 'Bongkar rincian biaya fotografer utama, videografer, dan photobooth di Indonesia tahun 2026. Temukan cara cerdas menghemat hingga 85% biaya dokumentasi tanpa kehilangan momen berharga.',
+    tldr: 'Paket dokumentasi pernikahan lengkap (fotografer pelaminan, sinematografer, dan photobooth 3 jam) rata-rata berkisar Rp 15–35 juta di Indonesia. Mengganti sewa photobooth konvensional dengan kamera tamu digital SudutBingkai (Rp 499rb) mampu memangkas anggaran jutaan rupiah sekaligus melipatgandakan jumlah foto candid alami dari seluruh meja undangan.',
+    category: 'Anggaran Pernikahan',
+    readingTime: '5 menit baca',
+    publishedAt: '2026-10-15',
+    updatedAt: '2026-10-15',
+    coverImage: '/images/guides/rincian-biaya-dokumentasi-pernikahan.jpg',
+    coverAlt: 'Rincian anggaran biaya foto dan video dokumentasi pernikahan modern Indonesia',
+    author: {
+      name: 'Tim Redaksi SudutBingkai',
+      role: 'Wedding Tech Specialist',
+    },
+    keywords: [
+      'biaya foto pernikahan 2026',
+      'anggaran dokumentasi resepsi pernikahan',
+      'paket fotografer wedding murah',
+      'biaya sewa photobooth pernikahan',
+      'tips menghemat biaya wedding documentation',
+    ],
+    content: {
+      intro: 'Dokumentasi adalah salah satu pos pengeluaran terbesar dalam anggaran pernikahan. Mulai dari sesi pre-wedding, akad nikah, hingga resepsi malam, biaya foto dan video kerap membengkak di luar perkiraan awal. Bagaimana gambaran riil biaya dokumentasi pernikahan di Indonesia tahun 2026 dan di mana letak penghematan paling cerdas yang bisa Anda ambil?',
+      sections: [
+        {
+          heading: 'Rincian Rata-Rata Biaya Vendor Dokumentasi 2026',
+          paragraphs: [
+            '1. Fotografer Utama & Asisten (Akad + Resepsi): Rp 6.000.000 – Rp 15.000.000 (fokus pada pelaminan, keluarga inti, dan prosesi adat resmi).',
+            '2. Sinematografer & Video Teaser (Reels / Cinematic Film): Rp 7.000.000 – Rp 20.000.000.',
+            '3. Sewa Photobooth Fisik 3 Jam: Rp 3.500.000 – Rp 8.000.000 (durasi terbatas dan antrean panjang).',
+            'Total anggaran dokumentasi standar di kota-kota besar Indonesia umumnya mencapai Rp 16.500.000 hingga Rp 43.000.000.',
+          ],
+          keyTakeaways: [
+            'Fotografer utama mutlak diperlukan untuk prosesi resmi di pelaminan.',
+            'Photobooth fisik sering menjadi pos anggaran yang kurang efisien karena durasi terbatas hanya 2–3 jam.',
+          ],
+        },
+        {
+          heading: 'Masalah Klasik: Momen Candid Tamu Selalu Terlewatkan',
+          paragraphs: [
+            'Meskipun Anda menyewa tim fotografer utama seharga belasan juta rupiah, mereka hanya memiliki dua pasang mata. Mereka terikat di depan panggung pelaminan untuk sesi foto keluarga bergiliran.',
+            'Ratusan momen tawa sahabat lama, celoteh haru di sudut ruangan, hingga kehebohan di meja makan hampir selalu luput dari bidikan kamera fotografer resmi.',
+          ],
+        },
+        {
+          heading: 'Trik Cerdas: Ganti Photobooth dengan Kamera Tamu Digital',
+          paragraphs: [
+            'Alih-alih mengeluarkan Rp 4–8 juta untuk photobooth fisik yang hanya melayani sebagian tamu yang rela antre, Anda bisa mengalokasikan Rp 499.000 untuk Paket Wedding SudutBingkai.',
+            'Seluruh 300 tamu di meja undangan Anda kini memegang kamera analog digital sekali pakai. Tidak ada batasan jam sewa, tidak ada antrean berdiri, dan pengantin mengantongi penghematan anggaran hingga Rp 7.500.000 yang bisa dialihkan untuk honeymoon atau katering.',
+          ],
+        },
+        {
+          heading: 'Kualitas File Asli High-Res Siap Cetak ke Album Kenangan',
+          paragraphs: [
+            'Banyak calon pengantin khawatir foto digital tamu buram atau rusak. Di SudutBingkai, file disimpan dalam resolusi asli (High-Res QHD) tanpa kompresi yang merusak detail emulsi film.',
+            'Setelah acara, kedua mempelai dapat mengunduh seluruh arsip dalam satu berkas ZIP dan memilih foto-foto terbaik untuk dicetak ke album fisik kenangan.',
+          ],
+        },
+      ],
+      conclusion: 'Menghemat biaya dokumentasi pernikahan bukan berarti mengurangi kualitas kenangan. Dengan tetap mempertahankan fotografer utama untuk pelaminan dan memanfaatkan kamera tamu digital SudutBingkai untuk momen candid seluruh meja, Anda mendapatkan dokumentasi 360 derajat terlengkap dengan efisiensi biaya maksimal.',
+    },
+    faqMicro: [
+      {
+        question: 'Apakah kamera tamu digital menggantikan fotografer pelaminan utama?',
+        answer: 'Tidak. Fotografer utama tetap wajib untuk prosesi formal di pelaminan, sedangkan kamera tamu digital melengkapi sudut pandang candid dari meja tamu yang tidak terjangkau fotografer resmi.',
+      },
+      {
+        question: 'Berapa persen penghematan jika beralih ke kamera tamu digital?',
+        answer: 'Rata-rata pasangan menghemat 80% hingga 88% pos anggaran photobooth, dari sebelumnya Rp 4–8 juta menjadi hanya Rp 499.000.',
+      },
+    ],
+  },
+  {
+    slug: 'karakter-warna-filter-film-analog-pernikahan',
+    title: 'Mengenal 8 Karakter Filter Film Analog: Dari Kodak Portra hingga CineStill',
+    excerpt: 'Ingin nuansa foto pernikahan yang hangat, nostalgia, dan timeless? Pelajari rahasia 8 filter emulasi film analog SudutBingkai untuk mempercantik hasil foto para tamu Anda.',
+    tldr: 'SudutBingkai menghadirkan 8 profil emulasi film legendaris: Kodak Portra 400 (kulit hangat alami), Kodak FunSaver (nostalgia disposable klasik), Fuji Quicksnap (hijau segar khas alam), Kodak Ektar 100 (kontras tajam dekorasi bunga), CineStill 800T (sinematik malam dengan bokeh hangat), Ilford HP5 & Tri-X 400 (hitam putih dramatis), serta Agfa Vista (warna ceria pesta).',
+    category: 'Estetika Film',
+    readingTime: '4 menit baca',
+    publishedAt: '2026-10-15',
+    updatedAt: '2026-10-15',
+    coverImage: '/images/guides/karakter-warna-filter-film-analog-pernikahan.jpg',
+    coverAlt: 'Koleksi rol film analog 35mm dan filter emulasi kamera tamu digital SudutBingkai',
+    author: {
+      name: 'Tim Redaksi SudutBingkai',
+      role: 'Wedding Tech Specialist',
+    },
+    keywords: [
+      'filter kodak portra 400 pernikahan',
+      'preset film analog wedding',
+      'tone warna foto pernikahan vintage',
+      'cinestill 800t wedding photography',
+      'filter disposable camera estetik',
+    ],
+    content: {
+      intro: 'Mengapa foto analog era 90-an selalu terasa lebih hangat dan emosional dibanding foto kamera smartphone modern yang serba tajam? Rahasianya terletak pada emulsi kimia rol film legendaris yang meredam saturasi berlebih dan menambahkan grain lembut yang otentik. SudutBingkai mengintegrasikan 8 karakter emulasi film ternama dunia ke dalam kamera tamu digital Anda.',
+      sections: [
+        {
+          heading: '1. Kodak Portra 400: Standar Emas Nada Kulit Pengantin',
+          paragraphs: [
+            'Portra 400 adalah rol film paling dipuja oleh fotografer pernikahan dunia. Karakter utamanya adalah reproduksi warna kulit (skin tone) yang sangat lembut, hangat, dengan highlight yang tidak menyilaukan.',
+            'Sangat ideal untuk resepsi siang hari, pesta outdoor taman, maupun pesta ballroom elegan bernuansa pencahayaan warm white.',
+          ],
+          keyTakeaways: [
+            'Warna kulit wajah tampak segar dan glowing alami.',
+            'Memberikan nuansa romantis yang tak lekang oleh waktu.',
+          ],
+        },
+        {
+          heading: '2. Kodak FunSaver: Sensasi Kamera Sekali Pakai 90-an',
+          paragraphs: [
+            'Bagi Anda yang merindukan warna kuning keemasan khas kamera saku plastik sekali pakai era kanak-kanak, FunSaver adalah pilihannya. Saturasi warna yang ceria dan kontras yang tegas menghasilkan foto candid yang penuh rasa nostalgia.',
+          ],
+        },
+        {
+          heading: '3. Fuji Quicksnap: Nuansa Hijau Sejuk Alami',
+          paragraphs: [
+            'Fuji terkenal dengan karakter warna dingin (cool tone) dan saturasi warna hijau botani yang memikat. Sangat cocok untuk resepsi bertema rustic, pesta kebun hutan pinus, atau pernikahan berlatar alam terbuka di Bali dan Bandung.',
+          ],
+        },
+        {
+          heading: '4. CineStill 800T: Keajaiban Sinematik Resepsi Malam',
+          paragraphs: [
+            'Dibuat dari stok rol film layar lebar Hollywood, CineStill 800T terkenal dengan efek halation (pendaran cahaya oranye-kemerahan di sekitar lampu lilin atau bohlam gantung). Foto resepsi malam hari Anda akan tampak seperti adegan film romantis klasik.',
+          ],
+        },
+        {
+          heading: '5. Ilford HP5 Plus & Kodak Tri-X 400: Emosi Hitam Putih Abadi',
+          paragraphs: [
+            'Saat warna dihilangkan, yang tersisa adalah emosi murni. Ilford HP5 menghadirkan gradasi abu-abu yang anggun dan puitis, sementara Tri-X 400 memberikan kontras monokrom yang tegas dan berani untuk momen haru sungkeman.',
+          ],
+        },
+      ],
+      conclusion: 'Anda bebas menentukan preset film bawaan yang selaras dengan palet dekorasi pernikahan Anda di SudutBingkai, atau memberikan kebebasan bagi para tamu untuk berganti filter sesuai selera jepretan mereka.',
+    },
+    faqMicro: [
+      {
+        question: 'Apakah tamu bisa memilih sendiri filter film saat memotret?',
+        answer: 'Ya, Anda dapat mengaktifkan fitur izin ganti filter bagi tamu di Dashboard Host, atau menguncinya pada 1 filter resmi (misal: Portra 400) agar semua foto seragam.',
+      },
+      {
+        question: 'Apakah stempel tanggal di pojok foto bisa dinonaktifkan?',
+        answer: 'Stempel tanggal nostalgia oranye khas analog dapat diaktifkan atau dinonaktifkan sesuai preferensi estetika kedua mempelai.',
+      },
+    ],
+  },
+  {
+    slug: 'kamera-digital-ulang-tahun-gathering-kantor',
+    title: 'Bukan Cuma Wedding: Kamera Tamu Digital untuk Ulang Tahun & Gathering Kantor',
+    excerpt: 'SudutBingkai hadir untuk segala jenis perayaan! Temukan bagaimana kamera sekali pakai digital menghidupkan suasana di pesta Sweet 17, reuni akbar, dan corporate gala dinner.',
+    tldr: 'Selain pernikahan, kamera digital sekali pakai via scan QR sangat efektif untuk pesta Sweet 17, reuni sekolah, dan gathering perusahaan. Tanpa download aplikasi, seluruh peserta dapat memotret kekompakan tim secara spontan dengan foto langsung tayang di proyektor panggung via fitur Live Slideshow.',
+    category: 'Inspirasi Acara',
+    readingTime: '4 menit baca',
+    publishedAt: '2026-10-15',
+    updatedAt: '2026-10-15',
+    coverImage: '/images/guides/kamera-digital-ulang-tahun-gathering-kantor.jpg',
+    coverAlt: 'Keseruan pesta ulang tahun dan corporate gathering dengan kamera sekali pakai digital SudutBingkai',
+    author: {
+      name: 'Tim Redaksi SudutBingkai',
+      role: 'Event Tech Specialist',
+    },
+    keywords: [
+      'souvenir acara kantor unik 2026',
+      'dokumentasi gathering perusahaan seru',
+      'kamera disposable sweet 17',
+      'ide acara reuni akbar berkesan',
+      'event tech kamera qr indonesia',
+    ],
+    content: {
+      intro: 'Meskipun pernikahan adalah salah satu panggung terbesar untuk kamera tamu digital, keseruan spontanitas memotret dengan scan QR ternyata sangat diminati di berbagai jenis perayaan lainnya. Dari pesta ulang tahun Sweet 17, reuni sekolah, hingga gala dinner perusahaan multinasional, SudutBingkai menghadirkan energi interaktif yang mencairkan suasana.',
+      sections: [
+        {
+          heading: '1. Pesta Ulang Tahun & Sweet Seventeen yang Kekinian',
+          paragraphs: [
+            'Generasi Z dan kaum muda sangat menggemari estetika retro analog (Y2K & film vibe). Namun menyewa photobooth strip untuk pesta ulang tahun sering kali melebihi anggaran remaja.',
+            'Dengan SudutBingkai Paket Intimate (Rp 129.000 untuk 50 tamu), pesta ulang tahun di kafe atau restoran langsung memiliki kamera analog digital eksklusif. Teman-teman dapat saling memotret candid dan merekam pesan suara 15 detik ucapan selamat ulang tahun yang tak ternilai.',
+          ],
+          keyTakeaways: [
+            'Sangat ramah anggaran untuk perayaan privat.',
+            'Fitur pesan suara menjadi buku tamu digital (audio guestbook) yang sangat menyentuh.',
+          ],
+        },
+        {
+          heading: '2. Corporate Gathering & Gala Dinner Perusahaan',
+          paragraphs: [
+            'Dalam acara gathering kantor atau perayaan akhir tahun perusahaan, panitia sering kesulitan mengumpulkan dokumentasi kebersamaan antar karyawan. Foto dokumentasi resmi kantor umumnya kaku dan seragam.',
+            'Dengan menaruh barcode QR di setiap meja bundar gala dinner, para karyawan dari berbagai divisi dapat memotret kelucuan sesama rekan kerja, bersulang, dan membagikan ekspresi candid yang mempererat rasa kekeluargaan tim.',
+          ],
+        },
+        {
+          heading: '3. Siaran Langsung di Layar Proyektor Aula Ballroom',
+          paragraphs: [
+            'Di acara reuni akbar atau awarding night perusahaan, fitur Live Slideshow SudutBingkai dapat dihubungkan ke LED videotron panggung utama. Setiap foto lucu yang dipotret karyawan di meja belakang akan langsung terpampang di panggung, memicu gelak tawa serentak seisi ruangan.',
+          ],
+        },
+      ],
+      conclusion: 'Apapun jenis perayaannya—baik intimate gathering keluarga 20 orang hingga corporate event 1.000 peserta—SudutBingkai menyediakan wadah dokumentasi interaktif yang praktis, seru, dan bebas repot.',
+    },
+    faqMicro: [
+      {
+        question: 'Apakah logo perusahaan bisa dipasang di tampilan kamera tamu?',
+        answer: 'Bisa. Di Paket Unlimited atau opsi Custom Co-Branding, logo perusahaan atau branding tema acara dapat disematkan di pojok kartu meja dan antarmuka kamera.',
+      },
+      {
+        question: 'Berapa kapasitas peserta maksimal untuk acara kantor?',
+        answer: 'Paket Unlimited mendukung hingga 1.000 peserta dengan prioritas server tinggi untuk menjamin kelancaran unggahan foto serentak.',
+      },
+    ],
+  },
+  {
+    slug: 'panduan-wedding-organizer-kamera-tamu-digital',
+    title: 'Panduan Wedding Organizer: Cara Menambah Nilai Jual Paket Klien Anda',
+    excerpt: 'Bagi pemilik dan tim Wedding Organizer, simak strategi mengintegrasikan layanan kamera tamu digital SudutBingkai ke dalam proposal paket pernikahan untuk meningkatkan daya saing dan pendapatan komisi.',
+    tldr: 'Wedding Organizer dapat meningkatkan nilai paket pernikahan (upselling) dengan menawarkan kamera tamu digital SudutBingkai sebagai add-on eksklusif. Dapatkan bagi hasil komisi hingga 20% per acara, opsi co-branding logo WO di kartu meja dan kamera tamu, serta dashboard analytics klien real-time tanpa perlu modal perangkat keras.',
+    category: 'Kemitraan WO',
+    readingTime: '5 menit baca',
+    publishedAt: '2026-10-15',
+    updatedAt: '2026-10-15',
+    coverImage: '/images/guides/panduan-wedding-organizer-kamera-tamu-digital.jpg',
+    coverAlt: 'Tim Wedding Organizer profesional merekomendasikan paket kamera tamu digital SudutBingkai kepada pengantin',
+    author: {
+      name: 'Tim Kemitraan SudutBingkai',
+      role: 'Vendor Partnership Lead',
+    },
+    keywords: [
+      'ide paket wedding organizer 2026',
+      'komisi kemitraan wedding organizer',
+      'cara menaikkan omset WO',
+      'fitur baru wedding planner indonesia',
+      'afiliasi vendor dokumentasi pernikahan',
+    ],
+    content: {
+      intro: 'Industri pernikahan di Indonesia semakin kompetitif. Calon pengantin generasi modern tidak lagi hanya mencari Wedding Organizer yang mampu mengurus susunan acara dasar, melainkan WO yang mampu memberikan ide-ide segar bernilai tambah tinggi (value-added innovation). Bagaimana kemitraan dengan SudutBingkai dapat membantu agensi WO Anda tampil beda dan meraih pendapatan komisi berkelanjutan?',
+      sections: [
+        {
+          heading: '1. Diferensiasi Produk: Inovasi Tanpa Beban Modal Perangkat',
+          paragraphs: [
+            'Menyediakan photobooth sendiri membutuhkan investasi modal puluhan juta rupiah untuk kamera DSLR, printer sublimasi mahal, backdrop fisik, dan operator teknis di lokasi.',
+            'Dengan SudutBingkai, WO Anda memiliki produk dokumentasi interaktif mutakhir berbasis cloud tanpa perlu membeli perangkat keras apa pun. Cukup sertakan fitur "Digital Disposable Guest Camera" ke dalam proposal penawaran paket WO Anda.',
+          ],
+          keyTakeaways: [
+            'Nol biaya modal perangkat keras atau risiko kerusakan mesin printer.',
+            'Membuat proposal WO Anda terlihat jauh lebih modern dan inovatif dibanding kompetitor.',
+          ],
+        },
+        {
+          heading: '2. Bagi Hasil Komisi Hingga 20% per Acara Klien',
+          paragraphs: [
+            'Setiap klien pengantin yang Anda daftarkan melalui Portal Vendor SudutBingkai memberikan bagi hasil komisi tunai hingga 20%.',
+            'Dengan rata-rata 10 hingga 20 pernikahan per bulan, agensi WO Anda dapat menikmati tambahan pendapatan pasif jutaan rupiah secara konsisten dengan pencairan dana langsung ke rekening bank Anda.',
+          ],
+        },
+        {
+          heading: '3. Fitur Co-Branding Eksklusif Logo Agensi Anda',
+          paragraphs: [
+            'Kami memahami betapa pentingnya nama baik brand WO Anda. Di SudutBingkai, logo agensi Wedding Organizer Anda dapat disematkan berdampingan pada kartu meja standee tamu dan antarmuka kamera ponsel.',
+            'Ini menjadi media promosi gratis yang sangat prestisius di hadapan ratusan tamu undangan yang hadir di resepsi klien Anda.',
+          ],
+        },
+        {
+          heading: '4. Dashboard Portal Vendor dengan Analytics Real-Time',
+          paragraphs: [
+            'Mitra WO memiliki akses ke Portal Vendor resmi (sudutbingkai.vercel.app/vendor) untuk memantau status acara aktif, jumlah foto terkumpul, komisi yang siap dicairkan, hingga generator proposal penawaran kilat.',
+          ],
+        },
+      ],
+      conclusion: 'Bergabunglah dengan jaringan puluhan Wedding Organizer terdepan di Jakarta, Bandung, Bali, dan Surabaya yang telah meningkatkan kepuasan pengantin mereka bersama SudutBingkai.',
+    },
+    faqMicro: [
+      {
+        question: 'Bagaimana cara mendaftar menjadi mitra Wedding Organizer resmi?',
+        answer: 'Daftar secara gratis dalam 1 menit di sudutbingkai.vercel.app/vendor tanpa biaya pendaftaran atau kuota minimum acara.',
+      },
+      {
+        question: 'Kapan komisi bagi hasil WO dapat dicairkan?',
+        answer: 'Komisi dapat diajukan penarikannya kapan saja melalui tombol Tarik Komisi di dashboard portal vendor dan ditransfer langsung ke rekening bank agensi Anda.',
+      },
+    ],
+  },
 ];
 
 export function getGuideBySlug(slug: string): GuideArticle | undefined {
@@ -239,3 +596,4 @@ export function getGuideBySlug(slug: string): GuideArticle | undefined {
 export function getAllGuides(): GuideArticle[] {
   return GUIDE_ARTICLES;
 }
+
