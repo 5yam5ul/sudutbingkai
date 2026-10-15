@@ -3126,7 +3126,7 @@ export default function SuperAdminDashboard() {
               {/* Bank Details */}
               <div style={{ background: 'rgba(0,0,0,0.02)', padding: '14px', borderRadius: '14px', border: '1px solid rgba(0,0,0,0.06)' }}>
                 <span style={{ fontSize: '12px', fontWeight: 700, display: 'block', marginBottom: '8px' }}>Rekening Bank Pencairan Komisi:</span>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px' }}>
                   <input
                     type="text"
                     placeholder="Nama Bank (BCA/Mandiri)"

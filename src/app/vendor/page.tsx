@@ -14,7 +14,7 @@ import {
   Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
-import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS, authFetch, isSameVendorId } from '@/lib/auth';
+import { getClientSession, setClientSession, clearClientSession, authFetch, isSameVendorId } from '@/lib/auth';
 import ConfirmModal from '@/components/ConfirmModal';
 import { toast } from 'sonner';
 
@@ -164,9 +164,14 @@ export default function VendorPortalPage() {
       return;
     }
 
+    if (!vendor?.id) {
+      toast.error('Sesi kemitraan vendor tidak terdeteksi. Silakan masuk kembali.');
+      return;
+    }
+
     setIsRequestingPayout(true);
     try {
-      const vendorId = vendor.id || 'vendor_vows_co';
+      const vendorId = vendor.id;
       const res = await authFetch('/api/payouts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -514,6 +519,11 @@ export default function VendorPortalPage() {
       return;
     }
 
+    if (!vendor?.id) {
+      toast.error('Sesi kemitraan vendor tidak terdeteksi. Silakan masuk kembali.');
+      return;
+    }
+
     setIsSubmittingTesti(true);
     try {
       const res = await authFetch('/api/testimonials', {
@@ -522,7 +532,7 @@ export default function VendorPortalPage() {
         body: JSON.stringify({
           eventId: selectedTestiEvent,
           submitterType: 'vendor',
-          submitterId: vendor.id || 'vendor_vows_co',
+          submitterId: vendor.id,
           submitterName: vendor.companyName || vendor.name,
           submitterEmail: vendor.email,
           videoType: testiVideoType,

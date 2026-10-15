@@ -50,7 +50,7 @@ export async function createMayarInvoice(params: MayarInvoiceRequest): Promise<M
   }
 
   try {
-    const payload = {
+    const payload: Record<string, any> = {
       name: params.name || 'Tuan Rumah / Pengantin',
       email: params.email || 'customer@sudutbingkai.id',
       mobile: params.mobile || '081234567890',
@@ -59,6 +59,15 @@ export async function createMayarInvoice(params: MayarInvoiceRequest): Promise<M
       redirectUrl: params.redirectUrl,
       expiredAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     };
+
+    if (params.eventId || params.isAddonPax || params.paxAmount) {
+      payload.extraData = {
+        eventId: params.eventId,
+        isAddonPax: params.isAddonPax,
+        paxAmount: params.paxAmount,
+        packageTier: params.packageTier,
+      };
+    }
 
     const res = await fetch('https://api.mayar.id/hl/v1/payment/create', {
       method: 'POST',

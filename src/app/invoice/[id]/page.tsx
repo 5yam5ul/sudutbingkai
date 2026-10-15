@@ -261,43 +261,39 @@ export default function InvoicePage() {
           borderRadius: '24px',
           boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)',
           border: '1px solid rgba(0, 0, 0, 0.06)',
-          padding: '48px 48px',
+          padding: 'clamp(20px, 4vw, 48px)',
           position: 'relative',
           overflow: 'hidden'
         }}
       >
-        {/* Status Stamp Watermark Seal */}
+        {/* Status Stamp Watermark Seal (Responsive: flows on mobile, diagonal watermark on desktop) */}
         <div
+          className="sm:absolute sm:top-10 sm:right-12 inline-flex items-center gap-2 mb-4 sm:mb-0"
           style={{
-            position: 'absolute',
-            top: '40px',
-            right: '48px',
-            border: `3px solid ${isPaid ? '#10B981' : invoice.status === 'cancelled' ? '#EF4444' : '#D97706'}`,
-            borderRadius: '14px',
-            padding: '8px 20px',
+            border: `2.5px solid ${isPaid ? '#10B981' : invoice.status === 'cancelled' ? '#EF4444' : '#D97706'}`,
+            borderRadius: '12px',
+            padding: '6px 16px',
             color: isPaid ? '#10B981' : invoice.status === 'cancelled' ? '#EF4444' : '#D97706',
             fontWeight: 800,
-            fontSize: '18px',
-            letterSpacing: '3px',
+            fontSize: '15px',
+            letterSpacing: '2px',
             textTransform: 'uppercase',
-            transform: 'rotate(-6deg)',
+            transform: 'rotate(-4deg)',
             pointerEvents: 'none',
             background: isPaid
-              ? 'rgba(16, 185, 129, 0.05)'
+              ? 'rgba(16, 185, 129, 0.06)'
               : invoice.status === 'cancelled'
-                ? 'rgba(239, 68, 68, 0.05)'
-                : 'rgba(217, 119, 6, 0.05)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
+                ? 'rgba(239, 68, 68, 0.06)'
+                : 'rgba(217, 119, 6, 0.06)',
+            width: 'fit-content'
           }}
         >
-          <CheckCircle2 size={20} />
+          <CheckCircle2 size={18} />
           <span>{isPaid ? 'LUNAS / PAID' : invoice.status === 'cancelled' ? 'DIBATALKAN' : 'PENDING'}</span>
         </div>
 
         {/* Letterhead Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '24px', paddingBottom: '32px', borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px', paddingBottom: '28px', borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
               <img
@@ -314,7 +310,7 @@ export default function InvoicePage() {
             </p>
           </div>
 
-          <div style={{ textAlign: 'right' }}>
+          <div className="text-left sm:text-right">
             <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: '#86868B', fontWeight: 600, display: 'block' }}>
               BUKTI PEMBAYARAN ELEKTRONIK
             </span>

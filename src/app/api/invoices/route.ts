@@ -171,8 +171,8 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const session = getServerSession(request);
-    if (!session || session.role !== 'admin') {
-      return NextResponse.json({ success: false, error: 'Akses ditolak: Hanya Admin yang dapat memperbarui invoice' }, { status: 403 });
+    if (!session) {
+      return NextResponse.json({ success: false, error: 'Akses ditolak: Silakan login terlebih dahulu' }, { status: 401 });
     }
 
     const body = await request.json();
@@ -186,17 +186,54 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Invoice tidak ditemukan' }, { status: 404 });
     }
 
+    let linkedEvent = prevInvoice.eventId ? await getEventById(prevInvoice.eventId) : null;
+    const isAdmin = session.role === 'admin';
+    const isOwnerByEmail = Boolean(
+      session.email && prevInvoice.buyerEmail && session.email.toLowerCase() === prevInvoice.buyerEmail.toLowerCase()
+    );
+    const isOwnerByEventHost = Boolean(
+      linkedEvent && session.role === 'host' && (
+        session.email?.toLowerCase() === linkedEvent.hostEmail?.toLowerCase() ||
+        session.id === linkedEvent.hostEmail
+      )
+    );
+    const isOwnerByEventVendor = Boolean(
+      linkedEvent && session.role === 'vendor' && isSameVendorId(session.id, linkedEvent.vendorId)
+    );
+    const isAuthorizedOwner = isOwnerByEmail || isOwnerByEventHost || isOwnerByEventVendor;
+
+    if (!isAdmin && !isAuthorizedOwner) {
+      return NextResponse.json({
+        success: false,
+        error: 'Akses ditolak: Anda tidak memiliki wewenang untuk memperbarui invoice ini'
+      }, { status: 403 });
+    }
+
+    // Non-admin owners can ONLY mark their pending invoice as 'paid'
+    if (!isAdmin) {
+      if (body.status !== 'paid' || prevInvoice.status === 'paid') {
+        return NextResponse.json({
+          success: false,
+          error: 'Akses ditolak: Pemilik hanya dapat mengonfirmasi pembayaran invoice yang berstatus pending'
+        }, { status: 403 });
+      }
+    }
+
     const updates: any = {};
     if (body.status !== undefined) updates.status = body.status;
-    if (body.finalAmount !== undefined) updates.finalAmount = Number(body.finalAmount);
-    if (body.originalPrice !== undefined) updates.originalPrice = Number(body.originalPrice);
-    if (body.discountAmount !== undefined) updates.discountAmount = Number(body.discountAmount);
-    if (body.discountCode !== undefined) updates.discountCode = body.discountCode;
-    if (body.buyerName !== undefined) updates.buyerName = body.buyerName.trim();
-    if (body.buyerEmail !== undefined) updates.buyerEmail = body.buyerEmail.trim();
-    if (body.buyerPhone !== undefined) updates.buyerPhone = body.buyerPhone.trim();
-    if (body.paymentMethod !== undefined) updates.paymentMethod = body.paymentMethod;
-    if (body.paidAt !== undefined) updates.paidAt = body.paidAt;
+
+    // Admin-only fields
+    if (isAdmin) {
+      if (body.finalAmount !== undefined) updates.finalAmount = Number(body.finalAmount);
+      if (body.originalPrice !== undefined) updates.originalPrice = Number(body.originalPrice);
+      if (body.discountAmount !== undefined) updates.discountAmount = Number(body.discountAmount);
+      if (body.discountCode !== undefined) updates.discountCode = body.discountCode;
+      if (body.buyerName !== undefined) updates.buyerName = body.buyerName.trim();
+      if (body.buyerEmail !== undefined) updates.buyerEmail = body.buyerEmail.trim();
+      if (body.buyerPhone !== undefined) updates.buyerPhone = body.buyerPhone.trim();
+      if (body.paymentMethod !== undefined) updates.paymentMethod = body.paymentMethod;
+      if (body.paidAt !== undefined) updates.paidAt = body.paidAt;
+    }
 
     if (updates.status === 'paid' && !updates.paidAt) {
       updates.paidAt = new Date().toISOString();
@@ -210,64 +247,66 @@ export async function PATCH(request: Request) {
     // Synchronize linked event paymentStatus, additionalPax, or vendor commission when invoice status is updated
     if (updated.eventId && updates.status && updates.status !== prevInvoice.status) {
       try {
-        const linkedEvent = await getEventById(updated.eventId);
-        if (linkedEvent) {
+        const targetEvent = linkedEvent || await getEventById(updated.eventId);
+        if (targetEvent) {
           const isTopUpInvoice =
             updated.id.startsWith('inv_topup_') ||
             (updated.orderId || '').startsWith('topup_pax_') ||
+            (updated.orderId || '').startsWith('TOPUP-') ||
+            (updated.orderId || '').startsWith('ord_topup_') ||
             (updated.tierName || '').includes('Top Up Kuota Tamu');
 
           if (isTopUpInvoice) {
-            const orderPaxMatch = (updated.orderId || '').match(/^topup_pax_(\d+)_/i);
+            const orderPaxMatch = (updated.orderId || '').match(/^(?:topup_pax_|TOPUP-|ord_topup_)(\d+)/i);
             const tierPaxMatch = (updated.tierName || '').match(/\+(\d+)\s*Pax/i);
             const topUpPax = orderPaxMatch ? Number(orderPaxMatch[1]) : (tierPaxMatch ? Number(tierPaxMatch[1]) : 0);
 
             if (topUpPax > 0) {
               if (updates.status === 'paid' && prevInvoice.status !== 'paid') {
-                await updateEvent(linkedEvent.id, {
-                  additionalPax: (linkedEvent.additionalPax || 0) + topUpPax
+                await updateEvent(targetEvent.id, {
+                  additionalPax: (targetEvent.additionalPax || 0) + topUpPax
                 });
               } else if ((updates.status === 'pending' || updates.status === 'cancelled') && prevInvoice.status === 'paid') {
-                await updateEvent(linkedEvent.id, {
-                  additionalPax: Math.max(0, (linkedEvent.additionalPax || 0) - topUpPax)
+                await updateEvent(targetEvent.id, {
+                  additionalPax: Math.max(0, (targetEvent.additionalPax || 0) - topUpPax)
                 });
               }
             }
           } else {
-            if (updates.status === 'paid' && linkedEvent.paymentStatus !== 'paid') {
+            if (updates.status === 'paid' && targetEvent.paymentStatus !== 'paid') {
               const eventUpdates: any = { paymentStatus: 'paid' };
               if (
-                linkedEvent.vendorId &&
-                linkedEvent.commissionAmount &&
-                linkedEvent.commissionAmount > 0 &&
-                linkedEvent.commissionStatus !== 'available' &&
-                linkedEvent.commissionStatus !== 'withdrawn'
+                targetEvent.vendorId &&
+                targetEvent.commissionAmount &&
+                targetEvent.commissionAmount > 0 &&
+                targetEvent.commissionStatus !== 'available' &&
+                targetEvent.commissionStatus !== 'withdrawn'
               ) {
                 const vendors = await getAllVendors();
-                const matchedVendor = vendors.find(v => isSameVendorId(v.id, linkedEvent.vendorId));
+                const matchedVendor = vendors.find(v => isSameVendorId(v.id, targetEvent.vendorId));
                 if (matchedVendor && matchedVendor.status !== 'suspended') {
                   await updateVendor(matchedVendor.id, {
-                    walletBalance: (matchedVendor.walletBalance || 0) + linkedEvent.commissionAmount,
-                    totalEarnings: (matchedVendor.totalEarnings || 0) + linkedEvent.commissionAmount
+                    walletBalance: (matchedVendor.walletBalance || 0) + targetEvent.commissionAmount,
+                    totalEarnings: (matchedVendor.totalEarnings || 0) + targetEvent.commissionAmount
                   });
                   eventUpdates.commissionStatus = 'available';
                 }
               }
-              await updateEvent(linkedEvent.id, eventUpdates);
-            } else if ((updates.status === 'pending' || updates.status === 'cancelled') && linkedEvent.paymentStatus === 'paid') {
+              await updateEvent(targetEvent.id, eventUpdates);
+            } else if ((updates.status === 'pending' || updates.status === 'cancelled') && targetEvent.paymentStatus === 'paid') {
               const revertUpdates: any = { paymentStatus: 'pending' };
-              if (linkedEvent.vendorId && linkedEvent.commissionAmount && linkedEvent.commissionAmount > 0 && linkedEvent.commissionStatus === 'available') {
+              if (targetEvent.vendorId && targetEvent.commissionAmount && targetEvent.commissionAmount > 0 && targetEvent.commissionStatus === 'available') {
                 const vendors = await getAllVendors();
-                const matchedVendor = vendors.find(v => isSameVendorId(v.id, linkedEvent.vendorId));
+                const matchedVendor = vendors.find(v => isSameVendorId(v.id, targetEvent.vendorId));
                 if (matchedVendor) {
                   await updateVendor(matchedVendor.id, {
-                    walletBalance: Math.max(0, (matchedVendor.walletBalance || 0) - linkedEvent.commissionAmount),
-                    totalEarnings: Math.max(0, (matchedVendor.totalEarnings || 0) - linkedEvent.commissionAmount)
+                    walletBalance: Math.max(0, (matchedVendor.walletBalance || 0) - targetEvent.commissionAmount),
+                    totalEarnings: Math.max(0, (matchedVendor.totalEarnings || 0) - targetEvent.commissionAmount)
                   });
                 }
                 revertUpdates.commissionStatus = 'pending';
               }
-              await updateEvent(linkedEvent.id, revertUpdates);
+              await updateEvent(targetEvent.id, revertUpdates);
             }
           }
         }

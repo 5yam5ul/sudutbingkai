@@ -257,7 +257,8 @@ export default function GuestCameraPage() {
         .then(data => {
           if (data.success && data.event) {
             setEvent(data.event);
-            setMaxShots(data.event.shotsPerGuest || 20);
+            const tierLimit = PACKAGE_TIERS[data.event.packageTier as EventPackageTier]?.shotsPerGuest || 20;
+            setMaxShots(data.event.shotsPerGuest || tierLimit);
             if (data.event.preset) {
               setSelectedPreset(data.event.preset);
             }
@@ -840,6 +841,8 @@ export default function GuestCameraPage() {
         sCtx.drawImage(canvas, 0, 0, storageCanvas.width, storageCanvas.height);
       }
       const storageBase64 = storageCanvas.toDataURL('image/jpeg', 0.80);
+      storageCanvas.width = 0;
+      storageCanvas.height = 0;
       setLastShotThumb(storageBase64);
 
       // Save photo locally to guest personal roll with the FULL high-res image
@@ -1716,7 +1719,7 @@ export default function GuestCameraPage() {
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        padding: '12px 16px calc(max(14px, env(safe-area-inset-bottom, 0px)) + 4px) 16px',
+        padding: '12px 16px calc(max(20px, env(safe-area-inset-bottom, 20px)) + 8px) 16px',
         gap: '12px',
         boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.5)'
       }}>

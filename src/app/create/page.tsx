@@ -329,7 +329,7 @@ function CreateEventForm() {
 
       // 3. Initiate Mayar Checkout with accurate canonical eventId & server-validated price
       const hostUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.vercel.app';
-      const basePackagePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 349000;
+      const basePackagePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || (selectedTier === 'intimate' ? 129000 : selectedTier === 'unlimited' ? 999000 : 499000);
       const finalChargedAmount = (!isVendor && referralDiscount?.valid) ? referralDiscount.finalPrice : basePackagePrice;
       const redirectSuccessUrl = isVendor
         ? `${hostUrl}/vendor?tab=clients&newClient=${eventId}&paid=true`
@@ -1737,7 +1737,7 @@ function CreateEventForm() {
         }}
         title={pendingPaymentData?.title || `Paket ${activeTier.name}`}
         description={pendingPaymentData?.description || ''}
-        amount={pendingPaymentData?.amount || 349000}
+        amount={pendingPaymentData?.amount || parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 499000}
         isSimulation={pendingPaymentData?.isSimulation}
       />
     </div>

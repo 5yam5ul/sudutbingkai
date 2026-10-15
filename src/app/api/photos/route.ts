@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getAllPhotos, savePhoto, updatePhoto, deletePhoto, getEventById, getPhotoById } from '@/lib/db';
-import { PhotoRecord, getEventRetentionInfo } from '@/lib/types';
+import { PhotoRecord, getEventRetentionInfo, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 import { getServerSession, isSameVendorId } from '@/lib/auth';
 import { isMayarConfigured } from '@/lib/mayar';
 
@@ -116,7 +116,8 @@ export async function POST(request: Request) {
     }
 
     // 1. Enforce individual guest quota (shotsPerGuest)
-    const allowedShotsPerGuest = event.shotsPerGuest || 10;
+    const tierLimit = PACKAGE_TIERS[event.packageTier as EventPackageTier]?.shotsPerGuest || 20;
+    const allowedShotsPerGuest = event.shotsPerGuest || tierLimit;
     const requestedShotNumber = Number(body.shotNumber) || 1;
     if (requestedShotNumber > allowedShotsPerGuest) {
       return NextResponse.json({

@@ -8,7 +8,7 @@ import {
   AlertCircle, Loader2, Heart, Briefcase,
   Building2, Phone, MapPin, ShieldCheck, LogOut, CheckCircle2
 } from 'lucide-react';
-import { authenticateUser, setClientSession, getClientSession, clearClientSession, SYSTEM_USERS } from '@/lib/auth';
+import { setClientSession, getClientSession, clearClientSession } from '@/lib/auth';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { UserAccount } from '@/lib/types';
 import { toast } from 'sonner';
@@ -358,20 +358,13 @@ function LoginFormContent() {
           setLoading(false);
           return;
         }
-      } catch {}
-
-      const adminUser = authenticateUser(cleanEmail, cleanPassword, 'admin');
-      if (adminUser) {
-        setClientSession(adminUser);
-        toast.success('Masuk sebagai Super Admin');
-        router.push('/admin');
+        setErrorMsg(data.error || 'Kata sandi Super Admin salah.');
+      } catch {
+        setErrorMsg('Gagal menghubungi server otentikasi. Silakan periksa koneksi internet Anda.');
+      } finally {
         setLoading(false);
-        return;
-      } else {
-        setErrorMsg('Kata sandi Super Admin salah.');
-        setLoading(false);
-        return;
       }
+      return;
     }
 
     // 2. VENDOR PORTAL FLOW
@@ -474,14 +467,7 @@ function LoginFormContent() {
             setErrorMsg(data.error || 'Email atau kata sandi tidak cocok. Silakan periksa kembali atau daftarkan agensi baru.');
           }
         } catch {
-          const vendorUser = authenticateUser(cleanEmail, cleanPassword, 'vendor');
-          if (vendorUser) {
-            setClientSession(vendorUser);
-            toast.success(`Selamat datang di Portal Mitra, ${vendorUser.companyName || vendorUser.name}`);
-            router.push(resolveRedirectDestination('/vendor', 'vendor'));
-          } else {
-            setErrorMsg('Email atau kata sandi tidak cocok. Silakan periksa kembali atau daftarkan agensi baru.');
-          }
+          setErrorMsg('Gagal menghubungi server otentikasi. Silakan periksa koneksi internet Anda.');
         } finally {
           setLoading(false);
         }
@@ -571,14 +557,7 @@ function LoginFormContent() {
           setErrorMsg(data.error || 'Email atau kata sandi tidak cocok. Silakan daftar akun baru atau gunakan Masuk dengan Google.');
         }
       } catch {
-        const user = authenticateUser(cleanEmail, cleanPassword, 'host');
-        if (user) {
-          setClientSession(user);
-          toast.success(`Berhasil masuk sebagai ${user.name}`);
-          router.push(resolveRedirectDestination('/dashboard', 'host'));
-        } else {
-          setErrorMsg('Email atau kata sandi tidak cocok. Silakan periksa kembali atau gunakan Masuk dengan Google.');
-        }
+        setErrorMsg('Gagal menghubungi server otentikasi. Silakan periksa koneksi internet Anda.');
       } finally {
         setLoading(false);
       }

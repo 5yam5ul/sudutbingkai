@@ -128,7 +128,7 @@ export async function POST(request: Request) {
         };
         sessionToken = signSessionPayload(JSON.stringify(vendorSessionPayload));
       }
-    } else if (!isAdmin && vendorId !== 'vendor_vows_co') {
+    } else if (!isAdmin) {
       return NextResponse.json({
         success: false,
         error: 'Akun mitra vendor tidak ditemukan atau belum memiliki saldo komisi terverifikasi.'

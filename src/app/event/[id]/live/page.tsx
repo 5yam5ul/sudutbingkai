@@ -187,7 +187,14 @@ export default function LiveProjectorWallPage() {
   useEffect(() => {
     fetchData();
     const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
+    const handleVisibility = () => {
+      if (!document.hidden) fetchData();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, [eventId]);
 
   // Slideshow cycle respecting cycleSpeed, Pause, Shuffle, and Auto-Mix mode
