@@ -72,11 +72,13 @@ export default function MayarPaymentModal({
           style={{
             width: '100%',
             maxWidth: '460px',
+            maxHeight: 'min(92vh, 680px)',
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
             backgroundColor: '#FFFFFF',
             borderRadius: '24px',
             boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            border: '1px solid rgba(0, 0, 0, 0.08)',
-            overflow: 'hidden'
+            border: '1px solid rgba(0, 0, 0, 0.08)'
           }}
         >
           {/* Header */}

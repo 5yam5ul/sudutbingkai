@@ -115,6 +115,10 @@ CREATE TABLE IF NOT EXISTS public.video_wishes (
 
 CREATE INDEX IF NOT EXISTS idx_video_wishes_event_id ON public.video_wishes(event_id);
 
+-- Migrasi kolom session_id jika tabel sudah ada sebelumnya
+ALTER TABLE public.voice_notes ADD COLUMN IF NOT EXISTS session_id TEXT;
+ALTER TABLE public.video_wishes ADD COLUMN IF NOT EXISTS session_id TEXT;
+
 -- ------------------------------------------------------------------------------
 -- 5. TABEL VENDORS (Akun Mitra WO, Dompet Komisi & Saldo Kuota Grosir)
 -- ------------------------------------------------------------------------------

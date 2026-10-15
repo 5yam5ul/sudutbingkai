@@ -23,6 +23,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const eventId = searchParams.get('eventId') || undefined;
     const guestNameParam = searchParams.get('guestName');
+    const sessionIdParam = searchParams.get('sessionId')?.trim() || undefined;
     const session = getServerSession(request);
 
     // If no eventId is provided, strictly require Super Admin session
@@ -60,6 +61,17 @@ export async function GET(request: Request) {
     const shouldMaskVideo = isDelayedLocked && !isAuthorizedManager;
 
     let wishes = await getVideoWishes(canonicalEventId);
+    if (sessionIdParam) {
+      wishes = wishes.filter(w =>
+        w.sessionId === sessionIdParam ||
+        (!w.sessionId && guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan' && w.guestName?.toLowerCase() === guestNameParam.trim().toLowerCase())
+      );
+      if (shouldMaskVideo) {
+        wishes = wishes.map(w => ({ ...w, videoUrl: '', thumbnailUrl: undefined }));
+      }
+      return NextResponse.json({ success: true, wishes, videoWishes: wishes, isLocked: shouldMaskVideo || undefined });
+    }
+
     if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
       wishes = wishes.filter(w => w.guestName && w.guestName.toLowerCase() === guestNameParam.trim().toLowerCase());
       if (shouldMaskVideo) {
@@ -92,6 +104,8 @@ export async function POST(request: Request) {
     const eventIdParam = formData.get('eventId') as string | null;
     const rawGuestName = ((formData.get('guestName') as string) || 'Tamu Undangan').trim().slice(0, 80);
     const guestName = rawGuestName || 'Tamu Undangan';
+    const rawSessionId = ((formData.get('sessionId') as string) || '').trim().slice(0, 100);
+    const sessionId = rawSessionId || undefined;
     const tableNumber = ((formData.get('tableNumber') as string) || '').trim().slice(0, 40);
     const thumbnailUrl = (formData.get('thumbnail') as string) || '';
     const rawDuration = Number(formData.get('duration')) || 15;
@@ -148,20 +162,27 @@ export async function POST(request: Request) {
       }, { status: 403 });
     }
 
-    // Rate Limit / Spam Guard: 1 Video Wish per Named Guest per Event
+    // Rate Limit / Spam Guard: 1 Video Wish per Guest Session or Named Guest per Event
     const isNamed = guestName && 
       guestName.trim().toLowerCase() !== 'tamu' && 
       guestName.trim().toLowerCase() !== 'tamu undangan';
 
-    if (isNamed) {
-      const already = existingWishes.some(w => w.guestName && w.guestName.toLowerCase() === guestName.trim().toLowerCase());
-      if (already) {
-        return NextResponse.json({
-          success: false,
-          alreadySent: true,
-          error: 'Anda sudah mengirimkan video ucapan untuk acara ini. Terima kasih atas ucapan dan doa terbaik Anda!'
-        }, { status: 400 });
+    const already = existingWishes.some(w => {
+      if (sessionId && w.sessionId) {
+        return w.sessionId === sessionId;
       }
+      if (isNamed && w.guestName?.toLowerCase() === guestName.trim().toLowerCase()) {
+        return !w.sessionId || (sessionId && w.sessionId === sessionId);
+      }
+      return false;
+    });
+
+    if (already) {
+      return NextResponse.json({
+        success: false,
+        alreadySent: true,
+        error: 'Anda sudah mengirimkan video ucapan untuk acara ini. Terima kasih atas ucapan dan doa terbaik Anda!'
+      }, { status: 400 });
     }
 
     const arrayBuffer = await videoFile.arrayBuffer();
@@ -223,6 +244,7 @@ export async function POST(request: Request) {
       id: wishId,
       eventId: event.id,
       guestName: guestName.trim(),
+      sessionId: sessionId,
       tableNumber: tableNumber ? tableNumber.trim() : undefined,
       videoUrl: videoUrl,
       thumbnailUrl: resolvedThumbnailUrl,

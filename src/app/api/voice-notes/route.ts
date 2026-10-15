@@ -31,6 +31,7 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const eventIdParam = searchParams.get('eventId');
   const guestNameParam = searchParams.get('guestName');
+  const sessionIdParam = searchParams.get('sessionId')?.trim() || undefined;
   const session = getServerSession(request);
 
   let resolvedEventId = eventIdParam;
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
   }
 
   const isSpecificNamedGuestQuery = Boolean(
-    guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan'
+    sessionIdParam || (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan')
   );
 
   const isDelayedLocked = Boolean(
@@ -94,16 +95,24 @@ export async function GET(request: Request) {
       if (resolvedEventId) {
         query = query.eq('event_id', resolvedEventId);
       }
-      if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
-        query = query.ilike('guest_name', guestNameParam.trim());
-      }
 
       const { data, error } = await query;
       if (!error && data) {
-        const formatted = data.map(item => ({
+        let results = data;
+        if (sessionIdParam) {
+          results = results.filter(item =>
+            item.session_id === sessionIdParam ||
+            (!item.session_id && guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan' && item.guest_name?.toLowerCase() === guestNameParam.trim().toLowerCase())
+          );
+        } else if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
+          results = results.filter(item => item.guest_name?.toLowerCase() === guestNameParam.trim().toLowerCase());
+        }
+
+        const formatted = results.map(item => ({
           id: item.id,
           eventId: item.event_id,
           guestName: item.guest_name,
+          sessionId: item.session_id || undefined,
           audioUrl: shouldMaskAudio ? '' : item.audio_url,
           duration: item.duration,
           timestamp: item.timestamp
@@ -124,7 +133,12 @@ export async function GET(request: Request) {
       if (resolvedEventId) {
         notes = notes.filter((n: any) => n.eventId === resolvedEventId);
       }
-      if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
+      if (sessionIdParam) {
+        notes = notes.filter((n: any) =>
+          (n.sessionId === sessionIdParam || n.session_id === sessionIdParam) ||
+          ((!n.sessionId && !n.session_id) && guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan' && n.guestName?.toLowerCase() === guestNameParam.trim().toLowerCase())
+        );
+      } else if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
         notes = notes.filter((n: any) => n.guestName?.toLowerCase() === guestNameParam.trim().toLowerCase());
       }
       if (shouldMaskAudio) {
@@ -142,6 +156,8 @@ export async function POST(request: Request) {
     const eventId = formData.get('eventId') as string;
     const rawGuestName = ((formData.get('guestName') as string) || 'Tamu').trim().slice(0, 80);
     const guestName = rawGuestName || 'Tamu';
+    const rawSessionId = ((formData.get('sessionId') as string) || '').trim().slice(0, 100);
+    const sessionId = rawSessionId || undefined;
     const audioFile = formData.get('audio') as File | null;
     const rawDuration = Number(formData.get('duration')) || 15;
     const duration = Math.min(Math.max(1, rawDuration), 15);
@@ -190,7 +206,7 @@ export async function POST(request: Request) {
 
     const maxCapacity = (event.maxGuests || 5) + (event.additionalPax || 0);
 
-    // Rate Limit / Spam Guard: 1 Voice Note per Named Guest per Event + Total Event Capacity Cap
+    // Rate Limit / Spam Guard: 1 Voice Note per Guest Session or Named Guest per Event
     const isNamed = guestName && 
       guestName.trim().toLowerCase() !== 'tamu' && 
       guestName.trim().toLowerCase() !== 'tamu undangan';
@@ -198,7 +214,7 @@ export async function POST(request: Request) {
     if (isSupabaseConfigured && supabase) {
       const { data: allEventNotes } = await supabase
         .from('voice_notes')
-        .select('id, guest_name')
+        .select('id, guest_name, session_id')
         .eq('event_id', targetEventId);
 
       if (allEventNotes) {
@@ -208,7 +224,17 @@ export async function POST(request: Request) {
             error: `Kapasitas pesan suara untuk acara ini telah penuh (${maxCapacity} tamu).`
           }, { status: 403 });
         }
-        if (isNamed && allEventNotes.some(n => n.guest_name?.toLowerCase() === guestName.trim().toLowerCase())) {
+        const already = allEventNotes.some((n: any) => {
+          if (sessionId && n.session_id) {
+            return n.session_id === sessionId;
+          }
+          if (isNamed && n.guest_name?.toLowerCase() === guestName.trim().toLowerCase()) {
+            return !n.session_id || (sessionId && n.session_id === sessionId);
+          }
+          return false;
+        });
+
+        if (already) {
           return NextResponse.json({
             success: false,
             alreadySent: true,
@@ -228,7 +254,16 @@ export async function POST(request: Request) {
             error: `Kapasitas pesan suara untuk acara ini telah penuh (${maxCapacity} tamu).`
           }, { status: 403 });
         }
-        const already = isNamed && eventNotes.some((n: any) => n.guestName?.toLowerCase() === guestName.trim().toLowerCase());
+        const already = eventNotes.some((n: any) => {
+          const itemSession = n.sessionId || n.session_id;
+          if (sessionId && itemSession) {
+            return itemSession === sessionId;
+          }
+          if (isNamed && n.guestName?.toLowerCase() === guestName.trim().toLowerCase()) {
+            return !itemSession || (sessionId && itemSession === sessionId);
+          }
+          return false;
+        });
         if (already) {
           return NextResponse.json({
             success: false,
@@ -280,7 +315,7 @@ export async function POST(request: Request) {
           }
         }
 
-        const record = {
+        const record: any = {
           id: noteId,
           event_id: targetEventId,
           guest_name: guestName,
@@ -288,10 +323,19 @@ export async function POST(request: Request) {
           duration,
           timestamp: new Date().toISOString()
         };
+        if (sessionId) {
+          record.session_id = sessionId;
+        }
 
-        const { error: dbError } = await supabase
+        let { error: dbError } = await supabase
           .from('voice_notes')
           .insert(record);
+
+        if (dbError && dbError.message?.includes('session_id')) {
+          delete record.session_id;
+          const retry = await supabase.from('voice_notes').insert(record);
+          dbError = retry.error;
+        }
 
         if (!dbError) {
           return NextResponse.json({
@@ -300,13 +344,14 @@ export async function POST(request: Request) {
               id: noteId,
               eventId,
               guestName,
+              sessionId,
               audioUrl,
               duration,
               timestamp: record.timestamp
             }
           });
         }
-        console.warn('Supabase voice_notes DB insert error:', dbError.message);
+        console.warn('Supabase voice_notes DB insert error:', dbError?.message);
       } catch (sbEx) {
         console.warn('Supabase voice error:', sbEx);
       }
@@ -324,6 +369,7 @@ export async function POST(request: Request) {
         id: noteId,
         eventId: targetEventId,
         guestName,
+        sessionId,
         audioUrl: audioUrl || `/uploads/voices/${fileName}`,
         duration,
         timestamp: new Date().toISOString()

@@ -307,6 +307,7 @@ export interface EventData {
 export interface VideoWishRecord {
   id: string;
   eventId: string;
+  sessionId?: string;
   guestName: string;
   tableNumber?: string;
   videoUrl: string;
@@ -319,6 +320,7 @@ export interface VideoWishRecord {
 export interface VoiceNoteRecord {
   id: string;
   eventId: string;
+  sessionId?: string;
   guestName: string;
   audioUrl: string;
   duration: number;

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play, Link2, Globe, Copy, CreditCard, FileText } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
-import { getClientSession, setClientSession, clearClientSession, DEMO_USERS, authFetch } from '@/lib/auth';
+import { getClientSession, setClientSession, clearClientSession, authFetch } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FrameId, FRAME_TEMPLATES } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';

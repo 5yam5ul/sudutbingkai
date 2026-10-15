@@ -46,9 +46,16 @@ export async function POST(request: Request) {
       const event = await getEventById(eventId);
       if (event) {
         // If it was an add-on pax payment: increment additionalPax AND create official InvoiceRecord
-        if (description.includes('Top Up Kuota Tamu')) {
+        const isTopUpAddon = Boolean(
+          payload?.data?.extraData?.isAddonPax ||
+          payload?.extraData?.isAddonPax ||
+          description.includes('Top Up Kuota Tamu')
+        );
+
+        if (isTopUpAddon) {
+          const extraPax = Number(payload?.data?.extraData?.paxAmount || payload?.extraData?.paxAmount);
           const paxMatch = description.match(/\+(\d+)\s*Pax/i);
-          const addedPax = paxMatch ? Number(paxMatch[1]) : 25;
+          const addedPax = extraPax > 0 ? extraPax : (paxMatch ? Number(paxMatch[1]) : 25);
           const currentAdditional = event.additionalPax || 0;
           await updateEvent(event.id, {
             additionalPax: currentAdditional + addedPax

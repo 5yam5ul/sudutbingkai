@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 interface VideoWishRecorderProps {
   eventId: string;
   guestName: string;
+  sessionId?: string;
   coupleOrHost: string;
   onSuccess: () => void;
   onSkipTextWish?: (textWish: string) => void;
@@ -16,6 +17,7 @@ interface VideoWishRecorderProps {
 export default function VideoWishRecorder({
   eventId,
   guestName,
+  sessionId,
   coupleOrHost,
   onSuccess,
   onSkipTextWish
@@ -211,6 +213,7 @@ export default function VideoWishRecorder({
       formData.append('video', recordedBlob, `wish_${eventId}_${Date.now()}.webm`);
       formData.append('eventId', eventId);
       formData.append('guestName', guestName);
+      if (sessionId) formData.append('sessionId', sessionId);
       if (thumbnail) formData.append('thumbnail', thumbnail);
       formData.append('duration', String(Math.max(1, recordSeconds)));
 

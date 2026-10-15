@@ -154,8 +154,8 @@ export default function EventDashboardPage() {
   const [isZoomed, setIsZoomed] = useState(false);
   const filmStripRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Unlocked photos available for preview (now respects active guest filter!)
-  const isRollLocked = event?.revealMode === 'delayed' && !countdown.isExpired;
+  // Unlocked photos available for preview (now respects active guest filter & host preview!)
+  const isRollLocked = event?.revealMode === 'delayed' && !countdown.isExpired && !isHost;
   const availablePhotos = isRollLocked ? [] : displayedPhotos;
   const activeIndex = activePhoto ? availablePhotos.findIndex(p => p.id === activePhoto.id) : -1;
 

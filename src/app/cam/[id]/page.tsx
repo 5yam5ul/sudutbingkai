@@ -297,7 +297,7 @@ export default function GuestCameraPage() {
 
             // Verify if guest already submitted a voice note or video wish
             if (guestIdentifier && guestIdentifier !== 'Tamu' && guestIdentifier !== 'Tamu Undangan') {
-              fetch(`/api/voice-notes?eventId=${canonicalId}&guestName=${encodeURIComponent(guestIdentifier)}`)
+              fetch(`/api/voice-notes?eventId=${canonicalId}&guestName=${encodeURIComponent(guestIdentifier)}&sessionId=${encodeURIComponent(activeSession)}`)
                 .then(res => res.json())
                 .then(vData => {
                   if (vData.success && Array.isArray(vData.voiceNotes) && vData.voiceNotes.length > 0) {
@@ -310,7 +310,7 @@ export default function GuestCameraPage() {
                 })
                 .catch(() => {});
 
-              fetch(`/api/video-wishes?eventId=${canonicalId}&guestName=${encodeURIComponent(guestIdentifier)}`)
+              fetch(`/api/video-wishes?eventId=${canonicalId}&guestName=${encodeURIComponent(guestIdentifier)}&sessionId=${encodeURIComponent(activeSession)}`)
                 .then(res => res.json())
                 .then(wData => {
                   const list = wData.videoWishes || wData.wishes || [];
@@ -650,7 +650,7 @@ export default function GuestCameraPage() {
         })
         .catch(() => {});
 
-      fetch(`/api/voice-notes?eventId=${targetEventId}&guestName=${encodeURIComponent(clean)}`)
+      fetch(`/api/voice-notes?eventId=${targetEventId}&guestName=${encodeURIComponent(clean)}&sessionId=${encodeURIComponent(activeSession)}`)
         .then(res => res.json())
         .then(vData => {
           if (vData.success && Array.isArray(vData.voiceNotes) && vData.voiceNotes.length > 0) {
@@ -663,7 +663,7 @@ export default function GuestCameraPage() {
         })
         .catch(() => {});
 
-      fetch(`/api/video-wishes?eventId=${targetEventId}&guestName=${encodeURIComponent(clean)}`)
+      fetch(`/api/video-wishes?eventId=${targetEventId}&guestName=${encodeURIComponent(clean)}&sessionId=${encodeURIComponent(activeSession)}`)
         .then(res => res.json())
         .then(wData => {
           const list = wData.videoWishes || wData.wishes || [];
@@ -1290,11 +1290,15 @@ export default function GuestCameraPage() {
     setIsUploadingAudio(true);
     const canonicalId = event?.id || eventId;
     try {
+      const activeSession = guestSessionId || getOrCreateGuestSession(canonicalId, eventId);
       const formData = new FormData();
       formData.append('audio', audioBlob, 'voice.webm');
       formData.append('eventId', canonicalId);
       formData.append('guestName', guestName || 'Tamu');
       formData.append('duration', String(recordDuration));
+      if (activeSession) {
+        formData.append('sessionId', activeSession);
+      }
 
       const res = await fetch('/api/voice-notes', {
         method: 'POST',
@@ -2694,6 +2698,7 @@ export default function GuestCameraPage() {
                     <VideoWishRecorder
                       eventId={event?.id || eventId}
                       guestName={guestName}
+                      sessionId={guestSessionId || getOrCreateGuestSession(event?.id || eventId, eventId)}
                       coupleOrHost={event?.coupleOrHost || event?.title || 'Tuan Rumah'}
                       onSuccess={() => {
                         setHasSentVideoWish(true);

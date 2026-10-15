@@ -2714,7 +2714,7 @@ export async function saveVideoWish(wish: VideoWishRecord): Promise<VideoWishRec
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      await supabase.from('video_wishes').insert({
+      const record: any = {
         id: newWish.id,
         event_id: newWish.eventId,
         guest_name: newWish.guestName,
@@ -2724,7 +2724,15 @@ export async function saveVideoWish(wish: VideoWishRecord): Promise<VideoWishRec
         duration: newWish.durationSeconds || 15,
         aspect_ratio: newWish.aspectRatio || '9:16',
         timestamp: newWish.timestamp
-      });
+      };
+      if (newWish.sessionId) {
+        record.session_id = newWish.sessionId;
+      }
+      const { error } = await supabase.from('video_wishes').insert(record);
+      if (error && error.message?.includes('session_id')) {
+        delete record.session_id;
+        await supabase.from('video_wishes').insert(record);
+      }
     } catch (e) {
       console.warn('Supabase saveVideoWish fallback:', e);
     }
@@ -2761,6 +2769,7 @@ export async function getVideoWishes(eventId?: string): Promise<VideoWishRecord[
           thumbnailUrl: row.thumbnail_url || undefined,
           durationSeconds: Number(row.duration || 15),
           aspectRatio: row.aspect_ratio || '9:16',
+          sessionId: row.session_id || undefined,
           timestamp: row.timestamp
         }));
       }

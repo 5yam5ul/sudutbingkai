@@ -100,7 +100,7 @@ export function authenticateUser(email: string, pass: string, role?: 'host' | 'v
 const STORAGE_KEY = 'sb_auth_session';
 const FALLBACK_SECRET = 'sb_sec_hmac_2026_salt_9841';
 const SESSION_SECRET =
-  (typeof process !== 'undefined' && (process.env?.AUTH_SECRET || process.env?.NEXT_PUBLIC_AUTH_SECRET)) ||
+  (typeof process !== 'undefined' && process.env?.AUTH_SECRET) ||
   FALLBACK_SECRET;
 
 function sha256Sync(ascii: string): string {
