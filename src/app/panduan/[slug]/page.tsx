@@ -1,10 +1,11 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Clock, Calendar, User, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, User, ArrowRight, CheckCircle2, Zap, HelpCircle } from 'lucide-react';
 import { getGuideBySlug } from '@/lib/guides';
 import HeaderNav from '@/components/HeaderNav';
 import Footer from '@/components/Footer';
+import ShareBar from '@/components/ShareBar';
 
 export default async function GuideArticlePage({
   params,
@@ -17,6 +18,8 @@ export default async function GuideArticlePage({
   if (!guide) {
     notFound();
   }
+
+  const articlePath = `/panduan/${guide.slug}`;
 
   return (
     <div style={{ backgroundColor: '#FBFBFA', minHeight: '100vh', color: '#1D1D1F' }}>
@@ -130,20 +133,63 @@ export default async function GuideArticlePage({
             lineHeight: 1.2,
             color: '#1D1D1F',
             letterSpacing: '-0.02em',
-            marginBottom: '24px',
+            marginBottom: '20px',
           }}
         >
           {guide.title}
         </h1>
 
-        {/* Prominent High-Resolution Cover Image */}
+        {/* TL;DR Highlight Box (Jurus 3: AI Overviews & Featured Snippets Engine) */}
+        <div
+          style={{
+            backgroundColor: 'rgba(194, 120, 3, 0.08)',
+            border: '1px solid rgba(194, 120, 3, 0.25)',
+            borderRadius: '16px',
+            padding: 'clamp(18px, 2.5vw, 22px)',
+            marginBottom: '24px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+            <span
+              style={{
+                backgroundColor: '#C27803',
+                color: '#FFFFFF',
+                fontSize: '11px',
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
+                padding: '3px 10px',
+                borderRadius: '999px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+              }}
+            >
+              <Zap size={12} fill="#FFFFFF" />
+              <span>Ringkasan Cepat (TL;DR)</span>
+            </span>
+          </div>
+          <p
+            style={{
+              fontSize: '14.5px',
+              color: '#1D1D1F',
+              lineHeight: 1.65,
+              fontWeight: 500,
+              margin: 0,
+            }}
+          >
+            {guide.tldr}
+          </p>
+        </div>
+
+        {/* Prominent High-Resolution Cover Image with Rich Alt (Jurus 4: Image SEO) */}
         <div
           style={{
             width: '100%',
             aspectRatio: '16 / 9',
             borderRadius: 'clamp(14px, 2vw, 20px)',
             overflow: 'hidden',
-            marginBottom: 'clamp(24px, 3.5vw, 36px)',
+            marginBottom: '20px',
             backgroundColor: '#F4F4F1',
             boxShadow: '0 8px 30px rgba(0, 0, 0, 0.06)',
             border: '1px solid rgba(0, 0, 0, 0.08)',
@@ -151,11 +197,16 @@ export default async function GuideArticlePage({
         >
           <img
             src={guide.coverImage}
-            alt={guide.title}
+            alt={guide.coverAlt}
             loading="eager"
             decoding="async"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
           />
+        </div>
+
+        {/* Top Social Share Bar (Jurus 7: Social Share Viral Loop) */}
+        <div style={{ marginBottom: '32px' }}>
+          <ShareBar title={guide.title} url={articlePath} />
         </div>
 
         {/* Intro Highlight Box */}
@@ -252,6 +303,52 @@ export default async function GuideArticlePage({
             </section>
           ))}
 
+          {/* Micro-FAQ Section for Google Featured Snippets */}
+          {guide.faqMicro && guide.faqMicro.length > 0 && (
+            <section
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '20px',
+                border: '1px solid rgba(0, 0, 0, 0.08)',
+                padding: 'clamp(20px, 3vw, 28px)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.03)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                <HelpCircle size={18} color="#C27803" />
+                <h3
+                  style={{
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: '#1D1D1F',
+                    margin: 0,
+                  }}
+                >
+                  Tanya Jawab Singkat (FAQ)
+                </h3>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {guide.faqMicro.map((faq, fIdx) => (
+                  <div
+                    key={fIdx}
+                    style={{
+                      borderBottom: fIdx !== guide.faqMicro.length - 1 ? '1px solid rgba(0, 0, 0, 0.06)' : 'none',
+                      paddingBottom: fIdx !== guide.faqMicro.length - 1 ? '14px' : '0',
+                    }}
+                  >
+                    <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
+                      {faq.question}
+                    </h4>
+                    <p style={{ fontSize: '14px', color: '#515154', lineHeight: 1.6, margin: 0 }}>
+                      {faq.answer}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* Conclusion */}
           <section
             style={{
@@ -282,10 +379,15 @@ export default async function GuideArticlePage({
           </section>
         </article>
 
+        {/* Bottom Social Share Bar (Jurus 7) */}
+        <div style={{ marginTop: '36px' }}>
+          <ShareBar title={guide.title} url={articlePath} />
+        </div>
+
         {/* Embedded Call-to-Action Box */}
         <div
           style={{
-            marginTop: '48px',
+            marginTop: '44px',
             backgroundColor: '#12110F',
             borderRadius: '24px',
             padding: 'clamp(32px, 4vw, 40px) clamp(20px, 4vw, 32px)',

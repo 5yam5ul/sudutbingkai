@@ -1,12 +1,19 @@
+export interface MicroFaq {
+  question: string;
+  answer: string;
+}
+
 export interface GuideArticle {
   slug: string;
   title: string;
   excerpt: string;
+  tldr: string;
   category: string;
   readingTime: string;
   publishedAt: string;
   updatedAt: string;
   coverImage: string;
+  coverAlt: string;
   author: {
     name: string;
     role: string;
@@ -21,6 +28,7 @@ export interface GuideArticle {
     }[];
     conclusion: string;
   };
+  faqMicro: MicroFaq[];
 }
 
 export const GUIDE_ARTICLES: GuideArticle[] = [
@@ -28,11 +36,13 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     slug: 'souvenir-pernikahan-unik-kamera-tamu',
     title: 'Ide Souvenir Pernikahan Unik & Bermanfaat 2026: Kamera Tamu Sekali Pakai Digital',
     excerpt: 'Bosan dengan souvenir pernikahan yang berakhir di laci? Temukan bagaimana kamera sekali pakai digital (digital disposable camera) menjadi souvenir interaktif yang mengajak tamu ikut andil mengabadikan momen terindah.',
+    tldr: 'Kamera sekali pakai digital adalah alternatif souvenir pernikahan interaktif modern tanpa instal aplikasi. Tamu memotret momen candid langsung lewat scan QR di meja, menghemat anggaran photobooth hingga 85%, dan menghasilkan arsip foto asli siap cetak tanpa kompresi.',
     category: 'Inspirasi Pernikahan',
     readingTime: '4 menit baca',
     publishedAt: '2026-10-10',
     updatedAt: '2026-10-15',
     coverImage: '/images/guides/souvenir-pernikahan-unik.jpg',
+    coverAlt: 'Meja resepsi pernikahan elegan dengan standee barcode QR kamera tamu sekali pakai SudutBingkai',
     author: {
       name: 'Tim Redaksi SudutBingkai',
       role: 'Wedding Tech Specialist',
@@ -77,16 +87,28 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
       ],
       conclusion: 'Memilih kamera sekali pakai digital sebagai souvenir interaktif bukan hanya menghemat anggaran pernikahan, melainkan juga memberikan pengalaman tak terlupakan bagi tamu dan mengumpulkan arsip kenangan terindah untuk kedua mempelai.',
     },
+    faqMicro: [
+      {
+        question: 'Berapa biaya kamera sekali pakai digital dibanding souvenir fisik?',
+        answer: 'Souvenir fisik 300 tamu menghabiskan Rp 6–9 juta, sedangkan paket Wedding SudutBingkai untuk 300 tamu hanya Rp 499.000 (hemat hingga 85%).',
+      },
+      {
+        question: 'Apakah tamu usia tua bisa menggunakan kamera tamu ini?',
+        answer: 'Sangat mudah. Tamu cukup membuka kamera bawaan ponsel lalu mengarahkan ke barcode QR di meja tanpa perlu mendaftar atau mengunduh aplikasi tambahan.',
+      },
+    ],
   },
   {
     slug: 'perbedaan-photobooth-vs-disposable-camera',
     title: 'Photobooth vs Kamera Sekali Pakai Digital: Mana yang Lebih Hemat & Seru?',
     excerpt: 'Bingung memilih antara sewa photobooth konvensional atau kamera tamu digital SudutBingkai? Simak perbandingan biaya, kepraktisan, antrean tamu, hingga kualitas kenangan yang didapat.',
+    tldr: 'Photobooth konvensional membutuhkan biaya Rp 3–8 juta untuk durasi 2–3 jam dengan antrean fisik panjang, sedangkan kamera tamu digital SudutBingkai (mulai Rp 0 – Rp 499rb) dapat dinikmati seluruh tamu dari meja masing-masing tanpa batasan jam sewa dan dilengkapi live slideshow panggung.',
     category: 'Perbandingan Vendor',
     readingTime: '5 menit baca',
     publishedAt: '2026-10-12',
     updatedAt: '2026-10-15',
     coverImage: '/images/guides/photobooth-vs-disposable-camera.jpg',
+    coverAlt: 'Tamu pernikahan ceria berswafoto candid di meja resepsi membandingkan photobooth dengan kamera digital SudutBingkai',
     author: {
       name: 'Tim Redaksi SudutBingkai',
       role: 'Wedding Tech Specialist',
@@ -131,16 +153,28 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
       ],
       conclusion: 'Jika Anda mencari solusi dokumentasi yang hemat anggaran, bebas antrean, dan menghasilkan kenangan candid yang berlimpah ruah dari sudut pandang para tamu, kamera sekali pakai digital SudutBingkai adalah pilihan yang paling tepat.',
     },
+    faqMicro: [
+      {
+        question: 'Apakah hasil foto kamera tamu bisa ditampilkan di proyektor panggung?',
+        answer: 'Ya, SudutBingkai memiliki fitur Live Slideshow TV yang dapat dihubungkan ke laptop operator panggung untuk menayangkan foto candid tamu secara langsung.',
+      },
+      {
+        question: 'Berapa durasi aktif galeri setelah acara usai?',
+        answer: 'Seluruh foto, video, dan pesan suara aktif selama 30 hingga 60 hari setelah hari-H acara dan dapat diunduh gratis tanpa batas dalam format file ZIP resolusi asli.',
+      },
+    ],
   },
   {
     slug: 'cara-membuat-qr-code-foto-tamu',
     title: 'Panduan Lengkap Membuat Barcode QR Foto Tamu di Meja Resepsi Tanpa Aplikasi',
     excerpt: 'Langkah demi langkah membuat kartu barcode QR kamera sekali pakai untuk ditaruh di meja tamu resepsi pernikahan. Mudah, cepat 2 menit, dan langsung bisa dipakai tanpa download aplikasi.',
+    tldr: 'Membuat barcode QR foto tamu di meja resepsi cukup memakan waktu 2 menit di SudutBingkai: buat nama acara, tentukan paket & filter analog favorit, lalu unduh dan cetak kartu standee meja otomatis siap pakai dengan petunjuk scan yang mudah dipahami semua usia.',
     category: 'Tutorial & Tips',
     readingTime: '3 menit baca',
     publishedAt: '2026-10-14',
     updatedAt: '2026-10-15',
     coverImage: '/images/guides/cara-membuat-qr-code-tamu.jpg',
+    coverAlt: 'Tutorial flat lay cetak kartu barcode QR standee meja foto tamu pernikahan SudutBingkai',
     author: {
       name: 'Tim Redaksi SudutBingkai',
       role: 'Wedding Tech Specialist',
@@ -185,6 +219,16 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
       ],
       conclusion: 'Hanya dalam hitungan menit, Anda telah menciptakan pengalaman interaktif berkesan bagi para tamu tanpa perlu repot mencetak souvenir mahal atau meminta tamu mengirimkan foto lewat WhatsApp satu per satu.',
     },
+    faqMicro: [
+      {
+        question: 'Kertas apa yang paling bagus untuk mencetak kartu meja QR?',
+        answer: 'Kami menyarankan menggunakan kertas Art Carton 260gsm, Ivory, atau kertas bertekstur Linen dengan finishing doff agar tidak memantulkan cahaya saat difoto.',
+      },
+      {
+        question: 'Berapa banyak kartu barcode QR yang sebaiknya dicetak?',
+        answer: 'Idealnya sediakan 1 kartu standee akrilik di setiap meja makan (round table) atau setiap jarak 1,5 meter pada long table prasmanan.',
+      },
+    ],
   },
 ];
 

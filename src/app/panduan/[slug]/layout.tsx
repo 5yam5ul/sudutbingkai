@@ -104,7 +104,13 @@ export default async function GuideArticleLayout({
     '@type': 'Article',
     headline: guide.title,
     description: guide.excerpt,
-    image: [ogImage],
+    image: {
+      '@type': 'ImageObject',
+      url: `${baseUrl}${guide.coverImage}`,
+      caption: guide.coverAlt || guide.title,
+      width: 1200,
+      height: 675,
+    },
     datePublished: guide.publishedAt,
     dateModified: guide.updatedAt,
     mainEntityOfPage: {
@@ -126,6 +132,22 @@ export default async function GuideArticleLayout({
     },
   };
 
+  const microFaqSchema =
+    guide.faqMicro && guide.faqMicro.length > 0
+      ? {
+          '@context': 'https://schema.org',
+          '@type': 'FAQPage',
+          mainEntity: guide.faqMicro.map((f) => ({
+            '@type': 'Question',
+            name: f.question,
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: f.answer,
+            },
+          })),
+        }
+      : null;
+
   return (
     <>
       <script
@@ -136,6 +158,12 @@ export default async function GuideArticleLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
       />
+      {microFaqSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(microFaqSchema) }}
+        />
+      )}
       {children}
     </>
   );

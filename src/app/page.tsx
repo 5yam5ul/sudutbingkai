@@ -1236,7 +1236,7 @@ export default function HomePage() {
             <div style={{ aspectRatio: '3/4', borderRadius: '16px', overflow: 'hidden', position: 'relative', boxShadow: '0 8px 24px rgba(0,0,0,0.1)' }} className={`film-${activePreset}`}>
               <img
                 src="https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=700&q=80"
-                alt="Emulation preview"
+                alt={`Hasil Foto Kamera Tamu Filter Analog ${FILM_PRESETS[activePreset].name} - SudutBingkai`}
                 width={500}
                 height={667}
                 loading="lazy"

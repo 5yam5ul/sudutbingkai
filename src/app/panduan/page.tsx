@@ -114,7 +114,7 @@ export default function PanduanHubPage() {
                 >
                   <img
                     src={guide.coverImage}
-                    alt={guide.title}
+                    alt={guide.coverAlt || guide.title}
                     loading="lazy"
                     decoding="async"
                     style={{
