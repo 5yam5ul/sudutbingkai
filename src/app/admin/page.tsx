@@ -9,14 +9,15 @@ import {
   EyeOff, Trash2, Download, ExternalLink, RefreshCw, Plus,
   Sliders, Search, ArrowRight, LogOut, Check, X, Flame,
   Edit, Pencil, ArrowUpRight, ArrowDownRight, Layers, CreditCard,
-  Mic, Volume2, Film, Play, Clock, Upload
+  Mic, Volume2, Film, Play, Clock, Upload, UserCheck, Heart,
+  Phone, Mail, MessageSquare
 } from 'lucide-react';
 import { getClientSession, clearClientSession, getSignedClientToken, authFetch } from '@/lib/auth';
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, VoiceNoteRecord, getEventRetentionInfo } from '@/lib/types';
 import ConfirmModal from '@/components/ConfirmModal';
 import { toast } from 'sonner';
 
-export type AdminTab = 'overview' | 'events' | 'moderation' | 'vendors' | 'invoices' | 'payouts' | 'testimonials' | 'addons';
+export type AdminTab = 'overview' | 'events' | 'hosts' | 'moderation' | 'vendors' | 'invoices' | 'payouts' | 'testimonials' | 'addons';
 
 export const ADMIN_SLUG_MAP: Record<string, AdminTab> = {
   'overview': 'overview',
@@ -24,6 +25,10 @@ export const ADMIN_SLUG_MAP: Record<string, AdminTab> = {
   'finansial': 'overview',
   'events': 'events',
   'acara': 'events',
+  'hosts': 'hosts',
+  'host': 'hosts',
+  'klien': 'hosts',
+  'pengantin': 'hosts',
   'moderation': 'moderation',
   'moderasi': 'moderation',
   'media': 'moderation',
@@ -113,6 +118,8 @@ export default function SuperAdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [photoFilterEvent, setPhotoFilterEvent] = useState('all');
   const [moderationMediaType, setModerationMediaType] = useState<'photos' | 'videos' | 'voices'>('photos');
+  const [hostTierFilter, setHostTierFilter] = useState<'all' | EventPackageTier>('all');
+  const [hostPaymentFilter, setHostPaymentFilter] = useState<'all' | 'paid' | 'pending'>('all');
 
   // -------------------------------------------------------------
   // MODAL STATES
@@ -1305,6 +1312,146 @@ export default function SuperAdminDashboard() {
     (inv.eventId && inv.eventId.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+  const hostDirectory = React.useMemo(() => {
+    const map = new Map<string, {
+      email: string;
+      name: string;
+      phone: string;
+      events: EventData[];
+      totalPax: number;
+      totalPhotos: number;
+      totalVideos: number;
+      totalVoices: number;
+      totalSpent: number;
+      paidInvoicesCount: number;
+      unpaidInvoicesCount: number;
+      latestEventDate: string;
+      createdAt: string;
+    }>();
+
+    // 1. Scan Events
+    for (const ev of events) {
+      const email = (ev.hostEmail || '').trim().toLowerCase();
+      if (!email) continue;
+
+      const existing = map.get(email) || {
+        email,
+        name: ev.coupleOrHost || ev.title || email.split('@')[0],
+        phone: '',
+        events: [],
+        totalPax: 0,
+        totalPhotos: 0,
+        totalVideos: 0,
+        totalVoices: 0,
+        totalSpent: 0,
+        paidInvoicesCount: 0,
+        unpaidInvoicesCount: 0,
+        latestEventDate: ev.eventDate || '',
+        createdAt: ev.createdAt || ev.eventDate || ''
+      };
+
+      if (ev.coupleOrHost && (!existing.name || existing.name === email.split('@')[0])) {
+        existing.name = ev.coupleOrHost;
+      }
+
+      existing.events.push(ev);
+      existing.totalPax += (ev.maxGuests || 0) + (ev.additionalPax || 0);
+
+      if (ev.eventDate && (!existing.latestEventDate || new Date(ev.eventDate) > new Date(existing.latestEventDate))) {
+        existing.latestEventDate = ev.eventDate;
+      }
+      if (ev.createdAt && (!existing.createdAt || new Date(ev.createdAt) < new Date(existing.createdAt))) {
+        existing.createdAt = ev.createdAt;
+      }
+
+      map.set(email, existing);
+    }
+
+    // 2. Scan Invoices to enrich phone, name, and total spent
+    for (const inv of invoices) {
+      const email = (inv.buyerEmail || '').trim().toLowerCase();
+      if (!email) continue;
+
+      let existing = map.get(email);
+      if (!existing) {
+        existing = {
+          email,
+          name: inv.buyerName || email.split('@')[0],
+          phone: inv.buyerPhone || '',
+          events: [],
+          totalPax: 0,
+          totalPhotos: 0,
+          totalVideos: 0,
+          totalVoices: 0,
+          totalSpent: 0,
+          paidInvoicesCount: 0,
+          unpaidInvoicesCount: 0,
+          latestEventDate: '',
+          createdAt: inv.createdAt || ''
+        };
+        map.set(email, existing);
+      }
+
+      if (inv.buyerPhone && !existing.phone) {
+        existing.phone = inv.buyerPhone;
+      }
+      if (inv.buyerName && (!existing.name || existing.name === email.split('@')[0])) {
+        existing.name = inv.buyerName;
+      }
+
+      if (inv.status === 'paid') {
+        existing.totalSpent += (inv.finalAmount || 0);
+        existing.paidInvoicesCount += 1;
+      } else if (inv.status === 'pending') {
+        existing.unpaidInvoicesCount += 1;
+      }
+    }
+
+    // 3. Count media engagement
+    for (const host of map.values()) {
+      const eventIds = new Set(host.events.map(e => e.id));
+      host.totalPhotos = photos.filter(p => eventIds.has(p.eventId)).length;
+      host.totalVideos = videoWishes.filter(v => eventIds.has(v.eventId)).length;
+      host.totalVoices = voiceNotes.filter(v => eventIds.has(v.eventId)).length;
+    }
+
+    return Array.from(map.values()).sort((a, b) => {
+      const dateA = a.latestEventDate || a.createdAt || '';
+      const dateB = b.latestEventDate || b.createdAt || '';
+      return dateB.localeCompare(dateA);
+    });
+  }, [events, invoices, photos, videoWishes, voiceNotes]);
+
+  const filteredHosts = hostDirectory.filter(h => {
+    const q = searchTerm.toLowerCase().trim();
+    if (q) {
+      const matchName = h.name.toLowerCase().includes(q);
+      const matchEmail = h.email.toLowerCase().includes(q);
+      const matchPhone = h.phone.toLowerCase().includes(q);
+      const matchEvent = h.events.some(e => e.title.toLowerCase().includes(q) || (e.slug && e.slug.toLowerCase().includes(q)));
+      if (!matchName && !matchEmail && !matchPhone && !matchEvent) return false;
+    }
+
+    if (hostTierFilter !== 'all') {
+      const hasTier = h.events.some(e => (e.packageTier || 'wedding') === hostTierFilter);
+      if (!hasTier) return false;
+    }
+
+    if (hostPaymentFilter === 'paid') {
+      const isPaid = h.paidInvoicesCount > 0 || h.events.some(e => e.paymentStatus === 'paid');
+      if (!isPaid) return false;
+    } else if (hostPaymentFilter === 'pending') {
+      const isPending = h.unpaidInvoicesCount > 0 || h.events.some(e => e.paymentStatus === 'pending');
+      if (!isPending) return false;
+    }
+
+    return true;
+  });
+
+  const totalHostSpend = hostDirectory.reduce((sum, h) => sum + h.totalSpent, 0);
+  const totalPaidHosts = hostDirectory.filter(h => h.paidInvoicesCount > 0 || h.events.some(e => e.paymentStatus === 'paid')).length;
+  const totalManagedPax = hostDirectory.reduce((sum, h) => sum + h.totalPax, 0);
+
   // Security guard for admin role
   if (currentUser?.role !== 'admin') {
     return (
@@ -1422,6 +1569,7 @@ export default function SuperAdminDashboard() {
           {[
             { id: 'overview', label: 'Ringkasan & Finansial', slug: '/admin/overview', icon: DollarSign, count: null },
             { id: 'events', label: 'Manajemen Acara', slug: '/admin/events', icon: Calendar, count: events.length },
+            { id: 'hosts', label: 'Host & Klien', slug: '/admin/hosts', icon: UserCheck, count: hostDirectory.length },
             { id: 'moderation', label: 'Moderasi Media', slug: '/admin/moderation', icon: Camera, count: photos.length + videoWishes.length + voiceNotes.length },
             { id: 'vendors', label: 'Mitra Vendor', slug: '/admin/vendors', icon: Users, count: vendors.length },
             { id: 'invoices', label: 'Pusat Invoice', slug: '/admin/invoices', icon: FileText, count: invoices.length },
@@ -1518,16 +1666,78 @@ export default function SuperAdminDashboard() {
                   DATABASE PLATFORM
                 </span>
                 <strong style={{ fontSize: '28px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-                  {events.length} Acara • {photos.length} Foto
+                  {events.length} Acara • {hostDirectory.length} Host
                 </strong>
                 <span style={{ fontSize: '12px', color: '#515154' }}>
-                  {vendors.length} Vendor • {addons.length} Add-on Fisik
+                  {photos.length} Foto • {vendors.length} Vendor
                 </span>
               </div>
             </div>
 
-            {/* Quick Action Alerts */}
+            {/* Quick Action Alerts & Recent Activity */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
+              {/* Card 1: Host & Klien Terbaru */}
+              <div className="glass-card" style={{ padding: '26px', borderRadius: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                  <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <UserCheck size={16} color="#D97706" /> Host & Klien Terbaru
+                  </h3>
+                  <button onClick={() => navigateToTab('hosts')} className="glass-pill" style={{ padding: '6px 12px', fontSize: '12px', cursor: 'pointer' }}>
+                    Semua ({hostDirectory.length})
+                  </button>
+                </div>
+                {hostDirectory.length === 0 ? (
+                  <p style={{ color: '#86868B', fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Check size={14} color="#10B981" /> Belum ada host yang terdaftar.
+                  </p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {hostDirectory.slice(0, 3).map(h => {
+                      const cleanPhone = (h.phone || '').replace(/[^0-9]/g, '');
+                      const waNum = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
+                      return (
+                        <div key={h.email} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FFFFFF', padding: '12px 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.06)' }}>
+                          <div style={{ minWidth: 0, paddingRight: '8px' }}>
+                            <strong style={{ fontSize: '13px', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {h.name}
+                            </strong>
+                            <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>
+                              {h.events.length} Acara ({h.totalPax} Pax) • 📸 {h.totalPhotos} Foto
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                            {waNum && (
+                              <a
+                                href={`https://wa.me/${waNum}?text=${encodeURIComponent(`Halo Kak ${h.name}, salam dari Tim Sudut Bingkai...`)}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="glass-pill"
+                                style={{ padding: '4px 8px', fontSize: '11px', color: '#15803D', textDecoration: 'none' }}
+                                title="Chat WhatsApp"
+                              >
+                                WA
+                              </a>
+                            )}
+                            {h.events[0] && (
+                              <Link
+                                href={`/event/${h.events[0].slug || h.events[0].id}`}
+                                target="_blank"
+                                className="glass-pill"
+                                style={{ padding: '4px 8px', fontSize: '11px', textDecoration: 'none' }}
+                                title="Lihat Acara"
+                              >
+                                Acara
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Card 2: Antrean Payout */}
               <div className="glass-card" style={{ padding: '26px', borderRadius: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>Antrean Pencairan Dana</h3>
@@ -1554,6 +1764,7 @@ export default function SuperAdminDashboard() {
                 )}
               </div>
 
+              {/* Card 3: Kurasi Testimoni */}
               <div className="glass-card" style={{ padding: '26px', borderRadius: '20px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
                   <h3 style={{ fontSize: '17px', fontWeight: 700, margin: 0 }}>Kurasi Video Testimoni (+50k)</h3>
@@ -1736,6 +1947,439 @@ export default function SuperAdminDashboard() {
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ======================================================== */}
+        {/* TAB: HOST & KLIEN MONITORING DIRECTORY */}
+        {/* ======================================================== */}
+        {activeTab === 'hosts' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Top Bar: Title & Filters */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#1D1D1F' }}>
+                    Direktori Host & Klien
+                  </h2>
+                  <span className="glass-pill" style={{ padding: '3px 10px', fontSize: '12px', fontWeight: 600, color: '#D97706', background: 'rgba(217, 119, 6, 0.1)' }}>
+                    {filteredHosts.length} Host{filteredHosts.length !== hostDirectory.length ? ` / ${hostDirectory.length}` : ''}
+                  </span>
+                </div>
+                <span style={{ fontSize: '13px', color: '#6E6E73', marginTop: '2px', display: 'block' }}>
+                  Pantau kontak pengantin, kuota pax aktif, total jepretan rol tamu, dan riwayat transaksi platform
+                </span>
+              </div>
+
+              {/* Filters */}
+              <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                {/* Search */}
+                <div style={{ position: 'relative', width: '240px' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#86868B' }} />
+                  <input
+                    type="text"
+                    placeholder="Cari host / WA / email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '12px', fontSize: '13px' }}
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm('')}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#86868B', padding: 0 }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter Tier */}
+                <select
+                  value={hostTierFilter}
+                  onChange={(e) => setHostTierFilter(e.target.value as 'all' | EventPackageTier)}
+                  className="glass-input"
+                  style={{ padding: '9px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer', minWidth: '140px' }}
+                >
+                  <option value="all">Semua Paket</option>
+                  <option value="starter">Starter (100 Tamu)</option>
+                  <option value="intimate">Intimate (150 Tamu)</option>
+                  <option value="wedding">Wedding (300 Tamu)</option>
+                  <option value="unlimited">Unlimited (Tanpa Batas)</option>
+                </select>
+
+                {/* Filter Payment */}
+                <select
+                  value={hostPaymentFilter}
+                  onChange={(e) => setHostPaymentFilter(e.target.value as 'all' | 'paid' | 'pending')}
+                  className="glass-input"
+                  style={{ padding: '9px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer', minWidth: '140px' }}
+                >
+                  <option value="all">Semua Pembayaran</option>
+                  <option value="paid">Lunas (Paid)</option>
+                  <option value="pending">Menunggu Bayar</option>
+                </select>
+
+                {(searchTerm || hostTierFilter !== 'all' || hostPaymentFilter !== 'all') && (
+                  <button
+                    onClick={() => {
+                      setSearchTerm('');
+                      setHostTierFilter('all');
+                      setHostPaymentFilter('all');
+                    }}
+                    className="glass-pill"
+                    style={{ padding: '8px 12px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', color: '#DC2626' }}
+                    title="Reset Filter"
+                  >
+                    <RefreshCw size={13} />
+                    <span>Reset</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* 4 KPI Summary Cards for Hosts */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+              <div className="glass-card" style={{ padding: '20px', borderRadius: '18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', color: '#86868B', textTransform: 'uppercase' }}>
+                    Total Host Terdaftar
+                  </span>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(37, 99, 235, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <UserCheck size={16} color="#2563EB" />
+                  </div>
+                </div>
+                <strong style={{ fontSize: '26px', color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
+                  {hostDirectory.length} Host
+                </strong>
+                <span style={{ fontSize: '12px', color: '#6E6E73' }}>
+                  Akun pengantin & klien aktif
+                </span>
+              </div>
+
+              <div className="glass-card" style={{ padding: '20px', borderRadius: '18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', color: '#86868B', textTransform: 'uppercase' }}>
+                    Host Berbayar (Premium)
+                  </span>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Heart size={16} color="#10B981" />
+                  </div>
+                </div>
+                <strong style={{ fontSize: '26px', color: '#10B981', display: 'block', marginBottom: '4px' }}>
+                  {totalPaidHosts} Host
+                </strong>
+                <span style={{ fontSize: '12px', color: '#6E6E73' }}>
+                  {hostDirectory.length > 0 ? `${Math.round((totalPaidHosts / hostDirectory.length) * 100)}% konversi pembayaran` : '0%'}
+                </span>
+              </div>
+
+              <div className="glass-card" style={{ padding: '20px', borderRadius: '18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', color: '#86868B', textTransform: 'uppercase' }}>
+                    Total Kuota Pax Dikelola
+                  </span>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(139, 92, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users size={16} color="#8B5CF6" />
+                  </div>
+                </div>
+                <strong style={{ fontSize: '26px', color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
+                  {totalManagedPax.toLocaleString('id-ID')} Pax
+                </strong>
+                <span style={{ fontSize: '12px', color: '#6E6E73' }}>
+                  Kapasitas tamu di seluruh acara
+                </span>
+              </div>
+
+              <div className="glass-card" style={{ padding: '20px', borderRadius: '18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.05em', color: '#86868B', textTransform: 'uppercase' }}>
+                    Akumulasi GMV Host
+                  </span>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(217, 119, 6, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <DollarSign size={16} color="#D97706" />
+                  </div>
+                </div>
+                <strong style={{ fontSize: '26px', color: '#D97706', display: 'block', marginBottom: '4px' }}>
+                  Rp {totalHostSpend.toLocaleString('id-ID')}
+                </strong>
+                <span style={{ fontSize: '12px', color: '#6E6E73' }}>
+                  Dari invoice yang telah lunas
+                </span>
+              </div>
+            </div>
+
+            {/* Main Table */}
+            <div className="glass-card" style={{ padding: '0', borderRadius: '20px', overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>HOST & PENGANTIN</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>KONTAK & WHATSAPP</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>ACARA & KUOTA PAX</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>ENGAGEMENT ROL TAMU</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>STATUS & GMV</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>AKSI CEPAT</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredHosts.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '48px 24px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                              <UserCheck size={24} />
+                            </div>
+                            <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Tidak ada host yang cocok</strong>
+                            <p style={{ fontSize: '13px', color: '#86868B', margin: 0, maxWidth: '400px' }}>
+                              Coba periksa kata kunci pencarian atau ganti filter paket / status pembayaran di atas.
+                            </p>
+                            {(searchTerm || hostTierFilter !== 'all' || hostPaymentFilter !== 'all') && (
+                              <button
+                                onClick={() => {
+                                  setSearchTerm('');
+                                  setHostTierFilter('all');
+                                  setHostPaymentFilter('all');
+                                }}
+                                className="glass-pill"
+                                style={{ marginTop: '8px', padding: '7px 16px', fontSize: '12.5px', cursor: 'pointer' }}
+                              >
+                                Bersihkan Semua Filter
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredHosts.map((host) => {
+                        const cleanPhone = (host.phone || '').replace(/[^0-9]/g, '');
+                        const waNum = cleanPhone.startsWith('0') ? '62' + cleanPhone.slice(1) : cleanPhone;
+                        const isPaid = host.paidInvoicesCount > 0 || host.events.some(e => e.paymentStatus === 'paid');
+                        const initial = host.name ? host.name.charAt(0).toUpperCase() : '?';
+
+                        return (
+                          <tr key={host.email} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
+                            {/* 1. Host Name & Email */}
+                            <td style={{ padding: '16px 18px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div style={{
+                                  width: '38px',
+                                  height: '38px',
+                                  borderRadius: '50%',
+                                  background: 'linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%)',
+                                  border: '1px solid rgba(0,0,0,0.08)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  fontWeight: 700,
+                                  fontSize: '15px',
+                                  color: '#374151',
+                                  flexShrink: 0
+                                }}>
+                                  {initial}
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                  <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '180px' }}>
+                                    {host.name}
+                                  </strong>
+                                  <a
+                                    href={`mailto:${host.email}`}
+                                    style={{ fontSize: '12px', color: '#6E6E73', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}
+                                    title={`Kirim email ke ${host.email}`}
+                                  >
+                                    <Mail size={12} color="#86868B" />
+                                    <span style={{ textDecoration: 'underline' }}>{host.email}</span>
+                                  </a>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* 2. Phone & WhatsApp */}
+                            <td style={{ padding: '16px 18px' }}>
+                              {waNum ? (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                  <span style={{ fontSize: '12.5px', fontFamily: 'monospace', fontWeight: 600, color: '#1D1D1F' }}>
+                                    {host.phone}
+                                  </span>
+                                  <a
+                                    href={`https://wa.me/${waNum}?text=${encodeURIComponent(`Halo Kak ${host.name}, kami dari tim support platform kamera analog digital terkait acara Kakak...`)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      gap: '5px',
+                                      background: '#25D366',
+                                      color: '#FFFFFF',
+                                      padding: '4px 10px',
+                                      borderRadius: '999px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 600,
+                                      textDecoration: 'none',
+                                      width: 'fit-content'
+                                    }}
+                                  >
+                                    <MessageSquare size={12} />
+                                    <span>Chat WhatsApp</span>
+                                  </a>
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: '12px', color: '#9CA3AF', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <Phone size={12} /> Belum ada nomor
+                                </span>
+                              )}
+                            </td>
+
+                            {/* 3. Events Owned & Pax */}
+                            <td style={{ padding: '16px 18px' }}>
+                              {host.events.length === 0 ? (
+                                <span style={{ fontSize: '12px', color: '#86868B' }}>Belum ada acara aktif</span>
+                              ) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                  {host.events.map(ev => {
+                                    const totalEventPax = (ev.maxGuests || 0) + (ev.additionalPax || 0);
+                                    return (
+                                      <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                        <Link
+                                          href={`/event/${ev.slug || ev.id}/live`}
+                                          target="_blank"
+                                          style={{ fontSize: '13px', fontWeight: 600, color: '#2563EB', textDecoration: 'none' }}
+                                        >
+                                          {ev.title}
+                                        </Link>
+                                        <span className="glass-pill" style={{ padding: '2px 7px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
+                                          {ev.packageTier || 'wedding'}
+                                        </span>
+                                        <span style={{ fontSize: '11.5px', color: '#6E6E73' }}>
+                                          {totalEventPax} Pax
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                  <span style={{ fontSize: '11px', color: '#86868B', marginTop: '2px' }}>
+                                    Total Kuota: <strong>{host.totalPax} Pax</strong> ({host.events.length} Acara)
+                                  </span>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* 4. Media Engagement (Rol Tamu) */}
+                            <td style={{ padding: '16px 18px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#1D1D1F' }}>
+                                    <Camera size={13} color="#D97706" /> {host.totalPhotos} Foto
+                                  </span>
+                                  {host.totalVideos > 0 && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#8B5CF6' }}>
+                                      <Video size={13} /> {host.totalVideos} Video
+                                    </span>
+                                  )}
+                                  {host.totalVoices > 0 && (
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '12px', fontWeight: 600, color: '#10B981' }}>
+                                      <Mic size={13} /> {host.totalVoices} Suara
+                                    </span>
+                                  )}
+                                </div>
+                                <span style={{ fontSize: '11px', color: '#86868B' }}>
+                                  {host.totalPhotos === 0 ? 'Belum ada rol tercuci' : `${host.totalPhotos + host.totalVideos + host.totalVoices} momen terkumpul`}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* 5. Payment & GMV */}
+                            <td style={{ padding: '16px 18px' }}>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <div>
+                                  {isPaid ? (
+                                    <span className="glass-pill" style={{ padding: '3px 8px', fontSize: '11px', fontWeight: 700, color: '#059669', background: 'rgba(16, 185, 129, 0.1)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                      <CheckCircle2 size={11} /> LUNAS
+                                    </span>
+                                  ) : (
+                                    <span className="glass-pill" style={{ padding: '3px 8px', fontSize: '11px', fontWeight: 700, color: '#D97706', background: 'rgba(217, 119, 6, 0.1)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                                      <AlertCircle size={11} /> MENUNGGU BAYAR
+                                    </span>
+                                  )}
+                                </div>
+                                <strong style={{ fontSize: '13px', color: host.totalSpent > 0 ? '#1D1D1F' : '#86868B' }}>
+                                  Rp {host.totalSpent.toLocaleString('id-ID')}
+                                </strong>
+                                <span style={{ fontSize: '11px', color: '#86868B' }}>
+                                  {host.paidInvoicesCount} lunas{host.unpaidInvoicesCount > 0 ? `, ${host.unpaidInvoicesCount} pending` : ''}
+                                </span>
+                              </div>
+                            </td>
+
+                            {/* 6. Quick Actions */}
+                            <td style={{ padding: '16px 18px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                {host.events.length > 0 && (
+                                  <>
+                                    <Link
+                                      href={`/event/${host.events[0].slug || host.events[0].id}/live`}
+                                      target="_blank"
+                                      className="glass-pill"
+                                      style={{ padding: '6px 10px', fontSize: '11.5px', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                      title="Buka Live Gallery"
+                                    >
+                                      <ExternalLink size={12} /> Live
+                                    </Link>
+                                    <button
+                                      onClick={() => handleAddPax(host.events[0].id, host.events[0].maxGuests || 300, host.events[0].title)}
+                                      className="glass-pill"
+                                      style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                      title="Tambah kuota pax gratis untuk acara ini"
+                                    >
+                                      <Plus size={12} /> Pax
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  onClick={() => {
+                                    setNewInvoiceForm({
+                                      buyerName: host.name,
+                                      buyerEmail: host.email,
+                                      buyerPhone: host.phone,
+                                      tierId: 'wedding',
+                                      tierName: 'Wedding (300 Tamu)',
+                                      originalPrice: 499000,
+                                      discountAmount: 0,
+                                      finalAmount: 499000,
+                                      paymentMethod: 'qris',
+                                      status: 'paid'
+                                    });
+                                    setCreateInvoiceModalOpen(true);
+                                  }}
+                                  className="glass-pill"
+                                  style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                  title="Terbitkan invoice baru untuk host ini"
+                                >
+                                  <FileText size={12} /> +Invoice
+                                </button>
+                                {host.events.length > 0 && (
+                                  <button
+                                    onClick={() => {
+                                      setSearchTerm(host.name || host.email);
+                                      navigateToTab('events');
+                                    }}
+                                    className="glass-pill"
+                                    style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                                    title="Kelola acara host di tab Acara"
+                                  >
+                                    <Calendar size={12} /> Kelola
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
