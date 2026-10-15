@@ -18,7 +18,7 @@ export default function JsonLd({ baseUrl = 'https://sudutbingkai.vercel.app' }: 
     ],
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: '+62-812-9876-5432',
+      telephone: '+62-857-8225-5128',
       contactType: 'customer service',
       areaServed: 'ID',
       availableLanguage: ['Indonesian', 'English']

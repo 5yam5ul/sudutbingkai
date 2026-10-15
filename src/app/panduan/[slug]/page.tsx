@@ -20,11 +20,17 @@ export default async function GuideArticlePage({
 
   return (
     <div style={{ backgroundColor: '#FBFBFA', minHeight: '100vh', color: '#1D1D1F' }}>
-      {/* Unified Header with Official Logo */}
+      {/* Unified Floating Glass Header with Official Logo & Mobile Menu */}
       <HeaderNav activePath="/panduan" />
 
       {/* Article Container */}
-      <main style={{ maxWidth: '840px', margin: '0 auto', padding: '40px 24px 80px' }}>
+      <main
+        style={{
+          maxWidth: '840px',
+          margin: '0 auto',
+          padding: 'clamp(24px, 4vw, 44px) clamp(16px, 3vw, 24px) 80px',
+        }}
+      >
         {/* Back Link & Breadcrumb Visual Trail */}
         <div
           style={{
@@ -33,7 +39,7 @@ export default async function GuideArticlePage({
             justifyContent: 'space-between',
             flexWrap: 'wrap',
             gap: '12px',
-            marginBottom: '28px',
+            marginBottom: '24px',
           }}
         >
           <Link
@@ -42,13 +48,13 @@ export default async function GuideArticlePage({
               display: 'inline-flex',
               alignItems: 'center',
               gap: '6px',
-              fontSize: '13.5px',
+              fontSize: '13px',
               fontWeight: 600,
               color: '#C27803',
               textDecoration: 'none',
             }}
           >
-            <ArrowLeft size={16} />
+            <ArrowLeft size={15} />
             <span>Kembali ke Semua Panduan</span>
           </Link>
 
@@ -57,9 +63,10 @@ export default async function GuideArticlePage({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              fontSize: '12.5px',
+              gap: '6px',
+              fontSize: '12px',
               color: '#86868B',
+              flexWrap: 'wrap',
             }}
           >
             <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>
@@ -80,9 +87,9 @@ export default async function GuideArticlePage({
             display: 'flex',
             flexWrap: 'wrap',
             alignItems: 'center',
-            gap: '16px',
+            gap: '12px',
             marginBottom: '16px',
-            fontSize: '13px',
+            fontSize: '12.5px',
             color: '#86868B',
           }}
         >
@@ -91,25 +98,25 @@ export default async function GuideArticlePage({
               backgroundColor: 'rgba(194, 120, 3, 0.1)',
               color: '#C27803',
               fontWeight: 700,
-              padding: '4px 12px',
+              padding: '3px 10px',
               borderRadius: '999px',
               textTransform: 'uppercase',
               letterSpacing: '0.06em',
-              fontSize: '11px',
+              fontSize: '10.5px',
             }}
           >
             {guide.category}
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Calendar size={14} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Calendar size={13} />
             <span>{guide.publishedAt}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <Clock size={14} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <Clock size={13} />
             <span>{guide.readingTime}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            <User size={14} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <User size={13} />
             <span>{guide.author.name}</span>
           </div>
         </div>
@@ -118,12 +125,12 @@ export default async function GuideArticlePage({
         <h1
           style={{
             fontFamily: 'var(--font-serif)',
-            fontSize: 'clamp(2.2rem, 3.8vw, 3.2rem)',
+            fontSize: 'clamp(1.75rem, 4.5vw, 2.85rem)',
             fontWeight: 700,
             lineHeight: 1.2,
             color: '#1D1D1F',
             letterSpacing: '-0.02em',
-            marginBottom: '28px',
+            marginBottom: '24px',
           }}
         >
           {guide.title}
@@ -134,9 +141,9 @@ export default async function GuideArticlePage({
           style={{
             width: '100%',
             aspectRatio: '16 / 9',
-            borderRadius: '20px',
+            borderRadius: 'clamp(14px, 2vw, 20px)',
             overflow: 'hidden',
-            marginBottom: '36px',
+            marginBottom: 'clamp(24px, 3.5vw, 36px)',
             backgroundColor: '#F4F4F1',
             boxShadow: '0 8px 30px rgba(0, 0, 0, 0.06)',
             border: '1px solid rgba(0, 0, 0, 0.08)',
@@ -156,12 +163,12 @@ export default async function GuideArticlePage({
           style={{
             backgroundColor: '#FFFFFF',
             borderLeft: '4px solid #C27803',
-            borderRadius: '0 16px 16px 0',
-            padding: '24px 28px',
-            fontSize: '17px',
+            borderRadius: '0 14px 14px 0',
+            padding: 'clamp(16px, 2.5vw, 24px) clamp(16px, 2.5vw, 26px)',
+            fontSize: 'clamp(15px, 2vw, 16.5px)',
             lineHeight: 1.7,
             color: '#3A3A3C',
-            marginBottom: '44px',
+            marginBottom: '36px',
             boxShadow: '0 2px 12px rgba(0, 0, 0, 0.03)',
           }}
         >
@@ -169,15 +176,15 @@ export default async function GuideArticlePage({
         </div>
 
         {/* Article Body Content */}
-        <article style={{ display: 'flex', flexDirection: 'column', gap: '36px' }}>
+        <article style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
           {guide.content.sections.map((section, idx) => (
             <section key={idx}>
               <h2
                 style={{
-                  fontSize: '24px',
+                  fontSize: 'clamp(19px, 2.5vw, 23px)',
                   fontWeight: 700,
                   color: '#1D1D1F',
-                  marginBottom: '16px',
+                  marginBottom: '14px',
                   lineHeight: 1.3,
                 }}
               >
@@ -189,7 +196,7 @@ export default async function GuideArticlePage({
                   <p
                     key={pIdx}
                     style={{
-                      fontSize: '16px',
+                      fontSize: '15px',
                       color: '#48484A',
                       lineHeight: 1.75,
                       margin: 0,
@@ -203,21 +210,21 @@ export default async function GuideArticlePage({
               {section.keyTakeaways && (
                 <div
                   style={{
-                    marginTop: '20px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    marginTop: '18px',
+                    backgroundColor: 'rgba(255, 255, 255, 0.85)',
                     borderRadius: '16px',
                     border: '1px solid rgba(0, 0, 0, 0.06)',
-                    padding: '20px 24px',
+                    padding: 'clamp(16px, 2vw, 20px) clamp(16px, 2vw, 22px)',
                   }}
                 >
                   <h3
                     style={{
-                      fontSize: '14px',
+                      fontSize: '13px',
                       fontWeight: 700,
                       color: '#C27803',
                       textTransform: 'uppercase',
                       letterSpacing: '0.08em',
-                      marginBottom: '12px',
+                      marginBottom: '10px',
                     }}
                   >
                     Poin Utama:
@@ -230,12 +237,12 @@ export default async function GuideArticlePage({
                           display: 'flex',
                           alignItems: 'flex-start',
                           gap: '10px',
-                          fontSize: '15px',
+                          fontSize: '14px',
                           color: '#1D1D1F',
                           lineHeight: 1.5,
                         }}
                       >
-                        <CheckCircle2 size={18} color="#C27803" style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <CheckCircle2 size={16} color="#C27803" style={{ flexShrink: 0, marginTop: '2px' }} />
                         <span>{takeaway}</span>
                       </li>
                     ))}
@@ -248,23 +255,23 @@ export default async function GuideArticlePage({
           {/* Conclusion */}
           <section
             style={{
-              paddingTop: '20px',
+              paddingTop: '18px',
               borderTop: '1px solid rgba(0, 0, 0, 0.08)',
             }}
           >
             <h2
               style={{
-                fontSize: '22px',
+                fontSize: '20px',
                 fontWeight: 700,
                 color: '#1D1D1F',
-                marginBottom: '12px',
+                marginBottom: '10px',
               }}
             >
               Kesimpulan
             </h2>
             <p
               style={{
-                fontSize: '16px',
+                fontSize: '15px',
                 color: '#48484A',
                 lineHeight: 1.75,
                 margin: 0,
@@ -278,10 +285,10 @@ export default async function GuideArticlePage({
         {/* Embedded Call-to-Action Box */}
         <div
           style={{
-            marginTop: '56px',
+            marginTop: '48px',
             backgroundColor: '#12110F',
             borderRadius: '24px',
-            padding: '40px 32px',
+            padding: 'clamp(32px, 4vw, 40px) clamp(20px, 4vw, 32px)',
             color: '#FFFFFF',
             textAlign: 'center',
             display: 'flex',
@@ -292,9 +299,9 @@ export default async function GuideArticlePage({
           <h3
             style={{
               fontFamily: 'var(--font-serif)',
-              fontSize: '24px',
+              fontSize: 'clamp(20px, 2.5vw, 24px)',
               fontWeight: 700,
-              marginBottom: '12px',
+              marginBottom: '10px',
               color: '#FFFFFF',
             }}
           >
@@ -302,10 +309,10 @@ export default async function GuideArticlePage({
           </h3>
           <p
             style={{
-              fontSize: '15px',
+              fontSize: '14.5px',
               color: 'rgba(255, 255, 255, 0.72)',
               maxWidth: '560px',
-              marginBottom: '24px',
+              marginBottom: '22px',
               lineHeight: 1.6,
             }}
           >

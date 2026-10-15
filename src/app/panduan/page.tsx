@@ -10,12 +10,18 @@ export default function PanduanHubPage() {
 
   return (
     <div style={{ backgroundColor: '#FBFBFA', minHeight: '100vh', color: '#1D1D1F' }}>
-      {/* Unified Header with Official Logo */}
+      {/* Unified Floating Glass Header with Official Logo & Mobile Menu */}
       <HeaderNav activePath="/panduan" />
 
       {/* Hero Section */}
-      <main style={{ maxWidth: '1120px', margin: '0 auto', padding: '56px 24px 80px' }}>
-        <div style={{ maxWidth: '760px', marginBottom: '52px' }}>
+      <main
+        style={{
+          maxWidth: '1120px',
+          margin: '0 auto',
+          padding: 'clamp(32px, 5vw, 56px) clamp(16px, 3vw, 24px) 80px',
+        }}
+      >
+        <div style={{ maxWidth: '760px', marginBottom: 'clamp(36px, 5vw, 52px)' }}>
           <div
             style={{
               display: 'inline-flex',
@@ -24,14 +30,14 @@ export default function PanduanHubPage() {
               backgroundColor: 'rgba(194, 120, 3, 0.08)',
               border: '1px solid rgba(194, 120, 3, 0.2)',
               borderRadius: '999px',
-              padding: '6px 16px',
-              marginBottom: '20px',
+              padding: '5px 14px',
+              marginBottom: '16px',
             }}
           >
-            <BookOpen size={14} color="#C27803" />
+            <BookOpen size={13} color="#C27803" />
             <span
               style={{
-                fontSize: '12px',
+                fontSize: '11.5px',
                 fontWeight: 700,
                 color: '#C27803',
                 letterSpacing: '0.08em',
@@ -45,19 +51,19 @@ export default function PanduanHubPage() {
           <h1
             style={{
               fontFamily: 'var(--font-serif)',
-              fontSize: 'clamp(2.4rem, 4vw, 3.4rem)',
+              fontSize: 'clamp(1.85rem, 5vw, 3.2rem)',
               fontWeight: 700,
-              lineHeight: 1.15,
+              lineHeight: 1.18,
               color: '#1D1D1F',
               letterSpacing: '-0.02em',
-              marginBottom: '18px',
+              marginBottom: '14px',
             }}
           >
             Panduan Dokumentasi & Souvenir Pernikahan Modern
           </h1>
           <p
             style={{
-              fontSize: '18px',
+              fontSize: 'clamp(15px, 2vw, 17px)',
               color: '#515154',
               lineHeight: 1.6,
               margin: 0,
@@ -67,13 +73,13 @@ export default function PanduanHubPage() {
           </p>
         </div>
 
-        {/* Article Cards Grid with Visual Covers */}
+        {/* Article Cards Grid with Visual Covers (Full Mobile Friendly) */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '32px',
-            marginBottom: '72px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: 'clamp(20px, 3vw, 32px)',
+            marginBottom: '64px',
           }}
         >
           {guides.map((guide) => (
@@ -83,7 +89,7 @@ export default function PanduanHubPage() {
                 backgroundColor: '#FFFFFF',
                 borderRadius: '20px',
                 border: '1px solid rgba(0, 0, 0, 0.08)',
-                padding: '20px',
+                padding: 'clamp(16px, 2.5vw, 20px)',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -101,7 +107,7 @@ export default function PanduanHubPage() {
                     aspectRatio: '16 / 9',
                     borderRadius: '14px',
                     overflow: 'hidden',
-                    marginBottom: '18px',
+                    marginBottom: '16px',
                     backgroundColor: '#F4F4F1',
                     position: 'relative',
                   }}
@@ -126,16 +132,16 @@ export default function PanduanHubPage() {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    marginBottom: '12px',
+                    marginBottom: '10px',
                   }}
                 >
                   <span
                     style={{
-                      fontSize: '11px',
+                      fontSize: '10.5px',
                       fontWeight: 700,
                       color: '#C27803',
                       backgroundColor: 'rgba(194, 120, 3, 0.08)',
-                      padding: '4px 12px',
+                      padding: '3px 10px',
                       borderRadius: '999px',
                       textTransform: 'uppercase',
                       letterSpacing: '0.06em',
@@ -148,21 +154,21 @@ export default function PanduanHubPage() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
-                      fontSize: '12px',
+                      fontSize: '11.5px',
                       color: '#86868B',
                     }}
                   >
-                    <Clock size={13} />
+                    <Clock size={12} />
                     <span>{guide.readingTime}</span>
                   </div>
                 </div>
 
                 <h2
                   style={{
-                    fontSize: '19px',
+                    fontSize: 'clamp(17px, 2.2vw, 19px)',
                     fontWeight: 700,
                     lineHeight: 1.35,
-                    marginBottom: '10px',
+                    marginBottom: '8px',
                     color: '#1D1D1F',
                   }}
                 >
@@ -179,10 +185,10 @@ export default function PanduanHubPage() {
 
                 <p
                   style={{
-                    fontSize: '14px',
+                    fontSize: '13.5px',
                     color: '#515154',
                     lineHeight: 1.6,
-                    marginBottom: '20px',
+                    marginBottom: '18px',
                   }}
                 >
                   {guide.excerpt}
@@ -195,7 +201,7 @@ export default function PanduanHubPage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  fontSize: '14px',
+                  fontSize: '13.5px',
                   fontWeight: 600,
                   color: '#C27803',
                   textDecoration: 'none',
@@ -204,18 +210,18 @@ export default function PanduanHubPage() {
                 }}
               >
                 Baca Selengkapnya
-                <ChevronRight size={16} />
+                <ChevronRight size={15} />
               </Link>
             </article>
           ))}
         </div>
 
-        {/* Bottom CTA Box */}
+        {/* Bottom CTA Box (Responsive on Mobile) */}
         <section
           style={{
             backgroundColor: '#12110F',
             borderRadius: '24px',
-            padding: '48px 40px',
+            padding: 'clamp(32px, 5vw, 48px) clamp(20px, 4vw, 40px)',
             color: '#FFFFFF',
             display: 'flex',
             flexDirection: 'column',
@@ -226,20 +232,21 @@ export default function PanduanHubPage() {
           <h2
             style={{
               fontFamily: 'var(--font-serif)',
-              fontSize: 'clamp(1.8rem, 3vw, 2.4rem)',
+              fontSize: 'clamp(1.6rem, 3.5vw, 2.3rem)',
               fontWeight: 700,
-              marginBottom: '14px',
+              marginBottom: '12px',
               color: '#FFFFFF',
+              lineHeight: 1.25,
             }}
           >
             Siap Mengabadikan Momen Terindah Bersama Tamu?
           </h2>
           <p
             style={{
-              fontSize: '16px',
+              fontSize: 'clamp(14px, 2vw, 16px)',
               color: 'rgba(255, 255, 255, 0.72)',
               maxWidth: '600px',
-              marginBottom: '28px',
+              marginBottom: '24px',
               lineHeight: 1.6,
             }}
           >
@@ -251,9 +258,9 @@ export default function PanduanHubPage() {
             style={{
               backgroundColor: '#C27803',
               color: '#FFFFFF',
-              padding: '14px 32px',
+              padding: '12px 28px',
               borderRadius: '999px',
-              fontSize: '15px',
+              fontSize: '14.5px',
               fontWeight: 700,
               textDecoration: 'none',
               display: 'inline-flex',
@@ -262,7 +269,7 @@ export default function PanduanHubPage() {
             }}
           >
             Buat Acara Sekarang
-            <ArrowRight size={16} />
+            <ArrowRight size={15} />
           </Link>
         </section>
       </main>

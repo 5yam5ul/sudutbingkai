@@ -11,10 +11,10 @@ export default function Footer() {
           style={{
             maxWidth: '1120px',
             margin: '0 auto',
-            padding: '28px 24px',
+            padding: 'clamp(20px, 3vw, 28px) clamp(16px, 3vw, 24px)',
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '24px',
+            gap: 'clamp(16px, 2.5vw, 24px)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
@@ -124,13 +124,13 @@ export default function Footer() {
       </div>
 
       {/* Main Footer Content */}
-      <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '64px 24px 44px' }}>
+      <div style={{ maxWidth: '1120px', margin: '0 auto', padding: 'clamp(40px, 6vw, 64px) clamp(16px, 3vw, 24px) 36px' }}>
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '40px',
-            marginBottom: '48px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: 'clamp(28px, 4vw, 40px)',
+            marginBottom: '44px',
           }}
         >
           {/* Brand Column */}
@@ -282,13 +282,8 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/admin/login" style={{ color: '#86868B', textDecoration: 'none', fontSize: '13.5px' }}>
-                  Login Admin
-                </Link>
-              </li>
-              <li>
                 <a
-                  href="https://wa.me/6281298765432?text=Halo%20SudutBingkai%2C%20saya%20tertarik%20konsultasi%20kamera%20tamu%20digital%20untuk%20acara%20saya"
+                  href="https://wa.me/6285782255128?text=Halo%20SudutBingkai%2C%20saya%20tertarik%20konsultasi%20kamera%20tamu%20digital%20untuk%20acara%20saya"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -302,7 +297,7 @@ export default function Footer() {
                   }}
                 >
                   <MessageCircle size={14} />
-                  <span>Chat WhatsApp CS</span>
+                  <span>Chat WhatsApp CS (0857-8225-5128)</span>
                 </a>
               </li>
             </ul>

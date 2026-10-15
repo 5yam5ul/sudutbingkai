@@ -326,6 +326,9 @@ export default function HomePage() {
             <a href="#harga" style={{ color: '#6E6E73', textDecoration: 'none', fontSize: '13.5px', fontWeight: 500, transition: 'color 0.2s' }}>
               Harga
             </a>
+            <Link href="/panduan" style={{ color: '#6E6E73', textDecoration: 'none', fontSize: '13.5px', fontWeight: 500 }}>
+              Panduan
+            </Link>
             <Link href="/vendor" style={{ color: '#C27803', textDecoration: 'none', fontSize: '13.5px', fontWeight: 600 }}>
               Mitra Vendor / WO
             </Link>
@@ -430,6 +433,13 @@ export default function HomePage() {
             >
               Harga & Paket
             </a>
+            <Link 
+              href="/panduan" 
+              onClick={() => setMobileMenuOpen(false)}
+              style={{ color: '#1D1D1F', textDecoration: 'none', fontSize: '15px', fontWeight: 600, padding: '8px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}
+            >
+              Panduan Pernikahan
+            </Link>
             <Link 
               href="/vendor" 
               onClick={() => setMobileMenuOpen(false)}
