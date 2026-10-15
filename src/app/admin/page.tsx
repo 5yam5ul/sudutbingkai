@@ -12,7 +12,7 @@ import {
   Mic, Volume2, Film, Play, Clock, Upload
 } from 'lucide-react';
 import { getClientSession, clearClientSession, getSignedClientToken, authFetch } from '@/lib/auth';
-import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
+import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, VoiceNoteRecord, getEventRetentionInfo } from '@/lib/types';
 import ConfirmModal from '@/components/ConfirmModal';
 import { toast } from 'sonner';
 
@@ -102,7 +102,7 @@ export default function SuperAdminDashboard() {
   const [events, setEvents] = useState<EventData[]>([]);
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [videoWishes, setVideoWishes] = useState<VideoWishRecord[]>([]);
-  const [voiceNotes, setVoiceNotes] = useState<any[]>([]);
+  const [voiceNotes, setVoiceNotes] = useState<VoiceNoteRecord[]>([]);
   const [invoices, setInvoices] = useState<InvoiceRecord[]>([]);
   const [payouts, setPayouts] = useState<PayoutRequest[]>([]);
   const [testimonials, setTestimonials] = useState<VideoTestimonialSubmission[]>([]);
@@ -124,6 +124,7 @@ export default function SuperAdminDashboard() {
   const [newEventForm, setNewEventForm] = useState<Partial<EventData>>({
     title: '',
     coupleOrHost: '',
+    hostEmail: '',
     eventDate: new Date().toISOString().substring(0, 10),
     location: '',
     packageTier: 'wedding',
@@ -335,8 +336,8 @@ export default function SuperAdminDashboard() {
 
   const handleCreateNewEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEventForm.title || !newEventForm.coupleOrHost) {
-      toast.error('Nama acara dan penyelenggara wajib diisi.');
+    if (!newEventForm.title || !newEventForm.coupleOrHost || !newEventForm.hostEmail) {
+      toast.error('Nama acara, penyelenggara, dan email penyelenggara (host) wajib diisi.');
       return;
     }
 
@@ -344,16 +345,21 @@ export default function SuperAdminDashboard() {
       const res = await authFetch('/api/events', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newEventForm, adminAuthorized: true })
+        body: JSON.stringify({
+          ...newEventForm,
+          hostEmail: newEventForm.hostEmail.trim().toLowerCase(),
+          adminAuthorized: true
+        })
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Acara baru "${data.event.title}" berhasil dibuat!`);
+        toast.success(`Acara baru "${data.event.title}" berhasil dibuat! Akun host (${data.event.hostEmail}) telah terhubung.`);
         setEvents(prev => [data.event, ...prev]);
         setCreateEventModalOpen(false);
         setNewEventForm({
           title: '',
           coupleOrHost: '',
+          hostEmail: '',
           eventDate: new Date().toISOString().substring(0, 10),
           location: '',
           packageTier: 'wedding',
@@ -442,17 +448,22 @@ export default function SuperAdminDashboard() {
           toast.error('Jumlah pax harus angka positif.');
           return;
         }
-        const newTotal = currentPax + toAdd;
+        const targetEvent = events.find(e => e.id === eventId);
+        const currentAdditional = targetEvent?.additionalPax || 0;
+        const newAdditional = currentAdditional + toAdd;
+        const newTotal = (targetEvent?.maxGuests || currentPax) + newAdditional;
         try {
           const res = await authFetch('/api/events', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: eventId, maxGuests: newTotal, adminAuthorized: true })
+            body: JSON.stringify({ id: eventId, additionalPax: newAdditional, adminAuthorized: true })
           });
           const data = await res.json();
           if (data.success) {
-            toast.success(`Berhasil menambahkan +${toAdd} Pax gratis. Kuota sekarang: ${newTotal} Tamu.`);
-            setEvents(prev => prev.map(e => e.id === eventId ? { ...e, maxGuests: newTotal } : e));
+            toast.success(`Berhasil menambahkan +${toAdd} Pax gratis. Total kuota: ${newTotal} Tamu (+${newAdditional} Pax tambahan).`);
+            setEvents(prev => prev.map(e => e.id === eventId ? { ...e, additionalPax: newAdditional } : e));
+          } else {
+            toast.error(data.error || 'Gagal memperbarui kuota tamu.');
           }
         } catch {
           toast.error('Gagal memperbarui kuota tamu.');
@@ -1247,6 +1258,11 @@ export default function SuperAdminDashboard() {
   const pendingPayoutsTotal = payouts.filter(p => p.status === 'pending').reduce((acc, curr) => acc + curr.amount, 0);
   const netPlatformProfit = totalGMV - totalVendorPayouts;
 
+  const getEventTitle = (id: string) => {
+    const found = events.find(e => e.id === id);
+    return found ? `${found.title} (${found.coupleOrHost})` : `Acara: ${id}`;
+  };
+
   const filteredEvents = events.filter(e =>
     e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     e.coupleOrHost.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1644,7 +1660,7 @@ export default function SuperAdminDashboard() {
                         <td style={{ padding: '16px 18px' }}>
                           <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{e.packageTier || 'wedding'}</span>
                           <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>
-                            {e.maxGuests} Tamu • {e.shotsPerGuest} Rol • Preset: {e.preset}
+                            {(e.maxGuests || 0) + (e.additionalPax || 0)} Tamu {e.additionalPax ? `(+${e.additionalPax} Pax)` : ''} • {e.shotsPerGuest} Rol • Preset: {e.preset}
                           </span>
                         </td>
                         <td style={{ padding: '16px 18px' }}>
@@ -1678,7 +1694,7 @@ export default function SuperAdminDashboard() {
                             </button>
 
                             <button
-                              onClick={() => handleAddPax(e.id, e.maxGuests, e.title)}
+                              onClick={() => handleAddPax(e.id, (e.maxGuests || 0) + (e.additionalPax || 0), e.title)}
                               className="glass-pill"
                               style={{ padding: '6px 10px', fontSize: '11.5px', cursor: 'pointer', color: '#2563EB' }}
                               title="Suntik kuota tamu gratis"
@@ -1846,7 +1862,7 @@ export default function SuperAdminDashboard() {
                       </div>
                       <div style={{ fontSize: '12px', marginBottom: '8px' }}>
                         <strong style={{ display: 'block' }}>{p.guestName}</strong>
-                        <span style={{ fontSize: '10.5px', color: '#86868B' }}>Acara: {p.eventId}</span>
+                        <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getEventTitle(p.eventId)}>{getEventTitle(p.eventId)}</span>
                       </div>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button
@@ -1894,7 +1910,7 @@ export default function SuperAdminDashboard() {
                       </div>
                       <div style={{ fontSize: '12px' }}>
                         <strong style={{ display: 'block', color: '#1D1D1F' }}>{v.guestName}</strong>
-                        <span style={{ fontSize: '10.5px', color: '#86868B' }}>Acara: {v.eventId} • {v.durationSeconds} dtk</span>
+                        <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getEventTitle(v.eventId)}>{getEventTitle(v.eventId)} • {v.durationSeconds} dtk</span>
                       </div>
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <a
@@ -1940,7 +1956,7 @@ export default function SuperAdminDashboard() {
                           <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
                             {v.guestName}
                           </strong>
-                          <span style={{ fontSize: '10.5px', color: '#86868B' }}>Acara: {v.eventId} • {v.duration || 15} dtk</span>
+                          <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getEventTitle(v.eventId)}>{getEventTitle(v.eventId)} • {v.duration || 15} dtk</span>
                         </div>
                       </div>
 
@@ -2634,6 +2650,31 @@ export default function SuperAdminDashboard() {
                 </div>
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Email Penyelenggara (Host Email)</label>
+                  <input
+                    type="email"
+                    value={eventToEdit.hostEmail || ''}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, hostEmail: e.target.value })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                    placeholder="pengantin@domain.com"
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Tambahan Kuota (Pax Extra)</label>
+                  <input
+                    type="number"
+                    value={eventToEdit.additionalPax || 0}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, additionalPax: Math.max(0, Number(e.target.value) || 0) })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Paket Tier</label>
@@ -2831,6 +2872,19 @@ export default function SuperAdminDashboard() {
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Email Penyelenggara / Klien (Host Email) *</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="pengantin@gmail.com (Untuk login ke Dashboard Host)"
+                  value={newEventForm.hostEmail || ''}
+                  onChange={(e) => setNewEventForm({ ...newEventForm, hostEmail: e.target.value })}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

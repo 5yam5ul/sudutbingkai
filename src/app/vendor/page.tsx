@@ -10,7 +10,7 @@ import {
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
   CreditCard, Wallet, Share2, Video, Film, PlayCircle,
   Printer, Tv, Eye, Award, X, AlertTriangle, Calendar, MapPin, Mail, Lightbulb, Clock,
-  Heart, ChevronDown, ChevronUp, Shield,
+  Heart, ChevronDown, ChevronUp, Shield, FileX,
   Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
@@ -80,6 +80,16 @@ export default function VendorPortalPage() {
   const [testiCaption, setTestiCaption] = useState<string>('');
   const [isSubmittingTesti, setIsSubmittingTesti] = useState<boolean>(false);
   const [isUploadingTestiVideo, setIsUploadingTestiVideo] = useState<boolean>(false);
+
+  const claimedEventMap = React.useMemo(() => {
+    const map = new Map<string, 'pending' | 'approved'>();
+    testimonials.forEach(t => {
+      if (t.status === 'pending' || t.status === 'approved') {
+        map.set(t.eventId, t.status);
+      }
+    });
+    return map;
+  }, [testimonials]);
 
   // Partner Wallet & Referral State
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -526,6 +536,7 @@ export default function VendorPortalPage() {
         unsavedTestiVideoRef.current = null;
         toast.success('Video testimoni berhasil dikirim! Tim kurasi akan memverifikasi dalam 1x24 jam & saldo Rp 50.000 otomatis dicairkan.');
         setTestimonials(prev => [data.submission, ...prev]);
+        setSelectedTestiEvent('');
         setTestiVideoUrl('');
         setTestiVideoType('link');
         setTestiCaption('');
@@ -2084,9 +2095,19 @@ export default function VendorPortalPage() {
                                 <Check size={12} strokeWidth={2.5} /> Berhasil Ditransfer
                               </span>
                             ) : p.status === 'rejected' ? (
-                              <span style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#DC2626', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                <X size={12} strokeWidth={2.5} /> Ditolak
-                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                                <span style={{ background: 'rgba(239, 68, 68, 0.12)', border: '1px solid rgba(239, 68, 68, 0.3)', color: '#DC2626', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px', width: 'fit-content' }}>
+                                  <X size={12} strokeWidth={2.5} /> Ditolak
+                                </span>
+                                <span style={{ fontSize: '10.5px', color: '#059669', fontWeight: 600 }}>
+                                  Saldo telah dikembalikan ke dompet
+                                </span>
+                                {p.notes && (
+                                  <span style={{ fontSize: '11px', color: '#DC2626', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '3px 7px', borderRadius: '6px', maxWidth: '240px' }}>
+                                    <strong>Alasan:</strong> {p.notes}
+                                  </span>
+                                )}
+                              </div>
                             ) : (
                               <span style={{ background: 'rgba(245, 158, 11, 0.12)', border: '1px solid rgba(245, 158, 11, 0.3)', color: '#D97706', fontSize: '11.5px', fontWeight: 700, padding: '3px 10px', borderRadius: '999px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                                 <Clock size={12} /> Menunggu Transfer Admin
@@ -2222,11 +2243,15 @@ export default function VendorPortalPage() {
                       <option value="">-- Pilih Acara Terdaftar --</option>
                       {clients
                         .filter(c => c.paymentStatus !== 'pending' && c.packageTier !== 'starter')
-                        .map(c => (
-                        <option key={c.id} value={c.id}>
-                          {c.title} ({c.date})
-                        </option>
-                      ))}
+                        .map(c => {
+                          const claimStatus = claimedEventMap.get(c.id);
+                          const isClaimed = Boolean(claimStatus);
+                          return (
+                            <option key={c.id} value={c.id} disabled={isClaimed}>
+                              {c.title} ({c.date}) {claimStatus === 'approved' ? '— (Bonus Telah Diklaim)' : claimStatus === 'pending' ? '— (Sedang Diverifikasi)' : ''}
+                            </option>
+                          );
+                        })}
                     </select>
                   </div>
 
@@ -2483,19 +2508,40 @@ export default function VendorPortalPage() {
                           </p>
                         )}
 
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.04)', fontSize: '12px' }}>
-                          <a
-                            href={t.videoUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            style={{ color: '#C27803', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
-                          >
-                            <ExternalLink size={13} />
-                            <span>Tonton Video</span>
-                          </a>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.04)', fontSize: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                          {t.status === 'rejected' ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span style={{ color: '#86868B', fontSize: '11.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                <FileX size={13} />
+                                <span>Berkas telah dibersihkan</span>
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedTestiEvent(t.eventId);
+                                  window.scrollTo({ top: 300, behavior: 'smooth' });
+                                  toast.info(`Formulir disiapkan untuk revisi video "${t.eventTitle}".`);
+                                }}
+                                className="glass-pill"
+                                style={{ padding: '3px 9px', fontSize: '11px', color: '#D97706', cursor: 'pointer', fontWeight: 600, borderColor: 'rgba(217, 119, 6, 0.4)' }}
+                              >
+                                Kirim Revisi
+                              </button>
+                            </div>
+                          ) : (
+                            <a
+                              href={t.videoUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ color: '#C27803', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+                            >
+                              <ExternalLink size={13} />
+                              <span>Tonton Video</span>
+                            </a>
+                          )}
 
-                          <strong style={{ color: '#10B981', fontFamily: 'var(--font-mono)' }}>
-                            +Rp {t.rewardAmount.toLocaleString('id-ID')}
+                          <strong style={{ color: t.status === 'rejected' ? '#86868B' : '#10B981', textDecoration: t.status === 'rejected' ? 'line-through' : 'none', fontFamily: 'var(--font-mono)' }}>
+                            {t.status === 'rejected' ? 'Rp 0' : `+Rp ${t.rewardAmount.toLocaleString('id-ID')}`}
                           </strong>
                         </div>
 

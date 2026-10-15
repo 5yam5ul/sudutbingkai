@@ -7,11 +7,11 @@ import {
   Camera, Tv, Printer, Download, Share2, RefreshCw, ArrowLeft, 
   Image as ImageIcon, Users, Check, Lock, Unlock, Clock, Volume2, 
   Mic, X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Film, CheckCircle2,
-  SlidersHorizontal, Play, Briefcase, Calendar, MapPin, MessageSquare
+  SlidersHorizontal, Play, Briefcase, Calendar, MapPin, MessageSquare, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { hapticLightTap, hapticDialClick } from '@/lib/haptics';
-import { EventData, PhotoRecord, VideoWishRecord } from '@/lib/types';
+import { EventData, PhotoRecord, VideoWishRecord, VoiceNoteRecord } from '@/lib/types';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FRAME_TEMPLATES } from '@/lib/frames';
 import JSZip from 'jszip';
@@ -21,15 +21,6 @@ import SkeletonLoader from '@/components/SkeletonLoader';
 import VideoWishStoriesPlayer from '@/components/VideoWishStoriesPlayer';
 import { toast } from 'sonner';
 import { getClientSession, authFetch, isSameVendorId } from '@/lib/auth';
-
-interface VoiceNoteRecord {
-  id: string;
-  eventId: string;
-  guestName: string;
-  audioUrl: string;
-  duration: number;
-  timestamp: string;
-}
 
 const slideVariants = {
   enter: (direction: number) => ({
@@ -786,6 +777,44 @@ export default function EventDashboardPage() {
           </div>
         </div>
       </header>
+
+      {/* Pending Payment Activation Banner */}
+      {event && event.packageTier !== 'starter' && event.paymentStatus === 'pending' && (
+        <div style={{
+          background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(217, 119, 6, 0.08) 100%)',
+          borderBottom: '1.5px solid rgba(217, 119, 6, 0.35)',
+          padding: '12px 16px',
+          position: 'relative',
+          zIndex: 45
+        }}>
+          <div style={{
+            maxWidth: '1240px',
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <AlertTriangle size={18} color="#D97706" style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: '13px', color: '#92400E' }}>
+                <strong style={{ fontWeight: 700 }}>Album Menunggu Aktivasi Pembayaran:</strong>{' '}
+                <span>Fitur jepretan kamera tamu akan aktif otomatis setelah pelunasan tagihan oleh penyelenggara.</span>
+              </div>
+            </div>
+            {isHost && (
+              <Link
+                href={`/invoice/inv_${event.id}`}
+                className="btn-apple-black"
+                style={{ padding: '6px 14px', fontSize: '11.5px', textDecoration: 'none', background: '#D97706', color: '#FFFFFF', borderRadius: '8px', flexShrink: 0 }}
+              >
+                Bayar Sekarang
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Full-Bleed Cinematic Hero Cover Section */}
       <section

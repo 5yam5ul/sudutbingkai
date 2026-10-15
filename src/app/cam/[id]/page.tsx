@@ -481,7 +481,7 @@ export default function GuestCameraPage() {
   };
 
   const startCamera = async () => {
-    if (remaining === 0) {
+    if (remaining === 0 || (event && event.packageTier !== 'starter' && event.paymentStatus === 'pending')) {
       stopCameraHardware();
       return;
     }

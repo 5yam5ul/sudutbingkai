@@ -316,6 +316,15 @@ export interface VideoWishRecord {
   timestamp: string;
 }
 
+export interface VoiceNoteRecord {
+  id: string;
+  eventId: string;
+  guestName: string;
+  audioUrl: string;
+  duration: number;
+  timestamp: string;
+}
+
 export interface PhotoRecord {
   id: string;
   eventId: string;
