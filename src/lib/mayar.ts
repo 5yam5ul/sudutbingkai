@@ -29,6 +29,7 @@ export interface MayarInvoiceResponse {
   invoiceId: string;
   amount: number;
   message?: string;
+  error?: string;
 }
 
 /**
@@ -53,19 +54,24 @@ export async function createMayarInvoice(params: MayarInvoiceRequest): Promise<M
     const payload: Record<string, any> = {
       name: params.name || 'Tuan Rumah / Pengantin',
       email: params.email || 'customer@sudutbingkai.id',
-      mobile: params.mobile || '081234567890',
       amount: params.amount,
       description: params.description || `Paket ${params.packageTier.toUpperCase()} SudutBingkai`,
       redirectUrl: params.redirectUrl,
       expiredAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
     };
 
-    if (params.eventId || params.isAddonPax || params.paxAmount) {
+    // Only attach mobile if provided with valid length (avoid static dummy number which triggers rate-limit)
+    if (params.mobile && params.mobile.trim().length >= 8) {
+      payload.mobile = params.mobile.trim();
+    }
+
+    // STRICT REQUIREMENT: Mayar API strictly requires all extraData values to be STRINGS
+    if (params.eventId || params.isAddonPax !== undefined || params.paxAmount !== undefined) {
       payload.extraData = {
-        eventId: params.eventId,
-        isAddonPax: params.isAddonPax,
-        paxAmount: params.paxAmount,
-        packageTier: params.packageTier,
+        eventId: String(params.eventId || ''),
+        isAddonPax: params.isAddonPax ? 'true' : 'false',
+        paxAmount: String(params.paxAmount || 0),
+        packageTier: String(params.packageTier || ''),
       };
     }
 
@@ -78,7 +84,7 @@ export async function createMayarInvoice(params: MayarInvoiceRequest): Promise<M
       body: JSON.stringify(payload)
     });
 
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
 
     if (res.ok && data?.data?.link) {
       return {
@@ -90,24 +96,42 @@ export async function createMayarInvoice(params: MayarInvoiceRequest): Promise<M
       };
     }
 
-    console.error('Mayar API non-ok response:', data);
+    console.error('Mayar API non-ok response:', res.status, data);
+
+    // Extract exact human-readable error from Mayar error structures
+    let errMsg = 'Gagal membuat tautan pembayaran Mayar. Silakan coba beberapa saat lagi.';
+    const rawMsg = data?.messages || data?.message || data?.error;
+    if (typeof rawMsg === 'string') {
+      errMsg = rawMsg;
+    } else if (Array.isArray(rawMsg)) {
+      errMsg = rawMsg.join(', ');
+    } else if (data?.data && typeof data.data === 'object') {
+      const fieldErrors = Object.values(data.data).flat();
+      if (fieldErrors.length > 0) {
+        errMsg = fieldErrors.map(e => String(e)).join(', ');
+      }
+    }
+
     return {
       success: false,
       isSimulation: false,
       invoiceId: '',
       amount: params.amount,
       paymentUrl: '',
-      message: data?.message || 'Gagal membuat tautan pembayaran Mayar. Silakan coba beberapa saat lagi.'
+      message: errMsg,
+      error: errMsg
     };
   } catch (err: unknown) {
     console.error('Mayar API call error:', err);
+    const errText = (err as Error).message || 'Gagal menghubungi gateway pembayaran Mayar.';
     return {
       success: false,
       isSimulation: false,
       invoiceId: '',
       amount: params.amount,
       paymentUrl: '',
-      message: (err as Error).message || 'Gagal menghubungi gateway pembayaran Mayar.'
+      message: errText,
+      error: errText
     };
   }
 }
@@ -123,4 +147,3 @@ export function verifyMayarWebhookToken(tokenHeader: string | null): boolean {
   }
   return Boolean(tokenHeader && tokenHeader.trim() === MAYAR_WEBHOOK_TOKEN.trim());
 }
-

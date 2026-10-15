@@ -132,7 +132,7 @@ export default function BrideDashboardPage() {
         });
         setPaymentModalOpen(true);
       } else {
-        toast.error(payData.error || 'Gagal menginisiasi pembayaran.');
+        toast.error(payData.message || payData.error || 'Gagal menginisiasi pembayaran.');
       }
     } catch (err: any) {
       toast.error('Gagal menginisiasi pembayaran: ' + (err.message || 'Kesalahan jaringan'));

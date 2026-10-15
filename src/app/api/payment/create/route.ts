@@ -149,7 +149,8 @@ export async function POST(request: Request) {
 
       const discountedBasePrice = hasValidReferral ? Math.round(basePrice * 0.9) : basePrice;
       amount = discountedBasePrice + addonsPrice;
-      description = `Paket ${tierInfo?.name || 'Wedding'} (${tierInfo?.guestsLabel || '300 Tamu'}) - SudutBingkai (${existingEvent?.id || eventId || 'event'})`;
+      const orderCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+      description = `Paket ${tierInfo?.name || 'Wedding'} (${tierInfo?.guestsLabel || '300 Tamu'}) - SudutBingkai (${existingEvent?.id || eventId || 'event'}) #${orderCode}`;
     }
 
     // Free starter tier doesn't need payment
@@ -184,6 +185,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       ...invoiceResult,
+      error: invoiceResult.success ? undefined : (invoiceResult.error || invoiceResult.message || 'Gagal membuat transaksi pembayaran Mayar'),
       amount,
       isConfigured: isMayarConfigured,
     });

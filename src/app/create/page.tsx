@@ -367,7 +367,7 @@ function CreateEventForm() {
         });
         setPaymentModalOpen(true);
       } else {
-        toast.error('Gagal menginisiasi pembayaran Mayar: ' + (payData.error || 'Terjadi kesalahan'));
+        toast.error('Gagal menginisiasi pembayaran Mayar: ' + (payData.message || payData.error || 'Terjadi kesalahan'));
       }
     } catch (err: unknown) {
       toast.error('Error: ' + (err as Error).message);

@@ -46,9 +46,9 @@ export async function POST(request: Request) {
       const event = await getEventById(eventId);
       if (event) {
         // If it was an add-on pax payment: increment additionalPax AND create official InvoiceRecord
+        const rawIsAddon = payload?.data?.extraData?.isAddonPax ?? payload?.extraData?.isAddonPax;
         const isTopUpAddon = Boolean(
-          payload?.data?.extraData?.isAddonPax ||
-          payload?.extraData?.isAddonPax ||
+          rawIsAddon === true || rawIsAddon === 'true' ||
           description.includes('Top Up Kuota Tamu')
         );
 
