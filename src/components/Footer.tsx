@@ -330,7 +330,7 @@ export default function Footer() {
             <span>•</span>
             <span>Cloudflare R2 CDN</span>
             <span>•</span>
-            <span>Midtrans & QRIS Verified</span>
+            <span>Mayar.id & QRIS Verified</span>
           </div>
         </div>
       </div>
