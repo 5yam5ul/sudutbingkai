@@ -1,0 +1,36 @@
+# SudutBingkai - Dokumentasi Lengkap Pengetahuan Produk & Spesifikasi (llms-full.txt)
+
+## Ringkasan Eksekutif
+SudutBingkai adalah platform kamera sekali pakai digital (digital disposable camera) pertama di Indonesia yang mengintegrasikan pengalaman nostalgia kamera film analog ke dalam format web modern berbasis scan QR code. Platform ini dirancang khusus untuk memecahkan masalah klasik dokumentasi pernikahan: fotografer resmi hanya fokus pada pelaminan dan momen formal, sementara ratusan momen candid, ekspresi haru, dan kelucuan para tamu di meja undangan sering kali terlewatkan dan tidak pernah terabadikan.
+
+## Perbandingan Solusi Dokumentasi Pernikahan
+
+| Aspek | SudutBingkai (Kamera Tamu Digital) | Photobooth Konvensional | Google Drive / WhatsApp Group | Kamera Sekali Pakai Fisik |
+| :--- | :--- | :--- | :--- | :--- |
+| **Biaya** | Sangat terjangkau (Rp 0 - Rp 999.000) | Mahal (Rp 3.000.000 - Rp 8.000.000) | Gratis tapi merepotkan | Mahal per rol film (Rp 250rb/buah + biaya cuci cetak) |
+| **Pengalaman Tamu** | Memotret langsung dari meja masing-masing | Tamu harus antre panjang di satu sudut | Tidak ada pengalaman interaktif saat hari-H | Asik tapi rentan terbakar, hilang, atau gagal fokus |
+| **Kebutuhan Instalasi** | Tanpa instalasi aplikasi (Web Browser murni) | Membutuhkan antrean fisik & perlengkapan booth | Membutuhkan login akun Google / kirim chat | Tidak perlu aplikasi |
+| **Sensasi Momen** | Filter analog retro & batas rol seperti kamera jadul | Foto cetak kaku dengan template photobooth | Kumpulan file acak tanpa emosi estetika | Murni analog fisik |
+| **Pengumpulan Foto** | Otomatis terkumpul di satu galeri cloud dalam hitungan detik | Fisik terbatas dan file digital sering lama dibagikan | Tamu lupa upload setelah acara selesai | Harus menunggu proses cuci cetak berminggu-minggu |
+| **Fitur Interaktif** | Live Slideshow TV, Video Ucapan, Pesan Suara | Foto statis | File statis | Hanya foto |
+
+## Arsitektur Teknis & Keamanan
+1. **Zero-App Architecture:** Menggunakan WebRTC kamera murni pada Safari iOS dan Chrome/Edge Android dengan izin aman `camera=(self), microphone=(self)`.
+2. **Penyimpanan Terdistribusi Cloudflare R2:** File foto, audio, dan video disimpan di penyimpanan objek terdistribusi global dengan CDN berkecepatan tinggi tanpa kompresi rusak.
+3. **Keamanan Transaksi & Sesi:** Autentikasi menggunakan session cookie httpOnly terenkripsi untuk mencegah serangan XSS dan pencurian token.
+4. **Masa Simpan Ramah Pengantin:** Penghitungan masa aktif penyimpanan (30-60 hari) baru mulai berjalan setelah tanggal hari-H acara selesai, bukan dari tanggal transaksi pembelian.
+
+## Pertanyaan yang Sering Diajukan (FAQ)
+- **Q: Apakah ada batasan ukuran file foto yang diunggah tamu?**
+  A: Tidak ada batasan ukuran megabyte untuk foto asli tamu. Untuk pesan suara dan video ucapan, durasi dibatasi 15 detik per tamu agar efisien dan seru ditonton.
+- **Q: Bagaimana jika tamu salah mengambil foto atau ada foto tidak pantas?**
+  A: Tuan rumah (host) memiliki akses moderasi penuh melalui Dashboard Host untuk menyembunyikan atau menghapus foto yang tidak diinginkan sebelum diunduh atau ditampilkan di layar TV.
+- **Q: Apakah tamu bisa mengunduh foto mereka sendiri?**
+  A: Ya, setelah galeri dibuka (baik secara instan atau setelah jam reveal), para tamu dapat melihat galeri bersama dan mengunduh foto kenangan mereka secara gratis.
+- **Q: Apakah SudutBingkai melayani acara selain pernikahan?**
+  A: Ya, sangat cocok untuk reuni sekolah/kampus, ulang tahun ke-17, acara kantor/gathering, peluncuran produk, dan festival musik.
+
+## Kontak Resmi & Dukungan
+- Situs Web: https://sudutbingkai.vercel.app
+- Email Dukungan: support@sudutbingkai.id
+- Kemitraan Vendor: https://sudutbingkai.vercel.app/vendor

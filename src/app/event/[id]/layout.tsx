@@ -53,6 +53,86 @@ export async function generateMetadata({
   };
 }
 
-export default function EventLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+export default async function EventLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const event = await getEventById(id);
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sudutbingkai.vercel.app';
+
+  if (!event) {
+    return <>{children}</>;
+  }
+
+  const hostTitle = event.coupleOrHost || event.title;
+  const canonicalUrl = `${baseUrl}/event/${event.slug || event.id}`;
+  const ogImage = event.coverUrl || `${baseUrl}/opengraph-image`;
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Beranda',
+        item: baseUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Galeri Foto Acara',
+        item: canonicalUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: hostTitle,
+        item: canonicalUrl,
+      },
+    ],
+  };
+
+  const eventSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'Event',
+    name: `Galeri Foto & Kamera Tamu: ${hostTitle}`,
+    description: `Album kenangan dan dokumentasi candid dari sudut pandang para tamu di acara ${hostTitle}.`,
+    startDate: event.eventDate || new Date().toISOString().split('T')[0],
+    eventStatus: 'https://schema.org/EventScheduled',
+    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    location: {
+      '@type': 'Place',
+      name: event.location || 'Indonesia',
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: event.location || 'Indonesia',
+        addressCountry: 'ID',
+      },
+    },
+    image: [ogImage],
+    organizer: {
+      '@type': 'Organization',
+      name: 'SudutBingkai',
+      url: baseUrl,
+    },
+  };
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventSchema) }}
+      />
+      {children}
+    </>
+  );
 }

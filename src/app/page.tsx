@@ -523,6 +523,7 @@ export default function HomePage() {
               color: '#1D1D1F',
               maxWidth: '520px'
             }}>
+              <span className="sr-only">SudutBingkai • Kamera Sekali Pakai Digital untuk Tamu Pernikahan & Acara: </span>
               <span>
                 Bukan sekadar foto kaku<br className="mobile-only" /> di pelaminan.
               </span>
@@ -1833,9 +1834,10 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: '32px', fontSize: '13px', color: '#515154' }}>
+          <div style={{ display: 'flex', gap: '28px', fontSize: '13px', color: '#515154', flexWrap: 'wrap' }}>
             <Link href="/create" style={{ color: 'inherit', textDecoration: 'none' }}>Buat Album</Link>
             <Link href="/cam/demo" style={{ color: 'inherit', textDecoration: 'none' }}>Kamera Tamu</Link>
+            <Link href="/panduan" style={{ color: 'inherit', textDecoration: 'none' }}>Panduan Pernikahan</Link>
             <Link href="/vendor" style={{ color: 'inherit', textDecoration: 'none' }}>Mitra Vendor</Link>
           </div>
         </div>
