@@ -1558,65 +1558,134 @@ export default function SuperAdminDashboard() {
 
       {/* Main Container */}
       <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px 20px 80px' }}>
-        {/* Navigation Tabs (Responsive Flex-Wrap, No Cutoff) */}
+        {/* Navigation Tabs - Grouped Segments (Gaya 2) */}
         <div style={{ 
           display: 'flex', 
           flexWrap: 'wrap', 
-          alignItems: 'center', 
-          gap: '8px', 
+          alignItems: 'flex-start', 
+          gap: '14px', 
           marginBottom: '28px' 
         }}>
-          {[
-            { id: 'overview', label: 'Ringkasan & Finansial', slug: '/admin/overview', icon: DollarSign, count: null },
-            { id: 'events', label: 'Manajemen Acara', slug: '/admin/events', icon: Calendar, count: events.length },
-            { id: 'hosts', label: 'Host & Klien', slug: '/admin/hosts', icon: UserCheck, count: hostDirectory.length },
-            { id: 'moderation', label: 'Moderasi Media', slug: '/admin/moderation', icon: Camera, count: photos.length + videoWishes.length + voiceNotes.length },
-            { id: 'vendors', label: 'Mitra Vendor', slug: '/admin/vendors', icon: Users, count: vendors.length },
-            { id: 'invoices', label: 'Pusat Invoice', slug: '/admin/invoices', icon: FileText, count: invoices.length },
-            { id: 'payouts', label: 'Pencairan Dana', slug: '/admin/payouts', icon: Wallet, count: payouts.filter(p => p.status === 'pending').length || null, alert: payouts.filter(p => p.status === 'pending').length > 0 },
-            { id: 'testimonials', label: 'Kurasi Video (+50k)', slug: '/admin/testimonials', icon: Video, count: testimonials.filter(t => t.status === 'pending').length || null, alert: testimonials.filter(t => t.status === 'pending').length > 0 },
-            { id: 'addons', label: 'Katalog Add-on', slug: '/admin/addons', icon: Package, count: addons.length }
-          ].map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => navigateToTab(tab.id as AdminTab)}
-                title={`Buka ${tab.label} (${tab.slug})`}
-                className="glass-pill"
+          {(
+            [
+              {
+                title: 'Utama',
+                tabs: [
+                  { id: 'overview' as AdminTab, label: 'Ringkasan', slug: '/admin/overview', icon: DollarSign, count: null }
+                ]
+              },
+              {
+                title: 'Operasional',
+                tabs: [
+                  { id: 'events' as AdminTab, label: 'Acara', slug: '/admin/events', icon: Calendar, count: events.length },
+                  { id: 'hosts' as AdminTab, label: 'Host & Klien', slug: '/admin/hosts', icon: UserCheck, count: hostDirectory.length },
+                  { id: 'moderation' as AdminTab, label: 'Moderasi Media', slug: '/admin/moderation', icon: Camera, count: photos.length + videoWishes.length + voiceNotes.length }
+                ]
+              },
+              {
+                title: 'Finansial & Mitra',
+                tabs: [
+                  { id: 'vendors' as AdminTab, label: 'Mitra Vendor', slug: '/admin/vendors', icon: Users, count: vendors.length },
+                  { id: 'invoices' as AdminTab, label: 'Pusat Invoice', slug: '/admin/invoices', icon: FileText, count: invoices.length },
+                  { id: 'payouts' as AdminTab, label: 'Pencairan Dana', slug: '/admin/payouts', icon: Wallet, count: payouts.filter(p => p.status === 'pending').length, alert: payouts.filter(p => p.status === 'pending').length > 0 }
+                ]
+              },
+              {
+                title: 'Ekstensi & Konten',
+                tabs: [
+                  { id: 'addons' as AdminTab, label: 'Katalog Add-on', slug: '/admin/addons', icon: Package, count: addons.length },
+                  { id: 'testimonials' as AdminTab, label: 'Kurasi Video', slug: '/admin/testimonials', icon: Video, count: testimonials.filter(t => t.status === 'pending').length, alert: testimonials.filter(t => t.status === 'pending').length > 0 }
+                ]
+              }
+            ] as {
+              title: string;
+              tabs: {
+                id: AdminTab;
+                label: string;
+                slug: string;
+                icon: React.ComponentType<{ size?: number; color?: string; strokeWidth?: number; fill?: string }>;
+                count: number | null;
+                alert?: boolean;
+              }[];
+            }[]
+          ).map(group => (
+            <div key={group.title} style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+              <span style={{
+                fontSize: '10.5px',
+                fontWeight: 700,
+                letterSpacing: '0.06em',
+                textTransform: 'uppercase',
+                color: '#86868B',
+                paddingLeft: '4px'
+              }}>
+                {group.title}
+              </span>
+              <div
                 style={{
-                  background: isActive ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
-                  color: isActive ? '#FFFFFF' : '#1D1D1F',
-                  padding: '8px 14px',
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  display: 'flex',
+                  display: 'inline-flex',
                   alignItems: 'center',
-                  gap: '7px',
-                  whiteSpace: 'nowrap',
-                  boxShadow: isActive ? '0 4px 14px rgba(0,0,0,0.12)' : 'none',
-                  border: tab.alert ? '1.5px solid #F59E0B' : '1px solid rgba(0,0,0,0.08)'
+                  background: 'rgba(255, 255, 255, 0.75)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(0, 0, 0, 0.08)',
+                  borderRadius: '14px',
+                  padding: '3px',
+                  gap: '2px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.03)'
                 }}
               >
-                <Icon size={14} color={isActive ? '#F59E0B' : 'currentColor'} />
-                <span>{tab.label}</span>
-                {tab.count !== null && (
-                  <span style={{
-                    background: isActive ? 'rgba(255,255,255,0.2)' : tab.alert ? '#F59E0B' : 'rgba(0,0,0,0.06)',
-                    color: tab.alert && !isActive ? '#000000' : 'inherit',
-                    padding: '1px 7px',
-                    borderRadius: '999px',
-                    fontSize: '11px',
-                    fontWeight: 700
-                  }}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+                {group.tabs.map(tab => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  const shouldShowBadge = (tab.count !== null && tab.count > 0) || Boolean(tab.alert);
+
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => navigateToTab(tab.id)}
+                      title={`Buka ${tab.label} (${tab.slug})`}
+                      style={{
+                        background: isActive ? '#1D1D1F' : 'transparent',
+                        color: isActive ? '#FFFFFF' : '#374151',
+                        border: 'none',
+                        borderRadius: '10px',
+                        padding: '7px 12px',
+                        fontSize: '12.5px',
+                        fontWeight: isActive ? 600 : 500,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.15s ease',
+                        boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.12)' : 'none',
+                        outline: tab.alert ? '1.5px solid #F59E0B' : 'none'
+                      }}
+                    >
+                      <Icon size={14} color={isActive ? '#F59E0B' : '#6B7280'} />
+                      <span>{tab.label}</span>
+                      {shouldShowBadge && (
+                        <span style={{
+                          background: isActive
+                            ? 'rgba(255,255,255,0.22)'
+                            : tab.alert
+                              ? '#F59E0B'
+                              : 'rgba(0,0,0,0.06)',
+                          color: tab.alert && !isActive ? '#000000' : 'inherit',
+                          padding: '1px 7px',
+                          borderRadius: '999px',
+                          fontSize: '10.5px',
+                          fontWeight: 700
+                        }}>
+                          {tab.count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* ======================================================== */}
@@ -1846,7 +1915,30 @@ export default function SuperAdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredEvents.map(e => (
+                    {filteredEvents.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '52px 24px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                              <Calendar size={24} />
+                            </div>
+                            <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Tidak Ada Acara yang Cocok</strong>
+                            <p style={{ fontSize: '13px', color: '#86868B', margin: 0, maxWidth: '420px', lineHeight: 1.5 }}>
+                              {searchTerm ? 'Tidak ditemukan acara yang sesuai kata kunci pencarian.' : 'Belum ada acara yang terdaftar di platform.'}
+                            </p>
+                            {searchTerm && (
+                              <button
+                                onClick={() => setSearchTerm('')}
+                                className="glass-pill"
+                                style={{ marginTop: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer' }}
+                              >
+                                Bersihkan Pencarian
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredEvents.map(e => (
                       <tr key={e.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <td style={{ padding: '16px 18px' }}>
                           <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>{e.title}</strong>
@@ -2683,7 +2775,30 @@ export default function SuperAdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredVendors.map(v => (
+                    {filteredVendors.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '52px 24px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                              <Users size={24} />
+                            </div>
+                            <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Tidak Ada Mitra Vendor</strong>
+                            <p style={{ fontSize: '13px', color: '#86868B', margin: 0, maxWidth: '400px' }}>
+                              {searchTerm ? 'Tidak ditemukan mitra vendor yang cocok dengan kata kunci pencarian.' : 'Belum ada mitra vendor yang terdaftar di platform.'}
+                            </p>
+                            {searchTerm && (
+                              <button
+                                onClick={() => setSearchTerm('')}
+                                className="glass-pill"
+                                style={{ marginTop: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer' }}
+                              >
+                                Bersihkan Pencarian
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredVendors.map(v => (
                       <tr key={v.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <td style={{ padding: '16px 18px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -2830,7 +2945,30 @@ export default function SuperAdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredInvoices.map(inv => (
+                    {filteredInvoices.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '52px 24px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                              <FileText size={24} />
+                            </div>
+                            <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Tidak Ada Invoice Ditemukan</strong>
+                            <p style={{ fontSize: '13px', color: '#86868B', margin: 0, maxWidth: '400px' }}>
+                              {searchTerm ? 'Tidak ditemukan invoice yang cocok dengan kata kunci pencarian.' : 'Belum ada data faktur invoice di platform.'}
+                            </p>
+                            {searchTerm && (
+                              <button
+                                onClick={() => setSearchTerm('')}
+                                className="glass-pill"
+                                style={{ marginTop: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer' }}
+                              >
+                                Bersihkan Pencarian
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : filteredInvoices.map(inv => (
                       <tr key={inv.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <td style={{ padding: '16px 18px' }}>
                           <strong style={{ fontSize: '13.5px', fontFamily: 'var(--font-mono)' }}>{inv.invoiceNumber}</strong>
@@ -2935,7 +3073,21 @@ export default function SuperAdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {payouts.map(p => (
+                    {payouts.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} style={{ padding: '52px 24px', textAlign: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#10B981' }}>
+                              <Wallet size={24} />
+                            </div>
+                            <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Tidak Ada Antrean Pencairan Dana</strong>
+                            <p style={{ fontSize: '13px', color: '#86868B', margin: 0, maxWidth: '420px', lineHeight: 1.5 }}>
+                              Semua komisi mitra vendor telah diproses atau belum ada permintaan penarikan saldo dompet mitra yang diajukan.
+                            </p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : payouts.map(p => (
                       <tr key={p.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <td style={{ padding: '16px 18px' }}>
                           <strong style={{ fontSize: '14px', display: 'block' }}>{p.vendorName}</strong>
@@ -3030,7 +3182,20 @@ export default function SuperAdminDashboard() {
               <span style={{ fontSize: '13px', color: '#6E6E73' }}>Periksa video minimal 1 menit (60s), setujui untuk reward saldo +Rp 50.000 ke dompet mitra</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
+            {testimonials.length === 0 ? (
+              <div className="glass-card" style={{ padding: '56px 24px', borderRadius: '20px', textAlign: 'center', background: 'rgba(255,255,255,0.7)' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(217, 119, 6, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#D97706' }}>
+                  <Video size={26} />
+                </div>
+                <strong style={{ fontSize: '16px', color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+                  Belum Ada Antrean Video Testimoni
+                </strong>
+                <p style={{ fontSize: '13px', color: '#86868B', margin: '0 auto', maxWidth: '480px', lineHeight: 1.6 }}>
+                  Mitra vendor yang merekam dan mengunggah video review acara (durasi minimal 60 detik) akan tampil di sini untuk dikurasi. Persetujuan admin akan otomatis menambah saldo +Rp 50.000 ke dompet mitra.
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '18px' }}>
               {testimonials.map(t => (
                 <div key={t.id} className="glass-card" style={{ padding: '20px', borderRadius: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                   <div>
@@ -3109,7 +3274,8 @@ export default function SuperAdminDashboard() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
           </div>
         )}
 
