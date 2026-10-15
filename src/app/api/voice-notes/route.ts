@@ -160,10 +160,10 @@ export async function POST(request: Request) {
     }
     const targetEventId = event.id;
 
-    if (event.packageTier !== 'starter' && event.paymentStatus === 'pending' && isMayarConfigured) {
+    if (event.packageTier !== 'starter' && event.paymentStatus === 'pending') {
       return NextResponse.json({
         success: false,
-        error: 'Album acara ini sedang menunggu penyelesaian pembayaran.'
+        error: 'Album acara ini sedang menunggu penyelesaian pembayaran penyelenggara.'
       }, { status: 403 });
     }
     const retention = getEventRetentionInfo(event.eventDate, event.packageTier);

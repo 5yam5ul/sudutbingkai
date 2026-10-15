@@ -100,10 +100,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
     }
 
-    if (event.packageTier !== 'starter' && event.paymentStatus === 'pending' && isMayarConfigured) {
+    if (event.packageTier !== 'starter' && event.paymentStatus === 'pending') {
       return NextResponse.json({
         success: false,
-        error: 'Album acara ini sedang menunggu penyelesaian pembayaran.'
+        error: 'Album acara ini sedang menunggu penyelesaian pembayaran penyelenggara.'
       }, { status: 403 });
     }
 

@@ -12,7 +12,7 @@ import {
 import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { EventData, FilmPresetId, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
+import { EventData, FilmPresetId, PACKAGE_TIERS, EventPackageTier, getEventRetentionInfo } from '@/lib/types';
 import { FILM_PRESETS, applyAnalogFilterToCanvas, applyPhotoEnhancement } from '@/lib/filters';
 import { playAnalogShutterSound, playFilmWindingSound } from '@/lib/audio';
 import { 
@@ -3148,6 +3148,62 @@ export default function GuestCameraPage() {
           </p>
           <Link href="/" className="btn-apple-black" style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', textDecoration: 'none', borderRadius: '12px', fontSize: '13.5px' }}>
             <span>Kembali ke Beranda</span>
+            <ArrowRight size={15} />
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (event && event.packageTier !== 'starter' && event.paymentStatus === 'pending') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FBFBFA', color: '#1D1D1F', padding: '24px' }}>
+        <div className="glass-card" style={{ maxWidth: '440px', width: '100%', padding: '40px 28px', textAlign: 'center', borderRadius: '24px', border: '1.5px solid rgba(217, 119, 6, 0.35)' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(217, 119, 6, 0.12)', color: '#D97706', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <AlertTriangle size={26} />
+          </div>
+          <span className="font-mono-film" style={{ color: '#D97706', fontSize: '11px', display: 'block', marginBottom: '8px' }}>
+            MENUNGGU AKTIVASI PENYELENGGARA
+          </span>
+          <h1 className="font-display-serif" style={{ fontSize: '25px', fontWeight: 700, marginBottom: '10px', color: '#1D1D1F' }}>
+            Kamera Belum Diaktifkan
+          </h1>
+          <p style={{ color: '#6E6E73', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '24px' }}>
+            Roll kamera untuk acara <strong>{event.title}</strong> sedang menunggu penyelesaian pembayaran paket oleh penyelenggara acara atau Wedding Organizer.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <Link href={`/event/${event.slug || eventId}`} className="btn-apple-black" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 24px', textDecoration: 'none', borderRadius: '12px', fontSize: '13.5px' }}>
+              <span>Lihat Halaman Album</span>
+              <ArrowRight size={15} />
+            </Link>
+            <Link href="/dashboard" className="glass-pill" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px 20px', textDecoration: 'none', borderRadius: '12px', fontSize: '12.5px', color: '#B45309', fontWeight: 600 }}>
+              <span>Penyelenggara? Lunasi di Dashboard</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const retentionStatus = event ? getEventRetentionInfo(event.eventDate, event.packageTier) : null;
+  if (event && retentionStatus?.status === 'expired') {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FBFBFA', color: '#1D1D1F', padding: '24px' }}>
+        <div className="glass-card" style={{ maxWidth: '440px', width: '100%', padding: '40px 28px', textAlign: 'center', borderRadius: '24px' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: '#DC2626', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <Film size={26} />
+          </div>
+          <span className="font-mono-film" style={{ color: '#DC2626', fontSize: '11px', display: 'block', marginBottom: '8px' }}>
+            MASA AKTIF ROLL BERAKHIR
+          </span>
+          <h1 className="font-display-serif" style={{ fontSize: '25px', fontWeight: 700, marginBottom: '10px', color: '#1D1D1F' }}>
+            Sesi Kamera Telah Ditutup
+          </h1>
+          <p style={{ color: '#6E6E73', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '24px' }}>
+            Masa penyimpanan album untuk acara <strong>{event.title}</strong> ({PACKAGE_TIERS[event.packageTier || 'wedding']?.retentionDays || 30} hari) telah berakhir sehingga pengambilan foto baru sudah ditutup.
+          </p>
+          <Link href={`/event/${event.slug || eventId}`} className="btn-apple-black" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 24px', textDecoration: 'none', borderRadius: '12px', fontSize: '13.5px' }}>
+            <span>Kembali ke Halaman Acara</span>
             <ArrowRight size={15} />
           </Link>
         </div>

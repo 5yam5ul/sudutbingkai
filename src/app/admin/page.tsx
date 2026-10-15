@@ -233,6 +233,8 @@ export default function SuperAdminDashboard() {
 
   // 8. Approve Payout & Transfer Receipt Modal State
   const unsavedProofUploadRef = useRef<string | null>(null);
+  const unsavedAddonUploadRef = useRef<string | null>(null);
+  const [isUploadingAddonImage, setIsUploadingAddonImage] = useState(false);
   const [approvePayoutModal, setApprovePayoutModal] = useState<{
     isOpen: boolean;
     payoutId: string;
@@ -723,6 +725,73 @@ export default function SuperAdminDashboard() {
   // -------------------------------------------------------------
   // 4. ADD-ON CRUD ACTIONS
   // -------------------------------------------------------------
+  const cleanupUnsavedAddonImage = React.useCallback(() => {
+    const pendingUrl = unsavedAddonUploadRef.current;
+    if (pendingUrl) {
+      unsavedAddonUploadRef.current = null;
+      authFetch(`/api/upload?url=${encodeURIComponent(pendingUrl)}`, {
+        method: 'DELETE',
+        keepalive: true,
+      }).catch(() => {});
+    }
+  }, []);
+
+  const handleCloseEditAddonModal = () => {
+    cleanupUnsavedAddonImage();
+    setEditAddonModalOpen(false);
+  };
+
+  const handleCloseCreateAddonModal = () => {
+    cleanupUnsavedAddonImage();
+    setCreateAddonModalOpen(false);
+  };
+
+  const handleUploadAddonImage = async (e: React.ChangeEvent<HTMLInputElement>, mode: 'create' | 'edit') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingAddonImage(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'addon');
+      if (unsavedAddonUploadRef.current) {
+        formData.append('oldUrl', unsavedAddonUploadRef.current);
+      }
+
+      const res = await authFetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        unsavedAddonUploadRef.current = data.url;
+        if (mode === 'edit') {
+          setAddonToEdit(prev => prev ? { ...prev, imagePreviewUrl: data.url } : prev);
+        } else {
+          setNewAddonForm(prev => ({ ...prev, imagePreviewUrl: data.url }));
+        }
+        toast.success('Gambar produk add-on berhasil diunggah ke Cloudflare R2!');
+      } else {
+        toast.error(data.error || 'Gagal mengunggah gambar add-on.');
+      }
+    } catch {
+      toast.error('Gagal mengunggah gambar add-on.');
+    } finally {
+      setIsUploadingAddonImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveAddonImage = (mode: 'create' | 'edit') => {
+    cleanupUnsavedAddonImage();
+    if (mode === 'edit') {
+      setAddonToEdit(prev => prev ? { ...prev, imagePreviewUrl: '' } : prev);
+    } else {
+      setNewAddonForm(prev => ({ ...prev, imagePreviewUrl: '' }));
+    }
+  };
+
   const handleSaveEditAddon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!addonToEdit) return;
@@ -735,6 +804,7 @@ export default function SuperAdminDashboard() {
       });
       const data = await res.json();
       if (data.success) {
+        unsavedAddonUploadRef.current = null;
         toast.success(`Add-on "${addonToEdit.name}" berhasil diperbarui!`);
         setAddons(prev => prev.map(a => a.id === addonToEdit.id ? data.addon : a));
         setEditAddonModalOpen(false);
@@ -761,6 +831,7 @@ export default function SuperAdminDashboard() {
       });
       const data = await res.json();
       if (data.success) {
+        unsavedAddonUploadRef.current = null;
         toast.success(`Add-on baru "${data.addon.name}" berhasil ditambahkan ke katalog!`);
         setAddons(prev => [...prev, data.addon]);
         setCreateAddonModalOpen(false);
@@ -771,6 +842,7 @@ export default function SuperAdminDashboard() {
           price: 350000,
           costPrice: 150000,
           unit: '1 set',
+          imagePreviewUrl: '',
           freeShippingJabodetabek: true,
           isPopular: false,
           isActive: true
@@ -925,13 +997,15 @@ export default function SuperAdminDashboard() {
   useEffect(() => {
     const handleBeforeUnload = () => {
       cleanupUnsavedProof();
+      cleanupUnsavedAddonImage();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       cleanupUnsavedProof();
+      cleanupUnsavedAddonImage();
     };
-  }, [cleanupUnsavedProof]);
+  }, [cleanupUnsavedProof, cleanupUnsavedAddonImage]);
 
   const handleCancelApprovePayout = () => {
     if (approvePayoutModal.isSubmitting) return;
@@ -2387,7 +2461,10 @@ export default function SuperAdminDashboard() {
               </div>
 
               <button
-                onClick={() => setCreateAddonModalOpen(true)}
+                onClick={() => {
+                  cleanupUnsavedAddonImage();
+                  setCreateAddonModalOpen(true);
+                }}
                 className="btn-apple-black"
                 style={{ padding: '9px 16px', fontSize: '13px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
               >
@@ -2402,6 +2479,11 @@ export default function SuperAdminDashboard() {
                 return (
                   <div key={item.id} className="glass-card" style={{ padding: '24px', borderRadius: '18px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                     <div>
+                      {item.imagePreviewUrl && (
+                        <div style={{ width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px', background: '#F4F4F5', border: '1px solid rgba(0,0,0,0.06)' }}>
+                          <img src={item.imagePreviewUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        </div>
+                      )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                         <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', textTransform: 'uppercase' }}>
                           {item.category.replace('_', ' ')}
@@ -2458,6 +2540,7 @@ export default function SuperAdminDashboard() {
                       <div style={{ display: 'flex', gap: '6px' }}>
                         <button
                           onClick={() => {
+                            cleanupUnsavedAddonImage();
                             setAddonToEdit({ ...item });
                             setEditAddonModalOpen(true);
                           }}
@@ -3537,7 +3620,7 @@ export default function SuperAdminDashboard() {
                 <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Edit Add-on Fisik</h3>
                 <span style={{ fontSize: '12px', color: '#86868B' }}>ID: <code>{addonToEdit.id}</code></span>
               </div>
-              <button onClick={() => setEditAddonModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+              <button onClick={handleCloseEditAddonModal} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
                 <X size={20} />
               </button>
             </div>
@@ -3560,7 +3643,7 @@ export default function SuperAdminDashboard() {
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kategori</label>
                   <select
                     value={addonToEdit.category}
-                    onChange={(e) => setAddonToEdit({ ...addonToEdit, category: e.target.value })}
+                    onChange={(e) => setAddonToEdit({ ...addonToEdit, category: e.target.value as any })}
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
@@ -3617,6 +3700,34 @@ export default function SuperAdminDashboard() {
                 />
               </div>
 
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Gambar Preview Produk (Cloudflare R2)</label>
+                {addonToEdit.imagePreviewUrl && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', padding: '8px', borderRadius: '10px', background: '#F4F4F5' }}>
+                    <img src={addonToEdit.imagePreviewUrl} alt="Preview" style={{ width: '56px', height: '56px', borderRadius: '8px', objectFit: 'cover' }} />
+                    <div style={{ flex: 1, fontSize: '11.5px', color: '#515154', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {addonToEdit.imagePreviewUrl}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAddonImage('edit')}
+                      className="glass-pill"
+                      style={{ padding: '5px 10px', fontSize: '11px', color: '#DC2626', cursor: 'pointer' }}
+                    >
+                      Hapus Gambar
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={isUploadingAddonImage}
+                  onChange={(e) => handleUploadAddonImage(e, 'edit')}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '10px', fontSize: '12px' }}
+                />
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', cursor: 'pointer' }}>
                   <input
@@ -3639,7 +3750,7 @@ export default function SuperAdminDashboard() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
                 <button
                   type="button"
-                  onClick={() => setEditAddonModalOpen(false)}
+                  onClick={handleCloseEditAddonModal}
                   className="glass-pill"
                   style={{ padding: '10px 18px', fontSize: '13px', cursor: 'pointer' }}
                 >
@@ -3647,10 +3758,11 @@ export default function SuperAdminDashboard() {
                 </button>
                 <button
                   type="submit"
+                  disabled={isUploadingAddonImage}
                   className="btn-apple-black"
                   style={{ padding: '10px 22px', fontSize: '13px', borderRadius: '12px' }}
                 >
-                  Simpan Perubahan
+                  {isUploadingAddonImage ? 'Mengunggah...' : 'Simpan Perubahan'}
                 </button>
               </div>
             </form>
@@ -3669,7 +3781,7 @@ export default function SuperAdminDashboard() {
                 <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Tambah Add-on Baru</h3>
                 <span style={{ fontSize: '12px', color: '#86868B' }}>Masukkan produk perlengkapan resepsi / hardware baru</span>
               </div>
-              <button onClick={() => setCreateAddonModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+              <button onClick={handleCloseCreateAddonModal} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
                 <X size={20} />
               </button>
             </div>
@@ -3693,7 +3805,7 @@ export default function SuperAdminDashboard() {
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kategori</label>
                   <select
                     value={newAddonForm.category}
-                    onChange={(e) => setNewAddonForm({ ...newAddonForm, category: e.target.value })}
+                    onChange={(e) => setNewAddonForm({ ...newAddonForm, category: e.target.value as any })}
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
@@ -3752,6 +3864,34 @@ export default function SuperAdminDashboard() {
                 />
               </div>
 
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Gambar Preview Produk (Cloudflare R2)</label>
+                {newAddonForm.imagePreviewUrl && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', padding: '8px', borderRadius: '10px', background: '#F4F4F5' }}>
+                    <img src={newAddonForm.imagePreviewUrl} alt="Preview" style={{ width: '56px', height: '56px', borderRadius: '8px', objectFit: 'cover' }} />
+                    <div style={{ flex: 1, fontSize: '11.5px', color: '#515154', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {newAddonForm.imagePreviewUrl}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAddonImage('create')}
+                      className="glass-pill"
+                      style={{ padding: '5px 10px', fontSize: '11px', color: '#DC2626', cursor: 'pointer' }}
+                    >
+                      Hapus Gambar
+                    </button>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  disabled={isUploadingAddonImage}
+                  onChange={(e) => handleUploadAddonImage(e, 'create')}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '10px', fontSize: '12px' }}
+                />
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', cursor: 'pointer' }}>
                   <input
@@ -3766,7 +3906,7 @@ export default function SuperAdminDashboard() {
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid rgba(0,0,0,0.06)', paddingTop: '16px' }}>
                 <button
                   type="button"
-                  onClick={() => setCreateAddonModalOpen(false)}
+                  onClick={handleCloseCreateAddonModal}
                   className="glass-pill"
                   style={{ padding: '10px 18px', fontSize: '13px', cursor: 'pointer' }}
                 >
@@ -3774,10 +3914,11 @@ export default function SuperAdminDashboard() {
                 </button>
                 <button
                   type="submit"
+                  disabled={isUploadingAddonImage}
                   className="btn-apple-black"
                   style={{ padding: '10px 22px', fontSize: '13px', borderRadius: '12px' }}
                 >
-                  Tambahkan ke Katalog
+                  {isUploadingAddonImage ? 'Mengunggah...' : 'Tambahkan ke Katalog'}
                 </button>
               </div>
             </form>

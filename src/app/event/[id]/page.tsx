@@ -331,7 +331,7 @@ export default function EventDashboardPage() {
           const res = await authFetch('/api/events', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: eventId, revealMode: 'instant' })
+            body: JSON.stringify({ id: event?.id || eventId, revealMode: 'instant' })
           });
           const data = await res.json();
           if (data.success && data.event) {
@@ -1030,6 +1030,26 @@ export default function EventDashboardPage() {
 
       {/* Main Content (Photo Feed & Filters) */}
       <main className="dashboard-main" style={{ position: 'relative', zIndex: 10, paddingTop: '20px' }}>
+
+        {event && event.packageTier !== 'starter' && event.paymentStatus === 'pending' && (
+          <div className="glass-card form-section-card" style={{ marginBottom: '24px', background: 'rgba(245, 158, 11, 0.1)', border: '1.5px solid rgba(245, 158, 11, 0.4)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', padding: '18px 22px', borderRadius: '18px' }}>
+            <div>
+              <span className="font-mono-film" style={{ color: '#B45309', fontSize: '11px', fontWeight: 700, display: 'block', marginBottom: '4px' }}>
+                MENUNGGU PEMBAYARAN PAKET ACARA
+              </span>
+              <p style={{ margin: 0, fontSize: '13.5px', color: '#78350F', lineHeight: 1.5 }}>
+                Kamera tamu dan fitur unggah foto untuk acara ini belum aktif karena tagihan paket belum dilunasi oleh penyelenggara.
+              </p>
+            </div>
+            <Link
+              href={`/invoice/${event.id}`}
+              className="btn-apple-black"
+              style={{ padding: '10px 18px', fontSize: '12.5px', textDecoration: 'none', borderRadius: '10px', background: '#D97706', flexShrink: 0 }}
+            >
+              Lihat Tagihan / Lunasi Sekarang
+            </Link>
+          </div>
+        )}
 
         {/* Cuci Roll Developing Banner (When delayed & not expired) */}
         {event?.revealMode === 'delayed' && !countdown.isExpired && (

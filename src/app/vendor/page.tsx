@@ -2386,15 +2386,34 @@ export default function VendorPortalPage() {
                     style={{ display: 'none' }}
                   />
 
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="glass-pill"
-                    style={{ padding: '8px 16px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
-                  >
-                    <Upload size={13} />
-                    <span>Pilih Gambar dari Komputer</span>
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="glass-pill"
+                      style={{ padding: '8px 16px', fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                    >
+                      <Upload size={13} />
+                      <span>Pilih Gambar dari Komputer</span>
+                    </button>
+
+                    {logoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          cleanupUnsavedLogo();
+                          setLogoUrl('');
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                          toast.info('Logo dihapus dari form. Klik Simpan untuk memperbarui profil.');
+                        }}
+                        className="glass-pill"
+                        style={{ padding: '8px 14px', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px', cursor: 'pointer', color: '#DC2626', border: '1px solid rgba(220, 38, 38, 0.25)' }}
+                      >
+                        <Trash2 size={12} />
+                        <span>Hapus Logo</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 

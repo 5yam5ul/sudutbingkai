@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getInvoice, createInvoice, getEventById, getAllInvoices, updateInvoice, deleteInvoice, updateEvent, getAllVendors, updateVendor } from '@/lib/db';
+import { getInvoice, createInvoice, getEventById, getAllInvoices, updateInvoice, deleteInvoice, updateEvent, getAllVendors, updateVendor, getAllAddons } from '@/lib/db';
 import { PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 import { getServerSession, isSameVendorId } from '@/lib/auth';
 
@@ -51,10 +51,23 @@ export async function GET(request: Request) {
 
         const tierKey = (event.packageTier || 'wedding') as EventPackageTier;
         const tierInfo = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.wedding;
-        const rawPrice = tierInfo.isFree || tierKey === 'starter' 
+        const baseTierPrice = tierInfo.isFree || tierKey === 'starter' 
           ? 0 
           : (parseInt(tierInfo.price.replace(/[^0-9]/g, ''), 10) || 0);
-        const discount = event.referralCodeUsed ? Math.round(rawPrice * 0.1) : 0;
+        let addonsPrice = 0;
+        if (Array.isArray(event.addons) && event.addons.length > 0) {
+          try {
+            const catalogAddons = await getAllAddons();
+            for (const addonId of event.addons) {
+              const matchedAddon = catalogAddons.find(a => a.id === addonId && a.isActive !== false);
+              if (matchedAddon && matchedAddon.price > 0) {
+                addonsPrice += Number(matchedAddon.price);
+              }
+            }
+          } catch {}
+        }
+        const rawPrice = baseTierPrice + addonsPrice;
+        const discount = event.referralCodeUsed ? Math.round(baseTierPrice * 0.1) : 0;
         const finalAmount = rawPrice - discount;
         const isEventPaid = tierInfo.isFree || tierKey === 'starter' || event.paymentStatus === 'paid';
 
@@ -62,7 +75,7 @@ export async function GET(request: Request) {
           id: `inv_${event.id}`,
           eventId: event.id,
           orderId: `ord_${event.id.substring(0, 10)}`,
-          buyerType: event.vendorId ? 'vendor' : 'client',
+          buyerType: event.vendorId && !event.referralCodeUsed ? 'vendor' : 'client',
           buyerName: event.coupleOrHost || event.title,
           buyerEmail: event.hostEmail || 'pengantin@sudutbingkai.id',
           companyName: event.vendorName,
@@ -168,6 +181,11 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'ID invoice diperlukan' }, { status: 400 });
     }
 
+    const prevInvoice = await getInvoice(id);
+    if (!prevInvoice) {
+      return NextResponse.json({ success: false, error: 'Invoice tidak ditemukan' }, { status: 404 });
+    }
+
     const updates: any = {};
     if (body.status !== undefined) updates.status = body.status;
     if (body.finalAmount !== undefined) updates.finalAmount = Number(body.finalAmount);
@@ -189,45 +207,68 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'Invoice tidak ditemukan' }, { status: 404 });
     }
 
-    // Synchronize linked event paymentStatus and vendor commission when invoice status is updated
-    if (updated.eventId && updates.status) {
+    // Synchronize linked event paymentStatus, additionalPax, or vendor commission when invoice status is updated
+    if (updated.eventId && updates.status && updates.status !== prevInvoice.status) {
       try {
         const linkedEvent = await getEventById(updated.eventId);
         if (linkedEvent) {
-          if (updates.status === 'paid' && linkedEvent.paymentStatus !== 'paid') {
-            const eventUpdates: any = { paymentStatus: 'paid' };
-            if (
-              linkedEvent.vendorId &&
-              linkedEvent.commissionAmount &&
-              linkedEvent.commissionAmount > 0 &&
-              linkedEvent.commissionStatus !== 'available' &&
-              linkedEvent.commissionStatus !== 'withdrawn'
-            ) {
-              const vendors = await getAllVendors();
-              const matchedVendor = vendors.find(v => isSameVendorId(v.id, linkedEvent.vendorId));
-              if (matchedVendor && matchedVendor.status !== 'suspended') {
-                await updateVendor(matchedVendor.id, {
-                  walletBalance: (matchedVendor.walletBalance || 0) + linkedEvent.commissionAmount,
-                  totalEarnings: (matchedVendor.totalEarnings || 0) + linkedEvent.commissionAmount
+          const isTopUpInvoice =
+            updated.id.startsWith('inv_topup_') ||
+            (updated.orderId || '').startsWith('topup_pax_') ||
+            (updated.tierName || '').includes('Top Up Kuota Tamu');
+
+          if (isTopUpInvoice) {
+            const orderPaxMatch = (updated.orderId || '').match(/^topup_pax_(\d+)_/i);
+            const tierPaxMatch = (updated.tierName || '').match(/\+(\d+)\s*Pax/i);
+            const topUpPax = orderPaxMatch ? Number(orderPaxMatch[1]) : (tierPaxMatch ? Number(tierPaxMatch[1]) : 0);
+
+            if (topUpPax > 0) {
+              if (updates.status === 'paid' && prevInvoice.status !== 'paid') {
+                await updateEvent(linkedEvent.id, {
+                  additionalPax: (linkedEvent.additionalPax || 0) + topUpPax
                 });
-                eventUpdates.commissionStatus = 'available';
-              }
-            }
-            await updateEvent(linkedEvent.id, eventUpdates);
-          } else if ((updates.status === 'pending' || updates.status === 'cancelled') && linkedEvent.paymentStatus === 'paid') {
-            const revertUpdates: any = { paymentStatus: 'pending' };
-            if (linkedEvent.vendorId && linkedEvent.commissionAmount && linkedEvent.commissionAmount > 0 && linkedEvent.commissionStatus === 'available') {
-              const vendors = await getAllVendors();
-              const matchedVendor = vendors.find(v => isSameVendorId(v.id, linkedEvent.vendorId));
-              if (matchedVendor) {
-                await updateVendor(matchedVendor.id, {
-                  walletBalance: Math.max(0, (matchedVendor.walletBalance || 0) - linkedEvent.commissionAmount),
-                  totalEarnings: Math.max(0, (matchedVendor.totalEarnings || 0) - linkedEvent.commissionAmount)
+              } else if ((updates.status === 'pending' || updates.status === 'cancelled') && prevInvoice.status === 'paid') {
+                await updateEvent(linkedEvent.id, {
+                  additionalPax: Math.max(0, (linkedEvent.additionalPax || 0) - topUpPax)
                 });
               }
-              revertUpdates.commissionStatus = 'pending';
             }
-            await updateEvent(linkedEvent.id, revertUpdates);
+          } else {
+            if (updates.status === 'paid' && linkedEvent.paymentStatus !== 'paid') {
+              const eventUpdates: any = { paymentStatus: 'paid' };
+              if (
+                linkedEvent.vendorId &&
+                linkedEvent.commissionAmount &&
+                linkedEvent.commissionAmount > 0 &&
+                linkedEvent.commissionStatus !== 'available' &&
+                linkedEvent.commissionStatus !== 'withdrawn'
+              ) {
+                const vendors = await getAllVendors();
+                const matchedVendor = vendors.find(v => isSameVendorId(v.id, linkedEvent.vendorId));
+                if (matchedVendor && matchedVendor.status !== 'suspended') {
+                  await updateVendor(matchedVendor.id, {
+                    walletBalance: (matchedVendor.walletBalance || 0) + linkedEvent.commissionAmount,
+                    totalEarnings: (matchedVendor.totalEarnings || 0) + linkedEvent.commissionAmount
+                  });
+                  eventUpdates.commissionStatus = 'available';
+                }
+              }
+              await updateEvent(linkedEvent.id, eventUpdates);
+            } else if ((updates.status === 'pending' || updates.status === 'cancelled') && linkedEvent.paymentStatus === 'paid') {
+              const revertUpdates: any = { paymentStatus: 'pending' };
+              if (linkedEvent.vendorId && linkedEvent.commissionAmount && linkedEvent.commissionAmount > 0 && linkedEvent.commissionStatus === 'available') {
+                const vendors = await getAllVendors();
+                const matchedVendor = vendors.find(v => isSameVendorId(v.id, linkedEvent.vendorId));
+                if (matchedVendor) {
+                  await updateVendor(matchedVendor.id, {
+                    walletBalance: Math.max(0, (matchedVendor.walletBalance || 0) - linkedEvent.commissionAmount),
+                    totalEarnings: Math.max(0, (matchedVendor.totalEarnings || 0) - linkedEvent.commissionAmount)
+                  });
+                }
+                revertUpdates.commissionStatus = 'pending';
+              }
+              await updateEvent(linkedEvent.id, revertUpdates);
+            }
           }
         }
       } catch (e) {

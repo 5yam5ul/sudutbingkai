@@ -164,7 +164,13 @@ export default function PrintTableCardPage() {
       .catch(console.error);
   }, [eventId]);
 
+  const isUnpaidEvent = Boolean(event && event.packageTier !== 'starter' && event.paymentStatus === 'pending');
+
   const handlePrint = () => {
+    if (isUnpaidEvent) {
+      toast.error('Silakan lunasi tagihan paket acara terlebih dahulu sebelum mencetak kartu QR meja.');
+      return;
+    }
     window.print();
   };
 
@@ -216,6 +222,10 @@ export default function PrintTableCardPage() {
 
   // Export Single Card as High-Resolution PNG (300 DPI equivalent)
   const handleDownloadPng = async () => {
+    if (isUnpaidEvent) {
+      toast.error('Silakan lunasi tagihan paket acara terlebih dahulu sebelum mengunduh kartu QR meja.');
+      return;
+    }
     if (!previewCardRef.current) return;
     setIsExportingPng(true);
     toast.info('Menyiapkan gambar kartu resolusi tinggi (300 DPI)...');
@@ -243,6 +253,10 @@ export default function PrintTableCardPage() {
 
   // Download Raw QR Code as HD PNG (1000px)
   const handleDownloadQrPng = async () => {
+    if (isUnpaidEvent) {
+      toast.error('Silakan lunasi tagihan paket acara terlebih dahulu sebelum mengunduh QR Code.');
+      return;
+    }
     if (!guestCameraUrl) return;
     try {
       const hdUrl = await QRCode.toDataURL(guestCameraUrl, {
@@ -263,6 +277,10 @@ export default function PrintTableCardPage() {
 
   // Download Raw QR Code as Vector SVG
   const handleDownloadQrSvg = async () => {
+    if (isUnpaidEvent) {
+      toast.error('Silakan lunasi tagihan paket acara terlebih dahulu sebelum mengunduh QR Code SVG.');
+      return;
+    }
     if (!guestCameraUrl) return;
     try {
       const svgString = await QRCode.toString(guestCameraUrl, {
@@ -998,24 +1016,42 @@ export default function PrintTableCardPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#92400E', fontWeight: 500 }}>
               <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#D97706', flexShrink: 0 }} />
               <span>
-                <strong>Perhatian Sebelum Mencetak:</strong> Status pembayaran album ini masih <strong>Menunggu Pelunasan</strong>. Kartu QR meja sudah dapat dicetak, namun kamera tamu baru akan terbuka setelah pembayaran diselesaikan.
+                <strong>Menunggu Aktivasi Pembayaran:</strong> Anda dapat mendesain kartu meja sekarang, namun fitur <strong>Cetak PDF / Unduh QR</strong> dan <strong>Kamera Tamu</strong> baru akan aktif setelah tagihan paket acara dilunasi.
               </span>
             </div>
-            <Link
-              href={`/event/${event.slug || event.id}`}
-              style={{
-                padding: '7px 14px',
-                borderRadius: '10px',
-                background: '#D97706',
-                color: '#FFFFFF',
-                fontSize: '12px',
-                fontWeight: 700,
-                textDecoration: 'none',
-                whiteSpace: 'nowrap'
-              }}
-            >
-              Lihat Status Album
-            </Link>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <Link
+                href={`/invoice/${event.id}`}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '10px',
+                  background: '#D97706',
+                  color: '#FFFFFF',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Lunasi Tagihan Sekarang
+              </Link>
+              <Link
+                href="/dashboard"
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: '10px',
+                  background: 'rgba(217, 119, 6, 0.12)',
+                  border: '1px solid rgba(217, 119, 6, 0.35)',
+                  color: '#92400E',
+                  fontSize: '12px',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                Buka Dashboard
+              </Link>
+            </div>
           </div>
         </div>
       )}

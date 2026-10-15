@@ -35,7 +35,6 @@ export async function GET(request: Request) {
           hostEmail: undefined,
           commissionAmount: undefined,
           commissionStatus: undefined,
-          paymentStatus: undefined,
           referralCodeUsed: undefined,
           guestPin: undefined
         };
