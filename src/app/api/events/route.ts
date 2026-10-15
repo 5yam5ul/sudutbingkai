@@ -35,8 +35,7 @@ export async function GET(request: Request) {
           hostEmail: undefined,
           commissionAmount: undefined,
           commissionStatus: undefined,
-          referralCodeUsed: undefined,
-          guestPin: undefined
+          referralCodeUsed: undefined
         };
         return NextResponse.json({ success: true, event: guestSafeEvent });
       }
@@ -291,7 +290,6 @@ export async function POST(request: Request) {
       vendorLogo: verifiedVendorLogo,
       vendorInstagram: verifiedVendorInstagram,
       vendorCoBranding: body.vendorCoBranding,
-      guestPin: body.guestPin ? String(body.guestPin).trim() : undefined,
       addons: body.addons
     };
 
@@ -585,9 +583,6 @@ export async function PATCH(request: Request) {
         await deleteFromR2(existingEvent.coverUrl);
       }
       updates.coverUrl = body.coverUrl;
-    }
-    if (body.guestPin !== undefined) {
-      updates.guestPin = body.guestPin ? String(body.guestPin).trim() : '';
     }
     if (body.vendorCoBranding !== undefined) {
       updates.vendorCoBranding = body.vendorCoBranding;

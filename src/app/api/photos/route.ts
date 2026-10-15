@@ -281,7 +281,6 @@ export async function DELETE(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const sessionIdParam = (searchParams.get('sessionId') || '').trim();
-    const guestNameParam = (searchParams.get('guestName') || '').trim().toLowerCase();
 
     if (!id) {
       return NextResponse.json({ success: false, error: 'ID foto diperlukan' }, { status: 400 });

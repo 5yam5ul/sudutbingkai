@@ -238,7 +238,6 @@ export async function getAllEvents(): Promise<EventData[]> {
           const mapped = rowToEvent(row);
           const localCached = localEventsMap.get(mapped.id);
           if (localCached) {
-            if (localCached.guestPin && !mapped.guestPin) mapped.guestPin = localCached.guestPin;
             if (localCached.vendorCoBranding && !mapped.vendorCoBranding) mapped.vendorCoBranding = localCached.vendorCoBranding;
             if (localCached.addons && !mapped.addons) mapped.addons = localCached.addons;
           }
@@ -275,7 +274,6 @@ export async function getEventById(id: string): Promise<EventData | null> {
             const parsed: EventData[] = JSON.parse(raw);
             const localCached = parsed.find(e => e.id === mapped.id);
             if (localCached) {
-              if (localCached.guestPin && !mapped.guestPin) mapped.guestPin = localCached.guestPin;
               if (localCached.vendorCoBranding && !mapped.vendorCoBranding) mapped.vendorCoBranding = localCached.vendorCoBranding;
               if (localCached.addons && !mapped.addons) mapped.addons = localCached.addons;
             }
@@ -314,7 +312,7 @@ export async function saveEvent(event: EventData): Promise<EventData> {
     }
   }
 
-  // Always sync local cache so extended fields (guestPin, vendorCoBranding, addons) and local fallback stay up to date
+  // Always sync local cache so extended fields (vendorCoBranding, addons) and local fallback stay up to date
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(EVENTS_FILE) ? fs.readFileSync(EVENTS_FILE, 'utf8') : '[]';
@@ -390,7 +388,6 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
       if (!error && data) {
         const updated: EventData = {
           ...rowToEvent(data),
-          guestPin: updates.guestPin !== undefined ? (updates.guestPin || undefined) : existing?.guestPin,
           vendorCoBranding: updates.vendorCoBranding !== undefined ? updates.vendorCoBranding : existing?.vendorCoBranding,
           addons: updates.addons !== undefined ? updates.addons : existing?.addons
         };
