@@ -204,11 +204,6 @@ export default async function GuideArticlePage({
           />
         </div>
 
-        {/* Top Social Share Bar (Jurus 7: Social Share Viral Loop) */}
-        <div style={{ marginBottom: '32px' }}>
-          <ShareBar title={guide.title} url={articlePath} />
-        </div>
-
         {/* Intro Highlight Box */}
         <div
           style={{
