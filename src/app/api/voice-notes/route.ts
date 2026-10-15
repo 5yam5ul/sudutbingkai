@@ -430,12 +430,13 @@ export async function DELETE(request: Request) {
           }
         }
 
-        const { error } = await supabase
+        const { data: deletedRows, error } = await supabase
           .from('voice_notes')
           .delete()
-          .eq('id', id);
+          .eq('id', id)
+          .select('id');
 
-        if (!error) {
+        if (!error && deletedRows && deletedRows.length > 0) {
           if (target.audio_url) {
             await deleteFromR2(target.audio_url);
             if (target.audio_url.includes('/photos/')) {
@@ -454,6 +455,11 @@ export async function DELETE(request: Request) {
             }
           } catch {}
           return NextResponse.json({ success: true, message: 'Pesan suara berhasil dihapus' });
+        }
+        if (error) {
+          console.warn('Supabase voice_notes DELETE error:', error.message);
+        } else if (!deletedRows || deletedRows.length === 0) {
+          console.warn(`Supabase voice_notes DELETE(${id}) returned 0 deleted rows (RLS policy may be blocking DELETE).`);
         }
       }
     } catch (e) {

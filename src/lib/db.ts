@@ -581,8 +581,8 @@ export async function deleteEvent(id: string): Promise<boolean> {
       await supabase.from('voice_notes').delete().eq('event_id', canonicalId);
       await supabase.from('testimonials').delete().eq('event_id', canonicalId);
       await supabase.from('invoices').delete().eq('event_id', canonicalId);
-      const { error } = await supabase.from('events').delete().eq('id', canonicalId);
-      if (!error) {
+      const { data: deletedRows, error } = await supabase.from('events').delete().eq('id', canonicalId).select('id');
+      if (!error && deletedRows && deletedRows.length > 0) {
         // Also sync local fallback cleanup
         ensureLocalDataFiles();
         try {
@@ -619,7 +619,11 @@ export async function deleteEvent(id: string): Promise<boolean> {
         } catch {}
         return true;
       }
-      console.warn(`Supabase deleteEvent(${canonicalId}) error:`, error.message);
+      if (error) {
+        console.warn(`Supabase deleteEvent(${canonicalId}) error:`, error.message);
+      } else if (!deletedRows || deletedRows.length === 0) {
+        console.warn(`Supabase deleteEvent(${canonicalId}) returned 0 deleted rows (RLS policy may be blocking DELETE).`);
+      }
     } catch (err) {
       console.warn('Supabase deleteEvent exception:', err);
     }
@@ -879,12 +883,13 @@ export async function deletePhoto(id: string): Promise<boolean> {
         .eq('id', id)
         .maybeSingle();
 
-      const { error } = await supabase
+      const { data: deletedRows, error } = await supabase
         .from('photos')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select('id');
 
-      if (!error) {
+      if (!error && deletedRows && deletedRows.length > 0) {
         if (target?.image_url) {
           await deleteFromR2(target.image_url);
           if (target.image_url.includes('/photos/')) {
@@ -908,6 +913,11 @@ export async function deletePhoto(id: string): Promise<boolean> {
           }
         } catch {}
         return true;
+      }
+      if (error) {
+        console.warn('Supabase deletePhoto error:', error.message);
+      } else if (!deletedRows || deletedRows.length === 0) {
+        console.warn(`Supabase deletePhoto(${id}) returned 0 deleted rows (RLS policy may be blocking DELETE).`);
       }
     } catch (err) {
       console.warn('Supabase deletePhoto exception:', err);
@@ -1387,8 +1397,8 @@ export async function deleteInvoice(id: string): Promise<boolean> {
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      const { error } = await supabase.from('invoices').delete().or(`id.eq.${id},invoice_number.eq.${id}`);
-      if (!error) {
+      const { data: deletedRows, error } = await supabase.from('invoices').delete().or(`id.eq.${id},invoice_number.eq.${id}`).select('id');
+      if (!error && deletedRows && deletedRows.length > 0) {
         // Also sync local cache safely
         ensureLocalDataFiles();
         try {
@@ -1398,6 +1408,11 @@ export async function deleteInvoice(id: string): Promise<boolean> {
           fs.writeFileSync(INVOICES_FILE, JSON.stringify(invoices, null, 2), 'utf8');
         } catch {}
         return true;
+      }
+      if (error) {
+        console.warn('Supabase deleteInvoice error:', error.message);
+      } else if (!deletedRows || deletedRows.length === 0) {
+        console.warn(`Supabase deleteInvoice(${id}) returned 0 deleted rows (RLS policy may be blocking DELETE).`);
       }
     } catch (e) {
       console.warn('Supabase deleteInvoice exception:', e);
@@ -1654,8 +1669,8 @@ export async function deletePayout(id: string): Promise<boolean> {
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      const { error } = await supabase.from('payout_requests').delete().eq('id', id);
-      if (!error) {
+      const { data: deletedRows, error } = await supabase.from('payout_requests').delete().eq('id', id).select('id');
+      if (!error && deletedRows && deletedRows.length > 0) {
         // Also sync local cache
         ensureLocalDataFiles();
         try {
@@ -1665,6 +1680,11 @@ export async function deletePayout(id: string): Promise<boolean> {
           fs.writeFileSync(PAYOUTS_FILE, JSON.stringify(payouts, null, 2), 'utf8');
         } catch {}
         return true;
+      }
+      if (error) {
+        console.warn('Supabase deletePayout error:', error.message);
+      } else if (!deletedRows || deletedRows.length === 0) {
+        console.warn(`Supabase deletePayout(${id}) returned 0 deleted rows (RLS policy may be blocking DELETE).`);
       }
     } catch (e) {
       console.warn('Supabase deletePayout exception:', e);
@@ -1997,8 +2017,8 @@ export async function deleteTestimonial(id: string): Promise<boolean> {
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      const { error } = await supabase.from('testimonials').delete().eq('id', id);
-      if (!error) {
+      const { data: deletedRows, error } = await supabase.from('testimonials').delete().eq('id', id).select('id');
+      if (!error && deletedRows && deletedRows.length > 0) {
         // Also sync local cache
         ensureLocalDataFiles();
         try {
@@ -2008,6 +2028,11 @@ export async function deleteTestimonial(id: string): Promise<boolean> {
           fs.writeFileSync(TESTIMONIALS_FILE, JSON.stringify(list, null, 2), 'utf8');
         } catch {}
         return true;
+      }
+      if (error) {
+        console.warn('Supabase deleteTestimonial error:', error.message);
+      } else if (!deletedRows || deletedRows.length === 0) {
+        console.warn(`Supabase deleteTestimonial(${id}) returned 0 deleted rows (RLS policy may be blocking DELETE).`);
       }
     } catch (e) {
       console.warn('Supabase deleteTestimonial exception:', e);
@@ -2344,8 +2369,8 @@ export async function deleteVendor(id: string): Promise<boolean> {
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      const { error } = await supabase.from('vendors').delete().eq('id', id);
-      if (!error) {
+      const { data: deletedRows, error } = await supabase.from('vendors').delete().eq('id', id).select('id');
+      if (!error && deletedRows && deletedRows.length > 0) {
         // Also sync local cache safely
         ensureLocalDataFiles();
         try {
@@ -2355,6 +2380,11 @@ export async function deleteVendor(id: string): Promise<boolean> {
           fs.writeFileSync(VENDORS_FILE, JSON.stringify(vendors, null, 2), 'utf8');
         } catch {}
         return true;
+      }
+      if (error) {
+        console.warn('Supabase deleteVendor error:', error.message);
+      } else if (!deletedRows || deletedRows.length === 0) {
+        console.warn(`Supabase deleteVendor(${id}) returned 0 deleted rows (RLS policy may be blocking DELETE).`);
       }
     } catch (e) {
       console.warn('Supabase deleteVendor exception:', e);
@@ -2667,8 +2697,8 @@ export async function deleteAddon(id: string): Promise<boolean> {
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      const { error } = await supabase.from('addons').delete().eq('id', id);
-      if (!error) {
+      const { data: deletedRows, error } = await supabase.from('addons').delete().eq('id', id).select('id');
+      if (!error && deletedRows && deletedRows.length > 0) {
         // Also sync local cache safely
         try {
           ensureLocalDataFiles();
@@ -2678,6 +2708,11 @@ export async function deleteAddon(id: string): Promise<boolean> {
           fs.writeFileSync(ADDONS_FILE, JSON.stringify(list, null, 2), 'utf8');
         } catch {}
         return true;
+      }
+      if (error) {
+        console.warn('Supabase deleteAddon error:', error.message);
+      } else if (!deletedRows || deletedRows.length === 0) {
+        console.warn(`Supabase deleteAddon(${id}) returned 0 deleted rows (RLS policy may be blocking DELETE).`);
       }
     } catch (e) {
       console.warn('Supabase deleteAddon error:', e);
@@ -2817,8 +2852,8 @@ export async function deleteVideoWish(id: string): Promise<boolean> {
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      const { error } = await supabase.from('video_wishes').delete().eq('id', id);
-      if (!error) {
+      const { data: deletedRows, error } = await supabase.from('video_wishes').delete().eq('id', id).select('id');
+      if (!error && deletedRows && deletedRows.length > 0) {
         // Also sync local cache safely
         ensureLocalDataFiles();
         try {
@@ -2828,6 +2863,11 @@ export async function deleteVideoWish(id: string): Promise<boolean> {
           fs.writeFileSync(VIDEO_WISHES_FILE, JSON.stringify(list, null, 2), 'utf8');
         } catch {}
         return true;
+      }
+      if (error) {
+        console.warn('Supabase deleteVideoWish exception:', error.message);
+      } else if (!deletedRows || deletedRows.length === 0) {
+        console.warn(`Supabase deleteVideoWish(${id}) returned 0 deleted rows (RLS policy may be blocking DELETE).`);
       }
     } catch (e) {
       console.warn('Supabase deleteVideoWish exception:', e);

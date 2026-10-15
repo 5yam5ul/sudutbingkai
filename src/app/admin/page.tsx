@@ -202,6 +202,7 @@ export default function SuperAdminDashboard() {
     description: string;
     confirmText?: string;
     variant?: 'danger' | 'warning' | 'primary';
+    isLoading?: boolean;
     onConfirm: () => void;
   }>({
     isOpen: false,
@@ -209,6 +210,7 @@ export default function SuperAdminDashboard() {
     description: '',
     confirmText: 'Lanjutkan',
     variant: 'primary',
+    isLoading: false,
     onConfirm: () => {}
   });
 
@@ -933,6 +935,8 @@ export default function SuperAdminDashboard() {
             if (photoToInspect?.id === photoId) {
               setInspectPhotoModalOpen(false);
             }
+          } else {
+            toast.error(data.error || 'Gagal menghapus foto.');
           }
         } catch {
           toast.error('Gagal menghapus foto.');
@@ -4049,6 +4053,7 @@ export default function SuperAdminDashboard() {
         description={confirmModal.description}
         confirmText={confirmModal.confirmText}
         variant={confirmModal.variant}
+        isLoading={confirmModal.isLoading}
         onConfirm={confirmModal.onConfirm}
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
