@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const isVendorDirectPurchase = session.role === 'vendor';
+    let isVendorDirectPurchase = session.role === 'vendor';
     const body = await request.json();
     const {
       packageTier = 'wedding',
@@ -56,6 +56,9 @@ export async function POST(request: Request) {
       try {
         existingEvent = await getEventById(eventId);
         if (existingEvent?.slug) targetEventSlugOrId = existingEvent.slug;
+        if (existingEvent) {
+          isVendorDirectPurchase = Boolean(existingEvent.vendorId && !existingEvent.referralCodeUsed);
+        }
       } catch {}
 
       if (existingEvent) {

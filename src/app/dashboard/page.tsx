@@ -1861,34 +1861,64 @@ export default function BrideDashboardPage() {
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
                     Unggah dari Perangkat / Komputer
                   </label>
-                  <label
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      width: '100%',
-                      padding: '12px 18px',
-                      borderRadius: '12px',
-                      background: '#1D1D1F',
-                      color: '#fff',
-                      fontSize: '13.5px',
-                      fontWeight: 600,
-                      cursor: isUploadingCover ? 'wait' : 'pointer',
-                      transition: 'all 0.2s',
-                      opacity: isUploadingCover ? 0.7 : 1
-                    }}
-                  >
-                    <Upload size={16} />
-                    {isUploadingCover ? 'Mengunggah Foto...' : 'Pilih Foto Cover / Host (JPG/PNG)'}
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      disabled={isUploadingCover}
-                      onChange={handleUploadCover}
-                    />
-                  </label>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <label
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        flex: '1',
+                        minWidth: '200px',
+                        padding: '12px 18px',
+                        borderRadius: '12px',
+                        background: '#1D1D1F',
+                        color: '#fff',
+                        fontSize: '13.5px',
+                        fontWeight: 600,
+                        cursor: isUploadingCover ? 'wait' : 'pointer',
+                        transition: 'all 0.2s',
+                        opacity: isUploadingCover ? 0.7 : 1
+                      }}
+                    >
+                      <Upload size={16} />
+                      {isUploadingCover ? 'Mengunggah Foto...' : coverUrl ? 'Ganti Foto Cover' : 'Pilih Foto Cover / Host (JPG/PNG)'}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        disabled={isUploadingCover}
+                        onChange={handleUploadCover}
+                      />
+                    </label>
+
+                    {coverUrl && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          cleanupUnsavedCover();
+                          setCoverUrl('');
+                          toast.info('Foto cover dihapus (kembali ke default). Klik Simpan Pengaturan di bawah.');
+                        }}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '12px 16px',
+                          borderRadius: '12px',
+                          background: 'rgba(239, 68, 68, 0.08)',
+                          color: '#EF4444',
+                          border: '1px solid rgba(239, 68, 68, 0.25)',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Trash2 size={15} />
+                        <span>Hapus Cover</span>
+                      </button>
+                    )}
+                  </div>
                   <p style={{ fontSize: '11.5px', color: '#86868B', marginTop: '6px' }}>
                     Rekomendasi rasio landscape (16:9 atau 3:2), resolusi minimal 1200x800px.
                   </p>

@@ -13,7 +13,7 @@ import {
   Heart, ChevronDown, ChevronUp, Shield,
   Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic
 } from 'lucide-react';
-import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo } from '@/lib/types';
+import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, SYSTEM_USERS, authFetch, isSameVendorId } from '@/lib/auth';
 import ConfirmModal from '@/components/ConfirmModal';
 import { toast } from 'sonner';
@@ -61,6 +61,7 @@ export default function VendorPortalPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const unsavedLogoUploadRef = useRef<string | null>(null);
+  const unsavedTestiVideoRef = useRef<string | null>(null);
 
   const [vendor, setVendor] = useState<UserAccount>({
     id: '',
@@ -73,10 +74,12 @@ export default function VendorPortalPage() {
   // Partner Testimonial Rewards State
   const [testimonials, setTestimonials] = useState<VideoTestimonialSubmission[]>([]);
   const [selectedTestiEvent, setSelectedTestiEvent] = useState<string>('');
+  const [testiVideoType, setTestiVideoType] = useState<'link' | 'file'>('link');
   const [testiVideoUrl, setTestiVideoUrl] = useState<string>('');
   const [testiDuration, setTestiDuration] = useState<number>(65);
   const [testiCaption, setTestiCaption] = useState<string>('');
   const [isSubmittingTesti, setIsSubmittingTesti] = useState<boolean>(false);
+  const [isUploadingTestiVideo, setIsUploadingTestiVideo] = useState<boolean>(false);
 
   // Partner Wallet & Referral State
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -406,7 +409,7 @@ export default function VendorPortalPage() {
                 date: new Date(ev.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
                 rawEventDate: ev.eventDate,
                 venue: ev.location || 'Lokasi Acara',
-                guestCount: ev.maxGuests || 150,
+                guestCount: (ev.maxGuests || 150) + (ev.additionalPax || 0),
                 photoCount: 0,
                 preset: ev.preset,
                 packageTier: ev.packageTier || 'wedding',
@@ -422,22 +425,21 @@ export default function VendorPortalPage() {
 
             // Sync live referral commission history from vendor's events
             const liveHistory = data.events
-              .filter((ev: any) => (ev.commissionAmount && Number(ev.commissionAmount) > 0) || ev.referredByCode)
+              .filter((ev: any) => (ev.commissionAmount && Number(ev.commissionAmount) > 0) || ev.referralCodeUsed)
               .map((ev: any, idx: number) => {
-                const tierLabel = ev.packageTier === 'unlimited'
-                  ? 'Unlimited Tamu'
-                  : ev.packageTier === 'wedding'
-                    ? 'Wedding (300 Tamu)'
-                    : ev.packageTier === 'event'
-                      ? 'Event (150 Tamu)'
-                      : 'Party (75 Tamu)';
-                const approxPaid = ev.packageTier === 'unlimited'
-                  ? 899100
-                  : ev.packageTier === 'wedding'
-                    ? 449100
-                    : ev.packageTier === 'event'
-                      ? 242100
-                      : 161100;
+                const tierKey = (ev.packageTier || 'wedding') as EventPackageTier;
+                const tierInfo = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.wedding;
+                const tierLabel = `${tierInfo.name} (${tierInfo.guestsLabel})`;
+                const baseTierPrice = parseInt(tierInfo.price.replace(/[^0-9]/g, ''), 10) || 499000;
+                const hasDiscount = Boolean(ev.referralCodeUsed);
+                const approxPaid = hasDiscount ? Math.round(baseTierPrice * 0.9) : baseTierPrice;
+                const isCommissionPending = ev.paymentStatus === 'pending' || ev.commissionStatus === 'pending';
+                const statusLabel = isCommissionPending
+                  ? 'Menunggu Pelunasan'
+                  : ev.commissionStatus === 'withdrawn'
+                    ? 'Telah Ditarik'
+                    : 'Lunas / Cair';
+
                 return {
                   id: ev.id || `ref_live_${idx}`,
                   invoiceNumber: `INV/SB/${new Date(ev.createdAt || ev.eventDate || Date.now()).getFullYear()}/${String(idx + 1).padStart(4, '0')}`,
@@ -446,7 +448,7 @@ export default function VendorPortalPage() {
                   date: new Date(ev.eventDate || ev.createdAt || Date.now()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
                   totalPaid: approxPaid,
                   commissionAmount: Number(ev.commissionAmount || 0),
-                  status: ev.commissionStatus === 'withdrawn' ? 'Telah Ditarik' : 'Lunas / Cair'
+                  status: statusLabel
                 };
               });
 
@@ -494,7 +496,7 @@ export default function VendorPortalPage() {
       return;
     }
     if (!testiVideoUrl.trim()) {
-      toast.error('Silakan tempelkan link video testimoni (Google Drive / TikTok / IG Reels).');
+      toast.error(testiVideoType === 'file' ? 'Silakan unggah berkas video terlebih dahulu.' : 'Silakan tempelkan link video testimoni (Google Drive / TikTok / IG Reels).');
       return;
     }
     if (testiDuration < 60) {
@@ -513,7 +515,7 @@ export default function VendorPortalPage() {
           submitterId: vendor.id || 'vendor_vows_co',
           submitterName: vendor.companyName || vendor.name,
           submitterEmail: vendor.email,
-          videoType: 'link',
+          videoType: testiVideoType,
           videoUrl: testiVideoUrl.trim(),
           durationSeconds: Number(testiDuration),
           caption: testiCaption.trim()
@@ -521,9 +523,11 @@ export default function VendorPortalPage() {
       });
       const data = await res.json();
       if (data.success) {
+        unsavedTestiVideoRef.current = null;
         toast.success('Video testimoni berhasil dikirim! Tim kurasi akan memverifikasi dalam 1x24 jam & saldo Rp 50.000 otomatis dicairkan.');
         setTestimonials(prev => [data.submission, ...prev]);
         setTestiVideoUrl('');
+        setTestiVideoType('link');
         setTestiCaption('');
         setTestiDuration(65);
       } else {
@@ -645,16 +649,61 @@ export default function VendorPortalPage() {
     }
   }, []);
 
+  const cleanupUnsavedTestiVideo = React.useCallback(() => {
+    const pendingUrl = unsavedTestiVideoRef.current;
+    if (pendingUrl) {
+      unsavedTestiVideoRef.current = null;
+      authFetch(`/api/upload?url=${encodeURIComponent(pendingUrl)}`, {
+        method: 'DELETE',
+        keepalive: true,
+      }).catch(() => {});
+    }
+  }, []);
+
   useEffect(() => {
     const handleBeforeUnload = () => {
       cleanupUnsavedLogo();
+      cleanupUnsavedTestiVideo();
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       cleanupUnsavedLogo();
+      cleanupUnsavedTestiVideo();
     };
-  }, [cleanupUnsavedLogo]);
+  }, [cleanupUnsavedLogo, cleanupUnsavedTestiVideo]);
+
+  const handleTestiVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingTestiVideo(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', 'testimonial');
+      if (unsavedTestiVideoRef.current) {
+        formData.append('oldUrl', unsavedTestiVideoRef.current);
+      }
+      const res = await authFetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success && data.url) {
+        unsavedTestiVideoRef.current = data.url;
+        setTestiVideoUrl(data.url);
+        setTestiVideoType('file');
+        toast.success('File video testimoni berhasil diunggah ke Cloudflare R2!');
+      } else {
+        toast.error('Gagal mengunggah video: ' + (data.error || 'Format atau koneksi bermasalah'));
+      }
+    } catch (err: any) {
+      toast.error('Gagal mengunggah video: ' + (err.message || 'Kesalahan jaringan'));
+    } finally {
+      setIsUploadingTestiVideo(false);
+    }
+  };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -1898,6 +1947,7 @@ export default function VendorPortalPage() {
                       <th style={{ padding: '10px 12px' }}>Tanggal Acara</th>
                       <th style={{ padding: '10px 12px' }}>Pembayaran Klien</th>
                       <th style={{ padding: '10px 12px', color: '#C27803' }}>Komisi Anda ({partnerTier === 'vip' ? '20%' : partnerTier === 'regular' ? '12%' : '15%'})</th>
+                      <th style={{ padding: '10px 12px' }}>Status</th>
                       <th style={{ padding: '10px 12px', textAlign: 'right' }}>Aksi</th>
                     </tr>
                   </thead>
@@ -1923,9 +1973,36 @@ export default function VendorPortalPage() {
                           <td style={{ padding: '14px 12px', fontWeight: 700, color: '#10B981' }}>
                             +Rp {item.commissionAmount.toLocaleString('id-ID')}
                           </td>
+                          <td style={{ padding: '14px 12px' }}>
+                            <span style={{
+                              padding: '3px 8px',
+                              borderRadius: '6px',
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              background: item.status === 'Menunggu Pelunasan'
+                                ? 'rgba(217, 119, 6, 0.12)'
+                                : item.status === 'Telah Ditarik'
+                                  ? 'rgba(107, 114, 128, 0.12)'
+                                  : 'rgba(16, 185, 129, 0.12)',
+                              color: item.status === 'Menunggu Pelunasan'
+                                ? '#D97706'
+                                : item.status === 'Telah Ditarik'
+                                  ? '#4B5563'
+                                  : '#10B981',
+                              border: `1px solid ${
+                                item.status === 'Menunggu Pelunasan'
+                                  ? 'rgba(217, 119, 6, 0.3)'
+                                  : item.status === 'Telah Ditarik'
+                                    ? 'rgba(107, 114, 128, 0.3)'
+                                    : 'rgba(16, 185, 129, 0.3)'
+                              }`
+                            }}>
+                              {item.status}
+                            </span>
+                          </td>
                           <td style={{ padding: '14px 12px', textAlign: 'right' }}>
                             <Link
-                              href={`/invoice/${item.invoiceNumber}`}
+                              href={`/invoice/${item.id?.startsWith('inv_') ? item.id : `inv_${item.id}`}`}
                               target="_blank"
                               style={{
                                 display: 'inline-flex',
@@ -1949,7 +2026,7 @@ export default function VendorPortalPage() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} style={{ padding: '36px 16px', textAlign: 'center', color: '#86868B', fontSize: '13px' }}>
+                        <td colSpan={8} style={{ padding: '36px 16px', textAlign: 'center', color: '#86868B', fontSize: '13px' }}>
                           Belum ada transaksi rujukan klien. Bagikan kode atau tautan referral Anda kepada klien untuk mulai menghasilkan komisi.
                         </td>
                       </tr>
@@ -2143,7 +2220,9 @@ export default function VendorPortalPage() {
                       style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', fontSize: '14px', background: '#FFFFFF' }}
                     >
                       <option value="">-- Pilih Acara Terdaftar --</option>
-                      {clients.map(c => (
+                      {clients
+                        .filter(c => c.paymentStatus !== 'pending' && c.packageTier !== 'starter')
+                        .map(c => (
                         <option key={c.id} value={c.id}>
                           {c.title} ({c.date})
                         </option>
@@ -2152,21 +2231,132 @@ export default function VendorPortalPage() {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
-                      Link Video Testimoni (Min. 1 Menit) *
+                    <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '8px' }}>
+                      Metode Pengiriman Video Testimoni *
                     </label>
-                    <input
-                      type="url"
-                      required
-                      placeholder="https://drive.google.com/... atau link TikTok / IG Reels"
-                      value={testiVideoUrl}
-                      onChange={(e) => setTestiVideoUrl(e.target.value)}
-                      className="glass-input"
-                      style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', fontSize: '14px' }}
-                    />
-                    <span style={{ fontSize: '11px', color: '#86868B', marginTop: '4px', display: 'block' }}>
-                      Dapat berupa link Google Drive, TikTok, Instagram Reels, atau YouTube Shorts.
-                    </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', marginBottom: '12px' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (testiVideoType === 'file' && unsavedTestiVideoRef.current) {
+                            cleanupUnsavedTestiVideo();
+                            setTestiVideoUrl('');
+                          }
+                          setTestiVideoType('link');
+                        }}
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: '10px',
+                          border: testiVideoType === 'link' ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                          background: testiVideoType === 'link' ? 'rgba(194, 120, 3, 0.08)' : '#FFFFFF',
+                          color: testiVideoType === 'link' ? '#C27803' : '#515154',
+                          fontWeight: 600,
+                          fontSize: '12.5px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Tautan Video (Reels/TikTok/Drive)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTestiVideoType('file')}
+                        style={{
+                          padding: '10px 14px',
+                          borderRadius: '10px',
+                          border: testiVideoType === 'file' ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                          background: testiVideoType === 'file' ? 'rgba(194, 120, 3, 0.08)' : '#FFFFFF',
+                          color: testiVideoType === 'file' ? '#C27803' : '#515154',
+                          fontWeight: 600,
+                          fontSize: '12.5px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Unggah File Video (MP4/MOV ke Cloud R2)
+                      </button>
+                    </div>
+
+                    {testiVideoType === 'link' ? (
+                      <div>
+                        <input
+                          type="url"
+                          required
+                          placeholder="https://drive.google.com/... atau link TikTok / IG Reels"
+                          value={testiVideoUrl}
+                          onChange={(e) => setTestiVideoUrl(e.target.value)}
+                          className="glass-input"
+                          style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', fontSize: '14px' }}
+                        />
+                        <span style={{ fontSize: '11px', color: '#86868B', marginTop: '4px', display: 'block' }}>
+                          Dapat berupa link Google Drive publik, TikTok, Instagram Reels, atau YouTube Shorts.
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        {testiVideoUrl ? (
+                          <div style={{ padding: '14px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <CheckCircle2 size={16} color="#10B981" />
+                              <div>
+                                <strong style={{ fontSize: '12.5px', color: '#1D1D1F', display: 'block' }}>File Video Berhasil Terunggah</strong>
+                                <span style={{ fontSize: '11px', color: '#6E6E73' }}>Tersimpan aman di Cloudflare R2</span>
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                cleanupUnsavedTestiVideo();
+                                setTestiVideoUrl('');
+                              }}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#EF4444',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                              }}
+                            >
+                              <Trash2 size={13} />
+                              <span>Ganti Video</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '8px',
+                              width: '100%',
+                              padding: '14px 18px',
+                              borderRadius: '12px',
+                              border: '1.5px dashed rgba(194, 120, 3, 0.4)',
+                              background: '#FFFDF9',
+                              color: '#C27803',
+                              fontSize: '13.5px',
+                              fontWeight: 600,
+                              cursor: isUploadingTestiVideo ? 'wait' : 'pointer'
+                            }}
+                          >
+                            <Upload size={16} />
+                            <span>{isUploadingTestiVideo ? 'Mengunggah Video ke R2...' : 'Pilih Berkas Video (MP4 / WebM / MOV)'}</span>
+                            <input
+                              type="file"
+                              accept="video/mp4,video/webm,video/quicktime,video/*"
+                              style={{ display: 'none' }}
+                              disabled={isUploadingTestiVideo}
+                              onChange={handleTestiVideoUpload}
+                            />
+                          </label>
+                        )}
+                        <span style={{ fontSize: '11px', color: '#86868B', marginTop: '4px', display: 'block' }}>
+                          Video langsung diunggah ke penyimpanan cloud berkecepatan tinggi SudutBingkai.
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div>

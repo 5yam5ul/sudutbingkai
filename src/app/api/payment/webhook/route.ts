@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { verifyMayarWebhookToken } from '@/lib/mayar';
-import { getEventById, updateEvent, getAllVendors, updateVendor, isWebhookProcessed, markWebhookProcessed, getInvoice, createInvoice, updateInvoiceStatus } from '@/lib/db';
+import { getEventById, updateEvent, getAllVendors, updateVendor, isWebhookProcessed, markWebhookProcessed, getInvoice, createInvoice, updateInvoiceStatus, getAllAddons } from '@/lib/db';
 import { PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
 import { isSameVendorId } from '@/lib/auth';
 
@@ -94,21 +94,37 @@ export async function POST(request: Request) {
             } else {
               const tierKey = (event.packageTier || 'wedding') as EventPackageTier;
               const tierInfo = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.wedding;
-              const rawPrice = parseInt(tierInfo.price.replace(/[^0-9]/g, ''), 10) || Number(payload?.data?.amount) || 0;
-              const discount = event.referralCodeUsed ? Math.round(rawPrice * 0.1) : 0;
-              const finalAmount = Number(payload?.data?.amount) || Math.max(0, rawPrice - discount);
+              const baseTierPrice = parseInt(tierInfo.price.replace(/[^0-9]/g, ''), 10) || 499000;
+              let addonsPrice = 0;
+              if (Array.isArray(event.addons) && event.addons.length > 0) {
+                try {
+                  const allAddons = await getAllAddons();
+                  for (const addonId of event.addons) {
+                    const matchedAddon = allAddons.find(a => a.id === addonId && a.isActive !== false);
+                    if (matchedAddon && matchedAddon.price > 0) {
+                      addonsPrice += Number(matchedAddon.price);
+                    }
+                  }
+                } catch {}
+              }
+
+              const isDirectVendorEvent = Boolean(event.vendorId && !event.referralCodeUsed);
+              const buyerType = isDirectVendorEvent ? 'vendor' : 'client';
+              const discount = (!isDirectVendorEvent && event.referralCodeUsed) ? Math.round(baseTierPrice * 0.1) : 0;
+              const originalPrice = baseTierPrice + addonsPrice;
+              const finalAmount = Number(payload?.data?.amount) || Math.max(0, originalPrice - discount);
 
               await createInvoice({
                 id: `inv_${event.id}`,
                 eventId: event.id,
                 orderId: String(txId || `ord_${event.id.substring(0, 10)}`),
-                buyerType: event.vendorId ? 'vendor' : 'client',
+                buyerType,
                 buyerName: event.coupleOrHost || event.title,
                 buyerEmail: event.hostEmail || payload?.data?.email || 'pengantin@sudutbingkai.id',
                 companyName: event.vendorName,
                 tierId: tierKey,
                 tierName: `${tierInfo.name} (${tierInfo.guestsLabel})`,
-                originalPrice: rawPrice,
+                originalPrice,
                 discountAmount: discount,
                 discountCode: event.referralCodeUsed,
                 finalAmount,

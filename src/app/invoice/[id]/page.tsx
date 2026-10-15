@@ -58,6 +58,15 @@ export default function InvoicePage() {
     if (!invoice || !invoice.eventId) return;
     setIsInitiatingPayment(true);
     try {
+      const isTopUp = Boolean(
+        invoice.orderId?.startsWith('TOPUP-') ||
+        invoice.orderId?.startsWith('ord_topup_') ||
+        invoice.id?.startsWith('inv_topup_') ||
+        invoice.tierName?.includes('Top Up Kuota Tamu')
+      );
+      const paxMatch = invoice.tierName?.match(/\+([0-9]+)\s*Pax/i);
+      const paxAmount = paxMatch ? Number(paxMatch[1]) : 25;
+
       const hostUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.vercel.app';
       const payRes = await authFetch('/api/payment/create', {
         method: 'POST',
@@ -67,6 +76,8 @@ export default function InvoicePage() {
           name: invoice.buyerName,
           email: invoice.buyerEmail,
           eventId: invoice.eventId,
+          isAddonPax: isTopUp,
+          paxAmount: isTopUp ? paxAmount : undefined,
           referralCode: invoice.discountCode || undefined,
           redirectUrl: `${hostUrl}/invoice/${invoice.id}`,
         }),
@@ -79,7 +90,7 @@ export default function InvoicePage() {
         }
         setPendingPaymentData({
           amount: payData.amount || invoice.finalAmount,
-          title: invoice.tierName || 'Pelunasan Tagihan SudutBingkai',
+          title: invoice.tierName || (isTopUp ? `Top Up Kuota Tamu +${paxAmount} Pax` : 'Pelunasan Tagihan SudutBingkai'),
           description: `Invoice ${invoice.invoiceNumber} — ${invoice.buyerName}`,
           isSimulation: payData.isSimulation ?? true,
         });
@@ -551,20 +562,52 @@ export default function InvoicePage() {
           setPaymentModalOpen(false);
           if (!invoice?.eventId) return;
           try {
-            const res = await authFetch('/api/events', {
-              method: 'PATCH',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                id: invoice.eventId,
-                paymentStatus: 'paid',
-              }),
-            });
-            const data = await res.json();
-            if (data.success) {
-              setInvoice(prev => prev ? { ...prev, status: 'paid', paidAt: new Date().toISOString() } : prev);
-              toast.success('Pembayaran berhasil dikonfirmasi! Invoice telah ditandai LUNAS.');
+            const isTopUp = Boolean(
+              invoice.orderId?.startsWith('TOPUP-') ||
+              invoice.orderId?.startsWith('ord_topup_') ||
+              invoice.id?.startsWith('inv_topup_') ||
+              invoice.tierName?.includes('Top Up Kuota Tamu')
+            );
+
+            if (isTopUp) {
+              const res = await authFetch('/api/invoices', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: invoice.id,
+                  status: 'paid',
+                }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                setInvoice(prev => prev ? { ...prev, status: 'paid', paidAt: new Date().toISOString() } : prev);
+                toast.success('Pembayaran Top Up kuota tamu berhasil dikonfirmasi! Kuota acara Anda telah ditambahkan.');
+              } else {
+                toast.error(data.error || 'Gagal memperbarui status invoice top up.');
+              }
             } else {
-              toast.error(data.error || 'Gagal memperbarui status pembayaran.');
+              const res = await authFetch('/api/events', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: invoice.eventId,
+                  paymentStatus: 'paid',
+                }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                try {
+                  await authFetch('/api/invoices', {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: invoice.id, status: 'paid' }),
+                  });
+                } catch {}
+                setInvoice(prev => prev ? { ...prev, status: 'paid', paidAt: new Date().toISOString() } : prev);
+                toast.success('Pembayaran berhasil dikonfirmasi! Invoice telah ditandai LUNAS.');
+              } else {
+                toast.error(data.error || 'Gagal memperbarui status pembayaran.');
+              }
             }
           } catch {
             toast.error('Gagal menghubungi server untuk memperbarui status pembayaran.');

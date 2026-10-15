@@ -157,7 +157,59 @@ export async function POST(request: Request) {
     }
 
     const event = await getEventById(eventId);
-    const eventTitle = event ? (event.coupleOrHost || event.title) : 'Acara Sudut Bingkai';
+    if (!event) {
+      return NextResponse.json(
+        { success: false, error: 'Acara tidak ditemukan di sistem' },
+        { status: 404 }
+      );
+    }
+
+    // Ownership check: submitter must be the vendor of the event, or host of the event, or admin
+    const isVendorOwner = session.role === 'vendor' && isSameVendorId(session.id, event.vendorId);
+    const isHostOwner = session.role === 'host' && (
+      session.email?.toLowerCase() === event.hostEmail?.toLowerCase() ||
+      session.id === event.hostEmail
+    );
+    const isAdmin = session.role === 'admin';
+
+    if (!isVendorOwner && !isHostOwner && !isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Akses ditolak: Anda bukan pemilik sah dari acara ini' },
+        { status: 403 }
+      );
+    }
+
+    // Must be paid event and not free starter
+    if (event.packageTier === 'starter') {
+      return NextResponse.json(
+        { success: false, error: 'Program bonus video testimoni hanya berlaku untuk paket berbayar aktif' },
+        { status: 400 }
+      );
+    }
+
+    if (event.paymentStatus === 'pending') {
+      return NextResponse.json(
+        { success: false, error: 'Acara masih menunggu pelunasan pembayaran. Selesaikan pembayaran sebelum mengajukan testimoni' },
+        { status: 400 }
+      );
+    }
+
+    // Check duplicate submissions for this event
+    const existingTestis = await getTestimonialsByEvent(event.id);
+    const activeTesti = existingTestis.find(t => t.status === 'pending' || t.status === 'approved');
+    if (activeTesti) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: activeTesti.status === 'approved'
+            ? 'Bonus video testimoni untuk acara ini telah diklaim dan disetujui sebelumnya.'
+            : 'Acara ini sudah memiliki pengajuan video testimoni yang sedang dalam antrean verifikasi.'
+        },
+        { status: 409 }
+      );
+    }
+
+    const eventTitle = event.coupleOrHost || event.title || 'Acara Sudut Bingkai';
 
     const submission = await createTestimonialSubmission({
       eventId,

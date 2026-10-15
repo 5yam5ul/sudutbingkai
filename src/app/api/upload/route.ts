@@ -4,9 +4,17 @@ import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { uploadBufferToR2, isR2Configured, deleteFromR2 } from '@/lib/r2';
 import { getServerSession } from '@/lib/auth';
-import { getAllEvents, getAllVendors, getPayoutRequests, getAllAddons } from '@/lib/db';
+import { getAllEvents, getAllVendors, getPayoutRequests, getAllAddons, getAllTestimonials } from '@/lib/db';
 
-const ALLOWED_MIME_TYPES = new Set(['image/png', 'image/jpeg', 'image/jpg', 'image/webp']);
+const ALLOWED_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/webp',
+  'video/mp4',
+  'video/webm',
+  'video/quicktime'
+]);
 
 export async function POST(request: Request) {
   try {
@@ -20,7 +28,7 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File | null;
     const rawType = (formData.get('type') as string) || 'frame';
     const oldUrl = (formData.get('oldUrl') as string | null)?.trim() || '';
-    const type = ['frame', 'cover', 'logo', 'proof', 'addon', 'general'].includes(rawType) ? rawType : 'general';
+    const type = ['frame', 'cover', 'logo', 'proof', 'addon', 'testimonial', 'general'].includes(rawType) ? rawType : 'general';
 
     if (!file) {
       return NextResponse.json({ success: false, error: 'File tidak ditemukan' }, { status: 400 });
@@ -31,7 +39,7 @@ export async function POST(request: Request) {
     if (!ALLOWED_MIME_TYPES.has(mime)) {
       return NextResponse.json({
         success: false,
-        error: 'Format berkas tidak diizinkan. Hanya gambar PNG, JPG, dan WebP yang diperbolehkan.'
+        error: 'Format berkas tidak diizinkan. Hanya gambar (PNG, JPG, WebP) dan video (MP4, WebM, MOV) yang diperbolehkan.'
       }, { status: 400 });
     }
 
@@ -40,7 +48,13 @@ export async function POST(request: Request) {
     }
 
     // 2. Safe Extension derived from verified MIME (prevent double extension & executable tricks)
-    const ext = mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg';
+    const ext =
+      mime === 'image/png' ? 'png'
+      : mime === 'image/webp' ? 'webp'
+      : mime === 'video/mp4' ? 'mp4'
+      : mime === 'video/webm' ? 'webm'
+      : mime === 'video/quicktime' ? 'mov'
+      : 'jpg';
     const buffer = Buffer.from(await file.arrayBuffer());
     const subFolder =
       type === 'frame'
@@ -53,7 +67,9 @@ export async function POST(request: Request) {
               ? 'proofs'
               : type === 'addon'
                 ? 'addons'
-                : 'general';
+                : type === 'testimonial'
+                  ? 'testimonials'
+                  : 'general';
     const filename = `${type}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${ext}`;
     const storagePath = `${subFolder}/${filename}`;
 
@@ -143,26 +159,28 @@ export async function POST(request: Request) {
   }
 }
 
-const UPLOAD_ASSET_FOLDER_REGEX = /(?:^|\/)(frames|covers|logos|proofs|addons|general)\/[a-zA-Z0-9._-]+$/;
+const UPLOAD_ASSET_FOLDER_REGEX = /(?:^|\/)(frames|covers|logos|proofs|addons|testimonials|general)\/[a-zA-Z0-9._-]+$/;
 
 async function canSafelyDeleteUploadUrl(targetUrl: string): Promise<{ allowed: boolean; reason?: string }> {
   const clean = targetUrl.trim().split('?')[0];
   if (!clean || !UPLOAD_ASSET_FOLDER_REGEX.test(clean)) {
-    return { allowed: false, reason: 'Hanya aset unggahan sementara (frame, cover, logo, proof, addon) yang dapat dibersihkan melalui endpoint ini.' };
+    return { allowed: false, reason: 'Hanya aset unggahan sementara (frame, cover, logo, proof, addon, testimonial) yang dapat dibersihkan melalui endpoint ini.' };
   }
 
-  const [events, vendors, payouts, addons] = await Promise.all([
+  const [events, vendors, payouts, addons, testimonials] = await Promise.all([
     getAllEvents().catch(() => []),
     getAllVendors().catch(() => []),
     getPayoutRequests().catch(() => []),
-    getAllAddons().catch(() => [])
+    getAllAddons().catch(() => []),
+    getAllTestimonials().catch(() => [])
   ]);
 
   const isActivelyReferenced =
     events.some(e => e.coverUrl === targetUrl || e.customFrameUrl === targetUrl || e.vendorLogo === targetUrl) ||
     vendors.some(v => v.logoUrl === targetUrl) ||
     payouts.some(p => p.proofUrl === targetUrl) ||
-    addons.some(a => a.imagePreviewUrl === targetUrl);
+    addons.some(a => a.imagePreviewUrl === targetUrl) ||
+    testimonials.some(t => t.videoUrl === targetUrl);
 
   if (isActivelyReferenced) {
     return { allowed: false, reason: 'Aset sedang digunakan secara aktif oleh data yang telah disimpan.' };
