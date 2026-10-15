@@ -129,15 +129,19 @@ export async function POST(request: Request) {
     // 2. Query existing photos in database for this event
     const existingPhotos = await getAllPhotos(event.id, true);
 
-    // Count shots previously taken by this session or guest name
+    const reqDevice = (body.deviceId || (body.sessionId && body.sessionId.includes('__dev_') ? body.sessionId.split('__dev_')[1] : '')).trim();
+
+    // Count shots previously taken by this session, device fingerprint, or guest name
     const guestExistingShots = existingPhotos.filter(p => {
-      const matchSession = body.sessionId && p.sessionId === body.sessionId;
-      const matchName = body.guestName && 
+      const pDevice = (p.deviceId || (p.sessionId && p.sessionId.includes('__dev_') ? p.sessionId.split('__dev_')[1] : '')).trim();
+      const matchDevice = Boolean(reqDevice && pDevice && reqDevice === pDevice);
+      const matchSession = Boolean(body.sessionId && (p.sessionId === body.sessionId || (p.sessionId && body.sessionId && p.sessionId.split('__dev_')[0] === body.sessionId.split('__dev_')[0])));
+      const matchName = Boolean(body.guestName && 
         body.guestName.trim().toLowerCase() !== 'tamu' && 
         body.guestName.trim().toLowerCase() !== 'tamu undangan' &&
         p.guestName && 
-        p.guestName.trim().toLowerCase() === body.guestName.trim().toLowerCase();
-      return matchSession || matchName;
+        p.guestName.trim().toLowerCase() === body.guestName.trim().toLowerCase());
+      return matchDevice || matchSession || matchName;
     });
 
     if (guestExistingShots.length >= allowedShotsPerGuest) {
@@ -164,8 +168,11 @@ export async function POST(request: Request) {
     for (const p of existingPhotos) {
       const pName = (p.guestName || '').trim().toLowerCase();
       const isNamed = pName && pName !== 'tamu' && pName !== 'tamu undangan';
+      const pDev = (p.deviceId || (p.sessionId && p.sessionId.includes('__dev_') ? p.sessionId.split('__dev_')[1] : '')).trim();
       if (isNamed) {
         uniqueGuestKeys.add(`name:${pName}`);
+      } else if (pDev) {
+        uniqueGuestKeys.add(`dev:${pDev}`);
       } else if (p.sessionId && !p.sessionId.startsWith('session-')) {
         // Modern persistent guest session
         uniqueGuestKeys.add(`sess:${p.sessionId}`);
@@ -182,6 +189,7 @@ export async function POST(request: Request) {
     const isReqNamed = reqName && reqName !== 'tamu' && reqName !== 'tamu undangan';
     const isKnownGuest = Boolean(
       (isReqNamed && uniqueGuestKeys.has(`name:${reqName}`)) ||
+      (reqDevice && uniqueGuestKeys.has(`dev:${reqDevice}`)) ||
       (body.sessionId && uniqueGuestKeys.has(`sess:${body.sessionId}`)) ||
       (legacyAnonymousCount > 0 && effectiveGuestCount <= 1)
     );

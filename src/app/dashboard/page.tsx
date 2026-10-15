@@ -2367,9 +2367,14 @@ export default function BrideDashboardPage() {
 
                   {revealMode === 'delayed' && (
                     <div style={{ marginTop: '14px', padding: '16px', background: 'rgba(194, 120, 3, 0.06)', borderRadius: '14px', border: '1px solid rgba(194, 120, 3, 0.2)' }}>
-                      <label style={{ display: 'block', fontSize: '11.5px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#C27803', marginBottom: '8px' }}>
-                        Jadwal Pengungkapan Serentak (Hitung Mundur)
-                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                        <label style={{ display: 'block', fontSize: '11.5px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#C27803', margin: 0 }}>
+                          Jadwal Pengungkapan Serentak (Hitung Mundur)
+                        </label>
+                        <span className="font-mono-film" style={{ fontSize: '10.5px', background: 'rgba(194, 120, 3, 0.15)', color: '#92400E', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                          Zona: {typeof Intl !== 'undefined' ? (Intl.DateTimeFormat().resolvedOptions().timeZone.includes('Jakarta') ? 'WIB (UTC+7)' : Intl.DateTimeFormat().resolvedOptions().timeZone.includes('Makassar') ? 'WITA (UTC+8)' : Intl.DateTimeFormat().resolvedOptions().timeZone.includes('Jayapura') ? 'WIT (UTC+9)' : 'WIB') : 'WIB'}
+                        </span>
+                      </div>
 
                       {/* Quick presets */}
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>

@@ -492,7 +492,7 @@ export default function FrameCustomizer({
 
           {/* Interactive Canvas */}
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '20px' }}>
-            <div style={{ width: '240px', height: '320px', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 12px 32px rgba(0,0,0,0.18)', background: '#1D1D1F' }}>
+            <div style={{ width: '100%', maxWidth: '240px', aspectRatio: '3/4', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 12px 32px rgba(0,0,0,0.18)', background: '#1D1D1F', touchAction: 'pan-y' }}>
               <canvas
                 ref={previewCanvasRef}
                 style={{ width: '100%', height: '100%', objectFit: 'contain', display: 'block' }}

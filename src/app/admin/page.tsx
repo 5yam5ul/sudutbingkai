@@ -121,6 +121,11 @@ export default function SuperAdminDashboard() {
   const [hostTierFilter, setHostTierFilter] = useState<'all' | EventPackageTier>('all');
   const [hostPaymentFilter, setHostPaymentFilter] = useState<'all' | 'paid' | 'pending'>('all');
 
+  // Infrastructure health and bulk photo moderation states
+  const [systemHealth, setSystemHealth] = useState<any>(null);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+
   // -------------------------------------------------------------
   // MODAL STATES
   // -------------------------------------------------------------
@@ -301,6 +306,11 @@ export default function SuperAdminDashboard() {
       if (resAdd.status === 'fulfilled' && resAdd.value?.success) setAddons(resAdd.value.addons || []);
       if (resVid.status === 'fulfilled' && resVid.value?.success) setVideoWishes(resVid.value.videoWishes || resVid.value.wishes || []);
       if (resVoi.status === 'fulfilled' && resVoi.value?.success) setVoiceNotes(resVoi.value.voiceNotes || []);
+
+      authFetch('/api/admin/health')
+        .then(r => r.json())
+        .then(d => { if (d.success) setSystemHealth(d.health); })
+        .catch(() => {});
     } catch (err) {
       console.error('Failed to load admin data:', err);
     } finally {
@@ -924,6 +934,68 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleToggleSelectPhoto = (id: string) => {
+    setSelectedPhotoIds(prev => 
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleSelectAllPhotos = (filtered: PhotoRecord[]) => {
+    if (selectedPhotoIds.length === filtered.length) {
+      setSelectedPhotoIds([]);
+    } else {
+      setSelectedPhotoIds(filtered.map(p => p.id));
+    }
+  };
+
+  const handleBulkHide = async (hide: boolean) => {
+    if (selectedPhotoIds.length === 0) return;
+    setIsBulkProcessing(true);
+    let successCount = 0;
+    for (const id of selectedPhotoIds) {
+      try {
+        const res = await authFetch('/api/photos', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, isHidden: hide })
+        });
+        const data = await res.json();
+        if (data.success) successCount++;
+      } catch {}
+    }
+    setPhotos(prev => prev.map(p => selectedPhotoIds.includes(p.id) ? { ...p, isHidden: hide } : p));
+    setSelectedPhotoIds([]);
+    setIsBulkProcessing(false);
+    toast.success(`${successCount} foto berhasil ${hide ? 'disensor' : 'dipulihkan'}!`);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedPhotoIds.length === 0) return;
+    setConfirmModal({
+      isOpen: true,
+      title: `Hapus ${selectedPhotoIds.length} Foto Terpilih?`,
+      description: `Seluruh ${selectedPhotoIds.length} foto terpilih akan dihapus permanen dari Supabase dan Cloudflare R2. Tindakan ini tidak dapat dibatalkan.`,
+      confirmText: `Hapus ${selectedPhotoIds.length} Foto`,
+      variant: 'danger',
+      onConfirm: async () => {
+        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        setIsBulkProcessing(true);
+        let successCount = 0;
+        for (const id of selectedPhotoIds) {
+          try {
+            const res = await authFetch(`/api/photos?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+            const data = await res.json();
+            if (data.success) successCount++;
+          } catch {}
+        }
+        setPhotos(prev => prev.filter(p => !selectedPhotoIds.includes(p.id)));
+        setSelectedPhotoIds([]);
+        setIsBulkProcessing(false);
+        toast.success(`${successCount} foto berhasil dihapus permanen!`);
+      }
+    });
+  };
+
   const handleDeletePhoto = (photoId: string) => {
     setConfirmModal({
       isOpen: true,
@@ -1529,7 +1601,88 @@ export default function SuperAdminDashboard() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {/* System Health Indicators */}
+            {systemHealth && (
+              <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  title={`Database: ${systemHealth.database?.label} (${systemHealth.database?.latencyMs || 0}ms)`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: systemHealth.database?.healthy ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    border: `1px solid ${systemHealth.database?.healthy ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-mono)',
+                    color: systemHealth.database?.healthy ? '#065F46' : '#991B1B'
+                  }}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: systemHealth.database?.healthy ? '#10B981' : '#EF4444' }} />
+                  <span>DB</span>
+                </div>
+
+                <div
+                  title={`Service Role Key: ${systemHealth.serviceRoleKey?.label}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: systemHealth.serviceRoleKey?.active ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                    border: `1px solid ${systemHealth.serviceRoleKey?.active ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-mono)',
+                    color: systemHealth.serviceRoleKey?.active ? '#065F46' : '#92400E'
+                  }}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: systemHealth.serviceRoleKey?.active ? '#10B981' : '#F59E0B' }} />
+                  <span>RLS Bypass</span>
+                </div>
+
+                <div
+                  title={`Storage: ${systemHealth.storage?.label}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: systemHealth.storage?.configured ? 'rgba(16, 185, 129, 0.1)' : 'rgba(107, 114, 128, 0.1)',
+                    border: `1px solid ${systemHealth.storage?.configured ? 'rgba(16, 185, 129, 0.3)' : 'rgba(107, 114, 128, 0.3)'}`,
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-mono)',
+                    color: systemHealth.storage?.configured ? '#065F46' : '#374151'
+                  }}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: systemHealth.storage?.configured ? '#10B981' : '#6B7280' }} />
+                  <span>R2 Cloud</span>
+                </div>
+
+                <div
+                  title={`Payment: ${systemHealth.paymentGateway?.label}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: systemHealth.paymentGateway?.configured ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                    border: `1px solid ${systemHealth.paymentGateway?.configured ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                    fontSize: '10px',
+                    fontFamily: 'var(--font-mono)',
+                    color: systemHealth.paymentGateway?.configured ? '#065F46' : '#92400E'
+                  }}
+                >
+                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: systemHealth.paymentGateway?.configured ? '#10B981' : '#F59E0B' }} />
+                  <span>{systemHealth.paymentGateway?.configured ? 'Mayar Live' : 'Mayar Sandbox'}</span>
+                </div>
+              </div>
+            )}
+
             <div style={{ textAlign: 'right' }} className="desktop-only">
               <strong style={{ fontSize: '13px', display: 'block', color: '#1D1D1F' }}>Super Admin HQ</strong>
               <span style={{ fontSize: '11px', color: '#86868B' }}>admin@sudutbingkai.id</span>
@@ -2583,47 +2736,137 @@ export default function SuperAdminDashboard() {
                   <p>Belum ada foto yang cocok dengan filter ini.</p>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
-                  {filteredPhotos.map(p => (
-                    <div key={p.id} className="glass-card" style={{ padding: '10px', borderRadius: '16px', position: 'relative', opacity: p.isHidden ? 0.6 : 1 }}>
-                      <div
-                        onClick={() => {
-                          setPhotoToInspect(p);
-                          setInspectPhotoModalOpen(true);
-                        }}
-                        style={{ width: '100%', aspectRatio: '3/4', borderRadius: '12px', overflow: 'hidden', background: '#000', marginBottom: '8px', position: 'relative', cursor: 'pointer' }}
-                      >
-                        <img src={p.imageData} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        {p.isHidden && (
-                          <div style={{ position: 'absolute', inset: 0, background: 'rgba(239, 68, 68, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 700, fontSize: '12px' }}>
-                            DISENSOR
-                          </div>
-                        )}
-                      </div>
-                      <div style={{ fontSize: '12px', marginBottom: '8px' }}>
-                        <strong style={{ display: 'block' }}>{p.guestName}</strong>
-                        <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getEventTitle(p.eventId)}>{getEventTitle(p.eventId)}</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '6px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {/* Bulk Actions Header Toolbar */}
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: '10px',
+                    padding: '10px 16px',
+                    background: selectedPhotoIds.length > 0 ? 'rgba(194, 120, 3, 0.08)' : '#FFFFFF',
+                    border: selectedPhotoIds.length > 0 ? '1px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
+                    borderRadius: '14px',
+                    transition: 'all 0.2s ease'
+                  }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
+                      <input
+                        type="checkbox"
+                        checked={filteredPhotos.length > 0 && selectedPhotoIds.length === filteredPhotos.length}
+                        onChange={() => handleSelectAllPhotos(filteredPhotos)}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#C27803' }}
+                      />
+                      <span>Pilih Semua Foto ({filteredPhotos.length})</span>
+                    </label>
+
+                    {selectedPhotoIds.length > 0 && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '12px', color: '#C27803', fontWeight: 600 }}>
+                          {selectedPhotoIds.length} foto terpilih
+                        </span>
                         <button
-                          onClick={() => handleToggleHidePhoto(p.id, !!p.isHidden)}
+                          type="button"
+                          disabled={isBulkProcessing}
+                          onClick={() => handleBulkHide(true)}
                           className="glass-pill"
-                          style={{ flex: 1, padding: '6px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                          style={{ padding: '6px 12px', fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
-                          {p.isHidden ? <Eye size={12} /> : <EyeOff size={12} />}
-                          <span>{p.isHidden ? 'Buka' : 'Sensor'}</span>
+                          <EyeOff size={13} />
+                          <span>Sensor</span>
                         </button>
                         <button
-                          onClick={() => handleDeletePhoto(p.id)}
+                          type="button"
+                          disabled={isBulkProcessing}
+                          onClick={() => handleBulkHide(false)}
                           className="glass-pill"
-                          style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
-                          title="Hapus Permanen"
+                          style={{ padding: '6px 12px', fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                         >
-                          <Trash2 size={12} />
+                          <Eye size={13} />
+                          <span>Buka Sensor</span>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={isBulkProcessing}
+                          onClick={handleBulkDelete}
+                          className="glass-pill"
+                          style={{ padding: '6px 12px', fontSize: '11.5px', color: '#E11D48', borderColor: 'rgba(225, 29, 72, 0.3)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <Trash2 size={13} />
+                          <span>Hapus ({selectedPhotoIds.length})</span>
                         </button>
                       </div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '16px' }}>
+                    {filteredPhotos.map(p => (
+                      <div key={p.id} className="glass-card" style={{ padding: '10px', borderRadius: '16px', position: 'relative', opacity: p.isHidden ? 0.6 : 1, border: selectedPhotoIds.includes(p.id) ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.06)' }}>
+                        {/* Checkbox badge */}
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleSelectPhoto(p.id);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            top: '16px',
+                            left: '16px',
+                            zIndex: 10,
+                            cursor: 'pointer',
+                            background: 'rgba(0,0,0,0.6)',
+                            borderRadius: '6px',
+                            padding: '3px',
+                            display: 'flex'
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedPhotoIds.includes(p.id)}
+                            onChange={() => handleToggleSelectPhoto(p.id)}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#C27803' }}
+                          />
+                        </div>
+
+                        <div
+                          onClick={() => {
+                            setPhotoToInspect(p);
+                            setInspectPhotoModalOpen(true);
+                          }}
+                          style={{ width: '100%', aspectRatio: '3/4', borderRadius: '12px', overflow: 'hidden', background: '#000', marginBottom: '8px', position: 'relative', cursor: 'pointer' }}
+                        >
+                          <img src={p.imageData} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          {p.isHidden && (
+                            <div style={{ position: 'absolute', inset: 0, background: 'rgba(239, 68, 68, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 700, fontSize: '12px' }}>
+                              DISENSOR
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '12px', marginBottom: '8px' }}>
+                          <strong style={{ display: 'block' }}>{p.guestName}</strong>
+                          <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getEventTitle(p.eventId)}>{getEventTitle(p.eventId)}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <button
+                            onClick={() => handleToggleHidePhoto(p.id, !!p.isHidden)}
+                            className="glass-pill"
+                            style={{ flex: 1, padding: '6px', fontSize: '11px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                          >
+                            {p.isHidden ? <Eye size={12} /> : <EyeOff size={12} />}
+                            <span>{p.isHidden ? 'Buka' : 'Sensor'}</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeletePhoto(p.id)}
+                            className="glass-pill"
+                            style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
+                            title="Hapus Permanen"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )
             )}

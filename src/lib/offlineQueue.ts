@@ -17,6 +17,7 @@ export interface OfflinePhotoPayload {
   caption?: string;
   aspectRatio?: '1:1' | '3:4' | '9:16';
   frameId?: string;
+  deviceId?: string;
   createdAt: number;
 }
 
@@ -118,7 +119,8 @@ export async function flushOfflineQueue(
           imageData: item.imageData,
           caption: item.caption,
           aspectRatio: item.aspectRatio,
-          frameId: item.frameId
+          frameId: item.frameId,
+          deviceId: item.deviceId
         })
       });
 

@@ -1245,11 +1245,16 @@ function CreateEventForm() {
               {/* JIKA MEMILIH CUCI ROLL: PANEL JADWAL FLEKSIBEL + OPSI BUKA SEKARANG */}
               {revealMode === 'delayed' && (
                 <div style={{ padding: '20px', background: 'rgba(194, 120, 3, 0.06)', borderRadius: '16px', border: '1px solid rgba(194, 120, 3, 0.25)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
-                    <Clock size={16} color="#C27803" />
-                    <strong style={{ fontSize: '13px', color: '#1D1D1F' }}>
-                      Atur Waktu Pengungkapan Roll Film
-                    </strong>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Clock size={16} color="#C27803" />
+                      <strong style={{ fontSize: '13px', color: '#1D1D1F' }}>
+                        Atur Waktu Pengungkapan Roll Film
+                      </strong>
+                    </div>
+                    <span className="font-mono-film" style={{ fontSize: '10.5px', background: 'rgba(194, 120, 3, 0.15)', color: '#92400E', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                      Zona Waktu: {typeof Intl !== 'undefined' ? (Intl.DateTimeFormat().resolvedOptions().timeZone.includes('Jakarta') ? 'WIB (UTC+7)' : Intl.DateTimeFormat().resolvedOptions().timeZone.includes('Makassar') ? 'WITA (UTC+8)' : Intl.DateTimeFormat().resolvedOptions().timeZone.includes('Jayapura') ? 'WIT (UTC+9)' : 'WIB') : 'WIB'}
+                    </span>
                   </div>
                   <p style={{ fontSize: '12px', color: '#6E6E73', marginBottom: '14px' }}>
                     Pilih jalan pintas jam acara selesai atau tentukan tanggal & jam bebas sesuka Anda:

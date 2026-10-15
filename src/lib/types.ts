@@ -339,6 +339,7 @@ export interface PhotoRecord {
   aspectRatio?: '1:1' | '3:4' | '9:16';
   frameId?: FrameId;
   voiceNoteUrl?: string;
+  deviceId?: string;
 }
 
 export type PartnerTier = 'regular' | 'pro' | 'vip';

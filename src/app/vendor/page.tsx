@@ -501,6 +501,39 @@ export default function VendorPortalPage() {
           }
         })
         .catch(console.error);
+
+      // Auto-refresh when tab becomes visible (multi-tab / mobile app switch)
+      const handleVisibilityChange = () => {
+        if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+          authFetch('/api/vendors')
+            .then(res => res.json())
+            .then(data => {
+              if (data.success && data.vendors) {
+                const fresh = data.vendors.find((v: any) => isSameVendorId(v.id, session.id) || (session.email && v.email === session.email));
+                if (fresh && typeof fresh.walletBalance === 'number') {
+                  setWalletBalance(fresh.walletBalance);
+                  setPayoutAmount(fresh.walletBalance);
+                  if (typeof fresh.totalEarnings === 'number') setTotalEarnings(fresh.totalEarnings);
+                }
+              }
+            })
+            .catch(() => {});
+
+          authFetch(`/api/payouts?vendorId=${encodeURIComponent(vendorId)}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.success && data.payouts) {
+                setPayoutsList(data.payouts);
+              }
+            })
+            .catch(() => {});
+        }
+      };
+
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
     }
   }, []);
 
@@ -3953,6 +3986,93 @@ export default function VendorPortalPage() {
                       </span>
                     </div>
                   </div>
+                </div>
+
+                {/* 1-Click Printable Standee & Flyer Template */}
+                <div className="glass-card" style={{ padding: '20px 24px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px', background: 'linear-gradient(135deg, #FFFDF8 0%, #FDFBF7 100%)', border: '1px solid rgba(194, 120, 3, 0.25)' }}>
+                  <div>
+                    <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#C27803', display: 'block', marginBottom: '4px' }}>
+                      TEMPLATING CEPAT & RINGAN
+                    </span>
+                    <h4 style={{ fontSize: '15px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                      Template Desain Meja Cetak Siap Pakai (Standee A6)
+                    </h4>
+                    <p style={{ fontSize: '12px', color: '#6E6E73', margin: '4px 0 0' }}>
+                      Unduh template kartu meja beresolusi tinggi dengan kode referral <strong>{referralCode}</strong> Anda.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const canvas = document.createElement('canvas');
+                      canvas.width = 1200;
+                      canvas.height = 1800;
+                      const ctx = canvas.getContext('2d');
+                      if (!ctx) return;
+
+                      // Background
+                      ctx.fillStyle = '#FCFBF8';
+                      ctx.fillRect(0, 0, 1200, 1800);
+
+                      // Outer border
+                      ctx.strokeStyle = '#D97706';
+                      ctx.lineWidth = 12;
+                      ctx.strokeRect(60, 60, 1080, 1680);
+
+                      // Inner border
+                      ctx.strokeStyle = 'rgba(217, 119, 6, 0.4)';
+                      ctx.lineWidth = 3;
+                      ctx.strokeRect(80, 80, 1040, 1640);
+
+                      // Header
+                      ctx.fillStyle = '#1D1D1F';
+                      ctx.font = 'bold 54px Georgia, serif';
+                      ctx.textAlign = 'center';
+                      ctx.fillText('ABADIKAN MOMEN BAHAGIA', 600, 240);
+
+                      ctx.fillStyle = '#86868B';
+                      ctx.font = '32px sans-serif';
+                      ctx.fillText('Kamera Tamu Digital SudutBingkai', 600, 310);
+
+                      // Instructions box
+                      ctx.fillStyle = 'rgba(217, 119, 6, 0.08)';
+                      ctx.fillRect(160, 400, 880, 700);
+
+                      ctx.fillStyle = '#1D1D1F';
+                      ctx.font = 'bold 44px sans-serif';
+                      ctx.fillText('Pindai Barcode Untuk Mulai', 600, 500);
+
+                      ctx.fillStyle = '#515154';
+                      ctx.font = '30px sans-serif';
+                      ctx.fillText('1. Buka kamera ponsel Anda', 600, 620);
+                      ctx.fillText('2. Arahkan ke QR Code di meja ini', 600, 700);
+                      ctx.fillText('3. Jepret momen spontan & seru!', 600, 780);
+
+                      // Partner branding footer
+                      ctx.fillStyle = '#D97706';
+                      ctx.font = 'bold 36px monospace';
+                      ctx.fillText(`KODE PROMO MITRA: ${referralCode}`, 600, 1250);
+
+                      ctx.fillStyle = '#1D1D1F';
+                      ctx.font = '34px Georgia, serif';
+                      ctx.fillText(`Official Partner: ${companyName || vendor?.companyName || 'Mitra WO'}`, 600, 1380);
+
+                      ctx.fillStyle = '#86868B';
+                      ctx.font = '24px sans-serif';
+                      ctx.fillText('www.sudutbingkai.id', 600, 1600);
+
+                      const link = document.createElement('a');
+                      link.href = canvas.toDataURL('image/png');
+                      link.download = `standee-meja-${referralCode}.png`;
+                      link.click();
+                      toast.success('Template kartu meja berhasil diunduh!');
+                    }}
+                    className="btn-apple-black"
+                    style={{ padding: '10px 20px', borderRadius: '12px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                  >
+                    <Download size={15} />
+                    <span>Unduh Standee Meja Siap Cetak</span>
+                  </button>
                 </div>
 
                 {/* Social Media Caption Templates */}

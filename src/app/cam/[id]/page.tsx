@@ -25,6 +25,7 @@ import {
 } from '@/lib/haptics';
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
 import { addPhotoToOfflineQueue, flushOfflineQueue, getOfflinePhotosQueue, removeOfflinePhoto } from '@/lib/offlineQueue';
+import { getDeviceFingerprint, isInAppBrowser } from '@/lib/fingerprint';
 import ConfirmModal from '@/components/ConfirmModal';
 import VideoWishRecorder from '@/components/VideoWishRecorder';
 
@@ -155,6 +156,29 @@ export default function GuestCameraPage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
   const [isDesktop, setIsDesktop] = useState(false);
+
+  // In-app webview & offline queue warning
+  const [isInApp, setIsInApp] = useState(false);
+  const [inAppAlertDismissed, setInAppAlertDismissed] = useState(false);
+
+  useEffect(() => {
+    if (isInAppBrowser()) {
+      setIsInApp(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (offlineCount <= 0) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Masih ada foto offline yang belum tersinkron ke server. Yakin ingin keluar?';
+      return e.returnValue;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [offlineCount]);
 
   const [eventNotFound, setEventNotFound] = useState(false);
   const [loadingEvent, setLoadingEvent] = useState(true);
@@ -885,6 +909,7 @@ export default function GuestCameraPage() {
         // Stored only locally in guest phone memory (localStorage).
         toast.success(`Bidikan #${newShotNum} berhasil tersimpan di rol kamera!`);
       } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const deviceFp = getDeviceFingerprint();
         addPhotoToOfflineQueue({
           id: newGuestPhoto.id,
           eventId: canonicalId,
@@ -895,12 +920,14 @@ export default function GuestCameraPage() {
           caption: currentWish.trim(),
           aspectRatio,
           frameId: activeFrameId,
+          deviceId: deviceFp,
           createdAt: Date.now()
         }).then(() => {
           setOfflineCount(prev => prev + 1);
           toast.info('Tersimpan di antrian offline HP. Otomatis terunggah saat online.');
         });
       } else {
+        const deviceFp = getDeviceFingerprint();
         fetch('/api/photos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -912,7 +939,8 @@ export default function GuestCameraPage() {
             imageData: highResDataUrl,
             caption: currentWish.trim(),
             aspectRatio,
-            frameId: activeFrameId
+            frameId: activeFrameId,
+            deviceId: deviceFp
           })
         })
         .then(res => res.json())
@@ -951,6 +979,7 @@ export default function GuestCameraPage() {
         })
         .catch(async () => {
           // Network dropped during upload, queue it safely in IndexedDB
+          const deviceFp = getDeviceFingerprint();
           await addPhotoToOfflineQueue({
             id: newGuestPhoto.id,
             eventId: canonicalId,
@@ -961,6 +990,7 @@ export default function GuestCameraPage() {
             caption: currentWish.trim(),
             aspectRatio,
             frameId: activeFrameId,
+            deviceId: deviceFp,
             createdAt: Date.now()
           });
           setOfflineCount(prev => prev + 1);
@@ -1365,6 +1395,56 @@ export default function GuestCameraPage() {
         onChange={handleGalleryUpload}
         style={{ display: 'none' }}
       />
+
+      {/* In-App Browser Advisory Alert */}
+      {isInApp && !inAppAlertDismissed && (
+        <div style={{
+          flexShrink: 0,
+          background: 'linear-gradient(90deg, #1C1917 0%, #292524 100%)',
+          borderBottom: '1px solid rgba(217, 119, 6, 0.4)',
+          padding: '8px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          fontSize: '11px',
+          color: '#FDE68A',
+          zIndex: 60
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <AlertTriangle size={13} color="#F59E0B" />
+            <span>Untuk fokus & resolusi maksimal, buka via <strong>Chrome / Safari</strong>.</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setInAppAlertDismissed(true)}
+            style={{ background: 'none', border: 'none', color: '#A8A29E', cursor: 'pointer', padding: '2px', display: 'flex' }}
+          >
+            <X size={13} />
+          </button>
+        </div>
+      )}
+
+      {/* Delayed Reveal Alert Bar */}
+      {event?.revealMode === 'delayed' && (
+        <div style={{
+          flexShrink: 0,
+          background: 'rgba(28, 25, 23, 0.95)',
+          backdropFilter: 'blur(8px)',
+          borderBottom: '1px solid rgba(194, 120, 3, 0.3)',
+          padding: '6px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          fontSize: '11px',
+          color: '#F59E0B',
+          zIndex: 25
+        }}>
+          <Film size={12} />
+          <span>Mode Cuci Roll: Foto Anda aman tersimpan & terbit di album bersama setelah acara.</span>
+        </div>
+      )}
 
       {/* TIER 1: Dedicated Top Deck Hood (Flash, Film Preset, Counter) */}
       <header style={{
@@ -2101,6 +2181,25 @@ export default function GuestCameraPage() {
                   <X size={18} />
                 </button>
               </div>
+
+              {/* Delayed reveal reassurance banner */}
+              {event?.revealMode === 'delayed' && (
+                <div style={{
+                  padding: '9px 12px',
+                  borderRadius: '12px',
+                  background: 'rgba(194, 120, 3, 0.08)',
+                  border: '1px solid rgba(194, 120, 3, 0.22)',
+                  fontSize: '11.5px',
+                  color: '#92400E',
+                  marginBottom: '14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}>
+                  <Film size={14} color="#C27803" style={{ flexShrink: 0 }} />
+                  <span>Jepretan Anda aman tersimpan & siap terbit serentak di album bersama saat cuci roll selesai.</span>
+                </div>
+              )}
 
               {/* Photos List */}
               {myPhotos.length === 0 ? (
