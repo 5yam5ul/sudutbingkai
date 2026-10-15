@@ -6,11 +6,12 @@ import Link from 'next/link';
 import { 
   Printer, ArrowLeft, CheckCircle2, Share2, 
   Calendar, Building2, User, Mail, Phone, ShieldCheck, 
-  Download, ExternalLink, MessageSquare, Tag
+  Download, ExternalLink, MessageSquare, Tag, CreditCard
 } from 'lucide-react';
 import { InvoiceRecord } from '@/lib/types';
 import { authFetch } from '@/lib/auth';
 import SkeletonLoader from '@/components/SkeletonLoader';
+import MayarPaymentModal from '@/components/MayarPaymentModal';
 import { toast } from 'sonner';
 
 export default function InvoicePage() {
@@ -21,6 +22,14 @@ export default function InvoicePage() {
   const [invoice, setInvoice] = useState<InvoiceRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
+  const [pendingPaymentData, setPendingPaymentData] = useState<{
+    amount: number;
+    title: string;
+    description: string;
+    isSimulation?: boolean;
+  } | null>(null);
 
   useEffect(() => {
     async function fetchInvoice() {
@@ -44,6 +53,46 @@ export default function InvoicePage() {
       fetchInvoice();
     }
   }, [invoiceId]);
+
+  const handlePayPendingInvoice = async () => {
+    if (!invoice || !invoice.eventId) return;
+    setIsInitiatingPayment(true);
+    try {
+      const hostUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.vercel.app';
+      const payRes = await authFetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packageTier: invoice.tierId || 'wedding',
+          name: invoice.buyerName,
+          email: invoice.buyerEmail,
+          eventId: invoice.eventId,
+          referralCode: invoice.discountCode || undefined,
+          redirectUrl: `${hostUrl}/invoice/${invoice.id}`,
+        }),
+      });
+      const payData = await payRes.json();
+      if (payData.success) {
+        if (!payData.isSimulation && payData.paymentUrl && !payData.paymentUrl.startsWith('/')) {
+          window.location.href = payData.paymentUrl;
+          return;
+        }
+        setPendingPaymentData({
+          amount: payData.amount || invoice.finalAmount,
+          title: invoice.tierName || 'Pelunasan Tagihan SudutBingkai',
+          description: `Invoice ${invoice.invoiceNumber} — ${invoice.buyerName}`,
+          isSimulation: payData.isSimulation ?? true,
+        });
+        setPaymentModalOpen(true);
+      } else {
+        toast.error(payData.error || 'Gagal menginisiasi pembayaran.');
+      }
+    } catch (err: any) {
+      toast.error('Gagal menginisiasi pembayaran: ' + (err.message || 'Kesalahan jaringan'));
+    } finally {
+      setIsInitiatingPayment(false);
+    }
+  };
 
   const handlePrint = () => {
     window.print();
@@ -134,7 +183,31 @@ export default function InvoicePage() {
           <span>Kembali</span>
         </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          {invoice.status === 'pending' && invoice.eventId && (
+            <button
+              type="button"
+              onClick={handlePayPendingInvoice}
+              disabled={isInitiatingPayment}
+              className="btn-apple-black"
+              style={{
+                padding: '8px 18px',
+                fontSize: '13px',
+                fontWeight: 700,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: isInitiatingPayment ? 'wait' : 'pointer',
+                background: '#C27803',
+                color: '#FFFFFF',
+                border: 'none'
+              }}
+            >
+              <CreditCard size={15} />
+              <span>{isInitiatingPayment ? 'Memproses...' : 'Bayar Sekarang'}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={copyInvoiceLink}
@@ -434,25 +507,75 @@ export default function InvoicePage() {
       </div>
 
       {/* Screen-only Bottom Navigation */}
-      <div className="no-print" style={{ maxWidth: '820px', margin: '24px auto 0', textAlign: 'center' }}>
+      <div className="no-print" style={{ maxWidth: '820px', margin: '24px auto 0', textAlign: 'center', display: 'flex', justifyContent: 'center', gap: '20px', flexWrap: 'wrap' }}>
         {invoice.eventId && (
-          <Link
-            href={`/event/${(invoice as any).eventSlug || invoice.eventId}`}
-            style={{
-              fontSize: '13px',
-              color: '#C27803',
-              textDecoration: 'none',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}
-          >
-            <span>Buka Galeri Acara Terkait</span>
-            <ExternalLink size={14} />
-          </Link>
+          <>
+            <Link
+              href={`/dashboard?eventId=${invoice.eventId}`}
+              style={{
+                fontSize: '13px',
+                color: '#1D1D1F',
+                textDecoration: 'none',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>Kelola di Dashboard Acara</span>
+              <ExternalLink size={14} />
+            </Link>
+            <Link
+              href={`/event/${(invoice as any).eventSlug || invoice.eventId}`}
+              style={{
+                fontSize: '13px',
+                color: '#C27803',
+                textDecoration: 'none',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <span>Buka Galeri Acara Terkait</span>
+              <ExternalLink size={14} />
+            </Link>
+          </>
         )}
       </div>
+
+      <MayarPaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        onSuccess={async () => {
+          setPaymentModalOpen(false);
+          if (!invoice?.eventId) return;
+          try {
+            const res = await authFetch('/api/events', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: invoice.eventId,
+                paymentStatus: 'paid',
+              }),
+            });
+            const data = await res.json();
+            if (data.success) {
+              setInvoice(prev => prev ? { ...prev, status: 'paid', paidAt: new Date().toISOString() } : prev);
+              toast.success('Pembayaran berhasil dikonfirmasi! Invoice telah ditandai LUNAS.');
+            } else {
+              toast.error(data.error || 'Gagal memperbarui status pembayaran.');
+            }
+          } catch {
+            toast.error('Gagal menghubungi server untuk memperbarui status pembayaran.');
+          }
+        }}
+        title={pendingPaymentData?.title || 'Pelunasan Tagihan'}
+        description={pendingPaymentData?.description || ''}
+        amount={pendingPaymentData?.amount || invoice.finalAmount}
+        invoiceId={invoice.id}
+        isSimulation={pendingPaymentData?.isSimulation}
+      />
     </div>
   );
 }

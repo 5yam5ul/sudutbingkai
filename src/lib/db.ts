@@ -2136,14 +2136,16 @@ async function syncVendorBrandingToEvents(
 
 export async function saveVendor(vendorData: any): Promise<any> {
   const vendorId = vendorData.id || `vendor_${Date.now()}`;
-  let resolvedLogoUrl = vendorData.logoUrl || '';
+  let resolvedLogoUrl = vendorData.logoUrl !== undefined ? (vendorData.logoUrl || '') : undefined;
 
   try {
     const existingVendors = await getAllVendors();
     const prevVendor = existingVendors.find(
       v => v.id === vendorId || v.id?.replace(/^v_/, 'vendor_') === String(vendorId).replace(/^v_/, 'vendor_')
     );
-    if (resolvedLogoUrl && resolvedLogoUrl.startsWith('data:image')) {
+    if (resolvedLogoUrl === undefined) {
+      resolvedLogoUrl = prevVendor?.logoUrl || '';
+    } else if (resolvedLogoUrl && resolvedLogoUrl.startsWith('data:image')) {
       resolvedLogoUrl = await resolveVendorLogoR2(vendorId, resolvedLogoUrl);
     }
     await syncVendorBrandingToEvents(prevVendor?.id || vendorId, {
@@ -2151,7 +2153,7 @@ export async function saveVendor(vendorData: any): Promise<any> {
       vendorName: vendorData.companyName || vendorData.name,
       vendorInstagram: vendorData.instagram
     });
-    if (prevVendor?.logoUrl && prevVendor.logoUrl !== resolvedLogoUrl) {
+    if (vendorData.logoUrl !== undefined && prevVendor?.logoUrl && prevVendor.logoUrl !== resolvedLogoUrl) {
       await deleteFromR2(prevVendor.logoUrl);
     }
   } catch {}
@@ -2160,7 +2162,7 @@ export async function saveVendor(vendorData: any): Promise<any> {
     ...vendorData,
     id: vendorId,
     status: vendorData.status || 'active',
-    logoUrl: resolvedLogoUrl,
+    logoUrl: resolvedLogoUrl || '',
     createdAt: vendorData.createdAt || new Date().toISOString()
   };
 
@@ -2408,7 +2410,7 @@ export async function getAllAddons(): Promise<EventAddonItem[]> {
             costPrice: row.cost_price !== undefined && row.cost_price !== null
               ? Number(row.cost_price)
               : localMatch?.costPrice,
-            imagePreviewUrl: row.image_preview_url || row.image_url || undefined,
+            imagePreviewUrl: row.image_preview_url || row.image_url || localMatch?.imagePreviewUrl || undefined,
             isActive: row.is_active !== undefined && row.is_active !== null
               ? row.is_active !== false
               : (localMatch?.isActive !== undefined ? localMatch.isActive : true),
@@ -2447,7 +2449,7 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
         }
       }
     }
-    if (prevAddon?.imagePreviewUrl && prevAddon.imagePreviewUrl !== resolvedImageUrl) {
+    if (addon.imagePreviewUrl !== undefined && prevAddon?.imagePreviewUrl && prevAddon.imagePreviewUrl !== resolvedImageUrl) {
       await deleteFromR2(prevAddon.imagePreviewUrl);
     }
   } catch (e) {
@@ -2480,8 +2482,8 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
       };
 
       let { data, error } = await supabase.from('addons').upsert(record).select().maybeSingle();
-      if (error && (error.message?.includes('cost_price') || error.message?.includes('is_active') || error.code === 'PGRST204')) {
-        const { cost_price: _cp, is_active: _ia, ...fallbackRecord } = record;
+      if (error && (error.message?.includes('cost_price') || error.message?.includes('is_active') || error.message?.includes('image_preview_url') || error.code === 'PGRST204')) {
+        const { cost_price: _cp, is_active: _ia, image_preview_url: _ip, ...fallbackRecord } = record;
         const retry = await supabase.from('addons').upsert(fallbackRecord).select().maybeSingle();
         data = retry.data;
         error = retry.error;
@@ -2496,7 +2498,7 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
           price: Number(data.price),
           priceFormatted: `Rp ${Number(data.price).toLocaleString('id-ID')}`,
           costPrice: data.cost_price !== undefined && data.cost_price !== null ? Number(data.cost_price) : newAddon.costPrice,
-          imagePreviewUrl: data.image_preview_url || data.image_url || undefined,
+          imagePreviewUrl: data.image_preview_url || data.image_url || newAddon.imagePreviewUrl || undefined,
           isActive: data.is_active !== undefined && data.is_active !== null ? data.is_active !== false : (newAddon.isActive !== false),
           freeShippingJabodetabek: data.free_shipping_jabodetabek !== false,
           unit: data.unit || '1 set',
@@ -2582,8 +2584,8 @@ export async function updateAddon(id: string, updates: Partial<EventAddonItem>):
       if (updates.isPopular !== undefined) dbUpdates.is_popular = updates.isPopular;
 
       let { data, error } = await supabase.from('addons').update(dbUpdates).eq('id', id).select().maybeSingle();
-      if (error && (error.message?.includes('cost_price') || error.message?.includes('is_active') || error.code === 'PGRST204')) {
-        const { cost_price: _cp, is_active: _ia, ...fallbackUpdates } = dbUpdates;
+      if (error && (error.message?.includes('cost_price') || error.message?.includes('is_active') || error.message?.includes('image_preview_url') || error.code === 'PGRST204')) {
+        const { cost_price: _cp, is_active: _ia, image_preview_url: _ip, ...fallbackUpdates } = dbUpdates;
         if (Object.keys(fallbackUpdates).length > 0) {
           const retry = await supabase.from('addons').update(fallbackUpdates).eq('id', id).select().maybeSingle();
           data = retry.data;
@@ -2601,7 +2603,9 @@ export async function updateAddon(id: string, updates: Partial<EventAddonItem>):
           costPrice: updates.costPrice !== undefined
             ? updates.costPrice
             : (data.cost_price !== undefined && data.cost_price !== null ? Number(data.cost_price) : existingAddon?.costPrice),
-          imagePreviewUrl: data.image_preview_url || data.image_url || undefined,
+          imagePreviewUrl: updates.imagePreviewUrl !== undefined
+            ? (updates.imagePreviewUrl || undefined)
+            : (data.image_preview_url || data.image_url || existingAddon?.imagePreviewUrl || undefined),
           isActive: updates.isActive !== undefined
             ? updates.isActive
             : (data.is_active !== undefined && data.is_active !== null ? data.is_active !== false : (existingAddon?.isActive ?? true)),

@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play, Link2, Globe, Copy } from 'lucide-react';
+import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play, Link2, Globe, Copy, CreditCard, FileText } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, DEMO_USERS, authFetch } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
@@ -12,6 +12,7 @@ import FrameCustomizer from '@/components/FrameCustomizer';
 import ConfirmModal from '@/components/ConfirmModal';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import VideoWishStoriesPlayer from '@/components/VideoWishStoriesPlayer';
+import MayarPaymentModal from '@/components/MayarPaymentModal';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 
@@ -40,6 +41,16 @@ export default function BrideDashboardPage() {
   const [filterTab, setFilterTab] = useState<'all' | 'visible' | 'hidden' | 'wishes'>('all');
   const [activePhoto, setActivePhoto] = useState<PhotoRecord | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Pending Payment Modal State
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [isInitiatingPayment, setIsInitiatingPayment] = useState(false);
+  const [pendingPaymentData, setPendingPaymentData] = useState<{
+    amount: number;
+    title: string;
+    description: string;
+    isSimulation?: boolean;
+  } | null>(null);
 
   // Custom Glass Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -85,6 +96,50 @@ export default function BrideDashboardPage() {
   const [zipProgress, setZipProgress] = useState('');
   const [showCreatedBanner, setShowCreatedBanner] = useState(false);
   const [isHostMismatched, setIsHostMismatched] = useState(false);
+
+  const handleCompletePendingPayment = async () => {
+    if (!event) return;
+    setIsInitiatingPayment(true);
+    try {
+      const tierKey = (event.packageTier || 'wedding') as EventPackageTier;
+      const tierInfo = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.wedding;
+      const fallbackAmount = parseInt(tierInfo.price.replace(/[^0-9]/g, ''), 10) || 499000;
+      const hostUrl = typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.vercel.app';
+
+      const payRes = await authFetch('/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          packageTier: tierKey,
+          name: event.coupleOrHost || event.title,
+          email: event.hostEmail || user?.email || 'host@sudutbingkai.id',
+          eventId: event.id,
+          referralCode: event.referralCodeUsed || undefined,
+          redirectUrl: `${hostUrl}/dashboard?eventId=${event.id}&paid=true`,
+        }),
+      });
+      const payData = await payRes.json();
+      if (payData.success) {
+        if (!payData.isSimulation && payData.paymentUrl && !payData.paymentUrl.startsWith('/')) {
+          window.location.href = payData.paymentUrl;
+          return;
+        }
+        setPendingPaymentData({
+          amount: payData.amount || fallbackAmount,
+          title: `Paket ${tierInfo.name} (${tierInfo.guestsLabel})`,
+          description: `Pelunasan Album Digital SudutBingkai: ${event.title}`,
+          isSimulation: payData.isSimulation ?? true,
+        });
+        setPaymentModalOpen(true);
+      } else {
+        toast.error(payData.error || 'Gagal menginisiasi pembayaran.');
+      }
+    } catch (err: any) {
+      toast.error('Gagal menginisiasi pembayaran: ' + (err.message || 'Kesalahan jaringan'));
+    } finally {
+      setIsInitiatingPayment(false);
+    }
+  };
 
   useEffect(() => {
     const current = getClientSession();
@@ -769,14 +824,101 @@ export default function BrideDashboardPage() {
 
         {event && (
           <>
+            {/* Pending Payment Alert Banner */}
+            {event.paymentStatus === 'pending' && (
+              <div style={{
+                marginBottom: '20px',
+                padding: '20px 24px',
+                borderRadius: '20px',
+                background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.12) 0%, rgba(194, 120, 3, 0.06) 100%)',
+                border: '1.5px solid rgba(217, 119, 6, 0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '16px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px', maxWidth: '620px' }}>
+                  <div style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '12px',
+                    background: 'rgba(217, 119, 6, 0.15)',
+                    color: '#D97706',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0
+                  }}>
+                    <AlertCircle size={20} />
+                  </div>
+                  <div>
+                    <strong style={{ fontSize: '15px', color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
+                      Album Acara Menunggu Pelunasan Pembayaran
+                    </strong>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#515154', lineHeight: 1.5 }}>
+                      Kamera tamu dan galeri publik saat ini masih terkunci. Selesaikan pembayaran paket Anda agar seluruh tamu undangan dapat langsung memindai QR Code dan memotret momen.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <Link
+                    href={`/invoice/inv_${event.id}`}
+                    className="glass-pill"
+                    style={{
+                      padding: '10px 16px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      color: '#1D1D1F',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#FFFFFF'
+                    }}
+                  >
+                    <FileText size={14} color="#C27803" />
+                    <span>Lihat Tagihan</span>
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleCompletePendingPayment}
+                    disabled={isInitiatingPayment}
+                    className="btn-apple-black"
+                    style={{
+                      padding: '10px 20px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: isInitiatingPayment ? 'wait' : 'pointer',
+                      background: '#C27803',
+                      color: '#FFFFFF',
+                      border: 'none'
+                    }}
+                  >
+                    <CreditCard size={15} />
+                    <span>{isInitiatingPayment ? 'Memproses...' : 'Bayar Sekarang'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Event Quick Overview Card */}
             <div className="glass-card form-section-card" style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2ECC71' }} />
-                <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
-                  ACARA AKTIF
+                <span style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: event?.paymentStatus === 'pending' ? '#D97706' : '#2ECC71'
+                }} />
+                <span className="font-mono-film" style={{ color: event?.paymentStatus === 'pending' ? '#D97706' : '#C27803', fontSize: '11px' }}>
+                  {event?.paymentStatus === 'pending' ? 'MENUNGGU PEMBAYARAN' : 'ACARA AKTIF'}
                 </span>
                 {events.length > 1 && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginLeft: '6px' }}>
@@ -858,6 +1000,15 @@ export default function BrideDashboardPage() {
                 <Tv size={14} />
                 <span>Layar TV</span>
               </Link>
+
+              <Link
+                href={`/invoice/inv_${event?.id}`}
+                className="glass-pill"
+                style={{ padding: '9px 12px', fontSize: '12.5px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+              >
+                <FileText size={14} />
+                <span>Invoice</span>
+              </Link>
             </div>
           </div>
 
@@ -881,8 +1032,14 @@ export default function BrideDashboardPage() {
             </div>
 
             <div>
-              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>PESAN SUARA</span>
-              <strong style={{ fontSize: '20px', color: '#C27803' }}>{voiceNotes.length} Ucapan</strong>
+              <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>
+                {videoWishes.length > 0 && voiceNotes.length > 0
+                  ? 'VIDEO & SUARA'
+                  : videoWishes.length > 0 || packageTier === 'wedding' || packageTier === 'unlimited'
+                    ? 'UCAPAN TAMU'
+                    : 'PESAN SUARA'}
+              </span>
+              <strong style={{ fontSize: '20px', color: '#C27803' }}>{voiceNotes.length + videoWishes.length} Ucapan</strong>
             </div>
 
             <div>
@@ -2495,6 +2652,41 @@ export default function BrideDashboardPage() {
           onClose={() => setShowStoriesPlayer(false)}
         />
       )}
+
+      {/* Mayar Payment Modal for Pending Event */}
+      <MayarPaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        onSuccess={async () => {
+          setPaymentModalOpen(false);
+          if (!event) return;
+          try {
+            const res = await authFetch('/api/events', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                id: event.id,
+                paymentStatus: 'paid',
+              }),
+            });
+            const data = await res.json();
+            if (data.success && data.event) {
+              setEvent(data.event);
+              setEvents(prev => prev.map(ev => ev.id === data.event.id ? data.event : ev));
+              toast.success('Pembayaran berhasil dikonfirmasi! Album acara Anda kini telah aktif sepenuhnya.');
+            } else {
+              toast.error(data.error || 'Gagal memperbarui status pembayaran acara.');
+            }
+          } catch {
+            toast.error('Gagal menghubungi server untuk memperbarui status pembayaran.');
+          }
+        }}
+        title={pendingPaymentData?.title || 'Pelunasan Paket Album'}
+        description={pendingPaymentData?.description || ''}
+        amount={pendingPaymentData?.amount || 499000}
+        invoiceId={event ? `inv_${event.id}` : undefined}
+        isSimulation={pendingPaymentData?.isSimulation}
+      />
     </div>
   );
 }

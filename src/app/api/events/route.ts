@@ -497,8 +497,49 @@ export async function PATCH(request: Request) {
     if (body.location !== undefined) updates.location = body.location.trim();
     if (body.preset) updates.preset = body.preset;
     if (body.additionalPax !== undefined) {
-      if (isCallerAdmin || !isMayarConfigured) {
-        updates.additionalPax = Number(body.additionalPax);
+      if (isCallerAdmin) {
+        updates.additionalPax = Math.max(0, Number(body.additionalPax) || 0);
+      } else if (!isMayarConfigured) {
+        const prevPax = existingEvent.additionalPax || 0;
+        const nextPax = Number(body.additionalPax);
+        const deltaPax = nextPax - prevPax;
+        const TOPUP_PRICES: Record<number, number> = {
+          25: 49000,
+          50: 89000,
+          100: 149000,
+          250: 249000,
+        };
+        if (!TOPUP_PRICES[deltaPax]) {
+          return NextResponse.json(
+            { success: false, error: 'Paket Top-Up Pax tidak valid. Pilih paket 25, 50, 100, atau 250 Pax.' },
+            { status: 400 }
+          );
+        }
+        updates.additionalPax = nextPax;
+        try {
+          const topupPrice = TOPUP_PRICES[deltaPax];
+          const nowIso = new Date().toISOString();
+          await createInvoice({
+            id: `inv_topup_${existingEvent.id}_${Date.now()}`,
+            eventId: existingEvent.id,
+            orderId: `topup_pax_${deltaPax}_${existingEvent.id}`,
+            buyerType: existingEvent.vendorId ? 'vendor' : 'client',
+            buyerName: existingEvent.coupleOrHost || existingEvent.title || 'Tuan Rumah',
+            buyerEmail: existingEvent.hostEmail || 'host@sudutbingkai.id',
+            companyName: existingEvent.vendorName,
+            tierId: (existingEvent.packageTier || 'wedding') as EventPackageTier,
+            tierName: `Top Up Kuota Tamu +${deltaPax} Pax (${existingEvent.title})`,
+            originalPrice: topupPrice,
+            discountAmount: 0,
+            finalAmount: topupPrice,
+            paymentMethod: 'qris',
+            status: 'paid',
+            paidAt: nowIso,
+            createdAt: nowIso,
+          });
+        } catch (invErr) {
+          console.warn('Simulator Top-Up invoice creation warning:', invErr);
+        }
       }
     }
     if (body.revealMode) updates.revealMode = body.revealMode;

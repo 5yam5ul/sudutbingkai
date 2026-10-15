@@ -411,6 +411,7 @@ export default function VendorPortalPage() {
                 preset: ev.preset,
                 packageTier: ev.packageTier || 'wedding',
                 shotsPerGuest: ev.shotsPerGuest || 36,
+                paymentStatus: ev.paymentStatus || 'paid',
                 commissionAmount: ev.commissionAmount || 0,
                 commissionStatus: ev.commissionStatus || 'available',
                 retentionInfo: retInfo,
@@ -2644,6 +2645,20 @@ export default function VendorPortalPage() {
                       }}>
                         {c.retentionInfo?.label || c.status}
                       </span>
+
+                      {c.paymentStatus === 'pending' && (
+                        <span style={{
+                          padding: '3px 9px',
+                          borderRadius: '6px',
+                          fontSize: '10.5px',
+                          fontWeight: 700,
+                          background: 'rgba(217, 119, 6, 0.14)',
+                          color: '#D97706',
+                          border: '1px solid rgba(217, 119, 6, 0.35)'
+                        }}>
+                          MENUNGGU PEMBAYARAN
+                        </span>
+                      )}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6E6E73', margin: '0 0 6px', flexWrap: 'wrap' }}>
@@ -2685,6 +2700,28 @@ export default function VendorPortalPage() {
 
                   {/* ACTION BUTTONS */}
                   <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                    {c.paymentStatus === 'pending' && (
+                      <Link
+                        href={`/invoice/inv_${c.id}`}
+                        className="btn-apple-black"
+                        style={{
+                          padding: '8px 14px',
+                          fontSize: '12.5px',
+                          textDecoration: 'none',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                          background: '#C27803',
+                          color: '#FFFFFF',
+                          fontWeight: 700,
+                          border: 'none'
+                        }}
+                      >
+                        <CreditCard size={13} />
+                        <span>Lunasi Tagihan</span>
+                      </Link>
+                    )}
+
                     {/* Setting Album Host Dashboard */}
                     <Link
                       href={`/dashboard?eventId=${c.slug || c.id}`}

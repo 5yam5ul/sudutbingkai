@@ -210,83 +210,61 @@ function LoginFormContent() {
     }
 
     if (assignedRole === 'vendor') {
-      // 1. Check if vendor is already registered in DB
-      let existingVendor: any = null;
       try {
-        const res = await fetch('/api/vendors');
-        const data = await res.json();
-        if (data.success && Array.isArray(data.vendors)) {
-          existingVendor = data.vendors.find((v: any) => 
-            (v.email && v.email.toLowerCase() === userEmail) ||
-            (v.id && (v.id === user.id || v.id === 'usr_g_' + user.id.substring(0, 10)))
-          );
-        }
-      } catch (err) {
-        console.warn('Check vendor error:', err);
-      }
-
-      if (existingVendor) {
-        const sessionUser: UserAccount = {
-          id: existingVendor.id,
-          name: existingVendor.name || fullName,
-          companyName: existingVendor.companyName || existingVendor.name || fullName,
-          email: userEmail,
-          role: 'vendor',
-          phone: existingVendor.phone || '',
-          instagram: existingVendor.instagram || '',
-          city: existingVendor.city || 'Jakarta',
-          partnerTier: existingVendor.partnerTier || 'regular',
-          referralCode: existingVendor.referralCode,
-          walletBalance: existingVendor.walletBalance || 0,
-          totalEarnings: existingVendor.totalEarnings || 0,
-          clientCount: existingVendor.clientCount || 0
-        };
-        const srvToken = await signOAuthSessionOnServer(sessionUser);
-        setClientSession(sessionUser, srvToken);
-        toast.success(`Selamat datang kembali di Portal Mitra, ${sessionUser.companyName || fullName}!`);
-        router.push(resolveRedirectDestination('/vendor', 'vendor'));
-        return;
-      } else {
-        // Vendor NOT found in DB. Check if user has host events under this email first:
-        try {
-          const hostSession: UserAccount = {
+        const res = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             id: 'usr_g_' + user.id.substring(0, 10),
             name: fullName,
             email: userEmail,
-            role: 'host'
-          };
-          const srvToken = await signOAuthSessionOnServer(hostSession);
-          const evRes = await fetch(`/api/events?hostEmail=${encodeURIComponent(userEmail)}`, {
-            headers: srvToken ? { Authorization: `Bearer ${srvToken}` } : undefined,
-          });
-          const evData = await evRes.json();
-          if (evData.success && evData.events && evData.events.length > 0) {
-            // User is an existing host! DO NOT mutate to vendor!
-            setClientSession(hostSession, srvToken);
-            toast.info(`Email Anda terdaftar sebagai Pengantin. Mengarahkan ke Dashboard Acara Anda...`);
-            router.push(resolveRedirectDestination('/dashboard', 'host'));
-            return;
-          }
-        } catch {}
+            role: 'vendor',
+            mode: 'oauth',
+            accessToken,
+          }),
+        });
+        const data = await res.json();
 
-        // If explicitly registering as vendor (user selected 'Daftar' tab or mode=register):
-        if (pendingMode === 'register' || authMode === 'register') {
-          // Pre-fill vendor registration form so user can provide Agency Name & Phone cleanly
-          setAuthMode('register');
-          setPortalRole('vendor');
-          setVendorPicName(fullName);
-          setEmail(userEmail);
-          toast.info('Akun Google terhubung. Lengkapi nama agensi WO Anda untuk menyelesaikan pendaftaran.');
-          return;
-        } else {
-          // In login mode, but no vendor found:
-          setAuthMode('register');
-          setPortalRole('vendor');
-          setVendorPicName(fullName);
-          setEmail(userEmail);
-          toast.error('Akun Google ini belum terdaftar sebagai Mitra Vendor. Silakan daftarkan nama agensi WO Anda.');
+        if (res.status === 403) {
+          const msg = data.error || 'Akun mitra vendor ini sedang ditangguhkan oleh Admin.';
+          setErrorMsg(msg);
+          toast.error(msg);
           return;
         }
+
+        if (data.redirectToHost && data.user) {
+          const srvToken = data.token || data.sessionToken;
+          setClientSession(data.user, srvToken);
+          toast.info('Email Anda terdaftar sebagai Pengantin. Mengarahkan ke Dashboard Acara Anda...');
+          router.push(resolveRedirectDestination('/dashboard', 'host'));
+          return;
+        }
+
+        if (data.success && data.user && data.user.role === 'vendor' && !data.unregisteredVendor) {
+          const srvToken = data.token || data.sessionToken;
+          setClientSession(data.user, srvToken);
+          toast.success(`Selamat datang kembali di Portal Mitra, ${data.user.companyName || fullName}!`);
+          router.push(resolveRedirectDestination('/vendor', 'vendor'));
+          return;
+        }
+      } catch (err) {
+        console.warn('OAuth vendor verification error:', err);
+      }
+
+      if (pendingMode === 'register' || authMode === 'register') {
+        setAuthMode('register');
+        setPortalRole('vendor');
+        setVendorPicName(fullName);
+        setEmail(userEmail);
+        toast.info('Akun Google terhubung. Lengkapi nama agensi WO Anda untuk menyelesaikan pendaftaran.');
+        return;
+      } else {
+        setAuthMode('register');
+        setPortalRole('vendor');
+        setVendorPicName(fullName);
+        setEmail(userEmail);
+        toast.error('Akun Google ini belum terdaftar sebagai Mitra Vendor. Silakan daftarkan nama agensi WO Anda.');
+        return;
       }
     }
 
@@ -456,15 +434,15 @@ function LoginFormContent() {
 
           const newVendorSession: UserAccount = {
             id: data.vendor.id,
-            name: vendorCompanyName.trim(),
+            name: data.vendor.name || vendorPicName.trim() || vendorCompanyName.trim(),
             email: cleanEmail,
             role: 'vendor',
-            companyName: vendorCompanyName.trim(),
-            phone: vendorPhone.trim(),
-            instagram: vendorInstagram.trim(),
-            city: vendorCity.trim(),
-            partnerTier: 'regular',
-            referralCode: generatedRef,
+            companyName: data.vendor.companyName || vendorCompanyName.trim(),
+            phone: data.vendor.phone || vendorPhone.trim(),
+            instagram: data.vendor.instagram || vendorInstagram.trim(),
+            city: data.vendor.city || vendorCity.trim(),
+            partnerTier: data.vendor.partnerTier || 'regular',
+            referralCode: data.vendor.referralCode || generatedRef,
             walletBalance: 0,
             totalEarnings: 0
           };

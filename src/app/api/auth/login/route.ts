@@ -76,9 +76,11 @@ export async function POST(request: Request) {
         );
       }
 
-      const allVendors = await getAllVendors();
+      const [allVendors, allEvents] = await Promise.all([getAllVendors(), getAllEvents()]);
       const matchedVendor = allVendors.find(
-        (v) => v.email && v.email.trim().toLowerCase() === cleanEmail
+        (v) =>
+          (v.email && v.email.trim().toLowerCase() === cleanEmail) ||
+          (body.id && (v.id === body.id || v.id === 'usr_g_' + String(body.id).substring(0, 10)))
       );
 
       if (requestedRole === 'vendor' && matchedVendor?.status === 'suspended') {
@@ -86,6 +88,42 @@ export async function POST(request: Request) {
           { success: false, error: 'Akun mitra vendor ini sedang ditangguhkan oleh Admin.' },
           { status: 403 }
         );
+      }
+
+      if (requestedRole === 'vendor' && !matchedVendor) {
+        const existingHostEvents = allEvents.filter(
+          (ev) => ev.hostEmail && ev.hostEmail.trim().toLowerCase() === cleanEmail && !ev.vendorId
+        );
+        if (existingHostEvents.length > 0) {
+          const hostObj: UserAccount = {
+            id: body.id || existingSession?.id || 'usr_' + cleanEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),
+            name: (body.name || existingSession?.name || cleanEmail.split('@')[0]).trim(),
+            email: cleanEmail,
+            role: 'host',
+          };
+          const token = signSessionPayload(JSON.stringify(hostObj));
+          const response = NextResponse.json({
+            success: true,
+            redirectToHost: true,
+            user: hostObj,
+            token,
+            sessionToken: token,
+          });
+          const maxAge = 60 * 24 * 60 * 60;
+          response.cookies.set('sb_auth_session', token, {
+            path: '/',
+            maxAge,
+            sameSite: 'lax',
+            httpOnly: false,
+          });
+          return response;
+        }
+
+        return NextResponse.json({
+          success: true,
+          unregisteredVendor: true,
+          email: cleanEmail,
+        });
       }
 
       const userObj: UserAccount =
@@ -109,7 +147,7 @@ export async function POST(request: Request) {
               id: body.id || existingSession?.id || 'usr_' + cleanEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),
               name: (body.name || existingSession?.name || cleanEmail.split('@')[0]).trim(),
               email: cleanEmail,
-              role: requestedRole === 'vendor' ? 'vendor' : 'host',
+              role: 'host',
               companyName: matchedVendor?.companyName || existingSession?.companyName,
               phone: matchedVendor?.phone || existingSession?.phone,
               instagram: matchedVendor?.instagram || existingSession?.instagram,
@@ -124,6 +162,17 @@ export async function POST(request: Request) {
       const response = NextResponse.json({
         success: true,
         user: userObj,
+        vendor: matchedVendor
+          ? {
+              id: matchedVendor.id,
+              name: matchedVendor.name,
+              companyName: matchedVendor.companyName || matchedVendor.name,
+              email: matchedVendor.email,
+              status: matchedVendor.status || 'active',
+              referralCode: matchedVendor.referralCode,
+              logoUrl: matchedVendor.logoUrl || '',
+            }
+          : undefined,
         token,
         sessionToken: token,
       });
