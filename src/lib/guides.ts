@@ -6,6 +6,7 @@ export interface GuideArticle {
   readingTime: string;
   publishedAt: string;
   updatedAt: string;
+  coverImage: string;
   author: {
     name: string;
     role: string;
@@ -31,6 +32,7 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     readingTime: '4 menit baca',
     publishedAt: '2026-10-10',
     updatedAt: '2026-10-15',
+    coverImage: '/images/guides/souvenir-pernikahan-unik.jpg',
     author: {
       name: 'Tim Redaksi SudutBingkai',
       role: 'Wedding Tech Specialist',
@@ -84,6 +86,7 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     readingTime: '5 menit baca',
     publishedAt: '2026-10-12',
     updatedAt: '2026-10-15',
+    coverImage: '/images/guides/photobooth-vs-disposable-camera.jpg',
     author: {
       name: 'Tim Redaksi SudutBingkai',
       role: 'Wedding Tech Specialist',
@@ -137,6 +140,7 @@ export const GUIDE_ARTICLES: GuideArticle[] = [
     readingTime: '3 menit baca',
     publishedAt: '2026-10-14',
     updatedAt: '2026-10-15',
+    coverImage: '/images/guides/cara-membuat-qr-code-tamu.jpg',
     author: {
       name: 'Tim Redaksi SudutBingkai',
       role: 'Wedding Tech Specialist',

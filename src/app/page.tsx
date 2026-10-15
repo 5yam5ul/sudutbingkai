@@ -7,6 +7,7 @@ import { FILM_PRESETS } from '@/lib/filters';
 import { FilmPresetId, UserAccount } from '@/lib/types';
 import { getClientSession, clearClientSession } from '@/lib/auth';
 import { toast } from 'sonner';
+import Footer from '@/components/Footer';
 
 const CURATED_PARTNERS = [
   {
@@ -1814,39 +1815,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FOOTER (Clean Light Glass) */}
-      <footer style={{ borderTop: '1px solid rgba(0, 0, 0, 0.07)', background: '#F4F4F1', padding: '64px 24px 40px' }}>
-        <div style={{ maxWidth: '1060px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: '32px' }}>
-          <div>
-            <div style={{ marginBottom: '12px' }}>
-              <img 
-                src="/sudut-bingkai-logo.png" 
-                alt="Sudut Bingkai" 
-                width={160}
-                height={42}
-                loading="lazy"
-                decoding="async"
-                style={{ height: '42px', width: 'auto', objectFit: 'contain', display: 'block' }} 
-              />
-            </div>
-            <p style={{ color: '#6E6E73', fontSize: '13px', maxWidth: '360px' }}>
-              Pengalaman kamera sekali pakai digital untuk momen otentik dan tak terlupakan di hari istimewa Anda.
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '28px', fontSize: '13px', color: '#515154', flexWrap: 'wrap' }}>
-            <Link href="/create" style={{ color: 'inherit', textDecoration: 'none' }}>Buat Album</Link>
-            <Link href="/cam/demo" style={{ color: 'inherit', textDecoration: 'none' }}>Kamera Tamu</Link>
-            <Link href="/panduan" style={{ color: 'inherit', textDecoration: 'none' }}>Panduan Pernikahan</Link>
-            <Link href="/vendor" style={{ color: 'inherit', textDecoration: 'none' }}>Mitra Vendor</Link>
-          </div>
-        </div>
-
-        <div style={{ maxWidth: '1060px', margin: '48px auto 0', paddingTop: '24px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#86868B' }}>
-          <span>© 2026 SudutBingkai. Hak cipta dilindungi.</span>
-          <span>Dibuat dengan estetika Apple Luminous Glass & Leica.</span>
-        </div>
-      </footer>
+      {/* ENTERPRISE FOOTER */}
+      <Footer />
     </div>
   );
 }

@@ -1,118 +1,21 @@
 import React from 'react';
 import Link from 'next/link';
-import { BookOpen, Clock, ArrowRight, Camera, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Clock, ArrowRight, ChevronRight } from 'lucide-react';
 import { getAllGuides } from '@/lib/guides';
+import HeaderNav from '@/components/HeaderNav';
+import Footer from '@/components/Footer';
 
 export default function PanduanHubPage() {
   const guides = getAllGuides();
 
   return (
     <div style={{ backgroundColor: '#FBFBFA', minHeight: '100vh', color: '#1D1D1F' }}>
-      {/* Top Navigation */}
-      <header
-        style={{
-          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
-          backgroundColor: 'rgba(255, 255, 255, 0.85)',
-          backdropFilter: 'blur(16px)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 40,
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1120px',
-            margin: '0 auto',
-            padding: '16px 24px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <Link
-            href="/"
-            style={{
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-            }}
-          >
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '8px',
-                backgroundColor: '#12110F',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#C27803',
-              }}
-            >
-              <Camera size={18} />
-            </div>
-            <span
-              style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: '20px',
-                fontWeight: 700,
-                color: '#1D1D1F',
-                letterSpacing: '-0.02em',
-              }}
-            >
-              SudutBingkai
-            </span>
-          </Link>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Link
-              href="/"
-              style={{
-                fontSize: '14px',
-                color: '#515154',
-                textDecoration: 'none',
-                fontWeight: 500,
-              }}
-            >
-              Beranda
-            </Link>
-            <Link
-              href="/vendor"
-              style={{
-                fontSize: '14px',
-                color: '#515154',
-                textDecoration: 'none',
-                fontWeight: 500,
-              }}
-            >
-              Mitra WO
-            </Link>
-            <Link
-              href="/create"
-              style={{
-                fontSize: '13px',
-                backgroundColor: '#1D1D1F',
-                color: '#FFFFFF',
-                padding: '8px 18px',
-                borderRadius: '999px',
-                textDecoration: 'none',
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              Buat Acara
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* Unified Header with Official Logo */}
+      <HeaderNav activePath="/panduan" />
 
       {/* Hero Section */}
-      <main style={{ maxWidth: '1120px', margin: '0 auto', padding: '60px 24px 80px' }}>
-        <div style={{ maxWidth: '720px', marginBottom: '56px' }}>
+      <main style={{ maxWidth: '1120px', margin: '0 auto', padding: '56px 24px 80px' }}>
+        <div style={{ maxWidth: '760px', marginBottom: '52px' }}>
           <div
             style={{
               display: 'inline-flex',
@@ -164,12 +67,12 @@ export default function PanduanHubPage() {
           </p>
         </div>
 
-        {/* Article Cards Grid */}
+        {/* Article Cards Grid with Visual Covers */}
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-            gap: '28px',
+            gap: '32px',
             marginBottom: '72px',
           }}
         >
@@ -180,7 +83,7 @@ export default function PanduanHubPage() {
                 backgroundColor: '#FFFFFF',
                 borderRadius: '20px',
                 border: '1px solid rgba(0, 0, 0, 0.08)',
-                padding: '32px 28px',
+                padding: '20px',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
@@ -189,12 +92,41 @@ export default function PanduanHubPage() {
               }}
             >
               <div>
+                {/* 16:9 Editorial Cover Image */}
+                <Link
+                  href={`/panduan/${guide.slug}`}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    aspectRatio: '16 / 9',
+                    borderRadius: '14px',
+                    overflow: 'hidden',
+                    marginBottom: '18px',
+                    backgroundColor: '#F4F4F1',
+                    position: 'relative',
+                  }}
+                >
+                  <img
+                    src={guide.coverImage}
+                    alt={guide.title}
+                    loading="lazy"
+                    decoding="async"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                    }}
+                  />
+                </Link>
+
+                {/* Category & Read Time */}
                 <div
                   style={{
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    marginBottom: '16px',
+                    marginBottom: '12px',
                   }}
                 >
                   <span
@@ -227,10 +159,10 @@ export default function PanduanHubPage() {
 
                 <h2
                   style={{
-                    fontSize: '20px',
+                    fontSize: '19px',
                     fontWeight: 700,
                     lineHeight: 1.35,
-                    marginBottom: '12px',
+                    marginBottom: '10px',
                     color: '#1D1D1F',
                   }}
                 >
@@ -250,7 +182,7 @@ export default function PanduanHubPage() {
                     fontSize: '14px',
                     color: '#515154',
                     lineHeight: 1.6,
-                    marginBottom: '24px',
+                    marginBottom: '20px',
                   }}
                 >
                   {guide.excerpt}
@@ -267,6 +199,8 @@ export default function PanduanHubPage() {
                   fontWeight: 600,
                   color: '#C27803',
                   textDecoration: 'none',
+                  paddingTop: '12px',
+                  borderTop: '1px solid rgba(0, 0, 0, 0.06)',
                 }}
               >
                 Baca Selengkapnya
@@ -333,18 +267,8 @@ export default function PanduanHubPage() {
         </section>
       </main>
 
-      {/* Footer */}
-      <footer
-        style={{
-          borderTop: '1px solid rgba(0, 0, 0, 0.08)',
-          padding: '32px 24px',
-          textAlign: 'center',
-          fontSize: '13px',
-          color: '#86868B',
-        }}
-      >
-        <p>© 2026 SudutBingkai. Seluruh hak cipta dilindungi.</p>
-      </footer>
+      {/* Shared Luxury Enterprise Footer */}
+      <Footer />
     </div>
   );
 }

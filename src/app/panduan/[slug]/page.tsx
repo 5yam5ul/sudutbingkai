@@ -1,8 +1,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Clock, Calendar, User, ArrowRight, CheckCircle2, Camera } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, User, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { getGuideBySlug } from '@/lib/guides';
+import HeaderNav from '@/components/HeaderNav';
+import Footer from '@/components/Footer';
 
 export default async function GuideArticlePage({
   params,
@@ -18,25 +20,20 @@ export default async function GuideArticlePage({
 
   return (
     <div style={{ backgroundColor: '#FBFBFA', minHeight: '100vh', color: '#1D1D1F' }}>
-      {/* Header Bar */}
-      <header
-        style={{
-          borderBottom: '1px solid rgba(0, 0, 0, 0.08)',
-          backgroundColor: 'rgba(255, 255, 255, 0.85)',
-          backdropFilter: 'blur(16px)',
-          position: 'sticky',
-          top: 0,
-          zIndex: 40,
-        }}
-      >
+      {/* Unified Header with Official Logo */}
+      <HeaderNav activePath="/panduan" />
+
+      {/* Article Container */}
+      <main style={{ maxWidth: '840px', margin: '0 auto', padding: '40px 24px 80px' }}>
+        {/* Back Link & Breadcrumb Visual Trail */}
         <div
           style={{
-            maxWidth: '1120px',
-            margin: '0 auto',
-            padding: '16px 24px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+            marginBottom: '28px',
           }}
         >
           <Link
@@ -44,97 +41,38 @@ export default async function GuideArticlePage({
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '8px',
-              fontSize: '14px',
+              gap: '6px',
+              fontSize: '13.5px',
               fontWeight: 600,
-              color: '#515154',
+              color: '#C27803',
               textDecoration: 'none',
             }}
           >
             <ArrowLeft size={16} />
-            <span>Kembali ke Panduan</span>
+            <span>Kembali ke Semua Panduan</span>
           </Link>
 
-          <Link
-            href="/"
+          <nav
+            aria-label="Breadcrumb"
             style={{
-              textDecoration: 'none',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
+              fontSize: '12.5px',
+              color: '#86868B',
             }}
           >
-            <div
-              style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '6px',
-                backgroundColor: '#12110F',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#C27803',
-              }}
-            >
-              <Camera size={15} />
-            </div>
-            <span
-              style={{
-                fontFamily: 'var(--font-serif)',
-                fontSize: '18px',
-                fontWeight: 700,
-                color: '#1D1D1F',
-              }}
-            >
-              SudutBingkai
-            </span>
-          </Link>
-
-          <Link
-            href="/create"
-            style={{
-              fontSize: '13px',
-              backgroundColor: '#1D1D1F',
-              color: '#FFFFFF',
-              padding: '8px 18px',
-              borderRadius: '999px',
-              textDecoration: 'none',
-              fontWeight: 600,
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            Buat Acara
-            <ArrowRight size={14} />
-          </Link>
+            <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>
+              Beranda
+            </Link>
+            <span>/</span>
+            <Link href="/panduan" style={{ color: 'inherit', textDecoration: 'none' }}>
+              Panduan
+            </Link>
+            <span>/</span>
+            <span style={{ color: '#1D1D1F', fontWeight: 600 }}>{guide.category}</span>
+          </nav>
         </div>
-      </header>
-
-      {/* Article Container */}
-      <main style={{ maxWidth: '840px', margin: '0 auto', padding: '48px 24px 80px' }}>
-        {/* Breadcrumb Visual Trail */}
-        <nav
-          aria-label="Breadcrumb"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '13px',
-            color: '#86868B',
-            marginBottom: '24px',
-          }}
-        >
-          <Link href="/" style={{ color: 'inherit', textDecoration: 'none' }}>
-            Beranda
-          </Link>
-          <span>/</span>
-          <Link href="/panduan" style={{ color: 'inherit', textDecoration: 'none' }}>
-            Panduan
-          </Link>
-          <span>/</span>
-          <span style={{ color: '#C27803', fontWeight: 600 }}>{guide.category}</span>
-        </nav>
 
         {/* Article Meta Bar */}
         <div
@@ -143,7 +81,7 @@ export default async function GuideArticlePage({
             flexWrap: 'wrap',
             alignItems: 'center',
             gap: '16px',
-            marginBottom: '20px',
+            marginBottom: '16px',
             fontSize: '13px',
             color: '#86868B',
           }}
@@ -190,6 +128,28 @@ export default async function GuideArticlePage({
         >
           {guide.title}
         </h1>
+
+        {/* Prominent High-Resolution Cover Image */}
+        <div
+          style={{
+            width: '100%',
+            aspectRatio: '16 / 9',
+            borderRadius: '20px',
+            overflow: 'hidden',
+            marginBottom: '36px',
+            backgroundColor: '#F4F4F1',
+            boxShadow: '0 8px 30px rgba(0, 0, 0, 0.06)',
+            border: '1px solid rgba(0, 0, 0, 0.08)',
+          }}
+        >
+          <img
+            src={guide.coverImage}
+            alt={guide.title}
+            loading="eager"
+            decoding="async"
+            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+          />
+        </div>
 
         {/* Intro Highlight Box */}
         <div
@@ -373,18 +333,8 @@ export default async function GuideArticlePage({
         </div>
       </main>
 
-      {/* Footer */}
-      <footer
-        style={{
-          borderTop: '1px solid rgba(0, 0, 0, 0.08)',
-          padding: '32px 24px',
-          textAlign: 'center',
-          fontSize: '13px',
-          color: '#86868B',
-        }}
-      >
-        <p>© 2026 SudutBingkai. Seluruh hak cipta dilindungi.</p>
-      </footer>
+      {/* Shared Luxury Enterprise Footer */}
+      <Footer />
     </div>
   );
 }
