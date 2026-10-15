@@ -4,7 +4,7 @@ const r2AccountId = process.env.R2_ACCOUNT_ID || '';
 const r2AccessKey = process.env.R2_ACCESS_KEY_ID || '';
 const r2SecretKey = process.env.R2_SECRET_ACCESS_KEY || '';
 const r2BucketName = process.env.R2_BUCKET_NAME || 'sudutbingkai-storage';
-const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || '';
+const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || process.env.NEXT_PUBLIC__R2_PUBLIC_URL || '';
 
 export const isR2Configured = Boolean(
   r2AccountId &&
