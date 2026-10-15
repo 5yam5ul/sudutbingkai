@@ -135,9 +135,17 @@ export async function POST(request: Request) {
 
     const id = body.id || 'sb-' + Math.random().toString(36).substring(2, 8);
     const rawSlug = body.slug || body.title;
-    const cleanSlug = rawSlug
+    let cleanSlug = rawSlug
       ? rawSlug.toString().trim().toLowerCase().replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
       : undefined;
+
+    if (cleanSlug) {
+      const allEvents = await getAllEvents();
+      const slugCollision = allEvents.some(e => e.id !== id && e.slug && e.slug.toLowerCase() === cleanSlug!.toLowerCase());
+      if (slugCollision) {
+        cleanSlug = `${cleanSlug}-${Math.random().toString(36).substring(2, 6)}`;
+      }
+    }
 
     const tierKey = (body.packageTier || 'wedding') as EventPackageTier;
     const tierConfig = PACKAGE_TIERS[tierKey] || PACKAGE_TIERS.starter;
@@ -156,10 +164,9 @@ export async function POST(request: Request) {
       }
     }
 
-    const resolvedHostEmail =
-      session.role === 'host'
-        ? session.email.trim().toLowerCase()
-        : (body.hostEmail ? String(body.hostEmail).trim().toLowerCase() : session.email.trim().toLowerCase());
+    const resolvedHostEmail = (body.hostEmail && String(body.hostEmail).includes('@'))
+      ? String(body.hostEmail).trim().toLowerCase()
+      : session.email.trim().toLowerCase();
 
     const defaultShots = tierConfig.shotsPerGuest;
     const requestedShots = body.shotsPerGuest !== undefined ? Number(body.shotsPerGuest) : defaultShots;
@@ -484,9 +491,17 @@ export async function PATCH(request: Request) {
     }
 
     if (body.slug !== undefined) {
-      updates.slug = body.slug
+      let candidateSlug = body.slug
         ? body.slug.toString().trim().toLowerCase().replace(/[^a-z0-9\-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '')
         : undefined;
+      if (candidateSlug) {
+        const allEvents = await getAllEvents();
+        const slugCollision = allEvents.some(e => e.id !== existingEvent.id && e.slug && e.slug.toLowerCase() === candidateSlug!.toLowerCase());
+        if (slugCollision) {
+          candidateSlug = `${candidateSlug}-${Math.random().toString(36).substring(2, 6)}`;
+        }
+      }
+      updates.slug = candidateSlug;
     }
     if (body.title) updates.title = body.title.trim();
     if (body.coupleOrHost) updates.coupleOrHost = body.coupleOrHost.trim();

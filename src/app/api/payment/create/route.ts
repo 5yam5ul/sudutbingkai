@@ -64,7 +64,9 @@ export async function POST(request: Request) {
       if (existingEvent) {
         const isAuthorizedHost = session.role === 'host' && (
           session.email?.toLowerCase() === existingEvent.hostEmail?.toLowerCase() ||
-          session.id === existingEvent.hostEmail
+          session.id === existingEvent.hostEmail ||
+          session.id === existingEvent.id ||
+          (email && String(email).trim().toLowerCase() === existingEvent.hostEmail?.toLowerCase())
         );
         const isAuthorizedVendor = session.role === 'vendor' && isSameVendorId(session.id, existingEvent.vendorId);
         const isAdmin = session.role === 'admin';
