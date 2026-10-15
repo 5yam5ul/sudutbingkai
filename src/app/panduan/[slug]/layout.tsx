@@ -19,7 +19,7 @@ export async function generateMetadata({
   }
 
   const title = guide.title;
-  const description = guide.excerpt;
+  const description = guide.tldr || guide.excerpt;
   const canonicalUrl = `${baseUrl}/panduan/${guide.slug}`;
   const ogImage = `${baseUrl}/opengraph-image`;
 
@@ -103,7 +103,7 @@ export default async function GuideArticleLayout({
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: guide.title,
-    description: guide.excerpt,
+    description: guide.tldr || guide.excerpt,
     image: {
       '@type': 'ImageObject',
       url: `${baseUrl}${guide.coverImage}`,

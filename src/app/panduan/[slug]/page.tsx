@@ -1,7 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, Clock, Calendar, User, ArrowRight, CheckCircle2, Zap, HelpCircle } from 'lucide-react';
+import { ArrowLeft, Clock, Calendar, User, ArrowRight, CheckCircle2, HelpCircle } from 'lucide-react';
 import { getGuideBySlug } from '@/lib/guides';
 import HeaderNav from '@/components/HeaderNav';
 import Footer from '@/components/Footer';
@@ -139,48 +139,19 @@ export default async function GuideArticlePage({
           {guide.title}
         </h1>
 
-        {/* TL;DR Highlight Box (Jurus 3: AI Overviews & Featured Snippets Engine) */}
-        <div
+        {/* Editorial Dek / Lead Paragraph (Natural Featured Snippet for Google & AI Search) */}
+        <p
           style={{
-            backgroundColor: 'rgba(194, 120, 3, 0.08)',
-            border: '1px solid rgba(194, 120, 3, 0.25)',
-            borderRadius: '16px',
-            padding: 'clamp(18px, 2.5vw, 22px)',
-            marginBottom: '24px',
+            fontSize: 'clamp(16.5px, 2.2vw, 19.5px)',
+            color: '#48484A',
+            lineHeight: 1.6,
+            fontWeight: 450,
+            marginBottom: '28px',
+            letterSpacing: '-0.01em',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <span
-              style={{
-                backgroundColor: '#C27803',
-                color: '#FFFFFF',
-                fontSize: '11px',
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                textTransform: 'uppercase',
-                padding: '3px 10px',
-                borderRadius: '999px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
-            >
-              <Zap size={12} fill="#FFFFFF" />
-              <span>Ringkasan Cepat (TL;DR)</span>
-            </span>
-          </div>
-          <p
-            style={{
-              fontSize: '14.5px',
-              color: '#1D1D1F',
-              lineHeight: 1.65,
-              fontWeight: 500,
-              margin: 0,
-            }}
-          >
-            {guide.tldr}
-          </p>
-        </div>
+          {guide.tldr}
+        </p>
 
         {/* Prominent High-Resolution Cover Image with Rich Alt (Jurus 4: Image SEO) */}
         <div
