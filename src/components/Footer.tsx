@@ -168,6 +168,79 @@ export default function Footer() {
               <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981' }} />
               <span>Sistem Siap untuk Acara Hari Ini</span>
             </div>
+
+            {/* Official Social Media Links */}
+            <div style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <a
+                href="https://instagram.com/sudutbingkai.id"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Instagram Resmi @sudutbingkai.id"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 0, 0, 0.04)',
+                  color: '#1D1D1F',
+                  border: '1px solid rgba(0, 0, 0, 0.08)',
+                  transition: 'all 0.2s',
+                  textDecoration: 'none',
+                }}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                  <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/>
+                  <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/>
+                </svg>
+              </a>
+              <a
+                href="https://tiktok.com/@sudutbingkai.id"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="TikTok Resmi @sudutbingkai.id"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 0, 0, 0.04)',
+                  color: '#1D1D1F',
+                  border: '1px solid rgba(0, 0, 0, 0.08)',
+                  transition: 'all 0.2s',
+                  textDecoration: 'none',
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.29 0 .58.04.86.12V9.42a6.34 6.34 0 0 0-.86-.06A6.33 6.33 0 0 0 3 15.69a6.33 6.33 0 0 0 9.09 5.67 6.27 6.27 0 0 0 3.73-5.71V8.75a8.28 8.28 0 0 0 4.88 1.58V6.88a4.86 4.86 0 0 1-1.11-.19z" />
+                </svg>
+              </a>
+              <a
+                href="https://wa.me/6285782255128"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="WhatsApp Resmi 0857-8225-5128"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'rgba(0, 0, 0, 0.04)',
+                  color: '#059669',
+                  border: '1px solid rgba(0, 0, 0, 0.08)',
+                  transition: 'all 0.2s',
+                  textDecoration: 'none',
+                }}
+              >
+                <MessageCircle size={15} />
+              </a>
+            </div>
           </div>
 
           {/* Column 2: Produk & Fitur */}
