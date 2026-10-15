@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 
 const r2AccountId = process.env.R2_ACCOUNT_ID || '';
 const r2AccessKey = process.env.R2_ACCESS_KEY_ID || '';
@@ -64,12 +64,62 @@ export async function uploadBufferToR2(
 }
 
 /**
+ * Download a binary buffer directly from Cloudflare R2 bucket.
+ * Used by the storage proxy route to bypass Indonesian ISP blocks on r2.dev.
+ */
+export async function downloadFromR2(key: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+  if (!r2Client) return null;
+  const cleanKey = key.replace(/^\/+/, '');
+  try {
+    const command = new GetObjectCommand({
+      Bucket: r2BucketName,
+      Key: cleanKey,
+    });
+    const response = await r2Client.send(command);
+    if (!response.Body) return null;
+    const byteArray = await response.Body.transformToByteArray();
+    return {
+      buffer: Buffer.from(byteArray),
+      contentType: response.ContentType || 'image/jpeg',
+    };
+  } catch (error) {
+    console.error('R2 download failed for key', cleanKey, error);
+    return null;
+  }
+}
+
+/**
+ * Converts r2.dev URLs into safe local proxy URLs (/api/storage/...) so devices
+ * on Indonesian telco providers (Telkomsel, Indihome, XL, Indosat) won't get
+ * intercepted by Internet Positif / Kominfo DNS filters.
+ */
+export function formatSafeMediaUrl(url?: string | null): string {
+  if (!url || typeof url !== 'string') return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+  if (trimmed.includes('.r2.dev/')) {
+    try {
+      const parsed = new URL(trimmed);
+      return `/api/storage${parsed.pathname}`;
+    } catch {
+      return trimmed;
+    }
+  }
+  return trimmed;
+}
+
+/**
  * Extract the canonical R2 object key from a public URL or storage path
  */
 export function extractR2KeyFromUrl(urlOrKey?: string | null): string | null {
   if (!urlOrKey || typeof urlOrKey !== 'string') return null;
   const trimmed = urlOrKey.trim();
   if (!trimmed || trimmed.startsWith('data:') || trimmed.startsWith('/uploads/')) return null;
+
+  // If it's a proxy storage path: /api/storage/events/...
+  if (trimmed.startsWith('/api/storage/')) {
+    return trimmed.replace('/api/storage/', '').replace(/^\/+/, '');
+  }
 
   // If it's already a relative R2 key
   if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
@@ -130,4 +180,5 @@ export async function deleteFromR2(keyOrUrl: string): Promise<boolean> {
     return false;
   }
 }
+
 

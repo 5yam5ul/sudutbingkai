@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getEventById } from '@/lib/db';
-import { uploadBufferToR2, deleteFromR2, isR2Configured } from '@/lib/r2';
+import { uploadBufferToR2, deleteFromR2, isR2Configured, formatSafeMediaUrl } from '@/lib/r2';
 import { getServerSession, isSameVendorId } from '@/lib/auth';
 import { getEventRetentionInfo } from '@/lib/types';
 import { isMayarConfigured } from '@/lib/mayar';
@@ -113,7 +113,7 @@ export async function GET(request: Request) {
           eventId: item.event_id,
           guestName: item.guest_name,
           sessionId: item.session_id || undefined,
-          audioUrl: shouldMaskAudio ? '' : item.audio_url,
+          audioUrl: shouldMaskAudio ? '' : formatSafeMediaUrl(item.audio_url),
           duration: item.duration,
           timestamp: item.timestamp
         }));

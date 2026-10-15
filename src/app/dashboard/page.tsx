@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play, Link2, Globe, Copy, CreditCard, FileText } from 'lucide-react';
+import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play, Link2, Globe, Copy, CreditCard, FileText, BookOpen, Users, Clock, Search } from 'lucide-react';
 import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, authFetch } from '@/lib/auth';
 import { FILM_PRESETS } from '@/lib/filters';
@@ -25,6 +25,20 @@ interface VoiceNoteRecord {
   timestamp: string;
 }
 
+interface GuestRecord {
+  id: string;
+  eventId: string;
+  guestName: string;
+  sessionId: string;
+  checkedInAt: string;
+  lastActiveAt?: string;
+  shotsCount: number;
+  hasVoiceNote: boolean;
+  hasVideoWish: boolean;
+  latestPhotoUrl?: string;
+  notes?: string;
+}
+
 export default function BrideDashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserAccount | null>(null);
@@ -33,10 +47,13 @@ export default function BrideDashboardPage() {
   const [photos, setPhotos] = useState<PhotoRecord[]>([]);
   const [voiceNotes, setVoiceNotes] = useState<VoiceNoteRecord[]>([]);
   const [videoWishes, setVideoWishes] = useState<VideoWishRecord[]>([]);
+  const [guests, setGuests] = useState<GuestRecord[]>([]);
+  const [guestSearch, setGuestSearch] = useState('');
+  const [loadingGuests, setLoadingGuests] = useState(false);
   const [showStoriesPlayer, setShowStoriesPlayer] = useState(false);
   const [activeStoryIndex, setActiveStoryIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'photos' | 'settings'>('photos');
+  const [activeTab, setActiveTab] = useState<'photos' | 'settings' | 'guests'>('photos');
   const [gallerySubTab, setGallerySubTab] = useState<'photos' | 'voices' | 'videos'>('photos');
   const [filterTab, setFilterTab] = useState<'all' | 'visible' | 'hidden' | 'wishes'>('all');
   const [activePhoto, setActivePhoto] = useState<PhotoRecord | null>(null);
@@ -279,6 +296,23 @@ export default function BrideDashboardPage() {
       console.warn('Gagal memuat video ucapan:', vidErr);
       setVideoWishes([]);
     }
+
+    // Fetch guests for Buku Tamu
+    try {
+      setLoadingGuests(true);
+      const resGuests = await authFetch(`/api/guests?eventId=${selected.id}`);
+      const dataGuests = await resGuests.json();
+      if (dataGuests.success && dataGuests.guests) {
+        setGuests(dataGuests.guests);
+      } else {
+        setGuests([]);
+      }
+    } catch (gErr) {
+      console.warn('Gagal memuat buku tamu:', gErr);
+      setGuests([]);
+    } finally {
+      setLoadingGuests(false);
+    }
   };
 
   const fetchData = async (currentUser?: UserAccount, targetEventId?: string) => {
@@ -448,6 +482,37 @@ export default function BrideDashboardPage() {
       setZipProgress('');
     }
   };
+
+  const exportGuestsToCSV = () => {
+    if (guests.length === 0) {
+      toast.info('Belum ada data tamu untuk diekspor.');
+      return;
+    }
+    const headers = ['No', 'Nama Tamu', 'Waktu Hadir (WIB)', 'Aktivitas Terakhir (WIB)', 'Jumlah Foto', 'Pesan Suara', 'Video Ucapan', 'ID Sesi'];
+    const rows = guests.map((g, idx) => [
+      idx + 1,
+      `"${(g.guestName || 'Tamu Undangan').replace(/"/g, '""')}"`,
+      `"${new Date(g.checkedInAt).toLocaleString('id-ID')}"`,
+      `"${g.lastActiveAt ? new Date(g.lastActiveAt).toLocaleString('id-ID') : '-'}"`,
+      g.shotsCount,
+      g.hasVoiceNote ? 'Ada' : 'Tidak',
+      g.hasVideoWish ? 'Ada' : 'Tidak',
+      `"${g.sessionId || '-'}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Buku_Tamu_${(event?.title || 'SudutBingkai').replace(/[^a-zA-Z0-9_\-]/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Buku tamu berhasil diekspor ke CSV!');
+  };
+
+  const filteredGuests = guests.filter(g =>
+    !guestSearch.trim() || (g.guestName && g.guestName.toLowerCase().includes(guestSearch.trim().toLowerCase()))
+  );
 
   const handleDeleteVoiceNote = (noteId: string) => {
     setConfirmModal({
@@ -1110,6 +1175,26 @@ export default function BrideDashboardPage() {
             >
               <span className="desktop-only">Pengaturan & Bingkai</span>
               <span className="mobile-only">Pengaturan</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('guests')}
+              className="glass-pill"
+              style={{
+                background: activeTab === 'guests' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
+                color: activeTab === 'guests' ? '#FFFFFF' : '#1D1D1F',
+                padding: '8px 18px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+            >
+              <BookOpen size={14} />
+              <span className="desktop-only">Buku Tamu ({guests.length})</span>
+              <span className="mobile-only">Tamu ({guests.length})</span>
             </button>
           </div>
 
@@ -2530,6 +2615,279 @@ export default function BrideDashboardPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: BUKU TAMU DIGITAL (GUESTBOOK) */}
+        {activeTab === 'guests' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* Header Description & Stats Card */}
+            <div className="glass-card form-section-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '24px' }}>
+                <div>
+                  <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
+                    BUKU TAMU & PRESENSI DIGITAL
+                  </span>
+                  <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 6px 0' }}>
+                    Daftar Kehadiran Tamu Undangan
+                  </h2>
+                  <p style={{ color: '#6E6E73', fontSize: '14px', margin: 0, maxWidth: '640px' }}>
+                    Setiap tamu yang memindai QR code dan membuka kamera acara otomatis tercatat secara real-time di buku tamu ini beserta jumlah jepretan dan doa yang mereka sampaikan.
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    onClick={exportGuestsToCSV}
+                    disabled={guests.length === 0}
+                    className="glass-pill"
+                    style={{
+                      padding: '9px 18px',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      cursor: guests.length === 0 ? 'not-allowed' : 'pointer',
+                      border: '1px solid rgba(194, 120, 3, 0.3)',
+                      background: 'rgba(194, 120, 3, 0.08)',
+                      color: '#C27803'
+                    }}
+                    title="Unduh data buku tamu dalam format Excel / CSV"
+                  >
+                    <Download size={14} />
+                    <span>Ekspor Buku Tamu (.CSV)</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (event) {
+                        setLoadingGuests(true);
+                        authFetch(`/api/guests?eventId=${event.id}`)
+                          .then(r => r.json())
+                          .then(d => {
+                            if (d.success && d.guests) setGuests(d.guests);
+                            toast.success('Buku tamu diperbarui!');
+                          })
+                          .catch(() => toast.error('Gagal memuat buku tamu'))
+                          .finally(() => setLoadingGuests(false));
+                      }
+                    }}
+                    className="glass-pill"
+                    style={{ padding: '9px 16px', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+                  >
+                    <RefreshCw size={14} className={loadingGuests ? 'animate-spin' : ''} />
+                    <span>Segarkan</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Stat Counters Grid */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+                gap: '14px',
+                padding: '16px',
+                borderRadius: '16px',
+                background: 'rgba(0,0,0,0.02)',
+                border: '1px solid rgba(0,0,0,0.05)'
+              }}>
+                <div>
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#86868B', textTransform: 'uppercase' }}>
+                    Total Tamu Hadir / Scan
+                  </span>
+                  <div style={{ fontSize: '24px', fontWeight: 800, color: '#1D1D1F', marginTop: '2px' }}>
+                    {guests.length} <span style={{ fontSize: '13px', fontWeight: 500, color: '#86868B' }}>/ {event?.maxGuests || 5} Pax</span>
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#86868B', textTransform: 'uppercase' }}>
+                    Total Foto Terkumpul
+                  </span>
+                  <div style={{ fontSize: '24px', fontWeight: 800, color: '#C27803', marginTop: '2px' }}>
+                    {photos.length} <span style={{ fontSize: '13px', fontWeight: 500, color: '#86868B' }}>Foto</span>
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#86868B', textTransform: 'uppercase' }}>
+                    Tamu Aktif Jepret
+                  </span>
+                  <div style={{ fontSize: '24px', fontWeight: 800, color: '#1D1D1F', marginTop: '2px' }}>
+                    {guests.filter(g => g.shotsCount > 0).length} <span style={{ fontSize: '13px', fontWeight: 500, color: '#86868B' }}>Tamu</span>
+                  </div>
+                </div>
+
+                <div>
+                  <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#86868B', textTransform: 'uppercase' }}>
+                    Pesan Suara & Video
+                  </span>
+                  <div style={{ fontSize: '24px', fontWeight: 800, color: '#1D1D1F', marginTop: '2px' }}>
+                    {voiceNotes.length + videoWishes.length} <span style={{ fontSize: '13px', fontWeight: 500, color: '#86868B' }}>Ucapan</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Guest List & Search */}
+            <div className="glass-card form-section-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+                <div style={{ position: 'relative', width: '100%', maxWidth: '360px' }}>
+                  <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#86868B' }} />
+                  <input
+                    type="text"
+                    value={guestSearch}
+                    onChange={(e) => setGuestSearch(e.target.value)}
+                    placeholder="Cari nama tamu undangan..."
+                    className="glass-input"
+                    style={{ width: '100%', paddingLeft: '36px', paddingRight: '12px', height: '40px', fontSize: '13px', borderRadius: '12px' }}
+                  />
+                  {guestSearch && (
+                    <button
+                      onClick={() => setGuestSearch('')}
+                      style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#86868B', padding: 0 }}
+                    >
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+
+                <span style={{ fontSize: '12.5px', color: '#86868B' }}>
+                  Menampilkan {filteredGuests.length} dari {guests.length} tamu
+                </span>
+              </div>
+
+              {filteredGuests.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '50px 20px', background: 'rgba(0,0,0,0.02)', borderRadius: '16px' }}>
+                  <Users size={36} color="#86868B" style={{ margin: '0 auto 12px', opacity: 0.6 }} />
+                  <h4 style={{ fontSize: '16px', fontWeight: 600, color: '#1D1D1F', margin: '0 0 6px 0' }}>
+                    {guestSearch ? 'Tidak ada nama tamu yang sesuai pencarian' : 'Belum Ada Tamu yang Scan Kamera'}
+                  </h4>
+                  <p style={{ color: '#86868B', fontSize: '13px', margin: '0 auto 16px', maxWidth: '420px' }}>
+                    {guestSearch
+                      ? 'Coba gunakan kata kunci pencarian yang lain.'
+                      : 'Bagikan kartu QR fisik atau tautan kamera ke para tamu. Begitu mereka membuka kamera dan memasukkan nama, data kehadiran mereka akan langsung muncul di sini.'}
+                  </p>
+                  {!guestSearch && event && (
+                    <button
+                      onClick={() => {
+                        const url = `${typeof window !== 'undefined' ? window.location.origin : 'https://sudutbingkai.id'}/cam/${eventSlug || event.slug || event.id}`;
+                        navigator.clipboard.writeText(url);
+                        toast.success('Tautan kamera tamu berhasil disalin!');
+                      }}
+                      className="btn-apple-black"
+                      style={{ padding: '8px 18px', fontSize: '12.5px' }}
+                    >
+                      Salin Tautan Kamera Tamu
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {filteredGuests.map((g, idx) => (
+                    <div
+                      key={g.id || idx}
+                      style={{
+                        padding: '16px',
+                        borderRadius: '16px',
+                        background: '#FFFFFF',
+                        border: '1px solid rgba(0,0,0,0.07)',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        flexWrap: 'wrap',
+                        gap: '14px'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: '240px' }}>
+                        {/* Guest Initial Avatar */}
+                        <div style={{
+                          width: '44px',
+                          height: '44px',
+                          borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #FFF8ED 0%, #F5E6CC 100%)',
+                          border: '1.5px solid rgba(194, 120, 3, 0.4)',
+                          color: '#C27803',
+                          fontWeight: 700,
+                          fontSize: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {g.guestName ? g.guestName.charAt(0).toUpperCase() : 'T'}
+                        </div>
+
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>
+                              {g.guestName}
+                            </strong>
+                            {g.shotsCount >= (event?.shotsPerGuest || 10) ? (
+                              <span style={{ fontSize: '10px', fontWeight: 600, background: '#ECFDF5', color: '#047857', padding: '2px 8px', borderRadius: '12px' }}>
+                                Kuota Selesai ({g.shotsCount}/{event?.shotsPerGuest || 10})
+                              </span>
+                            ) : g.shotsCount > 0 ? (
+                              <span style={{ fontSize: '10px', fontWeight: 600, background: '#FFF8ED', color: '#C27803', padding: '2px 8px', borderRadius: '12px' }}>
+                                Aktif ({g.shotsCount}/{event?.shotsPerGuest || 10} Foto)
+                              </span>
+                            ) : (
+                              <span style={{ fontSize: '10px', fontWeight: 600, background: 'rgba(0,0,0,0.05)', color: '#6E6E73', padding: '2px 8px', borderRadius: '12px' }}>
+                                Baru Masuk
+                              </span>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px', fontSize: '11.5px', color: '#86868B', flexWrap: 'wrap' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Clock size={12} />
+                              Hadir: {new Date(g.checkedInAt).toLocaleString('id-ID', { dateStyle: 'short', timeStyle: 'short' })} WIB
+                            </span>
+                            {g.sessionId && (
+                              <span style={{ fontFamily: 'var(--font-mono)', fontSize: '10.5px', color: '#A1A1A6' }}>
+                                ID: {g.sessionId.slice(-8)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Contribution Badges & Actions */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                        {g.hasVoiceNote && (
+                          <span style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#047857', background: '#ECFDF5', padding: '4px 10px', borderRadius: '20px', fontWeight: 500 }}>
+                            <Mic size={12} /> Ada Pesan Suara
+                          </span>
+                        )}
+                        {g.hasVideoWish && (
+                          <span style={{ fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#6366F1', background: '#EEF2FF', padding: '4px 10px', borderRadius: '20px', fontWeight: 500 }}>
+                            <Video size={12} /> Ada Video
+                          </span>
+                        )}
+
+                        {g.shotsCount > 0 && (
+                          <button
+                            onClick={() => {
+                              setActiveTab('photos');
+                              setGallerySubTab('photos');
+                              window.scrollTo({ top: 300, behavior: 'smooth' });
+                            }}
+                            className="glass-pill"
+                            style={{ padding: '6px 14px', fontSize: '11.5px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                            title={`Lihat ${g.shotsCount} foto milik ${g.guestName}`}
+                          >
+                            <Camera size={12} color="#C27803" />
+                            <span>{g.shotsCount} Foto</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

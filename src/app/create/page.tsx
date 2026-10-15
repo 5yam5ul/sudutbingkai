@@ -106,9 +106,6 @@ function CreateEventForm() {
     if (session.role === 'host' && session.email) {
       setExistingHost(session);
       setHostEmail(session.email);
-      if (session.name) {
-        setCoupleOrHost(prev => prev || session.name);
-      }
     }
 
     // Check URL searchParams or localStorage for partner referral

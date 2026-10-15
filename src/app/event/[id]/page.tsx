@@ -920,7 +920,7 @@ export default function EventDashboardPage() {
               textShadow: '0 3px 18px rgba(0, 0, 0, 0.7)'
             }}
           >
-            {event?.coupleOrHost || event?.title || 'Galeri Acara'}
+            {event?.title || event?.coupleOrHost || 'Galeri Acara'}
           </h1>
 
           {/* Date & Location */}

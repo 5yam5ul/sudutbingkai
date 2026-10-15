@@ -319,6 +319,19 @@ export default function GuestCameraPage() {
               queryParams.set('guestName', guestIdentifier);
             }
 
+            // Sync check-in to Buku Tamu
+            if (guestIdentifier && guestIdentifier !== 'Tamu' && guestIdentifier !== 'Tamu Undangan') {
+              fetch('/api/guests', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  eventId: canonicalId,
+                  guestName: guestIdentifier,
+                  sessionId: activeSession,
+                }),
+              }).catch(() => {});
+            }
+
             // Verify if guest already submitted a voice note or video wish
             if (guestIdentifier && guestIdentifier !== 'Tamu' && guestIdentifier !== 'Tamu Undangan') {
               fetch(`/api/voice-notes?eventId=${canonicalId}&guestName=${encodeURIComponent(guestIdentifier)}&sessionId=${encodeURIComponent(activeSession)}`)
@@ -641,6 +654,18 @@ export default function GuestCameraPage() {
     const targetEventId = event?.id || eventId;
     if (clean && clean !== 'Tamu' && clean !== 'Tamu Undangan') {
       const activeSession = guestSessionId || getOrCreateGuestSession(targetEventId, eventId);
+
+      // Record check-in to Buku Tamu
+      fetch('/api/guests', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: targetEventId,
+          guestName: clean,
+          sessionId: activeSession,
+        }),
+      }).catch(() => {});
+
       fetch(`/api/photos?eventId=${targetEventId}&sessionId=${encodeURIComponent(activeSession)}&guestName=${encodeURIComponent(clean)}`)
         .then(res => res.json())
         .then(pData => {

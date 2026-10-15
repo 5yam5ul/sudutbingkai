@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem, VideoWishRecord, PACKAGE_TIERS, EventPackageTier } from './types';
 import { supabase, isSupabaseConfigured } from './supabase';
-import { uploadBufferToR2, isR2Configured, deleteFromR2 } from './r2';
+import { uploadBufferToR2, isR2Configured, deleteFromR2, formatSafeMediaUrl } from './r2';
 import { isSameVendorId } from './auth';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
@@ -119,12 +119,12 @@ function rowToEvent(row: any): EventData {
     revealMode: row.reveal_mode,
     revealTime: row.reveal_time || undefined,
     frameId: row.frame_id,
-    customFrameUrl: row.custom_frame_url || undefined,
+    customFrameUrl: formatSafeMediaUrl(row.custom_frame_url) || undefined,
     frameText: row.frame_text || undefined,
     allowVoiceNote: row.allow_voice_note,
     closingWishType: row.closing_wish_type || (row.package_tier === 'wedding' || row.package_tier === 'unlimited' ? 'video' : 'voice'),
     allowGuestFrameToggle: row.allow_guest_frame_toggle,
-    coverUrl: row.cover_url || undefined,
+    coverUrl: formatSafeMediaUrl(row.cover_url) || undefined,
     createdAt: row.created_at,
     hostEmail: row.host_email || undefined,
     paymentStatus: row.payment_status || 'paid',
@@ -133,7 +133,7 @@ function rowToEvent(row: any): EventData {
     commissionStatus: row.commission_status || undefined,
     vendorId: row.vendor_id || undefined,
     vendorName: row.vendor_name || undefined,
-    vendorLogo: row.vendor_logo || undefined,
+    vendorLogo: formatSafeMediaUrl(row.vendor_logo) || undefined,
     vendorInstagram: row.vendor_instagram || undefined,
   };
 }
@@ -182,12 +182,12 @@ function rowToPhoto(row: any): PhotoRecord {
     guestName: row.guest_name,
     sessionId: row.session_id,
     shotNumber: row.shot_number,
-    imageData: row.image_url,
+    imageData: formatSafeMediaUrl(row.image_url),
     caption: row.caption || undefined,
     isHidden: row.is_hidden || false,
     aspectRatio: row.aspect_ratio || '3:4',
     frameId: row.frame_id || 'none',
-    voiceNoteUrl: row.voice_note_url || undefined,
+    voiceNoteUrl: formatSafeMediaUrl(row.voice_note_url) || undefined,
     timestamp: row.timestamp
   };
 }
@@ -2796,9 +2796,8 @@ export async function getVideoWishes(eventId?: string): Promise<VideoWishRecord[
           id: row.id,
           eventId: row.event_id,
           guestName: row.guest_name,
-          tableNumber: row.table_number || undefined,
-          videoUrl: row.video_url,
-          thumbnailUrl: row.thumbnail_url || undefined,
+          videoUrl: formatSafeMediaUrl(row.video_url),
+          thumbnailUrl: formatSafeMediaUrl(row.thumbnail_url) || undefined,
           durationSeconds: Number(row.duration || 15),
           aspectRatio: row.aspect_ratio || '9:16',
           sessionId: row.session_id || undefined,
