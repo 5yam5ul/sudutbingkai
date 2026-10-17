@@ -265,9 +265,13 @@ export async function getAllEvents(): Promise<EventData[]> {
       if (!error && data) {
         return data.map(row => {
           const mapped = rowToEvent(row);
+          const hasSupabaseExplicitCat = Boolean(
+            row.event_type ||
+            (Array.isArray(row.allowed_presets) && row.allowed_presets.some((p: unknown) => typeof p === 'string' && p.startsWith('__cat:')))
+          );
           const localCached = localEventsMap.get(mapped.id);
           if (localCached) {
-            if (localCached.eventType) mapped.eventType = localCached.eventType;
+            if (!hasSupabaseExplicitCat && localCached.eventType) mapped.eventType = localCached.eventType;
             if (localCached.vendorCoBranding && !mapped.vendorCoBranding) mapped.vendorCoBranding = localCached.vendorCoBranding;
             if (localCached.addons && !mapped.addons) mapped.addons = localCached.addons;
           }
@@ -298,13 +302,17 @@ export async function getEventById(id: string): Promise<EventData | null> {
 
       if (!error && data) {
         const mapped = rowToEvent(data);
+        const hasSupabaseExplicitCat = Boolean(
+          data.event_type ||
+          (Array.isArray(data.allowed_presets) && data.allowed_presets.some((p: unknown) => typeof p === 'string' && p.startsWith('__cat:')))
+        );
         try {
           if (fs.existsSync(EVENTS_FILE)) {
             const raw = fs.readFileSync(EVENTS_FILE, 'utf8');
             const parsed: EventData[] = JSON.parse(raw);
             const localCached = parsed.find(e => e.id === mapped.id);
             if (localCached) {
-              if (localCached.eventType) mapped.eventType = localCached.eventType;
+              if (!hasSupabaseExplicitCat && localCached.eventType) mapped.eventType = localCached.eventType;
               if (localCached.vendorCoBranding && !mapped.vendorCoBranding) mapped.vendorCoBranding = localCached.vendorCoBranding;
               if (localCached.addons && !mapped.addons) mapped.addons = localCached.addons;
             }
