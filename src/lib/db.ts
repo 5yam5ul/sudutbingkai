@@ -2198,14 +2198,17 @@ async function resolveVendorLogoR2(vendorId: string, rawLogoUrl?: string | null)
 
 async function syncVendorBrandingToEvents(
   vendorId: string,
-  branding: { vendorLogo?: string; vendorName?: string; vendorInstagram?: string }
+  branding: { vendorLogo?: string; vendorName?: string; vendorInstagram?: string; referralCode?: string }
 ) {
   if (!vendorId) return;
   const normalizedTarget = vendorId.replace(/^v_/, 'vendor_');
+  const cleanRef = (branding.referralCode || '').trim().toUpperCase();
   try {
     const allEvents = await getAllEvents();
     const matchingEvents = allEvents.filter(
-      e => e.vendorId && (e.vendorId === vendorId || e.vendorId.replace(/^v_/, 'vendor_') === normalizedTarget)
+      e =>
+        (e.vendorId && (e.vendorId === vendorId || e.vendorId.replace(/^v_/, 'vendor_') === normalizedTarget)) ||
+        (cleanRef && e.referralCodeUsed && e.referralCodeUsed.toUpperCase() === cleanRef)
     );
     for (const ev of matchingEvents) {
       const evUpdates: Partial<EventData> = {};
@@ -2240,20 +2243,23 @@ export async function saveVendor(vendorData: any): Promise<any> {
       resolvedLogoUrl = await resolveVendorLogoR2(vendorId, resolvedLogoUrl);
     }
     await syncVendorBrandingToEvents(prevVendor?.id || vendorId, {
-      vendorLogo: resolvedLogoUrl,
+      vendorLogo: formatSafeMediaUrl(resolvedLogoUrl) || resolvedLogoUrl,
       vendorName: vendorData.companyName || vendorData.name,
-      vendorInstagram: vendorData.instagram
+      vendorInstagram: vendorData.instagram,
+      referralCode: vendorData.referralCode || prevVendor?.referralCode
     });
-    if (vendorData.logoUrl !== undefined && prevVendor?.logoUrl && prevVendor.logoUrl !== resolvedLogoUrl) {
+    if (vendorData.logoUrl !== undefined && prevVendor?.logoUrl && prevVendor.logoUrl !== resolvedLogoUrl && prevVendor.logoUrl !== formatSafeMediaUrl(resolvedLogoUrl)) {
       await deleteFromR2(prevVendor.logoUrl);
     }
   } catch {}
+
+  const safeLogoUrl = formatSafeMediaUrl(resolvedLogoUrl) || '';
 
   const newVendor = {
     ...vendorData,
     id: vendorId,
     status: vendorData.status || 'active',
-    logoUrl: resolvedLogoUrl || '',
+    logoUrl: safeLogoUrl,
     createdAt: vendorData.createdAt || new Date().toISOString()
   };
 
@@ -2312,6 +2318,9 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       if (updates.logoUrl && updates.logoUrl.startsWith('data:image')) {
         updates.logoUrl = await resolveVendorLogoR2(id, updates.logoUrl);
       }
+      if (updates.logoUrl !== undefined) {
+        updates.logoUrl = formatSafeMediaUrl(updates.logoUrl) || '';
+      }
       const existingVendors = await getAllVendors();
       const prevVendor = existingVendors.find(
         v => v.id === id || v.id?.replace(/^v_/, 'vendor_') === String(id).replace(/^v_/, 'vendor_')
@@ -2319,7 +2328,8 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       await syncVendorBrandingToEvents(prevVendor?.id || id, {
         vendorLogo: updates.logoUrl,
         vendorName: updates.companyName,
-        vendorInstagram: updates.instagram
+        vendorInstagram: updates.instagram,
+        referralCode: updates.referralCode || prevVendor?.referralCode
       });
       if (updates.logoUrl !== undefined && prevVendor?.logoUrl && prevVendor.logoUrl !== updates.logoUrl) {
         await deleteFromR2(prevVendor.logoUrl);
@@ -2369,7 +2379,7 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
           email: data.email,
           phone: data.phone || '',
           instagram: data.instagram || '',
-          logoUrl: data.logo_url || '',
+          logoUrl: formatSafeMediaUrl(data.logo_url) || '',
           tier: data.tier === 'suspended' ? 'pro' : (data.tier || 'pro'),
           status: updates.status || data.status || (data.tier === 'suspended' ? 'suspended' : 'active'),
           partnerTier: data.partner_tier || 'regular',

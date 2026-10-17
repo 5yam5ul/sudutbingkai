@@ -65,7 +65,10 @@ function CreateEventForm() {
 
   // Vendor Commission Calculations
   const isVendor = currentUser?.role === 'vendor';
-  const vendorCommissionRate = currentUser?.partnerTier === 'vip' ? 0.20 : currentUser?.partnerTier === 'pro' ? 0.15 : 0.12;
+  const rawVendorRate = Number(currentUser?.commissionRate) || 0;
+  const vendorCommissionRate = rawVendorRate > 0
+    ? (rawVendorRate <= 1 ? rawVendorRate : rawVendorRate / 100)
+    : (currentUser?.partnerTier === 'vip' ? 0.20 : currentUser?.partnerTier === 'pro' ? 0.15 : 0.12);
   const basePackagePrice = parseInt(activeTier.price.replace(/[^0-9]/g, ''), 10) || 0;
   const vendorCommissionAmount = Math.round(basePackagePrice * vendorCommissionRate);
 
@@ -88,7 +91,6 @@ function CreateEventForm() {
 
   // 5. Host Account & Dashboard Credentials
   const [hostEmail, setHostEmail] = useState<string>('');
-  const [hostPin, setHostPin] = useState<string>('');
   const [existingHost, setExistingHost] = useState<UserAccount | null>(null);
 
   // Check mandatory session & referral code on mount
@@ -106,6 +108,29 @@ function CreateEventForm() {
     if (session.role === 'host' && session.email) {
       setExistingHost(session);
       setHostEmail(session.email);
+    } else if (session.role === 'vendor') {
+      authFetch('/api/vendors')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && Array.isArray(data.vendors)) {
+            const matched = data.vendors.find(
+              (v: any) => v.id === session.id || (session.email && v.email?.toLowerCase() === session.email.toLowerCase())
+            );
+            if (matched) {
+              setCurrentUser(prev => prev ? {
+                ...prev,
+                companyName: matched.companyName || prev.companyName || matched.name,
+                logoUrl: matched.logoUrl || prev.logoUrl,
+                instagram: matched.instagram || prev.instagram,
+                partnerTier: matched.partnerTier || prev.partnerTier || 'regular',
+                commissionRate: matched.commissionRate ?? prev.commissionRate,
+                walletBalance: typeof matched.walletBalance === 'number' ? matched.walletBalance : prev.walletBalance,
+                totalEarnings: typeof matched.totalEarnings === 'number' ? matched.totalEarnings : prev.totalEarnings,
+              } : prev);
+            }
+          }
+        })
+        .catch(() => {});
     }
 
     // Check URL searchParams or localStorage for partner referral
@@ -1411,18 +1436,18 @@ function CreateEventForm() {
           <div className="glass-card form-section-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px', marginBottom: '8px' }}>
               <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
-                05 • {isVendor ? 'DATA KLIEN & AKSES PENGANTIN' : 'AKUN PENYELENGGARA & AKSES DASHBOARD'}
+                05 • {isVendor ? `DATA KLIEN & AKSES ${getEventCategoryMeta(eventType).hostLabel.toUpperCase()}` : 'AKUN PENYELENGGARA & AKSES DASHBOARD'}
               </span>
               <span style={{ fontSize: '11.5px', color: '#2ECC71', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}>
                 <ShieldCheck size={14} /> {isVendor ? 'Akses Mitra Terverifikasi' : 'Bebas Login Ribet'}
               </span>
             </div>
             <h2 style={{ fontSize: '19px', fontWeight: 700, marginBottom: '6px', color: '#1D1D1F' }}>
-              {isVendor ? 'Data Klien & Akses Pengantin' : 'Kredensial Kendali Acara'}
+              {isVendor ? `Data Klien & Akses ${getEventCategoryMeta(eventType).hostLabel}` : 'Kredensial Kendali Acara'}
             </h2>
             <p style={{ fontSize: '13px', color: '#6E6E73', marginBottom: '20px', lineHeight: 1.5 }}>
               {isVendor 
-                ? 'Masukkan email pengantin agar mereka dapat melihat galeri foto dan mengunduh foto kenangan. Sebagai mitra vendor, Anda tetap dapat mengatur & memoderasi album ini kapan saja melalui Dashboard Mitra.'
+                ? `Masukkan email ${getEventCategoryMeta(eventType).hostLabel.toLowerCase()} / klien agar mereka dapat mengakses dashboard acara, memantau buku tamu, dan mengunduh arsip foto. Sebagai mitra vendor, Anda tetap dapat mengatur & memoderasi album ini kapan saja melalui Portal Mitra.`
                 : 'Akun ini digunakan untuk membuka Dashboard, mengunduh seluruh foto tamu dalam arsip ZIP kualitas tinggi, memoderasi foto, serta mencetak kartu QR tamu.'}
             </p>
 
@@ -1439,45 +1464,51 @@ function CreateEventForm() {
                 }}>
                   <Briefcase size={18} color="#C27803" style={{ flexShrink: 0 }} />
                   <span style={{ fontSize: '12.5px', color: '#1D1D1F' }}>
-                    Mitra WO Penanggung Jawab: <strong>{currentUser?.companyName || currentUser?.name}</strong> ({currentUser?.email})
+                    Mitra EO/WO Penanggung Jawab: <strong>{currentUser?.companyName || currentUser?.name}</strong> ({currentUser?.email})
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', alignItems: 'start' }}>
                   <div>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
                       <Mail size={13} color="#C27803" />
-                      Email Klien / Pengantin *
+                      Email Klien / {getEventCategoryMeta(eventType).hostLabel} *
                     </label>
                     <input
                       type="email"
                       required
-                      placeholder="contoh: pengantin@gmail.com"
+                      placeholder={
+                        eventType === 'wedding'
+                          ? 'contoh: pengantin@gmail.com'
+                          : eventType === 'corporate'
+                            ? 'contoh: panitia@perusahaan.com'
+                            : 'contoh: klien@gmail.com'
+                      }
                       value={hostEmail}
                       onChange={(e) => setHostEmail(e.target.value)}
                       className="glass-input"
                       style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14.5px' }}
                     />
                     <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '4px' }}>
-                      Pengantin dapat mengakses galeri & album mereka dengan email ini.
+                      {getEventCategoryMeta(eventType).hostLabel} dapat masuk ke dashboard album pribadi mereka dengan email ini.
                     </span>
                   </div>
 
-                  <div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
-                      <Key size={13} color="#C27803" />
-                      PIN Akses Klien (Opsional)
-                    </label>
-                    <input
-                      type="password"
-                      placeholder="Contoh: 123456 (opsional)"
-                      value={hostPin}
-                      onChange={(e) => setHostPin(e.target.value)}
-                      className="glass-input"
-                      style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14.5px' }}
-                    />
-                    <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '4px' }}>
-                      PIN pengaman untuk pengantin saat membuka dashboard pribadi.
+                  <div style={{
+                    padding: '12px 14px',
+                    borderRadius: '12px',
+                    background: 'rgba(39, 174, 96, 0.06)',
+                    border: '1px solid rgba(39, 174, 96, 0.2)',
+                    fontSize: '12px',
+                    color: '#515154',
+                    lineHeight: 1.5
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#27AE60', fontWeight: 700, marginBottom: '4px' }}>
+                      <UserCheck size={14} />
+                      <span>Akses Otomatis Klien & Mitra</span>
+                    </div>
+                    <span>
+                      Klien cukup login menggunakan email di samping (atau akun Google dengan email yang sama) untuk mengakses album ini. Anda juga memiliki kendali penuh via tombol <strong>Setting Album</strong> di Portal Mitra.
                     </span>
                   </div>
                 </div>
@@ -1550,21 +1581,21 @@ function CreateEventForm() {
                   </span>
                 </div>
 
-                <div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
-                    <Key size={13} color="#C27803" />
-                    PIN / Kata Sandi Dashboard
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="Contoh: 123456 (opsional)"
-                    value={hostPin}
-                    onChange={(e) => setHostPin(e.target.value)}
-                    className="glass-input"
-                    style={{ width: '100%', padding: '12px 16px', borderRadius: '12px', fontSize: '14.5px' }}
-                  />
-                  <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginTop: '4px' }}>
-                    Untuk masuk kembali jika membuka dari HP pasangan atau laptop.
+                <div style={{
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  background: '#FBFBFA',
+                  border: '1px solid rgba(0,0,0,0.06)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'center'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 700, color: '#1D1D1F', marginBottom: '4px' }}>
+                    <ShieldCheck size={14} color="#27AE60" />
+                    <span>Akses Dashboard Otomatis</span>
+                  </div>
+                  <span style={{ fontSize: '11.5px', color: '#6E6E73', lineHeight: 1.45 }}>
+                    Anda dan pasangan dapat masuk kembali kapan saja dari ponsel atau laptop cukup menggunakan alamat email di samping.
                   </span>
                 </div>
               </div>
@@ -1731,6 +1762,8 @@ function CreateEventForm() {
           toast.success('Pembayaran Terkonfirmasi!');
 
           let serverSignedToken: string | undefined;
+          let serverWalletBalance: number | undefined;
+          let serverTotalEarnings: number | undefined;
           if (createdDraftEventId) {
             try {
               const patchRes = await authFetch('/api/events', {
@@ -1745,14 +1778,20 @@ function CreateEventForm() {
               if (patchData?.sessionToken) {
                 serverSignedToken = patchData.sessionToken;
               }
+              if (typeof patchData?.walletBalance === 'number') {
+                serverWalletBalance = patchData.walletBalance;
+              }
+              if (typeof patchData?.totalEarnings === 'number') {
+                serverTotalEarnings = patchData.totalEarnings;
+              }
             } catch (evErr) {
               console.warn('Failed to mark draft event as paid:', evErr);
             }
           }
 
           if (isVendor && currentUser) {
-            const newBal = (currentUser.walletBalance || 0) + vendorCommissionAmount;
-            const newEarnings = (currentUser.totalEarnings || 0) + vendorCommissionAmount;
+            const newBal = serverWalletBalance ?? ((currentUser.walletBalance || 0) + vendorCommissionAmount);
+            const newEarnings = serverTotalEarnings ?? ((currentUser.totalEarnings || 0) + vendorCommissionAmount);
             const updatedUser: UserAccount = {
               ...currentUser,
               walletBalance: newBal,

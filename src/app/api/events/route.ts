@@ -425,10 +425,30 @@ export async function PATCH(request: Request) {
       }, { status: 403 });
     }
 
-    const currentTier = (existingEvent.packageTier || 'starter') as EventPackageTier;
-    const tierConfig = PACKAGE_TIERS[currentTier] || PACKAGE_TIERS.starter;
+    const isPendingDraft = existingEvent.paymentStatus === 'pending';
+    const requestedTier = (body.packageTier && PACKAGE_TIERS[body.packageTier as EventPackageTier])
+      ? (body.packageTier as EventPackageTier)
+      : undefined;
 
     const updates: Partial<EventData> = {};
+
+    // 2. Strict packageTier escalation prevention (cannot self-upgrade a paid event without payment or admin, but unpaid pending drafts can switch tiers)
+    if (requestedTier !== undefined && requestedTier !== existingEvent.packageTier) {
+      if (!isCallerAdmin && !isPendingDraft && requestedTier !== 'starter') {
+        return NextResponse.json({
+          success: false,
+          error: 'Peningkatan paket hanya dapat diproses melalui pembayaran resmi atau verifikasi admin.'
+        }, { status: 403 });
+      }
+      updates.packageTier = requestedTier;
+      if (requestedTier === 'starter') {
+        updates.paymentStatus = 'paid';
+        updates.commissionAmount = 0;
+      }
+    }
+
+    const currentTier = (updates.packageTier || existingEvent.packageTier || 'starter') as EventPackageTier;
+    const tierConfig = PACKAGE_TIERS[currentTier] || PACKAGE_TIERS.starter;
 
     // 1. Strict shotsPerGuest check against tier limits
     if (body.shotsPerGuest !== undefined) {
@@ -440,17 +460,6 @@ export async function PATCH(request: Request) {
         }, { status: 400 });
       }
       updates.shotsPerGuest = Math.max(1, requestedShots);
-    }
-
-    // 2. Strict packageTier escalation prevention (cannot self-upgrade without payment or admin)
-    if (body.packageTier !== undefined && body.packageTier !== existingEvent.packageTier) {
-      if (!isCallerAdmin) {
-        return NextResponse.json({
-          success: false,
-          error: 'Peningkatan paket hanya dapat diproses melalui pembayaran resmi atau verifikasi admin.'
-        }, { status: 403 });
-      }
-      updates.packageTier = body.packageTier;
     }
 
     // 3. Strict maxGuests check against tier + additionalPax
@@ -610,7 +619,7 @@ export async function PATCH(request: Request) {
       updates.addons = body.addons;
     }
 
-    // Administrative & financial fields: restricted to Admin (or sandbox simulation when !isMayarConfigured)
+    // Administrative & financial fields: restricted to Admin (or sandbox simulation when !isMayarConfigured, or pending draft updates)
     if (isCallerAdmin) {
       if (body.paymentStatus !== undefined) updates.paymentStatus = body.paymentStatus;
       if (body.referralCodeUsed !== undefined) updates.referralCodeUsed = body.referralCodeUsed;
@@ -618,8 +627,56 @@ export async function PATCH(request: Request) {
       if (body.commissionStatus !== undefined) updates.commissionStatus = body.commissionStatus;
       if (body.vendorId !== undefined) updates.vendorId = body.vendorId;
       if (body.hostEmail !== undefined) updates.hostEmail = body.hostEmail;
-    } else if (!isMayarConfigured && body.paymentStatus === 'paid' && existingEvent.paymentStatus === 'pending') {
-      updates.paymentStatus = 'paid';
+    } else {
+      if ((isPendingDraft || isAuthorizedVendor) && body.hostEmail && String(body.hostEmail).includes('@')) {
+        updates.hostEmail = String(body.hostEmail).trim().toLowerCase();
+      }
+      if (!isMayarConfigured && body.paymentStatus === 'paid' && existingEvent.paymentStatus === 'pending') {
+        updates.paymentStatus = 'paid';
+      }
+      // If a pending draft changed packageTier or referralCodeUsed, recalculate server commission & sync pending invoice
+      if (isPendingDraft && (updates.packageTier !== undefined || body.referralCodeUsed !== undefined)) {
+        const targetVendorId = existingEvent.vendorId || body.vendorId;
+        const cleanRef = (body.referralCodeUsed !== undefined ? body.referralCodeUsed : existingEvent.referralCodeUsed || '').toString().trim().toUpperCase();
+        if (cleanRef) updates.referralCodeUsed = cleanRef;
+        if (currentTier !== 'starter' && !tierConfig.isFree && (targetVendorId || cleanRef)) {
+          try {
+            const vendors = await getAllVendors();
+            const matchedVendor = vendors.find(v =>
+              (targetVendorId && isSameVendorId(v.id, targetVendorId)) ||
+              (cleanRef && (v.referralCode || '').toUpperCase() === cleanRef)
+            );
+            const basePrice = parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0;
+            const rawRate = Number(matchedVendor?.commissionRate) || 0;
+            const rateDecimal = rawRate > 0
+              ? (rawRate <= 1 ? rawRate : rawRate / 100)
+              : (matchedVendor?.partnerTier === 'vip' ? 0.20 : matchedVendor?.partnerTier === 'pro' ? 0.15 : 0.12);
+            const netPrice = cleanRef && !existingEvent.vendorId ? Math.round(basePrice * 0.9) : basePrice;
+            updates.commissionAmount = Math.round(netPrice * rateDecimal);
+          } catch {}
+        }
+        try {
+          const existingInv = await getInvoice(existingEvent.id);
+          if (existingInv && existingInv.status === 'pending') {
+            const baseTierPrice = tierConfig.isFree || currentTier === 'starter'
+              ? 0
+              : (parseInt(tierConfig.price.replace(/[^0-9]/g, ''), 10) || 0);
+            const isHostReferralDiscount = Boolean((updates.referralCodeUsed || existingEvent.referralCodeUsed) && session.role !== 'vendor');
+            const discount = isHostReferralDiscount ? Math.round(baseTierPrice * 0.1) : 0;
+            await updateInvoice(existingInv.id, {
+              buyerName: updates.coupleOrHost || existingEvent.coupleOrHost || updates.title || existingEvent.title,
+              buyerEmail: updates.hostEmail || existingEvent.hostEmail || existingInv.buyerEmail,
+              tierId: currentTier,
+              tierName: `${tierConfig.name} (${tierConfig.guestsLabel})`,
+              originalPrice: baseTierPrice,
+              discountAmount: discount,
+              finalAmount: baseTierPrice - discount,
+              status: currentTier === 'starter' ? 'paid' : 'pending',
+              paidAt: currentTier === 'starter' ? new Date().toISOString() : undefined,
+            });
+          }
+        } catch {}
+      }
     }
 
     // If transitioning to 'paid', disburse pending vendor commission and mark linked invoice 'paid'
@@ -738,7 +795,13 @@ export async function PATCH(request: Request) {
       sessionToken = signSessionPayload(JSON.stringify(vendorSessionUser));
     }
 
-    return NextResponse.json({ success: true, event: updated, sessionToken });
+    return NextResponse.json({
+      success: true,
+      event: updated,
+      sessionToken,
+      walletBalance: updatedVendorBalance,
+      totalEarnings: updatedVendorEarnings,
+    });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 400 });
   }

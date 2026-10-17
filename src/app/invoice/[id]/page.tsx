@@ -9,7 +9,7 @@ import {
   Download, ExternalLink, MessageSquare, Tag, CreditCard
 } from 'lucide-react';
 import { InvoiceRecord } from '@/lib/types';
-import { authFetch } from '@/lib/auth';
+import { authFetch, getClientSession, setClientSession } from '@/lib/auth';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
 import { toast } from 'sonner';
@@ -592,6 +592,19 @@ export default function InvoicePage() {
               });
               const data = await res.json();
               if (data.success) {
+                if (data.sessionToken) {
+                  const currentSession = getClientSession();
+                  if (currentSession) {
+                    setClientSession(
+                      {
+                        ...currentSession,
+                        walletBalance: typeof data.walletBalance === 'number' ? data.walletBalance : currentSession.walletBalance,
+                        totalEarnings: typeof data.totalEarnings === 'number' ? data.totalEarnings : currentSession.totalEarnings,
+                      },
+                      data.sessionToken
+                    );
+                  }
+                }
                 try {
                   await authFetch('/api/invoices', {
                     method: 'PATCH',

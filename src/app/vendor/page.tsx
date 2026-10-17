@@ -13,8 +13,9 @@ import {
   Heart, ChevronDown, ChevronUp, Shield, FileX,
   Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic
 } from 'lucide-react';
-import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo, PACKAGE_TIERS, EventPackageTier } from '@/lib/types';
+import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo, PACKAGE_TIERS, EventPackageTier, resolveEventCategory, getEventCategoryMeta } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, authFetch, isSameVendorId } from '@/lib/auth';
+import { formatSafeMediaUrl } from '@/lib/media-url';
 import ConfirmModal from '@/components/ConfirmModal';
 import { toast } from 'sonner';
 
@@ -224,7 +225,7 @@ export default function VendorPortalPage() {
 
   // Partner Commission Calculator State
   const [customEvents, setCustomEvents] = useState<number>(5);
-  const [customPlan, setCustomPlan] = useState<'event' | 'wedding' | 'unlimited'>('wedding');
+  const [customPlan, setCustomPlan] = useState<'intimate' | 'wedding' | 'unlimited'>('wedding');
   const [copiedScript, setCopiedScript] = useState<string | null>(null);
 
   // Marketing Kit Sub-Tabs & Interactive Pitch Customization
@@ -241,6 +242,7 @@ export default function VendorPortalPage() {
 
   // User session & landing view state
   const [currentSession, setCurrentSession] = useState<UserAccount | null>(null);
+  const [isRegisteredPartnerHost, setIsRegisteredPartnerHost] = useState<boolean>(false);
   const [isPartnerLanding, setIsPartnerLanding] = useState<boolean>(false);
   const [showRegisterModal, setShowRegisterModal] = useState<boolean>(false);
   const [regPicName, setRegPicName] = useState<string>('');
@@ -255,88 +257,72 @@ export default function VendorPortalPage() {
     const session = getClientSession();
     setCurrentSession(session);
     if (session?.name) setRegPicName(session.name);
+    if (session?.companyName) setRegCompanyName(session.companyName);
 
+    let forceLandingView = false;
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('view') === 'landing') {
+        forceLandingView = true;
         setIsPartnerLanding(true);
       }
     }
 
     if (!session || (session.role !== 'vendor' && session.role !== 'admin')) {
       setIsPartnerLanding(true);
+      if (session?.role === 'host') {
+        if (session.referralCode || session.companyName) {
+          setIsRegisteredPartnerHost(true);
+        }
+        authFetch('/api/vendors')
+          .then(res => res.json())
+          .then(data => {
+            if (data.success && Array.isArray(data.vendors)) {
+              const matched = data.vendors.find(
+                (v: any) => isSameVendorId(v.id, session.id) || (session.email && v.email?.toLowerCase() === session.email.toLowerCase())
+              );
+              if (matched) {
+                setIsRegisteredPartnerHost(true);
+              }
+            }
+          })
+          .catch(() => {});
+      }
       return;
     }
 
-    setIsPartnerLanding(false);
+    if (!forceLandingView) {
+      setIsPartnerLanding(false);
+    }
     setVendor(session);
     if (session.companyName) setCompanyName(session.companyName);
     else if (session.name) setCompanyName(session.name);
     if (session.instagram) setInstagram(session.instagram);
     if (session.phone) setPhone(session.phone);
     if (session.city) setCity(session.city);
-    if (session.logoUrl) setLogoUrl(session.logoUrl);
+    if (session.logoUrl) setLogoUrl(formatSafeMediaUrl(session.logoUrl));
+    if (session.partnerTier) setPartnerTier(session.partnerTier);
 
-    // If demo tester vendor account, populate initial fallback stats before DB refresh
-    if (session.id === 'vendor_vows_co' || session.email === 'vendor@sudutbingkai.id') {
-      const initialBal = typeof session.walletBalance === 'number' ? session.walletBalance : 420000;
-      const initialEarn = typeof session.totalEarnings === 'number' ? session.totalEarnings : 1260000;
-      setWalletBalance(initialBal);
-      setTotalEarnings(initialEarn);
-      setReferralCode(session.referralCode || 'VOWSANDCO');
-      setBankName(session.bankDetails?.bankName || session.bankAccount?.bankName || 'BCA');
-      setAccountNumber(session.bankDetails?.accountNumber || session.bankAccount?.accountNumber || '8730129841');
-      setAccountHolder(session.bankDetails?.accountHolder || session.bankAccount?.accountHolder || 'Sarah Pramono');
-      setPayoutAmount(initialBal);
-      setReferralHistory([
-        {
-          id: 'ref_001',
-          invoiceNumber: 'INV/SB/2026/02/0001',
-          clientName: 'Sarah & Dimas',
-          tierName: 'Wedding (300 Tamu)',
-          date: '14 Februari 2026',
-          totalPaid: 449100,
-          commissionAmount: 67500,
-          status: 'Lunas / Cair'
-        },
-        {
-          id: 'ref_002',
-          invoiceNumber: 'INV/SB/2026/02/0002',
-          clientName: 'Anisa & Reza',
-          tierName: 'Event (150 Tamu)',
-          date: '28 Februari 2026',
-          totalPaid: 242100,
-          commissionAmount: 36000,
-          status: 'Lunas / Cair'
-        },
-        {
-          id: 'ref_003',
-          invoiceNumber: 'INV/SB/2026/03/0001',
-          clientName: 'Jonathan & Maya',
-          tierName: 'Party (75 Tamu)',
-          date: '7 Maret 2026',
-          totalPaid: 161100,
-          commissionAmount: 24000,
-          status: 'Lunas / Cair'
-        }
-      ]);
-    } else {
-      if (session.referralCode) {
-        setReferralCode(session.referralCode);
-      } else if (session.name) {
-        setReferralCode(session.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10));
-      }
-      if (typeof session.walletBalance === 'number') {
-        setWalletBalance(session.walletBalance);
-        setPayoutAmount(session.walletBalance);
-      }
-      if (typeof session.totalEarnings === 'number') setTotalEarnings(session.totalEarnings);
-      const bankObj = session.bankDetails || session.bankAccount;
-      if (bankObj) {
-        if (bankObj.bankName) setBankName(bankObj.bankName);
-        if (bankObj.accountNumber) setAccountNumber(bankObj.accountNumber);
-        if (bankObj.accountHolder) setAccountHolder(bankObj.accountHolder);
-      }
+    if (session.referralCode) {
+      setReferralCode(session.referralCode);
+    } else if (session.id === 'vendor_vows_co' || session.email === 'vendor@sudutbingkai.id') {
+      setReferralCode('VOWSANDCO');
+    } else if (session.name) {
+      setReferralCode(session.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10));
+    }
+
+    if (typeof session.walletBalance === 'number') {
+      setWalletBalance(session.walletBalance);
+      setPayoutAmount(session.walletBalance);
+    }
+    if (typeof session.totalEarnings === 'number') {
+      setTotalEarnings(session.totalEarnings);
+    }
+    const bankObj = session.bankDetails || session.bankAccount;
+    if (bankObj) {
+      if (bankObj.bankName) setBankName(bankObj.bankName);
+      if (bankObj.accountNumber) setAccountNumber(bankObj.accountNumber);
+      if (bankObj.accountHolder) setAccountHolder(bankObj.accountHolder);
     }
 
     // Refresh live vendor balance and profile from database
@@ -344,20 +330,23 @@ export default function VendorPortalPage() {
       .then(res => res.json())
       .then(data => {
         if (data.success && data.vendors) {
-          const fresh = data.vendors.find((v: any) => isSameVendorId(v.id, session.id) || (session.email && v.email === session.email));
+          const fresh = data.vendors.find(
+            (v: any) => isSameVendorId(v.id, session.id) || (session.email && v.email?.toLowerCase() === session.email.toLowerCase())
+          );
           if (fresh) {
-            setVendor((prev: any) => ({ ...prev, ...fresh }));
+            setVendor((prev: any) => ({ ...prev, ...fresh, logoUrl: formatSafeMediaUrl(fresh.logoUrl || '') }));
             if (typeof fresh.walletBalance === 'number') {
               setWalletBalance(fresh.walletBalance);
               setPayoutAmount(fresh.walletBalance);
             }
             if (typeof fresh.totalEarnings === 'number') setTotalEarnings(fresh.totalEarnings);
+            if (fresh.partnerTier) setPartnerTier(fresh.partnerTier);
             if (fresh.referralCode) setReferralCode(fresh.referralCode);
-            if (fresh.companyName) setCompanyName(fresh.companyName);
-            if (fresh.instagram) setInstagram(fresh.instagram);
-            if (fresh.phone) setPhone(fresh.phone);
-            if (fresh.city) setCity(fresh.city);
-            if (fresh.logoUrl) setLogoUrl(fresh.logoUrl);
+            if (fresh.companyName || fresh.name) setCompanyName(fresh.companyName || fresh.name);
+            if (fresh.instagram !== undefined) setInstagram(fresh.instagram || '');
+            if (fresh.phone !== undefined) setPhone(fresh.phone || '');
+            if (fresh.city !== undefined) setCity(fresh.city || '');
+            if (fresh.logoUrl !== undefined) setLogoUrl(formatSafeMediaUrl(fresh.logoUrl || ''));
             if (fresh.bankDetails) {
               if (fresh.bankDetails.bankName) setBankName(fresh.bankDetails.bankName);
               if (fresh.bankDetails.accountNumber) setAccountNumber(fresh.bankDetails.accountNumber);
@@ -371,41 +360,13 @@ export default function VendorPortalPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
-      if (tabParam === 'clients') {
-        setActiveTab('clients');
+      if (tabParam === 'clients' || tabParam === 'wallet' || tabParam === 'branding' || tabParam === 'testimonials' || tabParam === 'marketing') {
+        setActiveTab(tabParam);
       }
       if (urlParams.get('paid') === 'true') {
         toast.success('Pembayaran klien baru berhasil terkonfirmasi dan komisi telah masuk ke dompet Anda!');
       }
     }
-
-    authFetch('/api/vendors')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.vendors && data.vendors.length > 0) {
-          const v = data.vendors.find((item: any) => 
-            item.id === session?.id || 
-            (session?.email && item.email?.toLowerCase() === session?.email?.toLowerCase())
-          );
-          if (v) {
-            setCompanyName(v.companyName || v.name || session.companyName || session.name || '');
-            setInstagram(v.instagram || session.instagram || '');
-            setPhone(v.phone || session.phone || '');
-            setLogoUrl(v.logoUrl || '');
-            if (v.city) setCity(v.city);
-            if (v.partnerTier) setPartnerTier(v.partnerTier);
-            if (v.referralCode) setReferralCode(v.referralCode);
-            if (v.walletBalance !== undefined) setWalletBalance(v.walletBalance);
-            if (v.totalEarnings !== undefined) setTotalEarnings(v.totalEarnings);
-            if (v.bankDetails) {
-              if (v.bankDetails.bankName) setBankName(v.bankDetails.bankName);
-              if (v.bankDetails.accountNumber) setAccountNumber(v.bankDetails.accountNumber);
-              if (v.bankDetails.accountHolder) setAccountHolder(v.bankDetails.accountHolder);
-            }
-          }
-        }
-      })
-      .catch(console.error);
 
     const vendorId = session?.id || '';
     if (vendorId) {
@@ -415,9 +376,11 @@ export default function VendorPortalPage() {
           if (data.success && data.events) {
             const realClients = data.events.map((ev: any) => {
               const retInfo = getEventRetentionInfo(ev.eventDate, ev.packageTier || 'wedding');
+              const catType = resolveEventCategory(ev);
               return {
                 id: ev.id,
                 slug: ev.slug,
+                eventType: catType,
                 title: ev.title,
                 coupleOrHost: ev.coupleOrHost,
                 hostEmail: ev.hostEmail,
@@ -438,7 +401,7 @@ export default function VendorPortalPage() {
             });
             setClients(realClients);
 
-            // Sync live referral commission history from vendor's events
+            // Sync live referral commission history strictly from real database events
             const liveHistory = data.events
               .filter((ev: any) => (ev.commissionAmount && Number(ev.commissionAmount) > 0) || ev.referralCodeUsed)
               .map((ev: any, idx: number) => {
@@ -454,11 +417,15 @@ export default function VendorPortalPage() {
                   : ev.commissionStatus === 'withdrawn'
                     ? 'Telah Ditarik'
                     : 'Lunas / Cair';
+                const displayClientName =
+                  ev.title && ev.coupleOrHost && ev.title !== ev.coupleOrHost
+                    ? `${ev.title} (${ev.coupleOrHost})`
+                    : (ev.title || ev.coupleOrHost || 'Klien Acara');
 
                 return {
-                  id: ev.id || `ref_live_${idx}`,
+                  id: ev.id,
                   invoiceNumber: `INV/SB/${new Date(ev.createdAt || ev.eventDate || Date.now()).getFullYear()}/${String(idx + 1).padStart(4, '0')}`,
-                  clientName: ev.coupleOrHost || ev.title || 'Klien Acara',
+                  clientName: displayClientName,
                   tierName: tierLabel,
                   date: new Date(ev.eventDate || ev.createdAt || Date.now()).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
                   totalPaid: approxPaid,
@@ -467,17 +434,7 @@ export default function VendorPortalPage() {
                 };
               });
 
-            if (liveHistory.length > 0) {
-              if (session.id === 'vendor_vows_co' || session.email === 'vendor@sudutbingkai.id') {
-                setReferralHistory(prev => {
-                  const existingIds = new Set(prev.map((item: any) => item.id));
-                  const uniqueNew = liveHistory.filter((item: any) => !existingIds.has(item.id));
-                  return [...uniqueNew, ...prev];
-                });
-              } else {
-                setReferralHistory(liveHistory);
-              }
-            }
+            setReferralHistory(liveHistory);
           }
         })
         .catch(console.error);
@@ -627,6 +584,36 @@ export default function VendorPortalPage() {
     router.push('/dashboard');
   };
 
+  const handleSwitchToVendor = async () => {
+    const session = getClientSession();
+    const updated: UserAccount = {
+      ...(session || vendor),
+      role: 'vendor'
+    };
+    let signedToken: string | undefined;
+    try {
+      const res = await authFetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'oauth',
+          role: 'vendor',
+          email: updated.email,
+          name: updated.name
+        })
+      });
+      const data = await res.json();
+      if (data.success && (data.token || data.sessionToken)) {
+        signedToken = data.token || data.sessionToken;
+      }
+    } catch {}
+    setClientSession(updated, signedToken);
+    setCurrentSession(updated);
+    setVendor(updated);
+    setIsPartnerLanding(false);
+    toast.success('Selamat datang kembali di Portal Mitra Vendor.');
+  };
+
   const handleExplicitRegisterVendor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!regCompanyName.trim()) {
@@ -678,6 +665,7 @@ export default function VendorPortalPage() {
       };
 
       setReferralCode(resolvedRefCode);
+      setPartnerTier('regular');
       setClientSession(newVendorSession, data.sessionToken);
       setVendor(newVendorSession);
       setCompanyName(cleanCompany);
@@ -882,15 +870,15 @@ export default function VendorPortalPage() {
 
   // Partner Commission Calculator Mathematics
   const planDetails = {
-    event: { name: 'Paket Event (150 Tamu)', basePrice: 269000 },
-    wedding: { name: 'Paket Wedding (300 Tamu)', basePrice: 499000 },
-    unlimited: { name: 'Paket Unlimited Tamu', basePrice: 999000 }
+    intimate: { name: 'Paket Intimate (50 Tamu)', basePrice: 129000 },
+    wedding: { name: 'Paket Wedding (200 Tamu)', basePrice: 499000 },
+    unlimited: { name: 'Paket Unlimited (500 Tamu)', basePrice: 999000 }
   };
 
   const currentPlanInfo = planDetails[customPlan];
   const normalTotalPrice = customEvents * currentPlanInfo.basePrice;
-  const commissionRatePercent = customEvents >= 10 ? 20 : 15;
-  const partnerTierName = customEvents >= 10 ? 'Mitra Elite (20%)' : 'Mitra Pro (15%)';
+  const commissionRatePercent = customEvents >= 10 ? 20 : customEvents >= 3 ? 15 : 12;
+  const partnerTierName = customEvents >= 10 ? 'Mitra VIP (20%)' : customEvents >= 3 ? 'Mitra Pro (15%)' : 'Mitra Regular (12%)';
   const commissionEarned = Math.round(normalTotalPrice * (commissionRatePercent / 100));
   const commissionPerEvent = customEvents > 0 ? Math.round(commissionEarned / customEvents) : 0;
 
@@ -959,7 +947,7 @@ export default function VendorPortalPage() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => setShowRegisterModal(true)}
+                      onClick={() => isRegisteredPartnerHost ? handleSwitchToVendor() : setShowRegisterModal(true)}
                       className="glass-pill"
                       style={{
                         padding: '8px 14px',
@@ -971,7 +959,7 @@ export default function VendorPortalPage() {
                         border: '1px solid rgba(194, 120, 3, 0.3)'
                       }}
                     >
-                      Daftar Mitra WO
+                      {isRegisteredPartnerHost ? 'Buka Portal Mitra Saya' : 'Daftar Mitra WO'}
                     </button>
                   </>
                 ) : currentSession?.role === 'vendor' ? (
@@ -1039,7 +1027,9 @@ export default function VendorPortalPage() {
                       Halo, {currentSession.name || 'Penyelenggara Acara'}! Anda saat ini masuk sebagai Host (Penyelenggara Acara).
                     </strong>
                     <span style={{ fontSize: '12.5px', color: '#6E6E73' }}>
-                      Ini adalah halaman informasi Program Kemitraan Agensi & Event Planner. Seluruh album dan data acara Anda tetap aman.
+                      {isRegisteredPartnerHost
+                        ? `Akun kemitraan agensi Anda (${companyName || 'Mitra Terdaftar'}) aktif. Anda dapat beralih kembali ke Portal Mitra kapan saja.`
+                        : 'Ini adalah halaman informasi Program Kemitraan Agensi & Event Planner. Seluruh album dan data acara Anda tetap aman.'}
                     </span>
                   </div>
                 </div>
@@ -1054,11 +1044,11 @@ export default function VendorPortalPage() {
                   </Link>
                   <button
                     type="button"
-                    onClick={() => setShowRegisterModal(true)}
+                    onClick={() => isRegisteredPartnerHost ? handleSwitchToVendor() : setShowRegisterModal(true)}
                     className="glass-pill"
                     style={{ padding: '8px 14px', fontSize: '12px', cursor: 'pointer', color: '#C27803', fontWeight: 600, border: '1px solid rgba(194, 120, 3, 0.3)' }}
                   >
-                    Daftar Jadi Mitra
+                    {isRegisteredPartnerHost ? 'Buka Portal Mitra Saya' : 'Daftar Jadi Mitra'}
                   </button>
                 </div>
               </div>
@@ -1095,11 +1085,11 @@ export default function VendorPortalPage() {
                 {currentSession?.role === 'host' ? (
                   <button
                     type="button"
-                    onClick={() => setShowRegisterModal(true)}
+                    onClick={() => isRegisteredPartnerHost ? handleSwitchToVendor() : setShowRegisterModal(true)}
                     className="btn-apple-black"
                     style={{ padding: '13px 28px', fontSize: '14px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}
                   >
-                    <span>Daftarkan Agensi WO Anda</span>
+                    <span>{isRegisteredPartnerHost ? 'Buka Portal Mitra Saya' : 'Daftarkan Agensi WO Anda'}</span>
                     <ArrowRight size={15} />
                   </button>
                 ) : (
@@ -1126,7 +1116,7 @@ export default function VendorPortalPage() {
               {/* 4 Feature Badges */}
               <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '10px' }}>
                 <span className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', color: '#515154' }}>
-                  <DollarSign size={13} color="#C27803" /> Komisi 15% - 20% Dicairkan Cepat
+                  <DollarSign size={13} color="#C27803" /> Komisi 12% - 20% Dicairkan Cepat
                 </span>
                 <span className="glass-pill" style={{ padding: '6px 14px', fontSize: '12px', color: '#515154' }}>
                   <Award size={13} color="#C27803" /> Tanpa Modal & Tanpa Kuota
@@ -1164,7 +1154,7 @@ export default function VendorPortalPage() {
                     Penghasilan Tambahan (Komisi Pasif)
                   </strong>
                   <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
-                    Raih komisi 15% - 20% untuk setiap klien acara (pernikahan, ulang tahun, gathering, reuni, dll.) yang memesan paket melalui tautan referral atau kode promo agensi Anda. Komisi masuk otomatis ke dompet digital mitra.
+                    Raih komisi 12% - 20% untuk setiap klien acara (pernikahan, ulang tahun, gathering, reuni, dll.) yang memesan paket melalui tautan referral atau kode promo agensi Anda. Komisi masuk otomatis ke dompet digital mitra.
                   </p>
                 </div>
 
@@ -1176,7 +1166,7 @@ export default function VendorPortalPage() {
                     100% Tanpa Modal & Tanpa Kuota
                   </strong>
                   <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.55, margin: 0 }}>
-                    Tidak perlu menyetok kuota voucher atau menanggung risiko modal. Cukup rekomendasikan kode promo unik Anda kepada klien acara. Komisi 15%–20% otomatis masuk ke dompet digital Anda.
+                    Tidak perlu menyetok kuota voucher atau menanggung risiko modal. Cukup rekomendasikan kode promo unik Anda kepada klien acara. Komisi 12%–20% otomatis masuk ke dompet digital Anda.
                   </p>
                 </div>
 
@@ -1227,7 +1217,7 @@ export default function VendorPortalPage() {
                     Jumlah Acara Klien Agensi / Mitra Anda:
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '20px' }}>
-                    {[3, 5, 10, 20].map((num) => (
+                    {[2, 5, 10, 20].map((num) => (
                       <button
                         key={num}
                         type="button"
@@ -1253,9 +1243,9 @@ export default function VendorPortalPage() {
                   </label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {[
-                      { id: 'event', label: 'Paket Event (150 Tamu)', price: 'Rp 269.000' },
-                      { id: 'wedding', label: 'Paket Wedding (300 Tamu)', price: 'Rp 499.000' },
-                      { id: 'unlimited', label: 'Paket Unlimited Tamu', price: 'Rp 999.000' }
+                      { id: 'intimate', label: 'Paket Intimate (50 Tamu)', price: 'Rp 129.000' },
+                      { id: 'wedding', label: 'Paket Wedding (200 Tamu)', price: 'Rp 499.000' },
+                      { id: 'unlimited', label: 'Paket Unlimited (500 Tamu)', price: 'Rp 999.000' }
                     ].map((p) => (
                       <button
                         key={p.id}
@@ -1312,11 +1302,11 @@ export default function VendorPortalPage() {
                   {currentSession?.role === 'host' ? (
                     <button
                       type="button"
-                      onClick={() => setShowRegisterModal(true)}
+                      onClick={() => isRegisteredPartnerHost ? handleSwitchToVendor() : setShowRegisterModal(true)}
                       className="btn-apple-black"
                       style={{ width: '100%', padding: '12px', fontSize: '13.5px', cursor: 'pointer', textAlign: 'center', borderRadius: '12px' }}
                     >
-                      Daftar Jadi Mitra untuk Klaim Komisi Ini
+                      {isRegisteredPartnerHost ? 'Buka Portal Mitra Saya' : 'Daftar Jadi Mitra untuk Klaim Komisi Ini'}
                     </button>
                   ) : (
                     <Link
@@ -1552,7 +1542,7 @@ export default function VendorPortalPage() {
                 {currentSession?.role === 'host' ? (
                   <button
                     type="button"
-                    onClick={() => setShowRegisterModal(true)}
+                    onClick={() => isRegisteredPartnerHost ? handleSwitchToVendor() : setShowRegisterModal(true)}
                     style={{
                       padding: '13px 32px',
                       borderRadius: '12px',
@@ -1565,7 +1555,7 @@ export default function VendorPortalPage() {
                       boxShadow: '0 8px 24px rgba(194, 120, 3, 0.4)'
                     }}
                   >
-                    Daftar Sebagai Mitra Sekarang
+                    {isRegisteredPartnerHost ? 'Buka Portal Mitra Saya' : 'Daftar Sebagai Mitra Sekarang'}
                   </button>
                 ) : (
                   <Link
@@ -1692,7 +1682,7 @@ export default function VendorPortalPage() {
               <div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '3px 9px', borderRadius: '999px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', fontSize: '10.5px', fontWeight: 600, marginBottom: '6px' }}>
                   <Building size={12} />
-                  <span>Wedding Organizer Partner Hub</span>
+                  <span>Wedding Organizer & Event Partner Hub</span>
                 </div>
 
                 <h1 className="font-display-serif" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.2rem)', fontWeight: 700, color: '#1D1D1F', marginBottom: '4px' }}>
@@ -1738,7 +1728,7 @@ export default function VendorPortalPage() {
             <div>
               <span className="font-mono-film" style={{ color: '#86868B', display: 'block', marginBottom: '4px' }}>LEVEL KEMITRAAN</span>
               <strong style={{ fontSize: '20px', color: '#C27803', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Award size={18} /> Mitra Pro (15%)
+                <Award size={18} /> {partnerTier === 'vip' ? 'Mitra VIP (20%)' : partnerTier === 'pro' ? 'Mitra Pro (15%)' : 'Mitra Regular (12%)'}
               </strong>
             </div>
           </div>
@@ -2902,6 +2892,19 @@ export default function VendorPortalPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '6px' }}>
                       <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>{c.title}</h3>
                       
+                      {/* Event Category Badge */}
+                      <span style={{
+                        padding: '2px 8px',
+                        borderRadius: '6px',
+                        fontSize: '10.5px',
+                        fontWeight: 600,
+                        background: 'rgba(29, 29, 31, 0.07)',
+                        color: '#1D1D1F',
+                        letterSpacing: '0.02em'
+                      }}>
+                        {getEventCategoryMeta(c.eventType || 'wedding').badgeLabel}
+                      </span>
+
                       {/* Package Tier Badge */}
                       <span style={{
                         padding: '2px 8px',
@@ -2960,6 +2963,12 @@ export default function VendorPortalPage() {
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#6E6E73', margin: '0 0 6px', flexWrap: 'wrap' }}>
+                      {c.coupleOrHost && c.coupleOrHost !== c.title && (
+                        <>
+                          <span style={{ fontWeight: 600, color: '#1D1D1F' }}>{c.coupleOrHost}</span>
+                          <span>•</span>
+                        </>
+                      )}
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                         <Calendar size={13} color="#86868B" />
                         <span>{c.date}</span>

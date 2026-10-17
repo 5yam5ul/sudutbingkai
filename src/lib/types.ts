@@ -265,6 +265,7 @@ export type EventCategoryType = 'wedding' | 'birthday' | 'corporate' | 'other';
 
 export interface EventCategoryMeta {
   type: EventCategoryType;
+  badgeLabel: string;
   heroBadgeText: string;
   defaultTitle: string;
   defaultCoverUrl: string;
@@ -280,6 +281,7 @@ export function getEventCategoryMeta(type: EventCategoryType = 'wedding'): Event
     case 'birthday':
       return {
         type: 'birthday',
+        badgeLabel: 'Ulang Tahun',
         heroBadgeText: 'BIRTHDAY CELEBRATION OF',
         defaultTitle: 'Album Ulang Tahun',
         defaultCoverUrl: '/samples/dummy-guests.jpg',
@@ -292,6 +294,7 @@ export function getEventCategoryMeta(type: EventCategoryType = 'wedding'): Event
     case 'corporate':
       return {
         type: 'corporate',
+        badgeLabel: 'Kantor & Gala',
         heroBadgeText: 'SPECIAL GATHERING & EVENT',
         defaultTitle: 'Album Gathering & Acara',
         defaultCoverUrl: '/samples/dummy-guests.jpg',
@@ -304,6 +307,7 @@ export function getEventCategoryMeta(type: EventCategoryType = 'wedding'): Event
     case 'other':
       return {
         type: 'other',
+        badgeLabel: 'Acara Spesial',
         heroBadgeText: 'SPECIAL MOMENTS OF',
         defaultTitle: 'Album Momen Spesial',
         defaultCoverUrl: '/samples/dummy-guests.jpg',
@@ -317,6 +321,7 @@ export function getEventCategoryMeta(type: EventCategoryType = 'wedding'): Event
     default:
       return {
         type: 'wedding',
+        badgeLabel: 'Pernikahan',
         heroBadgeText: 'THE WEDDING CELEBRATION OF',
         defaultTitle: 'Album Pernikahan',
         defaultCoverUrl: '/samples/dummy-couple.jpg',
@@ -466,6 +471,7 @@ export interface UserAccount {
   logoUrl?: string;
   tier?: 'starter' | 'pro' | 'agency';
   partnerTier?: PartnerTier;
+  commissionRate?: number;
   referralCode?: string;
   walletBalance?: number;
   totalEarnings?: number;

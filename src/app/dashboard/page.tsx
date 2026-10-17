@@ -184,7 +184,7 @@ export default function BrideDashboardPage() {
 
   const handleRestoreHostRole = async () => {
     if (!user) return;
-    const restoredUser: UserAccount = {
+    let restoredUser: UserAccount = {
       ...user,
       role: 'host'
     };
@@ -203,13 +203,49 @@ export default function BrideDashboardPage() {
       const data = await res.json();
       if (data.success && (data.token || data.sessionToken)) {
         signedToken = data.token || data.sessionToken;
+        if (data.user) {
+          restoredUser = { ...restoredUser, ...data.user, role: 'host' };
+        }
       }
     } catch {}
     setUser(restoredUser);
     setClientSession(restoredUser, signedToken);
     setIsHostMismatched(false);
-    toast.success('Peran akun Anda berhasil dikembalikan sebagai Pengantin / Penyelenggara!');
+    toast.success('Peran akun Anda berhasil beralih ke Mode Host / Penyelenggara!');
     fetchData(restoredUser);
+  };
+
+  const handleSwitchToVendorRole = async () => {
+    if (!user) return;
+    let vendorUser: UserAccount = {
+      ...user,
+      role: 'vendor'
+    };
+    let signedToken: string | undefined;
+    try {
+      const res = await authFetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: 'oauth',
+          role: 'vendor',
+          email: vendorUser.email,
+          name: vendorUser.name,
+          companyName: vendorUser.companyName
+        })
+      });
+      const data = await res.json();
+      if (data.success && (data.token || data.sessionToken)) {
+        signedToken = data.token || data.sessionToken;
+        if (data.user) {
+          vendorUser = { ...vendorUser, ...data.user, role: 'vendor' };
+        }
+      }
+    } catch {}
+    setUser(vendorUser);
+    setClientSession(vendorUser, signedToken);
+    toast.success('Beralih kembali ke Portal Mitra Vendor!');
+    router.push('/vendor');
   };
 
   const selectActiveEvent = async (selected: EventData) => {
@@ -733,6 +769,23 @@ export default function BrideDashboardPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             {user?.role === 'vendor' && (
               <>
+                <Link
+                  href="/vendor?tab=clients"
+                  className="btn-apple-black"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '7px 14px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                  }}
+                >
+                  <ArrowLeft size={13} />
+                  <span>Kembali ke Portal Mitra</span>
+                </Link>
+
                 <button
                   type="button"
                   onClick={handleRestoreHostRole}
@@ -749,31 +802,36 @@ export default function BrideDashboardPage() {
                     border: '1px solid rgba(194, 120, 3, 0.3)',
                     background: 'rgba(194, 120, 3, 0.08)'
                   }}
-                  title="Kembalikan peran ke Pengantin / Penyelenggara"
+                  title="Beralih ke Mode Host / Acara Pribadi"
                 >
                   <Heart size={13} />
-                  <span>Mode Pengantin</span>
+                  <span>Mode Host Pribadi</span>
                 </button>
-
-                <Link
-                  href="/vendor?tab=clients"
-                  className="glass-pill"
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '7px 12px',
-                    fontSize: '12px',
-                    color: '#515154',
-                    fontWeight: 500,
-                    textDecoration: 'none',
-                    border: '1px solid rgba(0, 0, 0, 0.08)'
-                  }}
-                >
-                  <ArrowLeft size={13} />
-                  <span>Portal Mitra</span>
-                </Link>
               </>
+            )}
+
+            {user?.role === 'host' && (user?.referralCode || user?.companyName) && (
+              <button
+                type="button"
+                onClick={handleSwitchToVendorRole}
+                className="glass-pill"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '7px 12px',
+                  fontSize: '12px',
+                  color: '#C27803',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  border: '1px solid rgba(194, 120, 3, 0.3)',
+                  background: 'rgba(194, 120, 3, 0.08)'
+                }}
+                title="Buka Portal Kemitraan Vendor / EO / WO Anda"
+              >
+                <Briefcase size={13} />
+                <span>Portal Mitra Vendor</span>
+              </button>
             )}
 
             <div style={{ textAlign: 'right' }} className="desktop-only">
@@ -812,7 +870,7 @@ export default function BrideDashboardPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <AlertCircle size={18} color="#C27803" style={{ flexShrink: 0 }} />
               <span style={{ fontSize: '13px', color: '#1D1D1F' }}>
-                Peran akun Anda saat ini terdeteksi sebagai <strong>Mitra Vendor</strong>. Kami telah memuat data acara pernikahan Anda di bawah.
+                Peran akun Anda saat ini terdeteksi sebagai <strong>Mitra Vendor</strong>. Kami telah memuat data acara pribadi Anda di bawah.
               </span>
             </div>
             <button
@@ -821,7 +879,7 @@ export default function BrideDashboardPage() {
               className="btn-apple-black"
               style={{ padding: '8px 16px', fontSize: '12px', borderRadius: '10px', cursor: 'pointer' }}
             >
-              Kembalikan ke Akun Pengantin
+              Kembalikan ke Mode Host / Acara
             </button>
           </div>
         )}
