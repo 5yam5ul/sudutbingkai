@@ -261,9 +261,113 @@ export function getEventRetentionInfo(eventDateStr?: string, tierKey: EventPacka
   }
 }
 
+export type EventCategoryType = 'wedding' | 'birthday' | 'corporate' | 'other';
+
+export interface EventCategoryMeta {
+  type: EventCategoryType;
+  heroBadgeText: string;
+  defaultTitle: string;
+  defaultCoverUrl: string;
+  defaultTagline: string;
+  defaultFrameTagline: string;
+  hostLabel: string;
+  coverAltText: string;
+  emptyGalleryPrompt: string;
+}
+
+export function getEventCategoryMeta(type: EventCategoryType = 'wedding'): EventCategoryMeta {
+  switch (type) {
+    case 'birthday':
+      return {
+        type: 'birthday',
+        heroBadgeText: 'BIRTHDAY CELEBRATION OF',
+        defaultTitle: 'Album Ulang Tahun',
+        defaultCoverUrl: '/samples/dummy-guests.jpg',
+        defaultTagline: 'Cheers to Another Year',
+        defaultFrameTagline: 'Cheers to Another Year',
+        hostLabel: 'Tuan Rumah',
+        coverAltText: 'Foto Sampul Ulang Tahun',
+        emptyGalleryPrompt: 'Abadikan senyum, kejutan seru, dan momen hangat perayaan ulang tahun ini sekarang juga.',
+      };
+    case 'corporate':
+      return {
+        type: 'corporate',
+        heroBadgeText: 'SPECIAL GATHERING & EVENT',
+        defaultTitle: 'Album Gathering & Acara',
+        defaultCoverUrl: '/samples/dummy-guests.jpg',
+        defaultTagline: 'Together We Celebrate',
+        defaultFrameTagline: 'Together We Celebrate',
+        hostLabel: 'Penyelenggara',
+        coverAltText: 'Foto Sampul Acara',
+        emptyGalleryPrompt: 'Abadikan kebersamaan, keseruan tim, dan momen berkesan di acara ini sekarang juga.',
+      };
+    case 'other':
+      return {
+        type: 'other',
+        heroBadgeText: 'SPECIAL MOMENTS OF',
+        defaultTitle: 'Album Momen Spesial',
+        defaultCoverUrl: '/samples/dummy-guests.jpg',
+        defaultTagline: 'Captured Memories',
+        defaultFrameTagline: 'Captured Memories',
+        hostLabel: 'Tuan Rumah',
+        coverAltText: 'Foto Sampul Acara',
+        emptyGalleryPrompt: 'Abadikan tawa, keseruan, dan momen kebersamaan kita di acara ini sekarang juga.',
+      };
+    case 'wedding':
+    default:
+      return {
+        type: 'wedding',
+        heroBadgeText: 'THE WEDDING CELEBRATION OF',
+        defaultTitle: 'Album Pernikahan',
+        defaultCoverUrl: '/samples/dummy-couple.jpg',
+        defaultTagline: 'The Beginning of Forever',
+        defaultFrameTagline: 'The Beginning of Forever',
+        hostLabel: 'Pengantin',
+        coverAltText: 'Foto Pengantin',
+        emptyGalleryPrompt: 'Abadikan senyum, tawa bahagia, dan momen hangat untuk pasangan pengantin sekarang juga.',
+      };
+  }
+}
+
+export function resolveEventCategory(event?: Partial<EventData> | null): EventCategoryType {
+  if (!event) return 'wedding';
+  if (
+    event.eventType === 'wedding' ||
+    event.eventType === 'birthday' ||
+    event.eventType === 'corporate' ||
+    event.eventType === 'other'
+  ) {
+    return event.eventType;
+  }
+
+  const titleAndSlug = `${event.title || ''} ${event.slug || ''}`.toLowerCase();
+  const hostText = (event.coupleOrHost || '').toLowerCase();
+  const frameText = (event.frameText || '').toLowerCase();
+
+  if (/(ultah|ulang\s*tahun|birthday|bday|b'day|sweet\s*17|milad|\b\d+\s*(tahun|thn)\b|\bhbd\b)/i.test(titleAndSlug) ||
+      /(still\s*young|happy\s*birthday|cheers\s*to\s*another\s*year)/i.test(frameText)) {
+    return 'birthday';
+  }
+
+  if (/(gathering|corporate|kantor|company|gala|townhall|seminar|workshop|outbond|outing|conference|summit)/i.test(titleAndSlug)) {
+    return 'corporate';
+  }
+
+  if (/(reuni|konser|festival|main|nongki|ngopi|bukber|arisan|party|pesta|liburan|trip|graduation|wisuda|halal\s*bihalal|syukuran|khitan|aqiqah)/i.test(titleAndSlug)) {
+    return 'other';
+  }
+
+  if (/(wedding|nikah|pernikahan|resepsi|akad|pawiwahan|ngunduh\s*mantu|pengantin|&|\bdan\b)/i.test(`${titleAndSlug} ${hostText}`)) {
+    return 'wedding';
+  }
+
+  return 'other';
+}
+
 export interface EventData {
   id: string;
   slug?: string;
+  eventType?: EventCategoryType;
   title: string;
   coupleOrHost: string;
   eventDate: string; // ISO date string

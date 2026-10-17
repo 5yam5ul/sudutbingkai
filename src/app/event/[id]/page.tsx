@@ -11,7 +11,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { hapticLightTap, hapticDialClick } from '@/lib/haptics';
-import { EventData, PhotoRecord, VideoWishRecord, VoiceNoteRecord } from '@/lib/types';
+import { EventData, PhotoRecord, VideoWishRecord, VoiceNoteRecord, resolveEventCategory, getEventCategoryMeta } from '@/lib/types';
+import { formatSafeMediaUrl } from '@/lib/media-url';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FRAME_TEMPLATES } from '@/lib/frames';
 import JSZip from 'jszip';
@@ -219,7 +220,12 @@ export default function EventDashboardPage() {
       if (resEvents) {
         const dataEvents = await resEvents.json();
         if (dataEvents.success && dataEvents.event) {
-          const ev = dataEvents.event;
+          const ev: EventData = {
+            ...dataEvents.event,
+            coverUrl: formatSafeMediaUrl(dataEvents.event.coverUrl) || undefined,
+            customFrameUrl: formatSafeMediaUrl(dataEvents.event.customFrameUrl) || undefined,
+            vendorLogo: formatSafeMediaUrl(dataEvents.event.vendorLogo) || undefined,
+          };
           setEvent(ev);
           const session = getClientSession();
           const isVerifiedOwner = Boolean(
@@ -239,7 +245,11 @@ export default function EventDashboardPage() {
 
       const dataPhotos = await resPhotos.json();
       if (dataPhotos.success) {
-        const fetchedPhotos = dataPhotos.photos || [];
+        const fetchedPhotos = (dataPhotos.photos || []).map((p: PhotoRecord) => ({
+          ...p,
+          imageData: formatSafeMediaUrl(p.imageData),
+          voiceNoteUrl: formatSafeMediaUrl(p.voiceNoteUrl) || undefined,
+        }));
         setPhotos(fetchedPhotos);
         setTotalPhotoCount(typeof dataPhotos.count === 'number' ? dataPhotos.count : fetchedPhotos.length);
       }
@@ -661,6 +671,7 @@ export default function EventDashboardPage() {
   }
 
   const presetInfo = event ? FILM_PRESETS[event.preset] || FILM_PRESETS.portra : FILM_PRESETS.portra;
+  const categoryMeta = getEventCategoryMeta(resolveEventCategory(event));
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FBFBFA', color: '#1D1D1F', position: 'relative' }}>
@@ -832,8 +843,8 @@ export default function EventDashboardPage() {
         {/* Background Cover Image with Cinematic Vignette & Bottom Dissolve */}
         <div style={{ position: 'absolute', inset: 0, zIndex: 1 }}>
           <img
-            src={event?.coverUrl || '/samples/dummy-couple.jpg'}
-            alt={event?.coupleOrHost || 'Foto Pengantin'}
+            src={formatSafeMediaUrl(event?.coverUrl) || categoryMeta.defaultCoverUrl}
+            alt={event?.title || event?.coupleOrHost || categoryMeta.coverAltText}
             style={{
               width: '100%',
               height: '100%',
@@ -841,7 +852,10 @@ export default function EventDashboardPage() {
               objectPosition: 'center 35%'
             }}
             onError={(e) => {
-              (e.target as HTMLImageElement).src = '/samples/dummy-couple.jpg';
+              const imgEl = e.currentTarget;
+              if (imgEl.src && !imgEl.src.endsWith(categoryMeta.defaultCoverUrl)) {
+                imgEl.src = categoryMeta.defaultCoverUrl;
+              }
             }}
           />
 
@@ -903,7 +917,7 @@ export default function EventDashboardPage() {
                 textShadow: '0 2px 8px rgba(0,0,0,0.7)'
               }}
             >
-              THE WEDDING CELEBRATION OF
+              {categoryMeta.heroBadgeText}
             </span>
           </div>
 
@@ -1422,10 +1436,20 @@ export default function EventDashboardPage() {
                       if (!isLocked) setActivePhoto(photo);
                     }}
                   >
-                    <div style={{ aspectRatio: '3/4', borderRadius: '18px', overflow: 'hidden', background: '#000', marginBottom: '12px', position: 'relative' }}>
+                    <div style={{ aspectRatio: '3/4', borderRadius: '18px', overflow: 'hidden', background: '#1A1816', marginBottom: '12px', position: 'relative' }}>
                       <img
-                        src={photo.imageData}
+                        src={formatSafeMediaUrl(photo.imageData)}
                         alt={`Foto oleh ${photo.guestName}`}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          const imgEl = e.currentTarget;
+                          const safeSrc = formatSafeMediaUrl(photo.imageData);
+                          if (safeSrc && !imgEl.dataset.retried) {
+                            imgEl.dataset.retried = '1';
+                            imgEl.src = `${safeSrc}${safeSrc.includes('?') ? '&' : '?'}v=${Date.now()}`;
+                          }
+                        }}
                         style={{
                           width: '100%',
                           height: '100%',
@@ -1929,7 +1953,7 @@ export default function EventDashboardPage() {
                     }}
                   >
                     <img
-                      src={activePhoto.imageData}
+                      src={formatSafeMediaUrl(activePhoto.imageData)}
                       alt={activePhoto.guestName}
                       draggable={false}
                       style={{
@@ -2070,7 +2094,7 @@ export default function EventDashboardPage() {
                         title={`Lihat foto ${idx + 1}`}
                       >
                         <img
-                          src={p.imageData}
+                          src={formatSafeMediaUrl(p.imageData)}
                           alt={`Thumbnail ${idx + 1}`}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
@@ -2327,7 +2351,7 @@ export default function EventDashboardPage() {
         <VideoWishStoriesPlayer
           wishes={videoWishes}
           initialIndex={activeStoryIndex}
-          coupleOrHost={event?.coupleOrHost || event?.title || 'Pengantin'}
+          coupleOrHost={event?.coupleOrHost || event?.title || 'Tuan Rumah'}
           onClose={() => setShowStoriesPlayer(false)}
         />
       )}

@@ -26,6 +26,7 @@ import {
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
 import { addPhotoToOfflineQueue, flushOfflineQueue, getOfflinePhotosQueue, removeOfflinePhoto } from '@/lib/offlineQueue';
 import { getDeviceFingerprint, isInAppBrowser } from '@/lib/fingerprint';
+import { formatSafeMediaUrl } from '@/lib/media-url';
 import ConfirmModal from '@/components/ConfirmModal';
 import VideoWishRecorder from '@/components/VideoWishRecorder';
 
@@ -280,7 +281,13 @@ export default function GuestCameraPage() {
         .then(res => res.json())
         .then(data => {
           if (data.success && data.event) {
-            setEvent(data.event);
+            const safeEvent = {
+              ...data.event,
+              coverUrl: formatSafeMediaUrl(data.event.coverUrl),
+              customFrameUrl: formatSafeMediaUrl(data.event.customFrameUrl),
+              vendorLogo: formatSafeMediaUrl(data.event.vendorLogo),
+            };
+            setEvent(safeEvent);
             const tierLimit = PACKAGE_TIERS[data.event.packageTier as EventPackageTier]?.shotsPerGuest || 20;
             setMaxShots(data.event.shotsPerGuest || tierLimit);
             if (data.event.preset) {
@@ -369,7 +376,7 @@ export default function GuestCameraPage() {
                   const serverPhotos: GuestPhoto[] = pData.photos.map((p: any, idx: number) => ({
                     id: p.id,
                     shotNumber: p.shotNumber || (idx + 1),
-                    imageData: p.imageData,
+                    imageData: formatSafeMediaUrl(p.imageData),
                     timestamp: new Date(p.timestamp || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }),
                     caption: p.caption || '',
                     aspectRatio: p.aspectRatio || '3:4',
@@ -434,10 +441,14 @@ export default function GuestCameraPage() {
       if (savedPhotos) {
         const parsed = JSON.parse(savedPhotos);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setMyPhotos(parsed);
-          setShotCount(prev => Math.max(prev, parsed.length));
-          if (parsed.length > 0) {
-            setLastShotThumb(parsed[parsed.length - 1].imageData);
+          const sanitizedParsed = parsed.map((p: any) => ({
+            ...p,
+            imageData: formatSafeMediaUrl(p.imageData),
+          }));
+          setMyPhotos(sanitizedParsed);
+          setShotCount(prev => Math.max(prev, sanitizedParsed.length));
+          if (sanitizedParsed.length > 0) {
+            setLastShotThumb(sanitizedParsed[sanitizedParsed.length - 1].imageData);
           }
         }
       }
@@ -677,7 +688,7 @@ export default function GuestCameraPage() {
               id: p.id,
               eventId: p.eventId || targetEventId,
               guestName: p.guestName,
-              imageData: p.imageData || p.url,
+              imageData: formatSafeMediaUrl(p.imageData || p.url),
               filter: p.filter || 'Disposable',
               shotNumber: p.shotNumber || (idx + 1),
               caption: p.caption || '',
@@ -855,10 +866,10 @@ export default function GuestCameraPage() {
       if (activeFrameId !== 'none') {
         await applyFrameToCanvas(canvas, ctx, {
           frameId: activeFrameId,
-          coupleOrTitle: event?.coupleOrHost || 'Pernikahan Spesial',
+          coupleOrTitle: event?.coupleOrHost || event?.title || 'Momen Spesial',
           eventDate: event?.eventDate,
           tagline: event?.frameText,
-          customFrameUrl: event?.customFrameUrl
+          customFrameUrl: formatSafeMediaUrl(event?.customFrameUrl)
         });
       }
 
@@ -971,7 +982,7 @@ export default function GuestCameraPage() {
         .then(res => res.json())
         .then(data => {
           if (data.success && data.photo) {
-            const confirmedUrl = data.photo.imageData || highResDataUrl;
+            const confirmedUrl = formatSafeMediaUrl(data.photo.imageData) || highResDataUrl;
             const confirmedId = data.photo.id || newGuestPhoto.id;
             setMyPhotos(prev => prev.map(p => p.id === newGuestPhoto.id ? { ...p, id: confirmedId, imageData: confirmedUrl } : p));
             // Update local storage representation
@@ -2269,7 +2280,7 @@ export default function GuestCameraPage() {
                         overflow: 'hidden'
                       }}>
                         <img
-                          src={photo.imageData}
+                          src={formatSafeMediaUrl(photo.imageData)}
                           alt={`Jepretan #${photo.shotNumber}`}
                           style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                         />
@@ -2322,7 +2333,7 @@ export default function GuestCameraPage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              downloadSinglePhoto(photo.imageData, photo.shotNumber);
+                              downloadSinglePhoto(formatSafeMediaUrl(photo.imageData), photo.shotNumber);
                             }}
                             title="Unduh ke HP"
                             style={{
@@ -2585,7 +2596,7 @@ export default function GuestCameraPage() {
                   whileTap={{ cursor: 'grabbing' }}
                 >
                   <img
-                    src={previewPhoto.imageData}
+                    src={formatSafeMediaUrl(previewPhoto.imageData)}
                     alt={`Jepretan #${previewPhoto.shotNumber}`}
                     draggable={false}
                     style={{

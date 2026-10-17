@@ -13,6 +13,7 @@ interface FrameCustomizerProps {
   initialEventDate?: string;
   initialTagline?: string;
   initialAllowGuestToggle?: boolean;
+  initialSampleModel?: 'couple' | 'guests';
   onUpdate: (data: {
     frameId: FrameId;
     customFrameUrl?: string;
@@ -30,6 +31,7 @@ export default function FrameCustomizer({
   initialEventDate = '',
   initialTagline = 'The Beginning of Forever',
   initialAllowGuestToggle = true,
+  initialSampleModel = 'couple',
   onUpdate
 }: FrameCustomizerProps) {
   const extractCleanTagline = (raw?: string) => {
@@ -50,11 +52,15 @@ export default function FrameCustomizer({
   const unsavedFrameUploadRef = useRef<string>('');
 
   const [activeCategory, setActiveCategory] = useState<'all' | 'wedding' | 'classic' | 'retro' | 'party'>('all');
-  const [sampleModel, setSampleModel] = useState<'couple' | 'guests'>('couple');
+  const [sampleModel, setSampleModel] = useState<'couple' | 'guests'>(initialSampleModel);
   const [isUploading, setIsUploading] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
 
   const previewCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    setSampleModel(initialSampleModel);
+  }, [initialSampleModel]);
 
   // Sync from parent when user edits Section 1 fields or switches events in Dashboard
   useEffect(() => {

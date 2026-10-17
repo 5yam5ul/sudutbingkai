@@ -4,8 +4,9 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play, Link2, Globe, Copy, CreditCard, FileText, BookOpen, Users, Clock, Search } from 'lucide-react';
-import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo } from '@/lib/types';
+import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo, resolveEventCategory, getEventCategoryMeta } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, authFetch } from '@/lib/auth';
+import { formatSafeMediaUrl } from '@/lib/media-url';
 import { FILM_PRESETS } from '@/lib/filters';
 import { FrameId, FRAME_TEMPLATES } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
@@ -238,7 +239,7 @@ export default function BrideDashboardPage() {
       setAllowGuestPresetSwitch(selected.allowGuestPresetSwitch || false);
     }
     setFrameId(selected.frameId || 'minimal-gold');
-    setCustomFrameUrl(selected.customFrameUrl || '');
+    setCustomFrameUrl(formatSafeMediaUrl(selected.customFrameUrl || ''));
     const rawTagline = selected.frameText || '';
     setFrameText(rawTagline.includes('•') ? (rawTagline.split('•').pop()?.trim() || '') : rawTagline);
     setCoupleOrHost(selected.coupleOrHost || '');
@@ -253,7 +254,7 @@ export default function BrideDashboardPage() {
         keepalive: true,
       }).catch(() => {});
     }
-    setCoverUrl(selected.coverUrl || '');
+    setCoverUrl(formatSafeMediaUrl(selected.coverUrl || ''));
     setEventSlug(selected.slug || '');
 
     // Fetch all photos including hidden for host moderation
@@ -261,7 +262,10 @@ export default function BrideDashboardPage() {
       const resPhotos = await authFetch(`/api/photos?eventId=${selected.id}&includeHidden=true`);
       const dataPhotos = await resPhotos.json();
       if (dataPhotos.success && dataPhotos.photos) {
-        setPhotos(dataPhotos.photos);
+        setPhotos(dataPhotos.photos.map((p: PhotoRecord) => ({
+          ...p,
+          imageData: formatSafeMediaUrl(p.imageData),
+        })));
       } else {
         setPhotos([]);
       }
@@ -677,6 +681,8 @@ export default function BrideDashboardPage() {
   }
 
   const presetInfo = event ? FILM_PRESETS[event.preset] || FILM_PRESETS.portra : FILM_PRESETS.portra;
+  const activeCategory = resolveEventCategory(event);
+  const categoryMeta = getEventCategoryMeta(activeCategory);
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#FBFBFA', color: '#1D1D1F' }}>
@@ -1012,7 +1018,7 @@ export default function BrideDashboardPage() {
                 )}
               </div>
               <h1 className="font-display-serif" style={{ fontSize: 'clamp(1.75rem, 4vw, 2.2rem)', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
-                {event?.title || 'Album Pernikahan'}
+                {event?.title || categoryMeta.defaultTitle}
               </h1>
               <p style={{ color: '#515154', fontSize: '14px' }}>
                 {event?.coupleOrHost} {event?.location && `• ${event.location}`}
@@ -1882,7 +1888,7 @@ export default function BrideDashboardPage() {
                 }}
               >
                 <img
-                  src={coverUrl || '/samples/dummy-couple.jpg'}
+                  src={formatSafeMediaUrl(coverUrl) || categoryMeta.defaultCoverUrl}
                   alt="Cover Preview"
                   style={{
                     width: '100%',
@@ -1890,7 +1896,10 @@ export default function BrideDashboardPage() {
                     objectFit: 'cover'
                   }}
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/samples/dummy-couple.jpg';
+                    const target = e.target as HTMLImageElement;
+                    if (!target.src.endsWith(categoryMeta.defaultCoverUrl)) {
+                      target.src = categoryMeta.defaultCoverUrl;
+                    }
                   }}
                 />
                 <div
@@ -1906,10 +1915,10 @@ export default function BrideDashboardPage() {
                   }}
                 >
                   <span style={{ fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', color: '#D4AF37', fontWeight: 600, marginBottom: '4px' }}>
-                    THE WEDDING CELEBRATION OF
+                    {categoryMeta.heroBadgeText}
                   </span>
                   <h3 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: '26px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-                    {event?.coupleOrHost || 'Nama Acara'}
+                    {event?.coupleOrHost || event?.title || 'Nama Acara'}
                   </h3>
                   <p style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.85)', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span>{event?.eventDate || '14 FEBRUARI 2026'}</span>
@@ -2022,7 +2031,7 @@ export default function BrideDashboardPage() {
                       }
                       setCoverUrl(e.target.value);
                     }}
-                    placeholder="https://... (URL foto prewedding)"
+                    placeholder="https://... (URL foto acara)"
                     style={{
                       width: '100%',
                       padding: '11px 14px',
@@ -2065,8 +2074,8 @@ export default function BrideDashboardPage() {
                 </span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {[
-                    { label: 'Potret Pengantin', url: '/samples/dummy-couple.jpg' },
                     { label: 'Suasana Tamu & Pesta', url: '/samples/dummy-guests.jpg' },
+                    { label: 'Potret Pengantin', url: '/samples/dummy-couple.jpg' },
                     { label: 'Romantic Warmth (Unsplash)', url: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1600&q=80' },
                     { label: 'Sunset Silhouette (Unsplash)', url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?auto=format&fit=crop&w=1600&q=80' },
                   ].map((p, idx) => (
@@ -2114,10 +2123,11 @@ export default function BrideDashboardPage() {
               <FrameCustomizer
                 initialFrameId={frameId}
                 initialCustomFrameUrl={customFrameUrl}
-                initialCoupleName={coupleOrHost || event?.coupleOrHost || 'Nama Acara'}
+                initialCoupleName={coupleOrHost || event?.coupleOrHost || event?.title || 'Nama Acara'}
                 initialEventDate={eventDate || event?.eventDate || ''}
-                initialTagline={frameText || 'The Beginning of Forever'}
+                initialTagline={frameText || categoryMeta.defaultTagline}
                 initialAllowGuestToggle={allowGuestFrameToggle}
+                initialSampleModel={activeCategory === 'wedding' ? 'couple' : 'guests'}
                 onUpdate={({ frameId: fId, customFrameUrl: cUrl, coupleName: cName, eventDate: eDate, tagline: tLine, allowGuestFrameToggle: aToggle }) => {
                   setFrameId(fId);
                   setCustomFrameUrl(cUrl || '');
@@ -2213,7 +2223,7 @@ export default function BrideDashboardPage() {
                           background: '#1D1D1F'
                         }}>
                           <img
-                            src="/samples/dummy-couple.jpg"
+                            src={categoryMeta.defaultCoverUrl}
                             alt={p.name}
                             className={`film-${id}`}
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { uploadBufferToR2, isR2Configured, deleteFromR2 } from '@/lib/r2';
+import { uploadBufferToR2, isR2Configured, deleteFromR2, formatSafeMediaUrl } from '@/lib/r2';
 import { getServerSession } from '@/lib/auth';
 import { getAllEvents, getAllVendors, getPayoutRequests, getAllAddons, getAllTestimonials } from '@/lib/db';
 
@@ -78,12 +78,13 @@ export async function POST(request: Request) {
       try {
         const r2Url = await uploadBufferToR2(buffer, storagePath, mime || 'image/png');
         if (r2Url) {
-          if (oldUrl && oldUrl !== r2Url) {
+          const safeUrl = formatSafeMediaUrl(r2Url);
+          if (oldUrl && oldUrl !== r2Url && oldUrl !== safeUrl) {
             await deleteOrphanUploadUrl(oldUrl).catch(() => {});
           }
           return NextResponse.json({
             success: true,
-            url: r2Url,
+            url: safeUrl,
             filename,
             size: file.size
           });
@@ -175,12 +176,16 @@ async function canSafelyDeleteUploadUrl(targetUrl: string): Promise<{ allowed: b
     getAllTestimonials().catch(() => [])
   ]);
 
+  const safeTarget = formatSafeMediaUrl(targetUrl);
+  const matchesTarget = (val?: string | null) =>
+    Boolean(val && (val === targetUrl || val === safeTarget || formatSafeMediaUrl(val) === safeTarget));
+
   const isActivelyReferenced =
-    events.some(e => e.coverUrl === targetUrl || e.customFrameUrl === targetUrl || e.vendorLogo === targetUrl) ||
-    vendors.some(v => v.logoUrl === targetUrl) ||
-    payouts.some(p => p.proofUrl === targetUrl) ||
-    addons.some(a => a.imagePreviewUrl === targetUrl) ||
-    testimonials.some(t => t.videoUrl === targetUrl);
+    events.some(e => matchesTarget(e.coverUrl) || matchesTarget(e.customFrameUrl) || matchesTarget(e.vendorLogo)) ||
+    vendors.some(v => matchesTarget(v.logoUrl)) ||
+    payouts.some(p => matchesTarget(p.proofUrl)) ||
+    addons.some(a => matchesTarget(a.imagePreviewUrl)) ||
+    testimonials.some(t => matchesTarget(t.videoUrl));
 
   if (isActivelyReferenced) {
     return { allowed: false, reason: 'Aset sedang digunakan secara aktif oleh data yang telah disimpan.' };

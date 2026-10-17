@@ -64,49 +64,48 @@ export async function uploadBufferToR2(
 }
 
 /**
- * Download a binary buffer directly from Cloudflare R2 bucket.
- * Used by the storage proxy route to bypass Indonesian ISP blocks on r2.dev.
+ * Fetch an object from Cloudflare R2 as a stream (optionally a byte range).
+ * Used by the /api/storage proxy so media is served from our own domain,
+ * bypassing the Indonesian ISP block on *.r2.dev.
  */
-export async function downloadFromR2(key: string): Promise<{ buffer: Buffer; contentType: string } | null> {
+export async function getR2ObjectStream(
+  key: string,
+  range?: string | null
+): Promise<{
+  body: ReadableStream;
+  contentType: string;
+  contentLength?: number;
+  contentRange?: string;
+  etag?: string;
+  isPartial: boolean;
+} | null> {
   if (!r2Client) return null;
   const cleanKey = key.replace(/^\/+/, '');
   try {
-    const command = new GetObjectCommand({
+    const response = await r2Client.send(new GetObjectCommand({
       Bucket: r2BucketName,
       Key: cleanKey,
-    });
-    const response = await r2Client.send(command);
+      ...(range ? { Range: range } : {}),
+    }));
     if (!response.Body) return null;
-    const byteArray = await response.Body.transformToByteArray();
     return {
-      buffer: Buffer.from(byteArray),
-      contentType: response.ContentType || 'image/jpeg',
+      body: response.Body.transformToWebStream() as ReadableStream,
+      contentType: response.ContentType || 'application/octet-stream',
+      contentLength: response.ContentLength,
+      contentRange: response.ContentRange,
+      etag: response.ETag,
+      isPartial: Boolean(range && response.ContentRange),
     };
   } catch (error) {
-    console.error('R2 download failed for key', cleanKey, error);
+    const name = (error as { name?: string })?.name;
+    if (name !== 'NoSuchKey') {
+      console.error('R2 stream failed for key', cleanKey, error);
+    }
     return null;
   }
 }
 
-/**
- * Converts r2.dev URLs into safe local proxy URLs (/api/storage/...) so devices
- * on Indonesian telco providers (Telkomsel, Indihome, XL, Indosat) won't get
- * intercepted by Internet Positif / Kominfo DNS filters.
- */
-export function formatSafeMediaUrl(url?: string | null): string {
-  if (!url || typeof url !== 'string') return '';
-  const trimmed = url.trim();
-  if (!trimmed) return '';
-  if (trimmed.includes('.r2.dev/')) {
-    try {
-      const parsed = new URL(trimmed);
-      return `/api/storage${parsed.pathname}`;
-    } catch {
-      return trimmed;
-    }
-  }
-  return trimmed;
-}
+export { formatSafeMediaUrl } from './media-url';
 
 /**
  * Extract the canonical R2 object key from a public URL or storage path

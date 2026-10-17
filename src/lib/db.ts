@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem, VideoWishRecord, PACKAGE_TIERS, EventPackageTier } from './types';
+import { EventData, EventCategoryType, FilmPresetId, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem, VideoWishRecord, PACKAGE_TIERS, EventPackageTier, resolveEventCategory } from './types';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { uploadBufferToR2, isR2Configured, deleteFromR2, formatSafeMediaUrl } from './r2';
 import { isSameVendorId } from './auth';
@@ -100,17 +100,40 @@ function cleanSlugString(text?: string): string | undefined {
   return clean || undefined;
 }
 
+function encodePresetsWithCategory(allowedPresets?: FilmPresetId[], eventType?: EventCategoryType): string[] | null {
+  const cleanPresets = Array.isArray(allowedPresets)
+    ? allowedPresets.filter(p => typeof p === 'string' && !p.startsWith('__cat:'))
+    : [];
+  if (eventType && ['wedding', 'birthday', 'corporate', 'other'].includes(eventType)) {
+    return [...cleanPresets, `__cat:${eventType}`];
+  }
+  return cleanPresets.length > 0 ? cleanPresets : null;
+}
+
 function rowToEvent(row: any): EventData {
   const derivedSlug = row.slug || cleanSlugString(row.couple_or_host) || cleanSlugString(row.title) || (row.id ? row.id.replace(/^wedding-|^event-|^sb-/, '') : undefined);
+  const rawAllowed: string[] = Array.isArray(row.allowed_presets) ? row.allowed_presets : [];
+  const catTag = rawAllowed.find(p => typeof p === 'string' && p.startsWith('__cat:'));
+  const explicitCat = (row.event_type || (catTag ? catTag.replace('__cat:', '') : undefined)) as EventCategoryType | undefined;
+  const cleanAllowedPresets = rawAllowed.filter(p => typeof p === 'string' && !p.startsWith('__cat:')) as FilmPresetId[];
+  const resolvedEventType = resolveEventCategory({
+    eventType: explicitCat,
+    title: row.title,
+    slug: derivedSlug,
+    coupleOrHost: row.couple_or_host,
+    frameText: row.frame_text,
+  });
+
   return {
     id: row.id,
     slug: derivedSlug,
+    eventType: resolvedEventType,
     title: row.title,
     coupleOrHost: row.couple_or_host,
     eventDate: row.event_date,
     location: row.location || undefined,
     preset: row.preset,
-    allowedPresets: row.allowed_presets || undefined,
+    allowedPresets: cleanAllowedPresets.length > 0 ? cleanAllowedPresets : undefined,
     allowGuestPresetSwitch: row.allow_guest_preset_switch,
     packageTier: row.package_tier,
     maxGuests: row.max_guests,
@@ -147,7 +170,7 @@ function eventToRow(event: EventData) {
     event_date: event.eventDate,
     location: event.location || null,
     preset: event.preset || 'portra',
-    allowed_presets: event.allowedPresets || null,
+    allowed_presets: encodePresetsWithCategory(event.allowedPresets, event.eventType),
     allow_guest_preset_switch: event.allowGuestPresetSwitch ?? true,
     package_tier: event.packageTier || 'wedding',
     max_guests: event.maxGuests,
@@ -221,7 +244,13 @@ export async function getAllEvents(): Promise<EventData[]> {
       const raw = fs.readFileSync(EVENTS_FILE, 'utf8');
       const parsed: EventData[] = JSON.parse(raw);
       for (const ev of parsed) {
-        localEventsMap.set(ev.id, ev);
+        localEventsMap.set(ev.id, {
+          ...ev,
+          eventType: resolveEventCategory(ev),
+          coverUrl: formatSafeMediaUrl(ev.coverUrl) || undefined,
+          customFrameUrl: formatSafeMediaUrl(ev.customFrameUrl) || undefined,
+          vendorLogo: formatSafeMediaUrl(ev.vendorLogo) || undefined,
+        });
       }
     }
   } catch {}
@@ -238,6 +267,7 @@ export async function getAllEvents(): Promise<EventData[]> {
           const mapped = rowToEvent(row);
           const localCached = localEventsMap.get(mapped.id);
           if (localCached) {
+            if (localCached.eventType) mapped.eventType = localCached.eventType;
             if (localCached.vendorCoBranding && !mapped.vendorCoBranding) mapped.vendorCoBranding = localCached.vendorCoBranding;
             if (localCached.addons && !mapped.addons) mapped.addons = localCached.addons;
           }
@@ -274,6 +304,7 @@ export async function getEventById(id: string): Promise<EventData | null> {
             const parsed: EventData[] = JSON.parse(raw);
             const localCached = parsed.find(e => e.id === mapped.id);
             if (localCached) {
+              if (localCached.eventType) mapped.eventType = localCached.eventType;
               if (localCached.vendorCoBranding && !mapped.vendorCoBranding) mapped.vendorCoBranding = localCached.vendorCoBranding;
               if (localCached.addons && !mapped.addons) mapped.addons = localCached.addons;
             }
@@ -297,9 +328,17 @@ export async function getEventById(id: string): Promise<EventData | null> {
 }
 
 export async function saveEvent(event: EventData): Promise<EventData> {
+  const normalizedEvent: EventData = {
+    ...event,
+    eventType: resolveEventCategory(event),
+    coverUrl: formatSafeMediaUrl(event.coverUrl) || undefined,
+    customFrameUrl: formatSafeMediaUrl(event.customFrameUrl) || undefined,
+    vendorLogo: formatSafeMediaUrl(event.vendorLogo) || undefined,
+  };
+
   if (isSupabaseConfigured && supabase) {
     try {
-      const row = eventToRow(event);
+      const row = eventToRow(normalizedEvent);
       const { error } = await supabase
         .from('events')
         .upsert(row);
@@ -312,22 +351,22 @@ export async function saveEvent(event: EventData): Promise<EventData> {
     }
   }
 
-  // Always sync local cache so extended fields (vendorCoBranding, addons) and local fallback stay up to date
+  // Always sync local cache so extended fields (vendorCoBranding, addons, eventType) and local fallback stay up to date
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(EVENTS_FILE) ? fs.readFileSync(EVENTS_FILE, 'utf8') : '[]';
     const events: EventData[] = JSON.parse(raw);
-    const existingIdx = events.findIndex(e => e.id === event.id);
+    const existingIdx = events.findIndex(e => e.id === normalizedEvent.id);
     if (existingIdx >= 0) {
-      events[existingIdx] = { ...events[existingIdx], ...event };
+      events[existingIdx] = { ...events[existingIdx], ...normalizedEvent };
     } else {
-      events.unshift(event);
+      events.unshift(normalizedEvent);
     }
     fs.writeFileSync(EVENTS_FILE, JSON.stringify(events, null, 2), 'utf8');
   } catch (err) {
     console.warn('Local saveEvent skipped:', err);
   }
-  return event;
+  return normalizedEvent;
 }
 
 export async function updateEvent(id: string, updates: Partial<EventData>): Promise<EventData | null> {
@@ -353,7 +392,11 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
       if (updates.eventDate !== undefined) dbUpdates.event_date = updates.eventDate;
       if (updates.location !== undefined) dbUpdates.location = updates.location;
       if (updates.preset !== undefined) dbUpdates.preset = updates.preset;
-      if (updates.allowedPresets !== undefined) dbUpdates.allowed_presets = updates.allowedPresets;
+      if (updates.allowedPresets !== undefined || updates.eventType !== undefined) {
+        const nextPresets = updates.allowedPresets !== undefined ? updates.allowedPresets : existing?.allowedPresets;
+        const nextType = updates.eventType !== undefined ? updates.eventType : existing?.eventType;
+        dbUpdates.allowed_presets = encodePresetsWithCategory(nextPresets, nextType);
+      }
       if (updates.allowGuestPresetSwitch !== undefined) dbUpdates.allow_guest_preset_switch = updates.allowGuestPresetSwitch;
       if (updates.packageTier !== undefined) dbUpdates.package_tier = updates.packageTier;
       if (updates.maxGuests !== undefined) dbUpdates.max_guests = updates.maxGuests;
@@ -386,8 +429,10 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
         .single();
 
       if (!error && data) {
+        const mappedRow = rowToEvent(data);
         const updated: EventData = {
-          ...rowToEvent(data),
+          ...mappedRow,
+          eventType: updates.eventType || mappedRow.eventType || existing?.eventType,
           vendorCoBranding: updates.vendorCoBranding !== undefined ? updates.vendorCoBranding : existing?.vendorCoBranding,
           addons: updates.addons !== undefined ? updates.addons : existing?.addons
         };
@@ -423,7 +468,9 @@ export async function updateEvent(id: string, updates: Partial<EventData>): Prom
 
     const normalizedUpdates = { ...updates };
     if (normalizedUpdates.coverUrl === '') normalizedUpdates.coverUrl = undefined;
+    else if (normalizedUpdates.coverUrl) normalizedUpdates.coverUrl = formatSafeMediaUrl(normalizedUpdates.coverUrl);
     if (normalizedUpdates.customFrameUrl === '') normalizedUpdates.customFrameUrl = undefined;
+    else if (normalizedUpdates.customFrameUrl) normalizedUpdates.customFrameUrl = formatSafeMediaUrl(normalizedUpdates.customFrameUrl);
     if (normalizedUpdates.revealTime === '') normalizedUpdates.revealTime = undefined;
 
     events[existingIdx] = { ...events[existingIdx], ...normalizedUpdates };
@@ -712,7 +759,11 @@ export async function getAllPhotos(eventId?: string, includeHidden: boolean = fa
       if (!includeHidden) {
         photos = photos.filter(p => !p.isHidden);
       }
-      return photos;
+      return photos.map(p => ({
+        ...p,
+        imageData: formatSafeMediaUrl(p.imageData),
+        voiceNoteUrl: formatSafeMediaUrl(p.voiceNoteUrl) || undefined,
+      }));
     }
   } catch {}
   return [];
@@ -797,7 +848,11 @@ export async function savePhoto(photo: PhotoRecord): Promise<PhotoRecord> {
         .upsert(row);
 
       if (!dbError) {
-        return { ...photo, imageData: finalImageUrl };
+        return {
+          ...photo,
+          imageData: formatSafeMediaUrl(finalImageUrl),
+          voiceNoteUrl: formatSafeMediaUrl(photo.voiceNoteUrl) || undefined,
+        };
       }
       console.warn('Supabase savePhoto DB error, falling back to local:', dbError.message);
     } catch (err) {
@@ -811,7 +866,11 @@ export async function savePhoto(photo: PhotoRecord): Promise<PhotoRecord> {
     finalImageUrl = saveImageToLocalFile(photo.id, photo.imageData);
   }
 
-  const savedRecord = { ...photo, imageData: finalImageUrl };
+  const savedRecord: PhotoRecord = {
+    ...photo,
+    imageData: formatSafeMediaUrl(finalImageUrl),
+    voiceNoteUrl: formatSafeMediaUrl(photo.voiceNoteUrl) || undefined,
+  };
 
   try {
     const raw = fs.existsSync(PHOTOS_FILE) ? fs.readFileSync(PHOTOS_FILE, 'utf8') : '[]';
@@ -1781,7 +1840,7 @@ export async function getAllTestimonials(): Promise<VideoTestimonialSubmission[]
           submitterName: row.submitter_name,
           submitterEmail: row.submitter_email || undefined,
           videoType: row.video_type || 'link',
-          videoUrl: row.video_url,
+          videoUrl: formatSafeMediaUrl(row.video_url),
           durationSeconds: Number(row.duration_seconds),
           caption: row.caption || undefined,
           rewardAmount: Number(row.reward_amount || 50000),
@@ -1800,7 +1859,8 @@ export async function getAllTestimonials(): Promise<VideoTestimonialSubmission[]
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(TESTIMONIALS_FILE) ? fs.readFileSync(TESTIMONIALS_FILE, 'utf8') : '[]';
-    return JSON.parse(raw);
+    const parsed: VideoTestimonialSubmission[] = JSON.parse(raw);
+    return parsed.map(t => ({ ...t, videoUrl: formatSafeMediaUrl(t.videoUrl) }));
   } catch {
     return [];
   }
@@ -2073,7 +2133,7 @@ export async function getAllVendors(): Promise<any[]> {
           email: v.email,
           phone: v.phone || '',
           instagram: v.instagram || '',
-          logoUrl: v.logo_url || '',
+          logoUrl: formatSafeMediaUrl(v.logo_url) || '',
           tier: v.tier === 'suspended' ? 'pro' : (v.tier || 'pro'),
           status: v.status || (v.tier === 'suspended' ? 'suspended' : 'active'),
           partnerTier: v.partner_tier || 'regular',
@@ -2100,7 +2160,8 @@ export async function getAllVendors(): Promise<any[]> {
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(VENDORS_FILE) ? fs.readFileSync(VENDORS_FILE, 'utf8') : '[]';
-    return JSON.parse(raw);
+    const parsed: any[] = JSON.parse(raw);
+    return parsed.map(v => ({ ...v, logoUrl: formatSafeMediaUrl(v.logoUrl) || '' }));
   } catch {
     return [];
   }
@@ -2413,7 +2474,10 @@ export async function getAllAddons(): Promise<EventAddonItem[]> {
   try {
     ensureLocalDataFiles();
     const raw = fs.existsSync(ADDONS_FILE) ? fs.readFileSync(ADDONS_FILE, 'utf8') : '[]';
-    localList = JSON.parse(raw);
+    localList = (JSON.parse(raw) as EventAddonItem[]).map(a => ({
+      ...a,
+      imagePreviewUrl: formatSafeMediaUrl(a.imagePreviewUrl) || undefined,
+    }));
   } catch {}
 
   // 1. Try Supabase
@@ -2437,7 +2501,7 @@ export async function getAllAddons(): Promise<EventAddonItem[]> {
             costPrice: row.cost_price !== undefined && row.cost_price !== null
               ? Number(row.cost_price)
               : localMatch?.costPrice,
-            imagePreviewUrl: row.image_preview_url || row.image_url || localMatch?.imagePreviewUrl || undefined,
+            imagePreviewUrl: formatSafeMediaUrl(row.image_preview_url || row.image_url || localMatch?.imagePreviewUrl) || undefined,
             isActive: row.is_active !== undefined && row.is_active !== null
               ? row.is_active !== false
               : (localMatch?.isActive !== undefined ? localMatch.isActive : true),
@@ -2486,7 +2550,7 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
   const newAddon: EventAddonItem = {
     ...addon,
     id: addonId,
-    imagePreviewUrl: resolvedImageUrl,
+    imagePreviewUrl: formatSafeMediaUrl(resolvedImageUrl) || undefined,
     priceFormatted: `Rp ${Number(addon.price).toLocaleString('id-ID')}`,
     createdAt: addon.createdAt || new Date().toISOString()
   };
@@ -2525,7 +2589,7 @@ export async function saveAddon(addon: EventAddonItem): Promise<EventAddonItem> 
           price: Number(data.price),
           priceFormatted: `Rp ${Number(data.price).toLocaleString('id-ID')}`,
           costPrice: data.cost_price !== undefined && data.cost_price !== null ? Number(data.cost_price) : newAddon.costPrice,
-          imagePreviewUrl: data.image_preview_url || data.image_url || newAddon.imagePreviewUrl || undefined,
+          imagePreviewUrl: formatSafeMediaUrl(data.image_preview_url || data.image_url || newAddon.imagePreviewUrl) || undefined,
           isActive: data.is_active !== undefined && data.is_active !== null ? data.is_active !== false : (newAddon.isActive !== false),
           freeShippingJabodetabek: data.free_shipping_jabodetabek !== false,
           unit: data.unit || '1 set',
@@ -2630,9 +2694,9 @@ export async function updateAddon(id: string, updates: Partial<EventAddonItem>):
           costPrice: updates.costPrice !== undefined
             ? updates.costPrice
             : (data.cost_price !== undefined && data.cost_price !== null ? Number(data.cost_price) : existingAddon?.costPrice),
-          imagePreviewUrl: updates.imagePreviewUrl !== undefined
+          imagePreviewUrl: formatSafeMediaUrl(updates.imagePreviewUrl !== undefined
             ? (updates.imagePreviewUrl || undefined)
-            : (data.image_preview_url || data.image_url || existingAddon?.imagePreviewUrl || undefined),
+            : (data.image_preview_url || data.image_url || existingAddon?.imagePreviewUrl || undefined)) || undefined,
           isActive: updates.isActive !== undefined
             ? updates.isActive
             : (data.is_active !== undefined && data.is_active !== null ? data.is_active !== false : (existingAddon?.isActive ?? true)),
@@ -2740,6 +2804,8 @@ export async function saveVideoWish(wish: VideoWishRecord): Promise<VideoWishRec
   const newWish: VideoWishRecord = {
     ...wish,
     id: wish.id || `vw_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+    videoUrl: formatSafeMediaUrl(wish.videoUrl),
+    thumbnailUrl: formatSafeMediaUrl(wish.thumbnailUrl) || undefined,
     timestamp: wish.timestamp || new Date().toISOString()
   };
 
@@ -2751,8 +2817,8 @@ export async function saveVideoWish(wish: VideoWishRecord): Promise<VideoWishRec
         event_id: newWish.eventId,
         guest_name: newWish.guestName,
         table_number: newWish.tableNumber || null,
-        video_url: newWish.videoUrl,
-        thumbnail_url: newWish.thumbnailUrl || null,
+        video_url: wish.videoUrl,
+        thumbnail_url: wish.thumbnailUrl || null,
         duration: newWish.durationSeconds || 15,
         aspect_ratio: newWish.aspectRatio || '9:16',
         timestamp: newWish.timestamp
@@ -2817,7 +2883,11 @@ export async function getVideoWishes(eventId?: string): Promise<VideoWishRecord[
     if (eventId) {
       list = list.filter(w => w.eventId === eventId);
     }
-    return list;
+    return list.map(w => ({
+      ...w,
+      videoUrl: formatSafeMediaUrl(w.videoUrl),
+      thumbnailUrl: formatSafeMediaUrl(w.thumbnailUrl) || undefined,
+    }));
   } catch {
     return [];
   }

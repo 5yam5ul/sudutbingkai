@@ -141,9 +141,10 @@ export async function GET(request: Request) {
       } else if (guestNameParam && guestNameParam.trim() !== 'Tamu' && guestNameParam.trim() !== 'Tamu Undangan') {
         notes = notes.filter((n: any) => n.guestName?.toLowerCase() === guestNameParam.trim().toLowerCase());
       }
-      if (shouldMaskAudio) {
-        notes = notes.map((n: any) => ({ ...n, audioUrl: '' }));
-      }
+      notes = notes.map((n: any) => ({
+        ...n,
+        audioUrl: shouldMaskAudio ? '' : formatSafeMediaUrl(n.audioUrl)
+      }));
       return NextResponse.json({ success: true, voiceNotes: notes, isLocked: shouldMaskAudio || undefined });
     }
   } catch {}
@@ -345,7 +346,7 @@ export async function POST(request: Request) {
               eventId,
               guestName,
               sessionId,
-              audioUrl,
+              audioUrl: formatSafeMediaUrl(audioUrl),
               duration,
               timestamp: record.timestamp
             }
@@ -370,7 +371,7 @@ export async function POST(request: Request) {
         eventId: targetEventId,
         guestName,
         sessionId,
-        audioUrl: audioUrl || `/uploads/voices/${fileName}`,
+        audioUrl: formatSafeMediaUrl(audioUrl || `/uploads/voices/${fileName}`),
         duration,
         timestamp: new Date().toISOString()
       };

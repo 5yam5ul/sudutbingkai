@@ -9,7 +9,7 @@ import {
   Mail, Key, UserCheck, Tag, Percent, Wallet, Briefcase, Loader2, Star, Mic
 } from 'lucide-react';
 import { FILM_PRESETS } from '@/lib/filters';
-import { FilmPresetId, EventPackageTier, PACKAGE_TIERS, PRIMARY_PACKAGE_TIER_KEYS, UserAccount } from '@/lib/types';
+import { FilmPresetId, EventPackageTier, PACKAGE_TIERS, PRIMARY_PACKAGE_TIER_KEYS, UserAccount, getEventCategoryMeta } from '@/lib/types';
 import { getClientSession, setClientSession, authFetch } from '@/lib/auth';
 import { FrameId } from '@/lib/frames';
 import FrameCustomizer from '@/components/FrameCustomizer';
@@ -223,6 +223,7 @@ function CreateEventForm() {
     const cleanSlug = generateCleanSlug(slug || coupleOrHost || title);
 
     const eventPayload: any = {
+      eventType,
       title,
       coupleOrHost,
       slug: cleanSlug || undefined,
@@ -514,7 +515,15 @@ function CreateEventForm() {
                     <button
                       key={cat}
                       type="button"
-                      onClick={() => setEventType(cat)}
+                      onClick={() => {
+                        const prevDefaultTagline = getEventCategoryMeta(eventType).defaultFrameTagline;
+                        const nextDefaultTagline = getEventCategoryMeta(cat).defaultFrameTagline;
+                        setEventType(cat);
+                        setPreviewSample(cat === 'wedding' ? 'couple' : 'guests');
+                        if (!frameText || frameText === prevDefaultTagline || frameText === 'The Beginning of Forever') {
+                          setFrameText(nextDefaultTagline);
+                        }
+                      }}
                       className="glass-pill"
                       style={{
                         padding: '7px 14px',
@@ -545,7 +554,11 @@ function CreateEventForm() {
                   placeholder={
                     eventType === 'wedding'
                       ? 'Contoh: Hari Pernikahan Dimas & Sarah'
-                      : 'Contoh: Sweet 17 Keisha Azzahra'
+                      : eventType === 'birthday'
+                        ? 'Contoh: 8 Tahun Mbuy / Sweet 17 Keisha'
+                        : eventType === 'corporate'
+                          ? 'Contoh: Gala Dinner & Townhall 2026'
+                          : 'Contoh: Reuni Akbar & Ngopi Bareng'
                   }
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}
@@ -562,7 +575,13 @@ function CreateEventForm() {
                   <input
                     type="text"
                     required
-                    placeholder="Contoh: Dimas & Sarah"
+                    placeholder={
+                      eventType === 'wedding'
+                        ? 'Contoh: Dimas & Sarah'
+                        : eventType === 'birthday'
+                          ? 'Contoh: Syamsul Ma\'arif / Keisha'
+                          : 'Contoh: Nama Penyelenggara / Tuan Rumah'
+                    }
                     value={coupleOrHost}
                     onChange={(e) => handleHostChange(e.target.value)}
                     className="glass-input"
@@ -1170,10 +1189,11 @@ function CreateEventForm() {
             <FrameCustomizer
               initialFrameId={frameId}
               initialCustomFrameUrl={customFrameUrl}
-              initialCoupleName={coupleOrHost || 'Nama Acara'}
+              initialCoupleName={coupleOrHost || title || 'Nama Acara'}
               initialEventDate={eventDate}
-              initialTagline={frameText || 'The Beginning of Forever'}
+              initialTagline={frameText || getEventCategoryMeta(eventType).defaultFrameTagline}
               initialAllowGuestToggle={allowGuestFrameToggle}
+              initialSampleModel={eventType === 'wedding' ? 'couple' : 'guests'}
               onUpdate={({ frameId: fId, customFrameUrl: cUrl, tagline: tLine, allowGuestFrameToggle: aToggle }) => {
                 setFrameId(fId);
                 setCustomFrameUrl(cUrl || '');

@@ -264,6 +264,7 @@ export async function POST(request: Request) {
     const newEvent: EventData = {
       id,
       slug: cleanSlug,
+      eventType: ['wedding', 'birthday', 'corporate', 'other'].includes(body.eventType) ? body.eventType : undefined,
       title: body.title.trim(),
       coupleOrHost: body.coupleOrHost.trim(),
       eventDate: body.eventDate || new Date().toISOString(),
@@ -502,6 +503,9 @@ export async function PATCH(request: Request) {
         }
       }
       updates.slug = candidateSlug;
+    }
+    if (body.eventType && ['wedding', 'birthday', 'corporate', 'other'].includes(body.eventType)) {
+      updates.eventType = body.eventType;
     }
     if (body.title) updates.title = body.title.trim();
     if (body.coupleOrHost) updates.coupleOrHost = body.coupleOrHost.trim();
