@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
 import { getEventById, getAllPhotos, getVideoWishes } from '@/lib/db';
-import { getServerSession } from '@/lib/auth';
+import { getServerSession, isSameVendorId } from '@/lib/auth';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const GUESTS_FILE = path.join(DATA_DIR, 'guests.json');
@@ -42,8 +42,36 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Parameter eventId wajib disertakan' }, { status: 400 });
     }
 
+    const session = getServerSession(request);
+    if (!session) {
+      return NextResponse.json(
+        { success: false, error: 'Akses ditolak: Sesi login diperlukan untuk melihat buku tamu.' },
+        { status: 401 }
+      );
+    }
+
     const event = await getEventById(eventIdParam);
-    const canonicalEventId = event ? event.id : eventIdParam;
+    if (!event) {
+      return NextResponse.json({ success: false, error: 'Acara tidak ditemukan' }, { status: 404 });
+    }
+
+    const isAuthorizedHost =
+      (session.role === 'host' || session.role === 'vendor') &&
+      Boolean(
+        (session.email && event.hostEmail && session.email.toLowerCase() === event.hostEmail.toLowerCase()) ||
+        (session.id && session.id === event.hostEmail)
+      );
+    const isAuthorizedVendor = session.role === 'vendor' && isSameVendorId(session.id, event.vendorId);
+    const isAdmin = session.role === 'admin';
+
+    if (!isAuthorizedHost && !isAuthorizedVendor && !isAdmin) {
+      return NextResponse.json(
+        { success: false, error: 'Akses ditolak: Buku tamu acara ini hanya dapat diakses oleh pemilik acara.' },
+        { status: 403 }
+      );
+    }
+
+    const canonicalEventId = event.id;
 
     // 1. Gather all activity from Photos, Voice Notes, and Video Wishes for this event
     const [allPhotos, videoWishes] = await Promise.all([

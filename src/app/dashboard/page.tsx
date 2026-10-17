@@ -164,7 +164,15 @@ export default function BrideDashboardPage() {
 
   useEffect(() => {
     const current = getClientSession();
-    if (!current || (current.role !== 'host' && current.role !== 'vendor' && current.role !== 'admin')) {
+    if (!current) {
+      router.push('/login');
+      return;
+    }
+    if (current.role === 'admin') {
+      router.replace('/admin');
+      return;
+    }
+    if (current.role !== 'host' && current.role !== 'vendor') {
       router.push('/login');
       return;
     }
@@ -365,7 +373,7 @@ export default function BrideDashboardPage() {
     try {
       setLoading(true);
       const activeRole = currentUser?.role || user?.role || 'host';
-      const email = currentUser?.email || user?.email || 'pengantin@sudutbingkai.id';
+      const email = currentUser?.email || user?.email || '';
       const vendorId = currentUser?.id || user?.id || '';
 
       const queryUrl = activeRole === 'vendor' && vendorId
@@ -375,41 +383,61 @@ export default function BrideDashboardPage() {
       const resEvents = await authFetch(queryUrl);
       let dataEvents = await resEvents.json();
 
-      // Smart recovery: If active role is 'vendor' but 0 vendor events, check if host events exist under this email
-      if (activeRole === 'vendor' && (!dataEvents.events || dataEvents.events.length === 0) && email) {
+      // Smart recovery: If active role is 'vendor' but 0 vendor events (or requested event is a personal host event under the same email), check host events under this email
+      if (
+        activeRole === 'vendor' &&
+        email &&
+        (
+          !dataEvents.events ||
+          dataEvents.events.length === 0 ||
+          (targetEventId && !dataEvents.events.some((e: EventData) => e.id === targetEventId || e.slug === targetEventId))
+        )
+      ) {
         try {
           const fallbackRes = await authFetch(`/api/events?hostEmail=${encodeURIComponent(email)}`);
           const fallbackData = await fallbackRes.json();
-          if (fallbackData.success && fallbackData.events && fallbackData.events.length > 0) {
-            dataEvents = fallbackData;
-            setIsHostMismatched(true);
+          if (fallbackData.success && Array.isArray(fallbackData.events) && fallbackData.events.length > 0) {
+            if (!dataEvents.events || dataEvents.events.length === 0) {
+              dataEvents = fallbackData;
+              setIsHostMismatched(true);
+            } else {
+              const existingIds = new Set(dataEvents.events.map((e: EventData) => e.id));
+              const merged = [...dataEvents.events];
+              for (const ev of fallbackData.events) {
+                if (!existingIds.has(ev.id)) merged.push(ev);
+              }
+              dataEvents = { ...dataEvents, events: merged };
+            }
           }
         } catch {}
       }
+
+      const ownedEvents: EventData[] = (dataEvents.success && Array.isArray(dataEvents.events))
+        ? dataEvents.events
+        : [];
+
+      setEvents(ownedEvents);
       let selected: EventData | null = null;
 
-      if (dataEvents.success && dataEvents.events && dataEvents.events.length > 0) {
-        setEvents(dataEvents.events);
-        if (targetEventId) {
-          selected = dataEvents.events.find((e: EventData) => e.id === targetEventId || e.slug === targetEventId) || dataEvents.events[0];
+      if (targetEventId) {
+        const matchedOwned = ownedEvents.find((e: EventData) => e.id === targetEventId || e.slug === targetEventId);
+        if (matchedOwned) {
+          selected = matchedOwned;
         } else {
-          selected = dataEvents.events[0];
+          toast.error('Akses ditolak: Anda hanya dapat mengakses dashboard acara milik akun Anda sendiri.');
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', '/dashboard');
+          }
+          selected = ownedEvents.length > 0 ? ownedEvents[0] : null;
         }
-      } else {
-        if (targetEventId) {
-          try {
-            const singleRes = await authFetch(`/api/events?id=${encodeURIComponent(targetEventId)}`);
-            const singleData = await singleRes.json();
-            if (singleData.success && singleData.event) {
-              selected = singleData.event;
-              setEvents([singleData.event]);
-            }
-          } catch {}
-        }
+      } else if (ownedEvents.length > 0) {
+        selected = ownedEvents[0];
       }
 
       if (selected) {
         await selectActiveEvent(selected);
+      } else {
+        setEvent(null);
       }
     } catch (e) {
       console.error('Error fetching dashboard data:', e);

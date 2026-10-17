@@ -21,7 +21,7 @@ export async function GET(request: Request) {
 
       // Check caller authorization
       const session = getServerSession(request);
-      const isAuthorizedHost = session?.role === 'host' && (
+      const isAuthorizedHost = (session?.role === 'host' || session?.role === 'vendor') && (
         session.email?.toLowerCase() === event.hostEmail?.toLowerCase() ||
         session.id === event.hostEmail
       );

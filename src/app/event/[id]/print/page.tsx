@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import QRCode from 'qrcode';
 import { toPng } from 'html-to-image';
@@ -13,7 +13,7 @@ import {
   Trash2, RefreshCw, Eye
 } from 'lucide-react';
 import { EventData, resolveEventCategory } from '@/lib/types';
-import { authFetch } from '@/lib/auth';
+import { authFetch, getClientSession, isSameVendorId } from '@/lib/auth';
 import { formatSafeMediaUrl } from '@/lib/media-url';
 
 type CardFormat = 'tent' | 'standing' | 'mini';
@@ -77,6 +77,7 @@ const EVENT_PRESETS = [
 
 export default function PrintTableCardPage() {
   const params = useParams();
+  const router = useRouter();
   const eventId = params.id as string;
 
   const [event, setEvent] = useState<EventData | null>(null);
@@ -133,17 +134,40 @@ export default function PrintTableCardPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const session = getClientSession();
+    if (!session) {
+      toast.error('Silakan masuk terlebih dahulu untuk mengakses Studio Cetak Kartu QR.');
+      router.replace('/login');
+      return;
+    }
+
     // Fetch event details with authentication token
     authFetch(`/api/events?id=${eventId}`)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.event) {
-          setEvent(data.event);
-          setCustomTitle(data.event.title || 'Momen Spesial');
-          if (data.event.vendorLogo && data.event.vendorCoBranding?.showLogoOnPrint !== false) {
-            setCustomLogoUrl(formatSafeMediaUrl(data.event.vendorLogo));
+          const ev: EventData = data.event;
+          const isAuthorizedHost =
+            (session.role === 'host' || session.role === 'vendor') &&
+            Boolean(
+              (session.email && ev.hostEmail && session.email.toLowerCase() === ev.hostEmail.toLowerCase()) ||
+              (session.id && session.id === ev.hostEmail)
+            );
+          const isAuthorizedVendor = session.role === 'vendor' && isSameVendorId(session.id, ev.vendorId);
+          const isAdmin = session.role === 'admin';
+
+          if (!isAuthorizedHost && !isAuthorizedVendor && !isAdmin) {
+            toast.error('Akses ditolak: Anda hanya dapat mencetak Kartu QR untuk acara milik akun Anda sendiri.');
+            router.replace(session.role === 'vendor' ? '/vendor' : '/dashboard');
+            return;
           }
-          const cat = resolveEventCategory(data.event);
+
+          setEvent(ev);
+          setCustomTitle(ev.title || 'Momen Spesial');
+          if (ev.vendorLogo && ev.vendorCoBranding?.showLogoOnPrint !== false) {
+            setCustomLogoUrl(formatSafeMediaUrl(ev.vendorLogo));
+          }
+          const cat = resolveEventCategory(ev);
           const presetKey = cat === 'birthday' ? 'birthday' : (cat === 'corporate' || cat === 'other') ? 'corporate' : 'wedding';
           const matchedPreset = EVENT_PRESETS.find(p => p.id === presetKey);
           if (matchedPreset) {
