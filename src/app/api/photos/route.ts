@@ -44,6 +44,7 @@ export async function GET(request: Request) {
     const safeIncludeHidden = requestedIncludeHidden && isOwnerOrAdmin;
 
     const sessionId = searchParams.get('sessionId');
+    const viewerSessionId = searchParams.get('viewerSessionId');
     const guestName = searchParams.get('guestName');
     const isPersonalRollQuery = Boolean(sessionId || (guestName && guestName.trim() !== 'Tamu' && guestName.trim() !== 'Tamu Undangan'));
 
@@ -59,7 +60,8 @@ export async function GET(request: Request) {
     );
 
     if (isDelayedAndLocked && !isOwnerOrAdmin) {
-      if (!sessionId) {
+      const effectiveGuestSession = sessionId || viewerSessionId;
+      if (!effectiveGuestSession) {
         return NextResponse.json({
           success: true,
           photos: [],
@@ -68,7 +70,17 @@ export async function GET(request: Request) {
           revealTime: targetEvent?.revealTime
         });
       }
-      photos = photos.filter(p => p.sessionId === sessionId);
+      photos = photos.filter(p => p.sessionId === effectiveGuestSession);
+      if (!isPersonalRollQuery) {
+        photos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        return NextResponse.json({
+          success: true,
+          photos,
+          count: totalCount,
+          isLocked: true,
+          revealTime: targetEvent?.revealTime
+        });
+      }
     } else if (isPersonalRollQuery) {
       photos = photos.filter(p => 
         (sessionId && p.sessionId === sessionId) ||
@@ -76,10 +88,15 @@ export async function GET(request: Request) {
       );
     }
 
-    // Chronological ascending order so the personal roll displays photos correctly in sequence
-    photos.sort((a, b) => (a.shotNumber || 0) - (b.shotNumber || 0) || new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    if (isPersonalRollQuery) {
+      // Chronological ascending order so the personal roll displays photos correctly in sequence (#1, #2, ...)
+      photos.sort((a, b) => (a.shotNumber || 0) - (b.shotNumber || 0) || new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+    } else {
+      // Shared gallery & Live Wall: newest photos first
+      photos.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    }
 
-    return NextResponse.json({ success: true, photos, count: photos.length });
+    return NextResponse.json({ success: true, photos, count: isPersonalRollQuery ? photos.length : totalCount });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
   }
@@ -212,6 +229,7 @@ export async function POST(request: Request) {
       eventId: event.id,
       guestName: (body.guestName || 'Tamu').trim(),
       sessionId: body.sessionId || 'session-' + Date.now(),
+      deviceId: reqDevice || undefined,
       shotNumber: safeShotNumber,
       imageData: body.imageData,
       timestamp: new Date().toISOString(),

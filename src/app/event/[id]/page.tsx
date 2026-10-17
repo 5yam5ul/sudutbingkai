@@ -155,9 +155,9 @@ export default function EventDashboardPage() {
   const [isZoomed, setIsZoomed] = useState(false);
   const filmStripRef = React.useRef<HTMLDivElement | null>(null);
 
-  // Unlocked photos available for preview (now respects active guest filter & host preview!)
+  // Unlocked photos available for preview (server already filters delayed mode to Host or guest's own photos)
   const isRollLocked = event?.revealMode === 'delayed' && !countdown.isExpired && !isHost;
-  const availablePhotos = isRollLocked ? [] : displayedPhotos;
+  const availablePhotos = displayedPhotos;
   const activeIndex = activePhoto ? availablePhotos.findIndex(p => p.id === activePhoto.id) : -1;
 
   const paginate = (newDirection: number) => {
@@ -211,10 +211,14 @@ export default function EventDashboardPage() {
     try {
       pollTickRef.current += 1;
       const shouldFetchSecondary = !isBackgroundPoll || pollTickRef.current % 3 === 0;
+      const viewerSession = typeof window !== 'undefined'
+        ? (localStorage.getItem(`sb_guest_session_${event?.id || eventId}`) || localStorage.getItem(`sb_guest_session_${eventId}`) || '')
+        : '';
+      const photosQueryUrl = `/api/photos?eventId=${eventId}${viewerSession ? `&viewerSessionId=${encodeURIComponent(viewerSession)}` : ''}`;
 
       const [resEvents, resPhotos] = await Promise.all([
         shouldFetchSecondary ? authFetch(`/api/events?id=${eventId}`) : Promise.resolve(null),
-        authFetch(`/api/photos?eventId=${eventId}`),
+        authFetch(photosQueryUrl),
       ]);
 
       if (resEvents) {
@@ -263,8 +267,13 @@ export default function EventDashboardPage() {
         if (resVoices) {
           try {
             const dataVoices = await resVoices.json();
-            if (dataVoices.success && dataVoices.voiceNotes) {
-              setVoiceNotes(dataVoices.voiceNotes);
+            if (dataVoices.success && Array.isArray(dataVoices.voiceNotes)) {
+              setVoiceNotes(
+                dataVoices.voiceNotes.map((n: VoiceNoteRecord) => ({
+                  ...n,
+                  audioUrl: formatSafeMediaUrl(n.audioUrl),
+                }))
+              );
             }
           } catch {}
         }
@@ -272,8 +281,14 @@ export default function EventDashboardPage() {
         if (resVideos) {
           try {
             const dataVideos = await resVideos.json();
-            if (dataVideos.success && dataVideos.videoWishes) {
-              setVideoWishes(dataVideos.videoWishes);
+            if (dataVideos.success && Array.isArray(dataVideos.videoWishes)) {
+              setVideoWishes(
+                dataVideos.videoWishes.map((w: VideoWishRecord) => ({
+                  ...w,
+                  videoUrl: formatSafeMediaUrl(w.videoUrl),
+                  thumbnailUrl: formatSafeMediaUrl(w.thumbnailUrl) || undefined,
+                }))
+              );
             }
           } catch {}
         }
@@ -1032,7 +1047,7 @@ export default function EventDashboardPage() {
                 ) : (
                   <Briefcase size={12} color="#FCD34D" />
                 )}
-                <span>WO: <strong style={{ color: '#FCD34D' }}>{event.vendorName}</strong></span>
+                <span>{resolveEventCategory(event) === 'wedding' ? 'WO:' : 'Organizer:'} <strong style={{ color: '#FCD34D' }}>{event.vendorName}</strong></span>
               </div>
             )}
 
@@ -1330,35 +1345,36 @@ export default function EventDashboardPage() {
             </div>
           )}
 
-          {isRollLocked && photos.length === 0 && totalPhotoCount > 0 ? (
-            <div className="glass-card" style={{ padding: '64px 24px', textAlign: 'center', borderRadius: '28px', maxWidth: '640px', margin: '0 auto', border: '1px solid rgba(194, 120, 3, 0.25)', background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFBF5 100%)' }}>
+          {isRollLocked && totalPhotoCount > 0 && (
+            <div className="glass-card" style={{ padding: photos.length > 0 ? '32px 24px' : '64px 24px', textAlign: 'center', borderRadius: '28px', maxWidth: '640px', margin: '0 auto 28px', border: '1px solid rgba(194, 120, 3, 0.25)', background: 'linear-gradient(180deg, #FFFFFF 0%, #FFFBF5 100%)' }}>
               <div
                 style={{
-                  width: '64px',
-                  height: '64px',
+                  width: '56px',
+                  height: '56px',
                   borderRadius: '50%',
                   background: 'rgba(194, 120, 3, 0.12)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  margin: '0 auto 20px',
+                  margin: '0 auto 16px',
                   color: '#C27803'
                 }}
               >
-                <Lock size={30} />
+                <Lock size={26} />
               </div>
-              <h3 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: '24px', fontWeight: 700, marginBottom: '10px', color: '#1D1D1F' }}>
+              <h3 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: '22px', fontWeight: 700, marginBottom: '8px', color: '#1D1D1F' }}>
                 {totalPhotoCount} Jepretan Tamu Sedang Dicuci di Kamar Gelap
               </h3>
-              <p style={{ color: '#6E6E73', fontSize: '14.5px', lineHeight: 1.6, maxWidth: '480px', margin: '0 auto 26px' }}>
-                Para tamu undangan telah mengabadikan <strong>{totalPhotoCount} momen candid</strong> sejauh ini! Seluruh hasil foto dirahasiakan dan akan terbuka serentak saat waktu cuci roll selesai.
+              <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6, maxWidth: '480px', margin: '0 auto 20px' }}>
+                Para tamu undangan telah mengabadikan <strong>{totalPhotoCount} momen candid</strong> sejauh ini! Seluruh hasil foto album bersama akan terbuka serentak saat waktu cuci roll selesai.
+                {photos.length > 0 ? ` Di bawah ini adalah ${photos.length} hasil jepretan kamera Anda sendiri:` : ''}
               </p>
               <Link
                 href={`/cam/${event?.slug || eventId}`}
                 className="btn-apple-black"
                 style={{
-                  padding: '12px 28px',
-                  fontSize: '14px',
+                  padding: '11px 24px',
+                  fontSize: '13.5px',
                   fontWeight: 600,
                   borderRadius: '999px',
                   display: 'inline-flex',
@@ -1370,7 +1386,9 @@ export default function EventDashboardPage() {
                 <span>Ikut Memotret Momen Sekarang</span>
               </Link>
             </div>
-          ) : photos.length === 0 ? (
+          )}
+
+          {photos.length === 0 && (!isRollLocked || totalPhotoCount === 0) ? (
             <div className="glass-card" style={{ padding: '72px 24px', textAlign: 'center', borderRadius: '28px', maxWidth: '640px', margin: '0 auto' }}>
               <div
                 style={{
@@ -1391,7 +1409,7 @@ export default function EventDashboardPage() {
                 Jadilah yang Pertama Mengisi Rol Foto
               </h3>
               <p style={{ color: '#6E6E73', fontSize: '14.5px', lineHeight: 1.6, maxWidth: '460px', margin: '0 auto 26px' }}>
-                Belum ada jepretan kamera dari para tamu. Abadikan senyum, tawa bahagia, dan momen hangat untuk {event?.coupleOrHost || 'tuan rumah'} sekarang juga.
+                {categoryMeta.emptyGalleryPrompt}
               </p>
               <Link
                 href={`/cam/${event?.slug || eventId}`}
@@ -1410,7 +1428,7 @@ export default function EventDashboardPage() {
                 <span>Buka Kamera Sekarang</span>
               </Link>
             </div>
-          ) : displayedPhotos.length === 0 ? (
+          ) : photos.length === 0 ? null : displayedPhotos.length === 0 ? (
             <div className="glass-card" style={{ padding: '48px 20px', textAlign: 'center', borderRadius: '24px' }}>
               <p style={{ color: '#6E6E73', fontSize: '14px', marginBottom: '14px' }}>
                 Belum ada foto yang diambil oleh <strong>{selectedGuest}</strong>.
@@ -1431,7 +1449,7 @@ export default function EventDashboardPage() {
               gap: '20px'
             }}>
               {displayedPhotos.map((photo) => {
-                const isLocked = event?.revealMode === 'delayed' && !countdown.isExpired;
+                const isLocked = false;
 
                 return (
                   <div

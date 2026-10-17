@@ -208,6 +208,7 @@ export default function GuestCameraPage() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordDuration, setRecordDuration] = useState(0);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
   const [isUploadingAudio, setIsUploadingAudio] = useState(false);
   const [hasSentVoice, setHasSentVoice] = useState(false);
   const [hasSentVideoWish, setHasSentVideoWish] = useState(false);
@@ -457,7 +458,8 @@ export default function GuestCameraPage() {
     }
 
     // Check offline queue
-    getOfflinePhotosQueue(event?.id || eventId, eventId).then(queue => {
+    const targetEventId = event?.id || eventId;
+    getOfflinePhotosQueue(targetEventId, eventId).then(queue => {
       setOfflineCount(queue.length);
     });
 
@@ -467,6 +469,42 @@ export default function GuestCameraPage() {
       }).then(count => {
         if (count > 0) {
           toast.success(`${count} foto offline berhasil disinkronkan ke album!`);
+          const activeSession = guestSessionId || getOrCreateGuestSession(targetEventId, eventId);
+          const cleanGuest = (guestName || localStorage.getItem(`sb_guest_${targetEventId}`) || localStorage.getItem(`sb_guest_${eventId}`) || '').trim();
+          if (cleanGuest && cleanGuest !== 'Tamu' && cleanGuest !== 'Tamu Undangan') {
+            fetch(`/api/photos?eventId=${targetEventId}&sessionId=${encodeURIComponent(activeSession)}&guestName=${encodeURIComponent(cleanGuest)}`)
+              .then(res => res.json())
+              .then(pData => {
+                if (pData.success && Array.isArray(pData.photos) && pData.photos.length > 0) {
+                  const sortedRaw = [...pData.photos].sort(
+                    (a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+                  );
+                  const serverPhotos = sortedRaw.map((p: any, idx: number) => ({
+                    id: p.id,
+                    eventId: p.eventId || targetEventId,
+                    guestName: p.guestName,
+                    imageData: formatSafeMediaUrl(p.imageData || p.url),
+                    filter: p.filter || 'Disposable',
+                    shotNumber: p.shotNumber || (idx + 1),
+                    caption: p.caption || '',
+                    timestamp: p.timestamp,
+                    aspectRatio: p.aspectRatio || '3:4',
+                    frameId: p.frameId || 'none'
+                  }));
+                  setShotCount(serverPhotos.length);
+                  setMyPhotos(serverPhotos);
+                  setLastShotThumb(serverPhotos[serverPhotos.length - 1].imageData);
+                  try {
+                    localStorage.setItem(`sb_shot_count_${targetEventId}`, String(serverPhotos.length));
+                    localStorage.setItem(`sb_shot_count_${eventId}`, String(serverPhotos.length));
+                    const persistentShots = serverPhotos.slice(-50);
+                    localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
+                    localStorage.setItem(`sb_my_shots_${targetEventId}`, JSON.stringify(persistentShots));
+                  } catch {}
+                }
+              })
+              .catch(() => {});
+          }
         }
       });
     };
@@ -486,7 +524,7 @@ export default function GuestCameraPage() {
     return () => {
       window.removeEventListener('online', handleOnline);
     };
-  }, [eventId, event?.slug]);
+  }, [eventId, event?.id, event?.slug, guestSessionId, guestName]);
 
   const attachStreamToVideo = (element: HTMLVideoElement | null, stream: MediaStream | null) => {
     if (!element || !stream) return;
@@ -680,32 +718,38 @@ export default function GuestCameraPage() {
       fetch(`/api/photos?eventId=${targetEventId}&sessionId=${encodeURIComponent(activeSession)}&guestName=${encodeURIComponent(clean)}`)
         .then(res => res.json())
         .then(pData => {
-          if (pData.success && Array.isArray(pData.photos) && pData.photos.length > 0) {
-            const sortedRaw = [...pData.photos].sort(
-              (a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-            );
-            const serverPhotos = sortedRaw.map((p: any, idx: number) => ({
-              id: p.id,
-              eventId: p.eventId || targetEventId,
-              guestName: p.guestName,
-              imageData: formatSafeMediaUrl(p.imageData || p.url),
-              filter: p.filter || 'Disposable',
-              shotNumber: p.shotNumber || (idx + 1),
-              caption: p.caption || '',
-              timestamp: p.timestamp,
-              aspectRatio: p.aspectRatio || '3:4',
-              frameId: p.frameId || 'none'
-            }));
-            setShotCount(serverPhotos.length);
-            setMyPhotos(serverPhotos);
-            setLastShotThumb(serverPhotos[serverPhotos.length - 1].imageData);
-            try {
-              localStorage.setItem(`sb_shot_count_${targetEventId}`, String(serverPhotos.length));
-              localStorage.setItem(`sb_shot_count_${eventId}`, String(serverPhotos.length));
-              const persistentShots = serverPhotos.slice(-50);
-              localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
-              localStorage.setItem(`sb_my_shots_${targetEventId}`, JSON.stringify(persistentShots));
-            } catch {}
+          if (pData.success && Array.isArray(pData.photos)) {
+            if (pData.photos.length > 0) {
+              const sortedRaw = [...pData.photos].sort(
+                (a: any, b: any) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+              );
+              const serverPhotos = sortedRaw.map((p: any, idx: number) => ({
+                id: p.id,
+                eventId: p.eventId || targetEventId,
+                guestName: clean,
+                imageData: formatSafeMediaUrl(p.imageData || p.url),
+                filter: p.filter || 'Disposable',
+                shotNumber: p.shotNumber || (idx + 1),
+                caption: p.caption || '',
+                timestamp: p.timestamp,
+                aspectRatio: p.aspectRatio || '3:4',
+                frameId: p.frameId || 'none'
+              }));
+              setShotCount(serverPhotos.length);
+              setMyPhotos(serverPhotos);
+              setLastShotThumb(serverPhotos[serverPhotos.length - 1].imageData);
+              try {
+                localStorage.setItem(`sb_shot_count_${targetEventId}`, String(serverPhotos.length));
+                localStorage.setItem(`sb_shot_count_${eventId}`, String(serverPhotos.length));
+                const persistentShots = serverPhotos.slice(-50);
+                localStorage.setItem(`sb_my_shots_${eventId}`, JSON.stringify(persistentShots));
+                localStorage.setItem(`sb_my_shots_${targetEventId}`, JSON.stringify(persistentShots));
+              } catch {}
+            } else if (!isDemo) {
+              setShotCount(0);
+              setMyPhotos([]);
+              setLastShotThumb(null);
+            }
           }
         })
         .catch(() => {});
@@ -1313,7 +1357,25 @@ export default function GuestCameraPage() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream);
+      const supportedAudioTypes = [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/aac',
+        'audio/ogg;codecs=opus'
+      ];
+      let selectedAudioMime = '';
+      if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+        for (const t of supportedAudioTypes) {
+          if (MediaRecorder.isTypeSupported(t)) {
+            selectedAudioMime = t;
+            break;
+          }
+        }
+      }
+      const mediaRecorder = selectedAudioMime
+        ? new MediaRecorder(stream, { mimeType: selectedAudioMime })
+        : new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (e) => {
@@ -1321,8 +1383,13 @@ export default function GuestCameraPage() {
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(audioBlob);
+        const finalMime = mediaRecorder.mimeType || selectedAudioMime || 'audio/webm';
+        const recordedAudioBlob = new Blob(audioChunksRef.current, { type: finalMime });
+        setAudioBlob(recordedAudioBlob);
+        setAudioPreviewUrl(prev => {
+          if (prev) URL.revokeObjectURL(prev);
+          return URL.createObjectURL(recordedAudioBlob);
+        });
         stream.getTracks().forEach(t => t.stop());
       };
 
@@ -1358,8 +1425,14 @@ export default function GuestCameraPage() {
     const canonicalId = event?.id || eventId;
     try {
       const activeSession = guestSessionId || getOrCreateGuestSession(canonicalId, eventId);
+      const mimeLower = (audioBlob.type || '').toLowerCase();
+      const ext = (mimeLower.includes('mp4') || mimeLower.includes('m4a') || mimeLower.includes('aac'))
+        ? 'm4a'
+        : mimeLower.includes('ogg')
+          ? 'ogg'
+          : 'webm';
       const formData = new FormData();
-      formData.append('audio', audioBlob, 'voice.webm');
+      formData.append('audio', audioBlob, `voice.${ext}`);
       formData.append('eventId', canonicalId);
       formData.append('guestName', guestName || 'Tamu');
       formData.append('duration', String(recordDuration));
@@ -1372,13 +1445,14 @@ export default function GuestCameraPage() {
         body: formData
       });
       const data = await res.json();
+      const hostDisplayName = event?.coupleOrHost || event?.title || 'tuan rumah';
       if (data.success) {
         setHasSentVoice(true);
         try {
           localStorage.setItem(`sb_has_sent_voice_${canonicalId}`, 'true');
           localStorage.setItem(`sb_has_sent_voice_${eventId}`, 'true');
         } catch {}
-        toast.success(`Pesan suara dan doa Anda telah tersimpan untuk ${event?.coupleOrHost || 'tuan rumah'}!`);
+        toast.success(`Pesan suara dan doa Anda telah tersimpan untuk ${hostDisplayName}!`);
       } else if (data.alreadySent) {
         setHasSentVoice(true);
         try {
@@ -1844,7 +1918,7 @@ export default function GuestCameraPage() {
         gap: '12px',
         boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.5)'
       }}>
-        {/* Row 1: Secondary Controls Cluster (Just 2 clean, high-value pills) */}
+        {/* Row 1: Secondary Controls Cluster (Aspect Ratio, Frame Toggle, Wish Trigger) */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -1853,6 +1927,30 @@ export default function GuestCameraPage() {
           width: '100%',
           flexWrap: 'wrap'
         }}>
+          {/* Multi-Aspect Ratio Toggle (3:4, 1:1, 9:16) */}
+          <button
+            onClick={cycleAspectRatio}
+            style={{
+              background: aspectRatio !== '3:4' ? 'rgba(194, 120, 3, 0.9)' : 'rgba(255, 255, 255, 0.08)',
+              border: aspectRatio !== '3:4' ? '1px solid #F59E0B' : '1px solid rgba(255, 255, 255, 0.16)',
+              padding: '6px 12px',
+              borderRadius: '999px',
+              color: '#FFFFFF',
+              fontSize: '11px',
+              fontWeight: 700,
+              fontFamily: 'var(--font-mono)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              transition: 'all 0.2s ease',
+              boxShadow: aspectRatio !== '3:4' ? '0 2px 8px rgba(194, 120, 3, 0.35)' : 'none'
+            }}
+            title="Ubah Rasio Foto (3:4 Potret / 1:1 Kotak / 9:16 Story)"
+          >
+            <span>RASIO {aspectRatio}</span>
+          </button>
+
           {/* Frame Toggle */}
           {event?.allowGuestFrameToggle !== false && (
             <button
@@ -1904,7 +2002,7 @@ export default function GuestCameraPage() {
               transition: 'all 0.2s ease',
               boxShadow: currentWish.trim() ? '0 2px 8px rgba(194, 120, 3, 0.35)' : 'none'
             }}
-            title={`Tuliskan ucapan untuk ${event?.coupleOrHost || 'tuan rumah'}`}
+            title={`Tuliskan ucapan untuk ${event?.coupleOrHost || event?.title || 'tuan rumah'}`}
           >
             <Heart size={12} fill={currentWish.trim() ? 'currentColor' : 'none'} color={currentWish.trim() ? '#fff' : '#C27803'} />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -2911,7 +3009,7 @@ export default function GuestCameraPage() {
                     textAlign: 'center'
                   }}>
                     <strong style={{ fontSize: '12.5px', color: '#FFFFFF', display: 'block', marginBottom: '8px' }}>
-                      Tinggalkan Ucapan Suara untuk {event?.coupleOrHost || 'Tuan Rumah'}
+                      Tinggalkan Ucapan Suara untuk {event?.coupleOrHost || event?.title || 'Tuan Rumah'}
                     </strong>
 
                     {!audioBlob ? (
@@ -2946,6 +3044,13 @@ export default function GuestCameraPage() {
                         <span style={{ fontSize: '11.5px', color: '#4ADE80', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <Check size={12} color="#4ADE80" /> Rekaman siap kirim ({recordDuration}s)
                         </span>
+                        {audioPreviewUrl && (
+                          <audio
+                            src={audioPreviewUrl}
+                            controls
+                            style={{ width: '100%', maxWidth: '250px', height: '34px', borderRadius: '8px' }}
+                          />
+                        )}
                         <div style={{ display: 'flex', gap: '8px' }}>
                           <button
                             onClick={submitVoiceNote}
@@ -2964,7 +3069,13 @@ export default function GuestCameraPage() {
                             {isUploadingAudio ? 'Mengirim...' : 'Kirim'}
                           </button>
                           <button
-                            onClick={() => setAudioBlob(null)}
+                            onClick={() => {
+                              setAudioBlob(null);
+                              setAudioPreviewUrl(prev => {
+                                if (prev) URL.revokeObjectURL(prev);
+                                return null;
+                              });
+                            }}
                             style={{
                               background: 'rgba(255, 255, 255, 0.15)',
                               color: '#FFFFFF',
@@ -2999,7 +3110,7 @@ export default function GuestCameraPage() {
                     marginBottom: '14px'
                   }}>
                     <Check size={12} color="#22C55E" />
-                    <span>Pesan suara tersimpan untuk {event?.coupleOrHost || 'tuan rumah'}</span>
+                    <span>Pesan suara tersimpan untuk {event?.coupleOrHost || event?.title || 'tuan rumah'}</span>
                   </div>
                 );
               }
@@ -3138,13 +3249,13 @@ export default function GuestCameraPage() {
               </p>
             </div>
 
-            {/* Vendor Partner Attribution (if applicable) */}
-            {event?.vendorName && (
+            {/* Vendor Partner Attribution (if applicable and allowed by Co-Branding) */}
+            {event?.vendorName && event?.vendorCoBranding?.showLogoOnGallery !== false && (
               <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: 'rgba(255, 255, 255, 0.45)', fontSize: '10.5px' }}>
                 {event.vendorLogo && (
                   <img src={event.vendorLogo} alt={event.vendorName} style={{ height: '14px', maxWidth: '50px', objectFit: 'contain' }} />
                 )}
-                <span>Partner WO: <strong style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{event.vendorName}</strong></span>
+                <span>{resolveEventCategory(event) === 'wedding' ? 'Partner WO:' : 'Official Organizer:'} <strong style={{ color: 'rgba(255, 255, 255, 0.8)' }}>{event.vendorName}</strong></span>
               </div>
             )}
           </div>
@@ -3262,12 +3373,12 @@ export default function GuestCameraPage() {
           <span>Tersedia <strong>{maxShots} jepretan</strong> analog {presetInfo.name}</span>
         </div>
 
-        {event?.vendorName && (
+        {event?.vendorName && event?.vendorCoBranding?.showLogoOnGallery !== false && (
           <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#86868B', fontSize: '11px' }}>
             {event.vendorLogo ? (
               <img src={event.vendorLogo} alt={event.vendorName} style={{ height: '16px', maxWidth: '64px', objectFit: 'contain' }} />
             ) : null}
-            <span>Partner: <strong style={{ color: '#1D1D1F' }}>{event.vendorName}</strong></span>
+            <span>{resolveEventCategory(event) === 'wedding' ? 'Partner WO:' : 'Official Organizer:'} <strong style={{ color: '#1D1D1F' }}>{event.vendorName}</strong></span>
           </div>
         )}
       </div>
@@ -3324,7 +3435,7 @@ export default function GuestCameraPage() {
             Kamera Belum Diaktifkan
           </h1>
           <p style={{ color: '#6E6E73', fontSize: '13.5px', lineHeight: 1.6, marginBottom: '24px' }}>
-            Roll kamera untuk acara <strong>{event.title}</strong> sedang menunggu penyelesaian pembayaran paket oleh penyelenggara acara atau Wedding Organizer.
+            Roll kamera untuk acara <strong>{event.title}</strong> sedang menunggu penyelesaian pembayaran paket oleh penyelenggara acara atau Event Organizer.
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <Link href={`/event/${event.slug || eventId}`} className="btn-apple-black" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '12px 24px', textDecoration: 'none', borderRadius: '12px', fontSize: '13.5px' }}>

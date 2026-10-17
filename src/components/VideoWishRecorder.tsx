@@ -211,8 +211,10 @@ export default function VideoWishRecorder({
     try {
       const thumbnail = await generateVideoThumbnail(recordedBlob);
 
+      const isMp4 = (recordedBlob.type || '').toLowerCase().includes('mp4');
+      const ext = isMp4 ? 'mp4' : 'webm';
       const formData = new FormData();
-      formData.append('video', recordedBlob, `wish_${eventId}_${Date.now()}.webm`);
+      formData.append('video', recordedBlob, `wish_${eventId}_${Date.now()}.${ext}`);
       formData.append('eventId', eventId);
       formData.append('guestName', guestName);
       if (sessionId) formData.append('sessionId', sessionId);
@@ -227,6 +229,10 @@ export default function VideoWishRecorder({
       const data = await res.json();
       if (data.success) {
         toast.success(`Video ucapan 15 detik Anda berhasil dikirim untuk ${coupleOrHost}!`);
+        if (stream) stream.getTracks().forEach(t => t.stop());
+        onSuccess();
+      } else if (data.alreadySent) {
+        toast.info(data.error || 'Anda sudah pernah mengirimkan video ucapan untuk acara ini.');
         if (stream) stream.getTracks().forEach(t => t.stop());
         onSuccess();
       } else {

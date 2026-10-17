@@ -169,7 +169,7 @@ export default function VideoWishStoriesPlayer({
 
             <a
               href={currentWish.videoUrl}
-              download={`video-ucapan-${currentWish.guestName}.webm`}
+              download={`video-ucapan-${currentWish.guestName}.${currentWish.videoUrl?.toLowerCase().includes('.mp4') ? 'mp4' : 'webm'}`}
               style={{ background: 'rgba(0,0,0,0.5)', color: '#FFF', borderRadius: '50%', width: '34px', height: '34px', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none' }}
               title="Unduh Video"
             >

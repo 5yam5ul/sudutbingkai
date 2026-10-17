@@ -276,7 +276,13 @@ export async function POST(request: Request) {
     }
 
     const noteId = `voice-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-    const extension = audioFile.type.includes('mp4') ? 'm4a' : 'webm';
+    const mimeLower = (audioFile.type || '').toLowerCase();
+    const nameLower = (audioFile.name || '').toLowerCase();
+    const extension = (mimeLower.includes('mp4') || mimeLower.includes('m4a') || mimeLower.includes('aac') || nameLower.endsWith('.m4a') || nameLower.endsWith('.mp4'))
+      ? 'm4a'
+      : mimeLower.includes('ogg')
+        ? 'ogg'
+        : 'webm';
     const fileName = `${noteId}.${extension}`;
     const buffer = Buffer.from(await audioFile.arrayBuffer());
 

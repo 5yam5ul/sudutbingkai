@@ -263,7 +263,7 @@ export async function applyFrameToCanvas(
       ctx.fillStyle = '#C27803';
       const subFontSize = Math.max(10, Math.floor(plaqueH * 0.24));
       ctx.font = `500 ${subFontSize}px "JetBrains Mono", monospace`;
-      ctx.fillText(`${formattedDate}   •   ${cleanTagline || 'THE BEGINNING OF FOREVER'}`, width / 2, plaqueY + plaqueH * 0.82);
+      ctx.fillText(cleanTagline ? `${formattedDate}   •   ${cleanTagline}` : formattedDate, width / 2, plaqueY + plaqueH * 0.82);
       break;
     }
 
@@ -381,7 +381,7 @@ export async function applyFrameToCanvas(
 
       ctx.fillStyle = '#78716C';
       ctx.font = `italic 500 ${Math.max(10, Math.floor(plaqueH * 0.25))}px "Georgia", serif`;
-      ctx.fillText(`${formattedDate} • ${cleanTagline || 'In Loving Celebration'}`, width / 2, height - m - plaqueH * 0.16);
+      ctx.fillText(cleanTagline ? `${formattedDate} • ${cleanTagline}` : formattedDate, width / 2, height - m - plaqueH * 0.16);
       break;
     }
 
