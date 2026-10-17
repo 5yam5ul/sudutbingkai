@@ -954,10 +954,12 @@ export default function SuperAdminDashboard() {
   };
 
   const handleSelectAllPhotos = (filtered: PhotoRecord[]) => {
-    if (selectedPhotoIds.length === filtered.length) {
-      setSelectedPhotoIds([]);
+    const filteredIds = filtered.map(p => p.id);
+    const allFilteredSelected = filteredIds.length > 0 && filteredIds.every(id => selectedPhotoIds.includes(id));
+    if (allFilteredSelected) {
+      setSelectedPhotoIds(prev => prev.filter(id => !filteredIds.includes(id)));
     } else {
-      setSelectedPhotoIds(filtered.map(p => p.id));
+      setSelectedPhotoIds(prev => Array.from(new Set([...prev, ...filteredIds])));
     }
   };
 
@@ -2881,7 +2883,7 @@ export default function SuperAdminDashboard() {
                     <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>
                       <input
                         type="checkbox"
-                        checked={filteredPhotos.length > 0 && selectedPhotoIds.length === filteredPhotos.length}
+                        checked={filteredPhotos.length > 0 && filteredPhotos.every(p => selectedPhotoIds.includes(p.id))}
                         onChange={() => handleSelectAllPhotos(filteredPhotos)}
                         style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#C27803' }}
                       />
@@ -2893,6 +2895,16 @@ export default function SuperAdminDashboard() {
                         <span style={{ fontSize: '12px', color: '#C27803', fontWeight: 600 }}>
                           {selectedPhotoIds.length} foto terpilih
                         </span>
+                        <button
+                          type="button"
+                          disabled={isBulkProcessing}
+                          onClick={() => setSelectedPhotoIds([])}
+                          className="glass-pill"
+                          style={{ padding: '6px 12px', fontSize: '11.5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <X size={13} />
+                          <span>Batal Pilih</span>
+                        </button>
                         <button
                           type="button"
                           disabled={isBulkProcessing}
@@ -2931,11 +2943,8 @@ export default function SuperAdminDashboard() {
                     {filteredPhotos.map(p => (
                       <div key={p.id} className="glass-card" style={{ padding: '10px', borderRadius: '16px', position: 'relative', opacity: p.isHidden ? 0.6 : 1, border: selectedPhotoIds.includes(p.id) ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.06)' }}>
                         {/* Checkbox badge */}
-                        <div
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleToggleSelectPhoto(p.id);
-                          }}
+                        <label
+                          onClick={(e) => e.stopPropagation()}
                           style={{
                             position: 'absolute',
                             top: '16px',
@@ -2944,17 +2953,20 @@ export default function SuperAdminDashboard() {
                             cursor: 'pointer',
                             background: 'rgba(0,0,0,0.6)',
                             borderRadius: '6px',
-                            padding: '3px',
-                            display: 'flex'
+                            padding: '4px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
                           }}
+                          title="Pilih foto ini"
                         >
                           <input
                             type="checkbox"
                             checked={selectedPhotoIds.includes(p.id)}
                             onChange={() => handleToggleSelectPhoto(p.id)}
-                            style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#C27803' }}
+                            style={{ cursor: 'pointer', width: '16px', height: '16px', accentColor: '#C27803', margin: 0 }}
                           />
-                        </div>
+                        </label>
 
                         <div
                           onClick={() => {
