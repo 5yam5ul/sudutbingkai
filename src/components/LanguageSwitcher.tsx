@@ -17,40 +17,45 @@ export default function LanguageSwitcher({
   className = ''
 }: LanguageSwitcherProps) {
   const isEn = currentLang === 'en';
-
-  const containerStyles = {
-    light: 'bg-stone-100 border border-stone-200 text-stone-800',
-    dark: 'bg-stone-900/80 border border-stone-800 text-stone-200 backdrop-blur-md',
-    glass: 'bg-white/30 border border-white/40 text-stone-900 backdrop-blur-lg shadow-sm'
-  }[variant];
-
-  const activePillBg = {
-    light: 'bg-stone-900 text-white',
-    dark: 'bg-amber-500 text-stone-950 font-bold',
-    glass: 'bg-stone-900 text-white'
-  }[variant];
-
-  const inactiveText = {
-    light: 'text-stone-500 hover:text-stone-900',
-    dark: 'text-stone-400 hover:text-stone-100',
-    glass: 'text-stone-600 hover:text-stone-950'
-  }[variant];
+  const isDark = variant === 'dark';
 
   return (
     <div
       role="group"
-      aria-label="Language Selection"
-      className={`relative inline-grid grid-cols-2 items-center rounded-full p-0.5 text-[11px] font-mono font-bold tracking-wider select-none ${containerStyles} ${className}`}
-      style={{ width: '84px', height: '28px' }}
+      aria-label="Pilih Bahasa / Select Language"
+      className={className}
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        position: 'relative',
+        width: '86px',
+        height: '32px',
+        borderRadius: '999px',
+        padding: '2px',
+        backgroundColor: isDark ? 'rgba(30, 27, 24, 0.85)' : 'rgba(0, 0, 0, 0.06)',
+        border: isDark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid rgba(0, 0, 0, 0.08)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
+        userSelect: 'none',
+        boxSizing: 'border-box'
+      }}
     >
-      {/* Sliding Active Pill Background */}
+      {/* Sliding Active Pill */}
       <span
         aria-hidden="true"
-        className={`absolute inset-y-0.5 rounded-full transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${activePillBg}`}
         style={{
-          width: 'calc(50% - 2px)',
-          left: '2px',
-          transform: isEn ? 'translateX(100%)' : 'translateX(0%)'
+          position: 'absolute',
+          top: '3px',
+          bottom: '3px',
+          left: '3px',
+          width: 'calc(50% - 3px)',
+          borderRadius: '999px',
+          backgroundColor: isDark ? '#D97706' : '#1D1D1F',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.18)',
+          transform: isEn ? 'translateX(100%)' : 'translateX(0%)',
+          transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+          pointerEvents: 'none',
+          zIndex: 1
         }}
       />
 
@@ -59,9 +64,27 @@ export default function LanguageSwitcher({
         type="button"
         onClick={() => onLanguageChange('id')}
         aria-pressed={!isEn}
-        className={`relative z-10 flex h-full items-center justify-center rounded-full transition-colors duration-200 ${
-          !isEn ? 'text-inherit' : inactiveText
-        }`}
+        style={{
+          position: 'relative',
+          zIndex: 2,
+          flex: 1,
+          height: '100%',
+          border: 'none',
+          background: 'transparent',
+          color: !isEn ? '#FFFFFF' : (isDark ? '#A1A1A6' : '#6E6E73'),
+          fontSize: '11.5px',
+          fontWeight: 700,
+          fontFamily: 'var(--font-mono, monospace)',
+          letterSpacing: '0.04em',
+          cursor: 'pointer',
+          borderRadius: '999px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'color 0.2s ease',
+          outline: 'none',
+          padding: 0
+        }}
       >
         ID
       </button>
@@ -71,9 +94,27 @@ export default function LanguageSwitcher({
         type="button"
         onClick={() => onLanguageChange('en')}
         aria-pressed={isEn}
-        className={`relative z-10 flex h-full items-center justify-center rounded-full transition-colors duration-200 ${
-          isEn ? 'text-inherit' : inactiveText
-        }`}
+        style={{
+          position: 'relative',
+          zIndex: 2,
+          flex: 1,
+          height: '100%',
+          border: 'none',
+          background: 'transparent',
+          color: isEn ? '#FFFFFF' : (isDark ? '#A1A1A6' : '#6E6E73'),
+          fontSize: '11.5px',
+          fontWeight: 700,
+          fontFamily: 'var(--font-mono, monospace)',
+          letterSpacing: '0.04em',
+          cursor: 'pointer',
+          borderRadius: '999px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'color 0.2s ease',
+          outline: 'none',
+          padding: 0
+        }}
       >
         EN
       </button>
