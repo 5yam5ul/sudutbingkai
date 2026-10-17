@@ -292,7 +292,7 @@ export default function HomePage() {
       </div>
 
       {/* Floating Glass Navigation (Apple style) */}
-      <nav style={{ position: 'sticky', top: '12px', zIndex: 50, padding: '0 16px', marginTop: '8px' }}>
+      <nav style={{ position: 'sticky', top: '14px', zIndex: 50, padding: '0 16px', marginTop: '12px' }}>
         <div className="glass-nav" style={{
           maxWidth: '1060px',
           margin: '0 auto',
@@ -338,54 +338,71 @@ export default function HomePage() {
           <div className="desktop-nav-actions">
             {currentUser ? (
               <div className="action-desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Link 
-                  href={currentUser.role === 'vendor' ? '/vendor' : '/dashboard'} 
-                  className="glass-pill"
-                  style={{ 
-                    padding: '7px 14px', 
-                    fontSize: '12.5px', 
-                    fontWeight: 600, 
-                    color: '#1D1D1F',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: 'rgba(194, 120, 3, 0.08)',
-                    borderColor: 'rgba(194, 120, 3, 0.25)'
-                  }}
-                >
-                  <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981' }} />
-                  <span>Dashboard ({currentUser.role === 'vendor' ? 'Mitra' : 'Host / Klien'})</span>
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: 'rgba(194, 120, 3, 0.08)',
+                  border: '1px solid rgba(194, 120, 3, 0.22)',
+                  borderRadius: '9999px',
+                  padding: '3px 4px 3px 12px',
+                  gap: '6px'
+                }}>
+                  <Link 
+                    href={currentUser.role === 'vendor' ? '/vendor' : '/dashboard'} 
+                    style={{ 
+                      fontSize: '12.5px', 
+                      fontWeight: 600, 
+                      color: '#1D1D1F',
+                      textDecoration: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#10B981', boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.25)' }} />
+                    <span>Dashboard {currentUser.role === 'vendor' ? 'Mitra' : 'Host'}</span>
+                  </Link>
+                  <span style={{ width: '1px', height: '14px', background: 'rgba(0, 0, 0, 0.1)', margin: '0 2px' }} />
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    title="Keluar / Logout"
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: '#86868B',
+                      padding: '5px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: '50%',
+                      transition: 'color 0.2s ease, background 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = '#DC2626'; e.currentTarget.style.background = 'rgba(220, 38, 38, 0.08)'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = '#86868B'; e.currentTarget.style.background = 'none'; }}
+                  >
+                    <LogOut size={14} />
+                  </button>
+                </div>
+
+                <Link href="/create" className="btn-apple-black" style={{ padding: '8px 18px', fontSize: '13px' }}>
+                  <span>+ Buat Album</span>
                 </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  title="Keluar / Logout"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#86868B',
-                    padding: '6px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    borderRadius: '50%'
-                  }}
-                >
-                  <LogOut size={16} />
-                </button>
               </div>
             ) : (
-              <Link href="/login" className="action-desktop-only" style={{ color: '#1D1D1F', textDecoration: 'none', fontSize: '13px', fontWeight: 500, padding: '7px 12px' }}>
-                Masuk
-              </Link>
+              <div className="action-desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Link href="/login" style={{ color: '#1D1D1F', textDecoration: 'none', fontSize: '13px', fontWeight: 500, padding: '7px 12px' }}>
+                  Masuk
+                </Link>
+                <Link href="/cam/demo" className="glass-pill" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
+                  Coba Kamera
+                </Link>
+                <Link href="/create" className="btn-apple-black" style={{ padding: '8px 18px', fontSize: '13px' }}>
+                  <span>Buat album</span>
+                </Link>
+              </div>
             )}
-            <Link href="/cam/demo" className="glass-pill action-desktop-only" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
-              Coba Kamera
-            </Link>
-            <Link href="/create" className="btn-apple-black action-desktop-only" style={{ padding: '8px 18px', fontSize: '13px' }}>
-              <span>Buat album</span>
-            </Link>
 
             {/* Mobile Menu Toggle Button */}
             <button 
