@@ -148,8 +148,9 @@ export async function POST(request: Request) {
 
     const payload = {
       ...body,
+      eventId: body.eventId ? String(body.eventId).trim() : undefined,
       buyerName: body.buyerName.trim(),
-      buyerEmail: (body.buyerEmail || 'pengantin@sudutbingkai.id').trim(),
+      buyerEmail: (body.buyerEmail || 'klien@sudutbingkai.id').trim(),
       buyerPhone: body.buyerPhone ? body.buyerPhone.trim() : undefined,
       buyerType: body.buyerType || 'client',
       tierId: tierKey,
@@ -159,10 +160,42 @@ export async function POST(request: Request) {
       finalAmount: Number(body.finalAmount ?? body.originalPrice ?? 0),
       paymentMethod: body.paymentMethod || 'qris',
       status: body.status || 'paid',
+      paidAt: (body.status || 'paid') === 'paid' ? (body.paidAt || new Date().toISOString()) : undefined,
       orderId: body.orderId || `ord_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 6)}`
     };
 
     const invoice = await createInvoice(payload);
+
+    // Synchronize linked event paymentStatus and vendor commission if manual invoice is created as 'paid'
+    if (invoice.eventId && invoice.status === 'paid') {
+      try {
+        const targetEvent = await getEventById(invoice.eventId);
+        if (targetEvent && targetEvent.paymentStatus !== 'paid') {
+          const eventUpdates: any = { paymentStatus: 'paid' };
+          if (
+            targetEvent.vendorId &&
+            targetEvent.commissionAmount &&
+            targetEvent.commissionAmount > 0 &&
+            targetEvent.commissionStatus !== 'available' &&
+            targetEvent.commissionStatus !== 'withdrawn'
+          ) {
+            const vendors = await getAllVendors();
+            const matchedVendor = vendors.find(v => isSameVendorId(v.id, targetEvent.vendorId));
+            if (matchedVendor && matchedVendor.status !== 'suspended') {
+              await updateVendor(matchedVendor.id, {
+                walletBalance: (matchedVendor.walletBalance || 0) + targetEvent.commissionAmount,
+                totalEarnings: (matchedVendor.totalEarnings || 0) + targetEvent.commissionAmount
+              });
+              eventUpdates.commissionStatus = 'available';
+            }
+          }
+          await updateEvent(targetEvent.id, eventUpdates);
+        }
+      } catch (syncErr) {
+        console.warn('Gagal menyinkronkan status acara dari invoice manual:', syncErr);
+      }
+    }
+
     return NextResponse.json({ success: true, invoice });
   } catch (err: unknown) {
     return NextResponse.json({ success: false, error: (err as Error).message }, { status: 500 });
@@ -225,6 +258,9 @@ export async function PATCH(request: Request) {
 
     // Admin-only fields
     if (isAdmin) {
+      if (body.eventId !== undefined) updates.eventId = body.eventId ? String(body.eventId).trim() : undefined;
+      if (body.tierId !== undefined) updates.tierId = body.tierId;
+      if (body.tierName !== undefined) updates.tierName = body.tierName;
       if (body.finalAmount !== undefined) updates.finalAmount = Number(body.finalAmount);
       if (body.originalPrice !== undefined) updates.originalPrice = Number(body.originalPrice);
       if (body.discountAmount !== undefined) updates.discountAmount = Number(body.discountAmount);

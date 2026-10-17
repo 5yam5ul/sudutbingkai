@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { getClientSession, clearClientSession, getSignedClientToken, authFetch } from '@/lib/auth';
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, VoiceNoteRecord, getEventRetentionInfo } from '@/lib/types';
+import { formatSafeMediaUrl } from '@/lib/media-url';
 import ConfirmModal from '@/components/ConfirmModal';
 import { toast } from 'sonner';
 
@@ -116,6 +117,8 @@ export default function SuperAdminDashboard() {
 
   // Search & Filter
   const [searchTerm, setSearchTerm] = useState('');
+  const [eventTypeFilter, setEventTypeFilter] = useState<'all' | 'wedding' | 'birthday' | 'corporate' | 'other'>('all');
+  const [eventPaymentFilter, setEventPaymentFilter] = useState<'all' | 'paid' | 'pending'>('all');
   const [photoFilterEvent, setPhotoFilterEvent] = useState('all');
   const [moderationMediaType, setModerationMediaType] = useState<'photos' | 'videos' | 'voices'>('photos');
   const [hostTierFilter, setHostTierFilter] = useState<'all' | EventPackageTier>('all');
@@ -134,16 +137,19 @@ export default function SuperAdminDashboard() {
   const [eventToEdit, setEventToEdit] = useState<EventData | null>(null);
   const [createEventModalOpen, setCreateEventModalOpen] = useState(false);
   const [newEventForm, setNewEventForm] = useState<Partial<EventData>>({
+    eventType: 'wedding',
     title: '',
     coupleOrHost: '',
     hostEmail: '',
     eventDate: new Date().toISOString().substring(0, 10),
     location: '',
     packageTier: 'wedding',
+    paymentStatus: 'paid',
     maxGuests: 300,
     shotsPerGuest: 36,
     preset: 'portra',
-    revealMode: 'instant'
+    revealMode: 'instant',
+    revealTime: ''
   });
 
   // 2. Vendors Modal
@@ -175,6 +181,7 @@ export default function SuperAdminDashboard() {
   const [invoiceToEdit, setInvoiceToEdit] = useState<InvoiceRecord | null>(null);
   const [createInvoiceModalOpen, setCreateInvoiceModalOpen] = useState(false);
   const [newInvoiceForm, setNewInvoiceForm] = useState<Partial<InvoiceRecord>>({
+    eventId: '',
     buyerName: '',
     buyerEmail: '',
     buyerPhone: '',
@@ -376,16 +383,19 @@ export default function SuperAdminDashboard() {
         setEvents(prev => [data.event, ...prev]);
         setCreateEventModalOpen(false);
         setNewEventForm({
+          eventType: 'wedding',
           title: '',
           coupleOrHost: '',
           hostEmail: '',
           eventDate: new Date().toISOString().substring(0, 10),
           location: '',
           packageTier: 'wedding',
+          paymentStatus: 'paid',
           maxGuests: 300,
           shotsPerGuest: 36,
           preset: 'portra',
-          revealMode: 'instant'
+          revealMode: 'instant',
+          revealTime: ''
         });
         loadAllAdminData();
       } else {
@@ -660,6 +670,7 @@ export default function SuperAdminDashboard() {
     try {
       const payload = {
         ...newInvoiceForm,
+        eventId: newInvoiceForm.eventId || undefined,
         buyerType: 'client',
         originalPrice: Number(newInvoiceForm.originalPrice || newInvoiceForm.finalAmount || 499000),
         finalAmount: Number(newInvoiceForm.finalAmount || newInvoiceForm.originalPrice || 499000),
@@ -677,6 +688,7 @@ export default function SuperAdminDashboard() {
         setInvoices(prev => [data.invoice, ...prev]);
         setCreateInvoiceModalOpen(false);
         setNewInvoiceForm({
+          eventId: '',
           buyerName: '',
           buyerEmail: '',
           buyerPhone: '',
@@ -688,6 +700,7 @@ export default function SuperAdminDashboard() {
           paymentMethod: 'qris',
           status: 'paid'
         });
+        loadAllAdminData();
       } else {
         toast.error(data.error || 'Gagal menerbitkan invoice.');
       }
@@ -1175,11 +1188,12 @@ export default function SuperAdminDashboard() {
         setPayouts(prev => prev.map(p => p.id === approvePayoutModal.payoutId ? {
           ...p,
           status: 'approved',
-          proofUrl: finalProofUrl,
+          proofUrl: finalProofUrl ? formatSafeMediaUrl(finalProofUrl) : undefined,
           notes: finalNotes,
           processedAt: new Date().toISOString()
         } : p));
         setApprovePayoutModal(prev => ({ ...prev, isOpen: false, isSubmitting: false }));
+        loadAllAdminData();
       } else {
         toast.error(data.error || 'Gagal menyetujui payout.');
         setApprovePayoutModal(prev => ({ ...prev, isSubmitting: false }));
@@ -1275,6 +1289,7 @@ export default function SuperAdminDashboard() {
           if (data.success) {
             toast.error('Video testimoni ditolak.');
             setTestimonials(prev => prev.map(t => t.id === testiId ? { ...t, status: 'rejected', adminNotes: reason.trim() } : t));
+            loadAllAdminData();
           }
         } catch {
           toast.error('Gagal menolak video.');
@@ -1298,6 +1313,7 @@ export default function SuperAdminDashboard() {
           if (data.success) {
             toast.success(`Data penarikan ${vendorName} berhasil dihapus.`);
             setPayouts(prev => prev.filter(p => p.id !== payoutId));
+            loadAllAdminData();
           } else {
             toast.error(data.error || 'Gagal menghapus penarikan.');
           }
@@ -1323,6 +1339,7 @@ export default function SuperAdminDashboard() {
           if (data.success) {
             toast.success(`Video testimoni dari ${submitterName} berhasil dihapus.`);
             setTestimonials(prev => prev.filter(t => t.id !== testiId));
+            loadAllAdminData();
           } else {
             toast.error(data.error || 'Gagal menghapus video testimoni.');
           }
@@ -1346,11 +1363,38 @@ export default function SuperAdminDashboard() {
     return found ? `${found.title} (${found.coupleOrHost})` : `Acara: ${id}`;
   };
 
-  const filteredEvents = events.filter(e =>
-    e.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.coupleOrHost.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    e.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getEventTypeBadgeInfo = (eventType?: string) => {
+    switch (eventType) {
+      case 'birthday':
+        return { label: 'Ulang Tahun', bg: 'rgba(236, 72, 153, 0.1)', color: '#DB2777' };
+      case 'corporate':
+        return { label: 'Kantor & Gala', bg: 'rgba(37, 99, 235, 0.1)', color: '#2563EB' };
+      case 'other':
+        return { label: 'Acara Spesial', bg: 'rgba(139, 92, 246, 0.1)', color: '#7C3AED' };
+      case 'wedding':
+      default:
+        return { label: 'Pernikahan', bg: 'rgba(217, 119, 6, 0.1)', color: '#D97706' };
+    }
+  };
+
+  const filteredEvents = events.filter(e => {
+    const q = searchTerm.toLowerCase().trim();
+    if (q) {
+      const matchTitle = e.title.toLowerCase().includes(q);
+      const matchHost = e.coupleOrHost.toLowerCase().includes(q);
+      const matchId = e.id.toLowerCase().includes(q);
+      const matchSlug = Boolean(e.slug && e.slug.toLowerCase().includes(q));
+      const matchEmail = Boolean(e.hostEmail && e.hostEmail.toLowerCase().includes(q));
+      if (!matchTitle && !matchHost && !matchId && !matchSlug && !matchEmail) return false;
+    }
+    if (eventTypeFilter !== 'all' && (e.eventType || 'wedding') !== eventTypeFilter) {
+      return false;
+    }
+    const effectivePaid = e.packageTier === 'starter' || e.paymentStatus !== 'pending';
+    if (eventPaymentFilter === 'paid' && !effectivePaid) return false;
+    if (eventPaymentFilter === 'pending' && effectivePaid) return false;
+    return true;
+  });
 
   const filteredPhotos = photos.filter(p => {
     if (photoFilterEvent !== 'all' && p.eventId !== photoFilterEvent) return false;
@@ -1540,7 +1584,7 @@ export default function SuperAdminDashboard() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <Link
-              href="/login"
+              href="/admin/login"
               className="btn-apple-black"
               style={{ background: '#FFFFFF', color: '#000000', padding: '12px', fontSize: '14px', textDecoration: 'none', borderRadius: '12px' }}
             >
@@ -2029,11 +2073,11 @@ export default function SuperAdminDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Pusat Kelola Acara ({events.length})</h2>
-                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Edit detail acara, ubah paket/kuota pax, cuci roll instan, dan kontrol penuh</span>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Pusat Kelola Acara ({filteredEvents.length}{filteredEvents.length !== events.length ? ` / ${events.length}` : ''})</h2>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Edit detail semua kategori acara, ubah paket/kuota pax, status pembayaran, dan kontrol penuh</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ position: 'relative', width: '260px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', width: '240px' }}>
                   <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#86868B' }} />
                   <input
                     type="text"
@@ -2044,6 +2088,28 @@ export default function SuperAdminDashboard() {
                     style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '12px', fontSize: '13px' }}
                   />
                 </div>
+                <select
+                  value={eventTypeFilter}
+                  onChange={(e) => setEventTypeFilter(e.target.value as any)}
+                  className="glass-input"
+                  style={{ padding: '9px 12px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  <option value="all">Semua Kategori</option>
+                  <option value="wedding">Pernikahan</option>
+                  <option value="birthday">Ulang Tahun</option>
+                  <option value="corporate">Kantor & Gala</option>
+                  <option value="other">Acara Spesial</option>
+                </select>
+                <select
+                  value={eventPaymentFilter}
+                  onChange={(e) => setEventPaymentFilter(e.target.value as any)}
+                  className="glass-input"
+                  style={{ padding: '9px 12px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer' }}
+                >
+                  <option value="all">Semua Status Bayar</option>
+                  <option value="paid">Lunas (Aktif)</option>
+                  <option value="pending">Pending Bayar</option>
+                </select>
                 <button
                   onClick={() => setCreateEventModalOpen(true)}
                   className="btn-apple-black"
@@ -2077,24 +2143,43 @@ export default function SuperAdminDashboard() {
                             </div>
                             <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Tidak Ada Acara yang Cocok</strong>
                             <p style={{ fontSize: '13px', color: '#86868B', margin: 0, maxWidth: '420px', lineHeight: 1.5 }}>
-                              {searchTerm ? 'Tidak ditemukan acara yang sesuai kata kunci pencarian.' : 'Belum ada acara yang terdaftar di platform.'}
+                              {(searchTerm || eventTypeFilter !== 'all' || eventPaymentFilter !== 'all') ? 'Tidak ditemukan acara yang sesuai dengan filter atau kata kunci pencarian.' : 'Belum ada acara yang terdaftar di platform.'}
                             </p>
-                            {searchTerm && (
+                            {(searchTerm || eventTypeFilter !== 'all' || eventPaymentFilter !== 'all') && (
                               <button
-                                onClick={() => setSearchTerm('')}
+                                onClick={() => {
+                                  setSearchTerm('');
+                                  setEventTypeFilter('all');
+                                  setEventPaymentFilter('all');
+                                }}
                                 className="glass-pill"
                                 style={{ marginTop: '8px', padding: '6px 14px', fontSize: '12px', cursor: 'pointer' }}
                               >
-                                Bersihkan Pencarian
+                                Bersihkan Filter
                               </button>
                             )}
                           </div>
                         </td>
                       </tr>
-                    ) : filteredEvents.map(e => (
+                    ) : filteredEvents.map(e => {
+                      const catBadge = getEventTypeBadgeInfo(e.eventType);
+                      const isEventPaid = e.packageTier === 'starter' || e.paymentStatus !== 'pending';
+                      return (
                       <tr key={e.id} style={{ borderBottom: '1px solid rgba(0,0,0,0.04)' }}>
                         <td style={{ padding: '16px 18px' }}>
-                          <strong style={{ fontSize: '14px', color: '#1D1D1F', display: 'block' }}>{e.title}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '3px' }}>
+                            <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>{e.title}</strong>
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              padding: '2px 7px',
+                              borderRadius: '999px',
+                              background: catBadge.bg,
+                              color: catBadge.color
+                            }}>
+                              {catBadge.label}
+                            </span>
+                          </div>
                           <span style={{ fontSize: '11px', color: '#86868B' }}>ID: <code>{e.id}</code> • Host: {e.coupleOrHost}</span>
                         </td>
                         <td style={{ padding: '16px 18px' }}>
@@ -2118,8 +2203,20 @@ export default function SuperAdminDashboard() {
                           })()}
                         </td>
                         <td style={{ padding: '16px 18px' }}>
-                          <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{e.packageTier || 'wedding'}</span>
-                          <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ fontWeight: 600, textTransform: 'capitalize' }}>{e.packageTier || 'wedding'}</span>
+                            <span style={{
+                              fontSize: '10px',
+                              fontWeight: 700,
+                              padding: '2px 7px',
+                              borderRadius: '999px',
+                              background: isEventPaid ? 'rgba(16, 185, 129, 0.12)' : 'rgba(217, 119, 6, 0.14)',
+                              color: isEventPaid ? '#059669' : '#D97706'
+                            }}>
+                              {isEventPaid ? 'LUNAS' : 'PENDING BAYAR'}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '11px', color: '#86868B', display: 'block', marginTop: '2px' }}>
                             {(e.maxGuests || 0) + (e.additionalPax || 0)} Tamu {e.additionalPax ? `(+${e.additionalPax} Pax)` : ''} • {e.shotsPerGuest} Rol • Preset: {e.preset}
                           </span>
                         </td>
@@ -2129,13 +2226,20 @@ export default function SuperAdminDashboard() {
                               Instant (Buka)
                             </span>
                           ) : (
-                            <button
-                              onClick={() => handleForceCuciRoll(e.id, e.title)}
-                              className="glass-pill"
-                              style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer', borderColor: '#F59E0B', color: '#D97706', fontWeight: 600 }}
-                            >
-                              Cuci Roll Paksa
-                            </button>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                              <button
+                                onClick={() => handleForceCuciRoll(e.id, e.title)}
+                                className="glass-pill"
+                                style={{ padding: '4px 10px', fontSize: '11px', cursor: 'pointer', borderColor: '#F59E0B', color: '#D97706', fontWeight: 600 }}
+                              >
+                                Cuci Roll Paksa
+                              </button>
+                              {e.revealTime && (
+                                <span style={{ fontSize: '10px', color: '#86868B' }}>
+                                  Buka: {new Date(e.revealTime).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </td>
                         <td style={{ padding: '16px 18px' }}>
@@ -2191,7 +2295,7 @@ export default function SuperAdminDashboard() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                    );})}
                   </tbody>
                 </table>
               </div>
@@ -2216,7 +2320,7 @@ export default function SuperAdminDashboard() {
                   </span>
                 </div>
                 <span style={{ fontSize: '13px', color: '#6E6E73', marginTop: '2px', display: 'block' }}>
-                  Pantau kontak pengantin, kuota pax aktif, total jepretan rol tamu, dan riwayat transaksi platform
+                  Pantau kontak penyelenggara acara, kuota pax aktif, total jepretan rol tamu, dan riwayat transaksi platform
                 </span>
               </div>
 
@@ -2251,10 +2355,12 @@ export default function SuperAdminDashboard() {
                   style={{ padding: '9px 14px', borderRadius: '12px', fontSize: '13px', cursor: 'pointer', minWidth: '140px' }}
                 >
                   <option value="all">Semua Paket</option>
-                  <option value="starter">Starter (100 Tamu)</option>
-                  <option value="intimate">Intimate (150 Tamu)</option>
+                  <option value="starter">Starter (5 Tamu)</option>
+                  <option value="intimate">Intimate (50 Tamu)</option>
+                  <option value="party">Party (75 Tamu)</option>
+                  <option value="event">Event (150 Tamu)</option>
                   <option value="wedding">Wedding (300 Tamu)</option>
-                  <option value="unlimited">Unlimited (Tanpa Batas)</option>
+                  <option value="unlimited">Unlimited (2.000 Tamu)</option>
                 </select>
 
                 {/* Filter Payment */}
@@ -2302,7 +2408,7 @@ export default function SuperAdminDashboard() {
                   {hostDirectory.length} Host
                 </strong>
                 <span style={{ fontSize: '12px', color: '#6E6E73' }}>
-                  Akun pengantin & klien aktif
+                  Akun penyelenggara & klien aktif
                 </span>
               </div>
 
@@ -2364,7 +2470,7 @@ export default function SuperAdminDashboard() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>HOST & PENGANTIN</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>PENYELENGGARA & HOST</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>KONTAK & WHATSAPP</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>ACARA & KUOTA PAX</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>ENGAGEMENT ROL TAMU</th>
@@ -2488,6 +2594,7 @@ export default function SuperAdminDashboard() {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                                   {host.events.map(ev => {
                                     const totalEventPax = (ev.maxGuests || 0) + (ev.additionalPax || 0);
+                                    const evCat = getEventTypeBadgeInfo(ev.eventType);
                                     return (
                                       <div key={ev.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                         <Link
@@ -2497,6 +2604,16 @@ export default function SuperAdminDashboard() {
                                         >
                                           {ev.title}
                                         </Link>
+                                        <span style={{
+                                          fontSize: '10px',
+                                          fontWeight: 700,
+                                          padding: '1.5px 6px',
+                                          borderRadius: '999px',
+                                          background: evCat.bg,
+                                          color: evCat.color
+                                        }}>
+                                          {evCat.label}
+                                        </span>
                                         <span className="glass-pill" style={{ padding: '2px 7px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase' }}>
                                           {ev.packageTier || 'wedding'}
                                         </span>
@@ -2586,15 +2703,26 @@ export default function SuperAdminDashboard() {
                                 )}
                                 <button
                                   onClick={() => {
+                                    const firstEv = host.events[0];
+                                    const tier = (firstEv?.packageTier && firstEv.packageTier !== 'starter') ? firstEv.packageTier : 'wedding';
+                                    const tierPriceMap: Record<string, { name: string; price: number }> = {
+                                      intimate: { name: 'Intimate Party (50 Tamu)', price: 129000 },
+                                      party: { name: 'Party (75 Tamu)', price: 179000 },
+                                      event: { name: 'Event (150 Tamu)', price: 269000 },
+                                      wedding: { name: 'Wedding (300 Tamu)', price: 499000 },
+                                      unlimited: { name: 'Grand / Unlimited (2.000 Tamu)', price: 999000 },
+                                    };
+                                    const tierMeta = tierPriceMap[tier] || tierPriceMap.wedding;
                                     setNewInvoiceForm({
+                                      eventId: firstEv?.id || '',
                                       buyerName: host.name,
                                       buyerEmail: host.email,
                                       buyerPhone: host.phone,
-                                      tierId: 'wedding',
-                                      tierName: 'Wedding (300 Tamu)',
-                                      originalPrice: 499000,
+                                      tierId: tier as EventPackageTier,
+                                      tierName: tierMeta.name,
+                                      originalPrice: tierMeta.price,
                                       discountAmount: 0,
-                                      finalAmount: 499000,
+                                      finalAmount: tierMeta.price,
                                       paymentMethod: 'qris',
                                       status: 'paid'
                                     });
@@ -2835,7 +2963,7 @@ export default function SuperAdminDashboard() {
                           }}
                           style={{ width: '100%', aspectRatio: '3/4', borderRadius: '12px', overflow: 'hidden', background: '#000', marginBottom: '8px', position: 'relative', cursor: 'pointer' }}
                         >
-                          <img src={p.imageData} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={formatSafeMediaUrl(p.imageData)} alt={p.guestName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           {p.isHidden && (
                             <div style={{ position: 'absolute', inset: 0, background: 'rgba(239, 68, 68, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: 700, fontSize: '12px' }}>
                               DISENSOR
@@ -2880,42 +3008,46 @@ export default function SuperAdminDashboard() {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
-                  {filteredVideos.map(v => (
-                    <div key={v.id} className="glass-card" style={{ padding: '12px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      <div style={{ width: '100%', aspectRatio: '9/16', maxHeight: '280px', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
-                        <video
-                          src={v.videoUrl}
-                          controls
-                          preload="metadata"
-                          playsInline
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        />
+                  {filteredVideos.map(v => {
+                    const safeVideoUrl = formatSafeMediaUrl(v.videoUrl);
+                    const videoExt = safeVideoUrl.toLowerCase().includes('.webm') ? 'webm' : 'mp4';
+                    return (
+                      <div key={v.id} className="glass-card" style={{ padding: '12px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div style={{ width: '100%', aspectRatio: '9/16', maxHeight: '280px', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
+                          <video
+                            src={safeVideoUrl}
+                            controls
+                            preload="metadata"
+                            playsInline
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '12px' }}>
+                          <strong style={{ display: 'block', color: '#1D1D1F' }}>{v.guestName}</strong>
+                          <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getEventTitle(v.eventId)}>{getEventTitle(v.eventId)} • {v.durationSeconds} dtk</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <a
+                            href={safeVideoUrl}
+                            download={`video-${v.guestName}.${videoExt}`}
+                            className="glass-pill"
+                            style={{ flex: 1, padding: '6px', fontSize: '11px', textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                          >
+                            <Download size={12} />
+                            <span>Unduh (.{videoExt})</span>
+                          </a>
+                          <button
+                            onClick={() => handleDeleteVideoWish(v.id)}
+                            className="glass-pill"
+                            style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
+                            title="Hapus Video Permanen"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ fontSize: '12px' }}>
-                        <strong style={{ display: 'block', color: '#1D1D1F' }}>{v.guestName}</strong>
-                        <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getEventTitle(v.eventId)}>{getEventTitle(v.eventId)} • {v.durationSeconds} dtk</span>
-                      </div>
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <a
-                          href={v.videoUrl}
-                          download={`video-${v.guestName}.mp4`}
-                          className="glass-pill"
-                          style={{ flex: 1, padding: '6px', fontSize: '11px', textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                        >
-                          <Download size={12} />
-                          <span>Unduh</span>
-                        </a>
-                        <button
-                          onClick={() => handleDeleteVideoWish(v.id)}
-                          className="glass-pill"
-                          style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
-                          title="Hapus Video Permanen"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )
             )}
@@ -2929,43 +3061,54 @@ export default function SuperAdminDashboard() {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-                  {filteredVoices.map(v => (
-                    <div key={v.id} className="glass-card" style={{ padding: '14px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(194, 120, 3, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <Volume2 size={16} color="#C27803" />
+                  {filteredVoices.map(v => {
+                    const safeAudioUrl = formatSafeMediaUrl(v.audioUrl);
+                    const lowerAudio = safeAudioUrl.toLowerCase();
+                    const audioExt = lowerAudio.includes('.m4a') || lowerAudio.includes('audio/mp4')
+                      ? 'm4a'
+                      : lowerAudio.includes('.mp4')
+                        ? 'mp4'
+                        : lowerAudio.includes('.ogg')
+                          ? 'ogg'
+                          : 'webm';
+                    return (
+                      <div key={v.id} className="glass-card" style={{ padding: '14px', borderRadius: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(194, 120, 3, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Volume2 size={16} color="#C27803" />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                              {v.guestName}
+                            </strong>
+                            <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getEventTitle(v.eventId)}>{getEventTitle(v.eventId)} • {v.duration || 15} dtk</span>
+                          </div>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                            {v.guestName}
-                          </strong>
-                          <span style={{ fontSize: '10.5px', color: '#86868B', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={getEventTitle(v.eventId)}>{getEventTitle(v.eventId)} • {v.duration || 15} dtk</span>
+
+                        <audio controls src={safeAudioUrl} style={{ width: '100%', height: '36px', borderRadius: '8px' }} />
+
+                        <div style={{ display: 'flex', gap: '6px' }}>
+                          <a
+                            href={safeAudioUrl}
+                            download={`suara-${v.guestName}.${audioExt}`}
+                            className="glass-pill"
+                            style={{ flex: 1, padding: '6px', fontSize: '11px', textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                          >
+                            <Download size={12} />
+                            <span>Unduh (.{audioExt})</span>
+                          </a>
+                          <button
+                            onClick={() => handleDeleteVoiceNote(v.id)}
+                            className="glass-pill"
+                            style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
+                            title="Hapus Rekaman Suara"
+                          >
+                            <Trash2 size={12} />
+                          </button>
                         </div>
                       </div>
-
-                      <audio controls src={v.audioUrl} style={{ width: '100%', height: '36px', borderRadius: '8px' }} />
-
-                      <div style={{ display: 'flex', gap: '6px' }}>
-                        <a
-                          href={v.audioUrl}
-                          download={`suara-${v.guestName}.webm`}
-                          className="glass-pill"
-                          style={{ flex: 1, padding: '6px', fontSize: '11px', textDecoration: 'none', color: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-                        >
-                          <Download size={12} />
-                          <span>Unduh</span>
-                        </a>
-                        <button
-                          onClick={() => handleDeleteVoiceNote(v.id)}
-                          className="glass-pill"
-                          style={{ padding: '6px 8px', color: '#E11D48', cursor: 'pointer' }}
-                          title="Hapus Rekaman Suara"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )
             )}
@@ -2979,8 +3122,8 @@ export default function SuperAdminDashboard() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
               <div>
-                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Mitra Vendor & Wedding Organizer ({vendors.length})</h2>
-                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Atur tier komisi (12%/15%/20%), sesuaikan saldo dompet, status akun, & rekening</span>
+                <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0 }}>Mitra Vendor, WO & Event Organizer ({vendors.length})</h2>
+                <span style={{ fontSize: '13px', color: '#6E6E73' }}>Atur tier komisi (12%/15%/20%), sesuaikan saldo dompet, status akun, & rekening pencairan</span>
               </div>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <div style={{ position: 'relative', width: '240px' }}>
@@ -3010,7 +3153,7 @@ export default function SuperAdminDashboard() {
                 <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                   <thead>
                     <tr style={{ background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
-                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>NAMA AGENSI / WO</th>
+                      <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>NAMA AGENSI / WO / EO</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>KONTAK & INSTAGRAM</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>TIER & REFERRAL</th>
                       <th style={{ padding: '14px 18px', fontWeight: 600, color: '#86868B' }}>SALDO & PERFORMA</th>
@@ -3216,6 +3359,11 @@ export default function SuperAdminDashboard() {
                         <td style={{ padding: '16px 18px' }}>
                           <strong style={{ fontSize: '13.5px', fontFamily: 'var(--font-mono)' }}>{inv.invoiceNumber}</strong>
                           <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Tgl: {new Date(inv.createdAt).toLocaleDateString('id-ID')}</span>
+                          {inv.eventId && (
+                            <span style={{ fontSize: '10.5px', color: '#C27803', fontWeight: 600, display: 'block', marginTop: '2px' }}>
+                              {getEventTitle(inv.eventId)}
+                            </span>
+                          )}
                         </td>
                         <td style={{ padding: '16px 18px' }}>
                           <span style={{ fontWeight: 600, display: 'block' }}>{inv.buyerName}</span>
@@ -3266,7 +3414,7 @@ export default function SuperAdminDashboard() {
                             )}
 
                             <Link
-                              href={`/invoice/${inv.eventId || inv.id}`}
+                              href={`/invoice/${inv.id}`}
                               target="_blank"
                               className="glass-pill"
                               style={{ padding: '6px 10px', fontSize: '11.5px', textDecoration: 'none' }}
@@ -3385,7 +3533,7 @@ export default function SuperAdminDashboard() {
                             )}
                             {p.proofUrl && (
                               <a
-                                href={p.proofUrl}
+                                href={formatSafeMediaUrl(p.proofUrl)}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="glass-pill"
@@ -3471,7 +3619,7 @@ export default function SuperAdminDashboard() {
 
                     <div style={{ marginBottom: '16px' }}>
                       <a
-                        href={t.videoUrl}
+                        href={formatSafeMediaUrl(t.videoUrl)}
                         target="_blank"
                         rel="noreferrer"
                         className="glass-pill"
@@ -3554,7 +3702,7 @@ export default function SuperAdminDashboard() {
                     <div>
                       {item.imagePreviewUrl && (
                         <div style={{ width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', marginBottom: '12px', background: '#F4F4F5', border: '1px solid rgba(0,0,0,0.06)' }}>
-                          <img src={item.imagePreviewUrl} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={formatSafeMediaUrl(item.imagePreviewUrl)} alt={item.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
                       )}
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
@@ -3661,6 +3809,36 @@ export default function SuperAdminDashboard() {
             <form onSubmit={handleSaveEditEvent} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kategori Acara</label>
+                  <select
+                    value={eventToEdit.eventType || 'wedding'}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, eventType: e.target.value as any })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="wedding">Pernikahan (Wedding)</option>
+                    <option value="birthday">Ulang Tahun (Birthday)</option>
+                    <option value="corporate">Kantor & Gala (Corporate)</option>
+                    <option value="other">Acara Spesial Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Status Pembayaran</label>
+                  <select
+                    value={eventToEdit.packageTier === 'starter' ? 'paid' : (eventToEdit.paymentStatus || 'paid')}
+                    disabled={eventToEdit.packageTier === 'starter'}
+                    onChange={(e) => setEventToEdit({ ...eventToEdit, paymentStatus: e.target.value as 'paid' | 'pending' })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="paid">Lunas (Aktif & Buka Kamera Tamu)</option>
+                    <option value="pending">Pending (Menunggu Pembayaran)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Acara</label>
                   <input
                     type="text"
@@ -3672,7 +3850,15 @@ export default function SuperAdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Pengantin / Host</label>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                    {eventToEdit.eventType === 'birthday'
+                      ? 'Nama Yang Berulang Tahun'
+                      : eventToEdit.eventType === 'corporate'
+                        ? 'Nama Perusahaan / Instansi'
+                        : eventToEdit.eventType === 'other'
+                          ? 'Nama Tuan Rumah / Penyelenggara'
+                          : 'Nama Pasangan Mempelai'}
+                  </label>
                   <input
                     type="text"
                     required
@@ -3716,7 +3902,7 @@ export default function SuperAdminDashboard() {
                     onChange={(e) => setEventToEdit({ ...eventToEdit, hostEmail: e.target.value })}
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
-                    placeholder="pengantin@domain.com"
+                    placeholder="host@domain.com"
                   />
                 </div>
                 <div>
@@ -3751,6 +3937,7 @@ export default function SuperAdminDashboard() {
                       setEventToEdit({
                         ...eventToEdit,
                         packageTier: tierKey,
+                        ...(tierKey === 'starter' ? { paymentStatus: 'paid' } : {}),
                         ...(def ? { maxGuests: def.maxGuests, shotsPerGuest: def.shotsPerGuest } : {})
                       });
                     }}
@@ -3789,7 +3976,7 @@ export default function SuperAdminDashboard() {
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: eventToEdit.revealMode === 'delayed' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Preset Default</label>
                   <select
@@ -3812,14 +3999,32 @@ export default function SuperAdminDashboard() {
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Mode Buka Foto (Cuci Roll)</label>
                   <select
                     value={eventToEdit.revealMode}
-                    onChange={(e) => setEventToEdit({ ...eventToEdit, revealMode: e.target.value as any })}
+                    onChange={(e) => {
+                      const nextMode = e.target.value as 'instant' | 'delayed';
+                      const defaultRevealTime = nextMode === 'delayed' && !eventToEdit.revealTime
+                        ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().substring(0, 16)
+                        : eventToEdit.revealTime;
+                      setEventToEdit({ ...eventToEdit, revealMode: nextMode, revealTime: defaultRevealTime });
+                    }}
                     className="glass-input"
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
                   >
                     <option value="instant">Instant (Langsung Muncul di Galeri)</option>
-                    <option value="delayed">Delayed (Tunggu Waktu Acara Selesai)</option>
+                    <option value="delayed">Delayed (Kejutan / Tunggu Jadwal Buka)</option>
                   </select>
                 </div>
+                {eventToEdit.revealMode === 'delayed' && (
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Jadwal Buka Roll (WIB)</label>
+                    <input
+                      type="datetime-local"
+                      value={eventToEdit.revealTime ? eventToEdit.revealTime.substring(0, 16) : ''}
+                      onChange={(e) => setEventToEdit({ ...eventToEdit, revealTime: e.target.value ? new Date(e.target.value).toISOString() : undefined })}
+                      className="glass-input"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -3896,7 +4101,7 @@ export default function SuperAdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Buat Acara Baru (Manual Admin)</h3>
-                <span style={{ fontSize: '12px', color: '#86868B' }}>Daftarkan acara klien/pengantin langsung tanpa lewat form checkout</span>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>Daftarkan acara klien dari semua kategori langsung tanpa lewat form checkout</span>
               </div>
               <button onClick={() => setCreateEventModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
                 <X size={20} />
@@ -3906,11 +4111,49 @@ export default function SuperAdminDashboard() {
             <form onSubmit={handleCreateNewEvent} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kategori Acara</label>
+                  <select
+                    value={newEventForm.eventType || 'wedding'}
+                    onChange={(e) => setNewEventForm({ ...newEventForm, eventType: e.target.value as any })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="wedding">Pernikahan (Wedding)</option>
+                    <option value="birthday">Ulang Tahun (Birthday)</option>
+                    <option value="corporate">Kantor & Gala (Corporate)</option>
+                    <option value="other">Acara Spesial Lainnya</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Status Pembayaran</label>
+                  <select
+                    value={newEventForm.packageTier === 'starter' ? 'paid' : (newEventForm.paymentStatus || 'paid')}
+                    disabled={newEventForm.packageTier === 'starter'}
+                    onChange={(e) => setNewEventForm({ ...newEventForm, paymentStatus: e.target.value as 'paid' | 'pending' })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="paid">Lunas (Aktif & Buka Kamera Tamu)</option>
+                    <option value="pending">Pending (Menunggu Pembayaran)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Acara</label>
                   <input
                     type="text"
                     required
-                    placeholder="Contoh: Pernikahan Kevin & Cindy"
+                    placeholder={
+                      newEventForm.eventType === 'birthday'
+                        ? 'Contoh: Ulang Tahun Ke-21 Clarissa'
+                        : newEventForm.eventType === 'corporate'
+                          ? 'Contoh: Annual Gala Dinner PT Nusantara'
+                          : newEventForm.eventType === 'other'
+                            ? 'Contoh: Reuni Akbar & Halal Bihalal'
+                            : 'Contoh: Pernikahan Kevin & Cindy'
+                    }
                     value={newEventForm.title}
                     onChange={(e) => setNewEventForm({ ...newEventForm, title: e.target.value })}
                     className="glass-input"
@@ -3918,11 +4161,27 @@ export default function SuperAdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Penyelenggara / Pengantin</label>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>
+                    {newEventForm.eventType === 'birthday'
+                      ? 'Nama Yang Berulang Tahun'
+                      : newEventForm.eventType === 'corporate'
+                        ? 'Nama Perusahaan / Instansi'
+                        : newEventForm.eventType === 'other'
+                          ? 'Nama Tuan Rumah / Penyelenggara'
+                          : 'Nama Pasangan Mempelai'}
+                  </label>
                   <input
                     type="text"
                     required
-                    placeholder="Kevin & Cindy"
+                    placeholder={
+                      newEventForm.eventType === 'birthday'
+                        ? 'Clarissa Putri'
+                        : newEventForm.eventType === 'corporate'
+                          ? 'PT Nusantara Kreatif'
+                          : newEventForm.eventType === 'other'
+                            ? 'Keluarga Besar Wijaya'
+                            : 'Kevin & Cindy'
+                    }
                     value={newEventForm.coupleOrHost}
                     onChange={(e) => setNewEventForm({ ...newEventForm, coupleOrHost: e.target.value })}
                     className="glass-input"
@@ -3936,7 +4195,7 @@ export default function SuperAdminDashboard() {
                 <input
                   type="email"
                   required
-                  placeholder="pengantin@gmail.com (Untuk login ke Dashboard Host)"
+                  placeholder="klien@gmail.com (Untuk login ke Dashboard Host)"
                   value={newEventForm.hostEmail || ''}
                   onChange={(e) => setNewEventForm({ ...newEventForm, hostEmail: e.target.value })}
                   className="glass-input"
@@ -3987,6 +4246,7 @@ export default function SuperAdminDashboard() {
                       setNewEventForm({
                         ...newEventForm,
                         packageTier: tierKey,
+                        ...(tierKey === 'starter' ? { paymentStatus: 'paid' } : {}),
                         ...(def ? { maxGuests: def.maxGuests, shotsPerGuest: def.shotsPerGuest } : {})
                       });
                     }}
@@ -4021,6 +4281,57 @@ export default function SuperAdminDashboard() {
                     style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
                   />
                 </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: newEventForm.revealMode === 'delayed' ? '1fr 1fr 1fr' : '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Preset Default</label>
+                  <select
+                    value={newEventForm.preset || 'portra'}
+                    onChange={(e) => setNewEventForm({ ...newEventForm, preset: e.target.value as FilmPresetId })}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="portra">Kodak Portra 400 (Warm Classic)</option>
+                    <option value="funsaver">Kodak FunSaver (Disposable)</option>
+                    <option value="quicksnap">Fuji QuickSnap (Cool Green)</option>
+                    <option value="ektar">Kodak Ektar 100 (Vivid)</option>
+                    <option value="cinestill">CineStill 800T (Halation)</option>
+                    <option value="ilford">Ilford HP5 (B&W Classic)</option>
+                    <option value="agfa">Agfa Vista (Vintage Pop)</option>
+                    <option value="trix">Kodak Tri-X (Deep Grain)</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Mode Buka Foto (Cuci Roll)</label>
+                  <select
+                    value={newEventForm.revealMode || 'instant'}
+                    onChange={(e) => {
+                      const nextMode = e.target.value as 'instant' | 'delayed';
+                      const defaultRevealTime = nextMode === 'delayed' && !newEventForm.revealTime
+                        ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().substring(0, 16)
+                        : newEventForm.revealTime;
+                      setNewEventForm({ ...newEventForm, revealMode: nextMode, revealTime: defaultRevealTime });
+                    }}
+                    className="glass-input"
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                  >
+                    <option value="instant">Instant (Langsung Muncul di Galeri)</option>
+                    <option value="delayed">Delayed (Kejutan / Tunggu Jadwal Buka)</option>
+                  </select>
+                </div>
+                {newEventForm.revealMode === 'delayed' && (
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Jadwal Buka Roll (WIB)</label>
+                    <input
+                      type="datetime-local"
+                      value={newEventForm.revealTime ? newEventForm.revealTime.substring(0, 16) : ''}
+                      onChange={(e) => setNewEventForm({ ...newEventForm, revealTime: e.target.value ? new Date(e.target.value).toISOString() : '' })}
+                      className="glass-input"
+                      style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px' }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div>
@@ -4067,7 +4378,7 @@ export default function SuperAdminDashboard() {
           <div className="glass-card" style={{ maxWidth: '600px', width: '100%', maxHeight: '90vh', overflowY: 'auto', background: '#FFFFFF', padding: '28px', borderRadius: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Edit Mitra Vendor (WO)</h3>
+                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Edit Mitra Vendor (WO / EO / Agensi)</h3>
                 <span style={{ fontSize: '12px', color: '#86868B' }}>ID: <code>{vendorToEdit.id}</code></span>
               </div>
               <button onClick={() => setEditVendorModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
@@ -4144,7 +4455,7 @@ export default function SuperAdminDashboard() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kode Referral (Kupon 10% Tamu)</label>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Kode Referral (Kupon 10% Klien)</label>
                   <input
                     type="text"
                     value={vendorToEdit.referralCode || ''}
@@ -4251,7 +4562,7 @@ export default function SuperAdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Daftarkan Mitra Vendor Baru</h3>
-                <span style={{ fontSize: '12px', color: '#86868B' }}>Daftarkan Wedding Organizer, Event Planner, atau Fotografer rekanan</span>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>Daftarkan Wedding Organizer, Event Planner, Party Planner, atau Fotografer rekanan</span>
               </div>
               <button onClick={() => setCreateVendorModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
                 <X size={20} />
@@ -4261,11 +4572,11 @@ export default function SuperAdminDashboard() {
             <form onSubmit={handleCreateNewVendor} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Agensi / WO</label>
+                  <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Agensi / WO / EO</label>
                   <input
                     type="text"
                     required
-                    placeholder="Contoh: Kinasih Wedding Planner"
+                    placeholder="Contoh: Kinasih Event & Wedding Planner"
                     value={newVendorForm.companyName}
                     onChange={(e) => setNewVendorForm({ ...newVendorForm, companyName: e.target.value })}
                     className="glass-input"
@@ -4490,6 +4801,23 @@ export default function SuperAdminDashboard() {
             </div>
 
             <form onSubmit={handleSaveEditInvoice} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Acara Terkait (Opsional - Otomatis Aktifkan Saat Lunas)</label>
+                <select
+                  value={invoiceToEdit.eventId || ''}
+                  onChange={(e) => setInvoiceToEdit({ ...invoiceToEdit, eventId: e.target.value || undefined })}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                >
+                  <option value="">-- Tidak Terhubung ke Acara Tertentu --</option>
+                  {events.map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.title} ({ev.coupleOrHost}) — [{getEventTypeBadgeInfo(ev.eventType).label}]
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Status Pembayaran</label>
@@ -4605,6 +4933,49 @@ export default function SuperAdminDashboard() {
             </div>
 
             <form onSubmit={handleCreateNewInvoice} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Acara Terkait (Opsional - Otomatis Aktifkan Saat Lunas)</label>
+                <select
+                  value={newInvoiceForm.eventId || ''}
+                  onChange={(e) => {
+                    const selectedEventId = e.target.value;
+                    const foundEvent = events.find(ev => ev.id === selectedEventId);
+                    if (foundEvent) {
+                      const tier = (foundEvent.packageTier && foundEvent.packageTier !== 'starter') ? foundEvent.packageTier : (newInvoiceForm.tierId || 'wedding');
+                      const tierPriceMap: Record<string, { name: string; price: number }> = {
+                        intimate: { name: 'Intimate Party (50 Tamu)', price: 129000 },
+                        party: { name: 'Party (75 Tamu)', price: 179000 },
+                        event: { name: 'Event (150 Tamu)', price: 269000 },
+                        wedding: { name: 'Wedding (300 Tamu)', price: 499000 },
+                        unlimited: { name: 'Grand / Unlimited (2.000 Tamu)', price: 999000 },
+                      };
+                      const tierMeta = tierPriceMap[tier] || tierPriceMap.wedding;
+                      setNewInvoiceForm({
+                        ...newInvoiceForm,
+                        eventId: selectedEventId,
+                        buyerName: newInvoiceForm.buyerName || foundEvent.coupleOrHost || foundEvent.title,
+                        buyerEmail: newInvoiceForm.buyerEmail || foundEvent.hostEmail || '',
+                        tierId: tier as EventPackageTier,
+                        tierName: tierMeta.name,
+                        originalPrice: tierMeta.price,
+                        finalAmount: tierMeta.price
+                      });
+                    } else {
+                      setNewInvoiceForm({ ...newInvoiceForm, eventId: '' });
+                    }
+                  }}
+                  className="glass-input"
+                  style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', fontSize: '13px', background: '#FFFFFF' }}
+                >
+                  <option value="">-- Tanpa Acara Terkait (Invoice Mandiri) --</option>
+                  {events.map(ev => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.title} ({ev.coupleOrHost}) — [{getEventTypeBadgeInfo(ev.eventType).label}]
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '4px' }}>Nama Pembeli / WO</label>
@@ -4639,13 +5010,20 @@ export default function SuperAdminDashboard() {
                     value={newInvoiceForm.tierId}
                     onChange={(e) => {
                       const tier = e.target.value as any;
-                      const price = tier === 'intimate' ? 129000 : tier === 'party' ? 179000 : tier === 'event' ? 269000 : tier === 'wedding' ? 499000 : 999000;
+                      const tierPriceMap: Record<string, { name: string; price: number }> = {
+                        intimate: { name: 'Intimate Party (50 Tamu)', price: 129000 },
+                        party: { name: 'Party (75 Tamu)', price: 179000 },
+                        event: { name: 'Event (150 Tamu)', price: 269000 },
+                        wedding: { name: 'Wedding (300 Tamu)', price: 499000 },
+                        unlimited: { name: 'Grand / Unlimited (2.000 Tamu)', price: 999000 },
+                      };
+                      const meta = tierPriceMap[tier] || tierPriceMap.wedding;
                       setNewInvoiceForm({
                         ...newInvoiceForm,
                         tierId: tier,
-                        tierName: tier.toUpperCase(),
-                        originalPrice: price,
-                        finalAmount: price
+                        tierName: meta.name,
+                        originalPrice: meta.price,
+                        finalAmount: meta.price
                       });
                     }}
                     className="glass-input"
@@ -4815,7 +5193,7 @@ export default function SuperAdminDashboard() {
                 <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Gambar Preview Produk (Cloudflare R2)</label>
                 {addonToEdit.imagePreviewUrl && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', padding: '8px', borderRadius: '10px', background: '#F4F4F5' }}>
-                    <img src={addonToEdit.imagePreviewUrl} alt="Preview" style={{ width: '56px', height: '56px', borderRadius: '8px', objectFit: 'cover' }} />
+                    <img src={formatSafeMediaUrl(addonToEdit.imagePreviewUrl)} alt="Preview" style={{ width: '56px', height: '56px', borderRadius: '8px', objectFit: 'cover' }} />
                     <div style={{ flex: 1, fontSize: '11.5px', color: '#515154', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {addonToEdit.imagePreviewUrl}
                     </div>
@@ -4890,7 +5268,7 @@ export default function SuperAdminDashboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div>
                 <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>Tambah Add-on Baru</h3>
-                <span style={{ fontSize: '12px', color: '#86868B' }}>Masukkan produk perlengkapan resepsi / hardware baru</span>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>Masukkan produk perlengkapan acara / hardware baru</span>
               </div>
               <button onClick={handleCloseCreateAddonModal} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
                 <X size={20} />
@@ -4979,7 +5357,7 @@ export default function SuperAdminDashboard() {
                 <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: '6px' }}>Gambar Preview Produk (Cloudflare R2)</label>
                 {newAddonForm.imagePreviewUrl && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', padding: '8px', borderRadius: '10px', background: '#F4F4F5' }}>
-                    <img src={newAddonForm.imagePreviewUrl} alt="Preview" style={{ width: '56px', height: '56px', borderRadius: '8px', objectFit: 'cover' }} />
+                    <img src={formatSafeMediaUrl(newAddonForm.imagePreviewUrl)} alt="Preview" style={{ width: '56px', height: '56px', borderRadius: '8px', objectFit: 'cover' }} />
                     <div style={{ flex: 1, fontSize: '11.5px', color: '#515154', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {newAddonForm.imagePreviewUrl}
                     </div>
@@ -5054,7 +5432,7 @@ export default function SuperAdminDashboard() {
             </div>
 
             <div style={{ width: '100%', aspectRatio: '3/4', borderRadius: '16px', overflow: 'hidden', background: '#000', marginBottom: '16px', position: 'relative' }}>
-              <img src={photoToInspect.imageData} alt={photoToInspect.guestName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <img src={formatSafeMediaUrl(photoToInspect.imageData)} alt={photoToInspect.guestName} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
               {photoToInspect.isHidden && (
                 <div style={{ position: 'absolute', top: '12px', right: '12px', background: '#EF4444', color: '#FFF', padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: 700 }}>
                   SEDANG DISENSOR
@@ -5070,7 +5448,7 @@ export default function SuperAdminDashboard() {
 
             <div style={{ display: 'flex', gap: '8px' }}>
               <a
-                href={photoToInspect.imageData}
+                href={formatSafeMediaUrl(photoToInspect.imageData)}
                 download={`foto-${photoToInspect.guestName}-${photoToInspect.id}.jpg`}
                 className="btn-apple-black"
                 style={{ flex: 1, padding: '10px', fontSize: '12.5px', borderRadius: '10px', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
@@ -5281,7 +5659,7 @@ export default function SuperAdminDashboard() {
                 </label>
                 {approvePayoutModal.proofUrl && (
                   <a
-                    href={approvePayoutModal.proofUrl}
+                    href={formatSafeMediaUrl(approvePayoutModal.proofUrl)}
                     target="_blank"
                     rel="noreferrer"
                     style={{ fontSize: '12px', color: '#059669', fontWeight: 600, textDecoration: 'underline' }}

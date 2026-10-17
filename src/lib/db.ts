@@ -1380,6 +1380,9 @@ export async function updateInvoice(id: string, updates: Partial<InvoiceRecord>)
     try {
       const dbUpdates: Record<string, any> = {};
       if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.eventId !== undefined) dbUpdates.event_id = updates.eventId || null;
+      if (updates.tierId !== undefined) dbUpdates.tier_id = updates.tierId;
+      if (updates.tierName !== undefined) dbUpdates.tier_name = updates.tierName;
       if (updates.finalAmount !== undefined) dbUpdates.final_amount = updates.finalAmount;
       if (updates.originalPrice !== undefined) dbUpdates.original_price = updates.originalPrice;
       if (updates.discountAmount !== undefined) dbUpdates.discount_amount = updates.discountAmount;
@@ -1572,7 +1575,7 @@ export async function getPayoutRequests(vendorId?: string): Promise<PayoutReques
           amount: Number(row.amount),
           bankDetails: row.bank_details || { bankName: 'BCA', accountNumber: '', accountHolder: '' },
           status: row.status,
-          proofUrl: row.proof_url || undefined,
+          proofUrl: row.proof_url ? formatSafeMediaUrl(row.proof_url) : undefined,
           notes: row.notes || undefined,
           requestedAt: row.requested_at,
           processedAt: row.processed_at || undefined
@@ -1587,7 +1590,10 @@ export async function getPayoutRequests(vendorId?: string): Promise<PayoutReques
   ensureLocalDataFiles();
   try {
     const raw = fs.existsSync(PAYOUTS_FILE) ? fs.readFileSync(PAYOUTS_FILE, 'utf8') : '[]';
-    const payouts: PayoutRequest[] = JSON.parse(raw);
+    const payouts: PayoutRequest[] = JSON.parse(raw).map((p: PayoutRequest) => ({
+      ...p,
+      proofUrl: p.proofUrl ? formatSafeMediaUrl(p.proofUrl) : undefined
+    }));
     if (!vendorId) return payouts;
     return payouts.filter(p => isSameVendorId(p.vendorId, vendorId) || p.vendorEmail.toLowerCase() === vendorId.toLowerCase());
   } catch {
@@ -1660,7 +1666,7 @@ export async function updatePayoutStatus(
           amount: Number(data.amount),
           bankDetails: data.bank_details || { bankName: 'BCA', accountNumber: '', accountHolder: '' },
           status: data.status,
-          proofUrl: data.proof_url || undefined,
+          proofUrl: data.proof_url ? formatSafeMediaUrl(data.proof_url) : undefined,
           notes: data.notes || undefined,
           requestedAt: data.requested_at,
           processedAt: data.processed_at || undefined
@@ -1700,7 +1706,7 @@ export async function updatePayoutStatus(
     if (!previousStatus) previousStatus = payouts[index].status;
     payouts[index].status = status;
     payouts[index].processedAt = processedAt;
-    if (proofUrl) payouts[index].proofUrl = proofUrl;
+    if (proofUrl) payouts[index].proofUrl = formatSafeMediaUrl(proofUrl);
     if (notes) payouts[index].notes = notes;
 
     fs.writeFileSync(PAYOUTS_FILE, JSON.stringify(payouts, null, 2), 'utf8');
@@ -1929,7 +1935,7 @@ export async function updateTestimonialStatus(
           submitterName: data.submitter_name,
           submitterEmail: data.submitter_email || undefined,
           videoType: data.video_type || 'link',
-          videoUrl: data.video_url,
+          videoUrl: formatSafeMediaUrl(data.video_url),
           durationSeconds: Number(data.duration_seconds),
           caption: data.caption || undefined,
           rewardAmount: Number(data.reward_amount || 50000),
