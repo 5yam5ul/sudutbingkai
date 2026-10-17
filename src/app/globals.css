@@ -177,6 +177,33 @@ h1, h2, h3, h4, h5, h6 {
   cursor: pointer;
   box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.22), inset 0 1px 1px rgba(255, 255, 255, 0.35);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.btn-apple-black::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    60deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.16) 50%,
+    transparent 58%
+  );
+  transform: rotate(25deg) translateY(-140%);
+  animation: btnSheenSweep 7s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes btnSheenSweep {
+  0%, 75% { transform: rotate(25deg) translateY(-140%); }
+  90%, 100% { transform: rotate(25deg) translateY(140%); }
 }
 
 .btn-apple-black:hover {
@@ -186,7 +213,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .btn-apple-black:active {
-  transform: translateY(1px);
+  transform: scale(0.96) translateY(1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 /* Apple Secondary Glass Button - Full Pill Rounded */
@@ -209,6 +237,8 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.95), inset 0 0 0 1px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  touch-action: manipulation;
+  user-select: none;
 }
 
 .btn-glass-secondary:hover {
@@ -216,6 +246,10 @@ h1, h2, h3, h4, h5, h6 {
   border-color: rgba(255, 255, 255, 1);
   transform: translateY(-2px);
   box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.08), inset 0 1px 1px rgba(255, 255, 255, 1);
+}
+
+.btn-glass-secondary:active {
+  transform: scale(0.96) translateY(1px) !important;
 }
 
 /* Typography Helpers */
@@ -393,7 +427,18 @@ br.mobile-only {
 .desktop-nav-links {
   display: flex;
   align-items: center;
-  gap: 26px;
+  gap: 12px;
+}
+
+.desktop-nav-links a {
+  padding: 6px 12px;
+  border-radius: 9999px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.desktop-nav-links a:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #1D1D1F !important;
 }
 
 .desktop-nav-actions {
@@ -409,10 +454,17 @@ br.mobile-only {
   width: 38px;
   height: 38px;
   border-radius: 9999px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   background: rgba(255, 255, 255, 0.85);
   border: 1px solid rgba(0, 0, 0, 0.08);
   color: var(--text-primary);
   cursor: pointer;
+}
+
+.mobile-nav-toggle:active {
+  transform: scale(0.92);
 }
 
 @media (max-width: 860px) {
@@ -1367,7 +1419,38 @@ br.mobile-only {
   will-change: transform;
 }
 
-/* 6. Smooth Native Scroll & View Transition Optimization */
+/* 6. Cinematic Ken Burns Slideshow Motion */
+@keyframes kenBurnsMotion {
+  0% {
+    transform: scale(1) translate(0%, 0%);
+  }
+  50% {
+    transform: scale(1.08) translate(-1.5%, -1%);
+  }
+  100% {
+    transform: scale(1.04) translate(1.5%, 1%);
+  }
+}
+
+/* 7. Flash Strobe & Shutter Animation */
+@keyframes shutterFlashStrobe {
+  0% { opacity: 0.98; }
+  100% { opacity: 0; }
+}
+
+/* 8. Offline Satellite Pulse */
+@keyframes offlinePulse {
+  0%, 100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+}
+
+/* 9. Smooth Native Scroll & View Transition Optimization */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-duration: 0.01ms !important;
@@ -1376,3 +1459,4 @@ br.mobile-only {
     scroll-behavior: auto !important;
   }
 }
+

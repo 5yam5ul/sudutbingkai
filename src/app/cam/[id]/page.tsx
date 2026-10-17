@@ -1673,16 +1673,19 @@ export default function GuestCameraPage() {
             <div style={{
               background: 'rgba(217, 119, 6, 0.25)',
               border: '1px solid #D97706',
-              padding: '3px 7px',
+              padding: '3px 8px',
               borderRadius: '999px',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
               fontSize: '10px',
-              color: '#F59E0B'
-            }}>
+              color: '#F59E0B',
+              animation: 'offlinePulse 2s ease-in-out infinite'
+            }}
+            title="Sinyal lemah: Foto tersimpan aman di HP & akan otomatis di-upload"
+            >
               <WifiOff size={10} />
-              <span>{offlineCount}</span>
+              <span>{offlineCount} offline</span>
             </div>
           )}
 
@@ -1699,15 +1702,27 @@ export default function GuestCameraPage() {
             <span style={{ fontSize: '8px', color: '#86868B', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
               SISA
             </span>
-            <span style={{
-              fontFamily: 'var(--font-mono)',
-              fontSize: '13.5px',
-              fontWeight: 800,
-              color: remaining <= 3 ? '#FF6B6B' : '#F59E0B',
-              lineHeight: 1.1,
-              letterSpacing: '0.04em'
-            }}>
-              {remaining.toString().padStart(2, '0')}
+            <span style={{ height: '16px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={remaining}
+                  initial={{ y: -12, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: 12, opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 450, damping: 25 }}
+                  style={{
+                    display: 'block',
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '13.5px',
+                    fontWeight: 800,
+                    color: remaining <= 3 ? '#FF6B6B' : '#F59E0B',
+                    lineHeight: 1.1,
+                    letterSpacing: '0.04em'
+                  }}
+                >
+                  {remaining.toString().padStart(2, '0')}
+                </motion.span>
+              </AnimatePresence>
             </span>
           </div>
         </div>
@@ -1861,7 +1876,8 @@ export default function GuestCameraPage() {
               inset: 0,
               background: '#ffffff',
               zIndex: 99999,
-              pointerEvents: 'none'
+              pointerEvents: 'none',
+              animation: 'shutterFlashStrobe 0.22s ease-out forwards'
             }} />
           )}
 
