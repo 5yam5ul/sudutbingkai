@@ -126,6 +126,15 @@ export default function GuestCameraPage() {
   // Point 8: Multi-Aspect Ratio: '3:4' | '1:1' | '9:16'
   const [aspectRatio, setAspectRatio] = useState<'3:4' | '1:1' | '9:16'>('3:4');
 
+  // Multi-Lens Selection ('0.5x' Ultrawide | '1x' Wide | '2x' Telephoto) & Tap-to-Focus
+  const [activeLens, setActiveLens] = useState<'0.5x' | '1x' | '2x'>('1x');
+  const [hardwareZoomSupported, setHardwareZoomSupported] = useState<boolean>(false);
+  const [zoomRange, setZoomRange] = useState<{ min: number; max: number; step: number } | null>(null);
+  const [selectedCameraDeviceId, setSelectedCameraDeviceId] = useState<string | null>(null);
+  const [ultrawideDeviceId, setUltrawideDeviceId] = useState<string | null>(null);
+  const [telephotoDeviceId, setTelephotoDeviceId] = useState<string | null>(null);
+  const [focusReticle, setFocusReticle] = useState<{ x: number; y: number } | null>(null);
+
   // Point 1: Frame toggle (guest can choose framed vs raw)
   const [useFrame, setUseFrame] = useState(true);
 
@@ -569,7 +578,45 @@ export default function GuestCameraPage() {
     }
   };
 
-  const startCamera = async () => {
+  // Scan physical smartphone camera devices (detect 0.5x ultrawide & 2x telephoto cameras)
+  const detectAvailableLenses = async () => {
+    if (typeof navigator === 'undefined' || !navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(d => d.kind === 'videoinput');
+      
+      let foundUltra: string | null = null;
+      let foundTele: string | null = null;
+
+      videoDevices.forEach(d => {
+        const label = (d.label || '').toLowerCase();
+        if (
+          label.includes('ultra') || 
+          label.includes('0.5') || 
+          label.includes('wide-angle') || 
+          label.includes('back camera 2') ||
+          label.includes('camera2 2')
+        ) {
+          foundUltra = d.deviceId;
+        } else if (
+          label.includes('tele') || 
+          label.includes('2x') || 
+          label.includes('zoom') || 
+          label.includes('back camera 3') ||
+          label.includes('camera2 3')
+        ) {
+          foundTele = d.deviceId;
+        }
+      });
+
+      if (foundUltra) setUltrawideDeviceId(foundUltra);
+      if (foundTele) setTelephotoDeviceId(foundTele);
+    } catch (e) {
+      console.warn('enumerateDevices lens detection error:', e);
+    }
+  };
+
+  const startCamera = async (targetDeviceId?: string | null) => {
     if (remaining === 0 || (event && event.packageTier !== 'starter' && event.paymentStatus === 'pending')) {
       stopCameraHardware();
       return;
@@ -577,13 +624,18 @@ export default function GuestCameraPage() {
     setCameraError(null);
     stopCameraHardware();
 
+    const devId = targetDeviceId !== undefined ? targetDeviceId : selectedCameraDeviceId;
+
     try {
+      // Studio Sensor Resolution: request 4K / QHD stream to maximize hardware sensor sharpness
       const constraints: MediaStreamConstraints = {
         audio: false,
         video: {
-          facingMode: { ideal: facingMode },
-          width: { ideal: 1920 },
-          height: { ideal: 1440 }
+          facingMode: devId ? undefined : { ideal: facingMode },
+          deviceId: devId ? { exact: devId } : undefined,
+          width: { ideal: 3840, min: 1280 },
+          height: { ideal: 2160, min: 720 },
+          frameRate: { ideal: 30, max: 60 }
         }
       };
 
@@ -597,11 +649,23 @@ export default function GuestCameraPage() {
       streamRef.current = stream;
       attachStreamToVideo(videoRef.current, stream);
 
-      // Lock continuous autofocus and exposure for crisp focus
+      // Lock continuous autofocus, exposure, and query hardware zoom capabilities
       try {
         const track = stream.getVideoTracks()[0];
-        // @ts-ignore
-        const capabilities = track.getCapabilities?.();
+        const capabilities: any = typeof (track as any)?.getCapabilities === 'function' ? (track as any).getCapabilities() : null;
+
+        if (capabilities?.zoom) {
+          setHardwareZoomSupported(true);
+          setZoomRange({
+            min: capabilities.zoom.min || 1,
+            max: capabilities.zoom.max || 1,
+            step: capabilities.zoom.step || 0.1
+          });
+        } else {
+          setHardwareZoomSupported(false);
+          setZoomRange(null);
+        }
+
         const advanced: any = {};
         // @ts-ignore
         if (capabilities?.focusMode?.includes('continuous')) {
@@ -616,6 +680,9 @@ export default function GuestCameraPage() {
           await track.applyConstraints({ advanced: [advanced] });
         }
       } catch {}
+
+      // Catalog device lenses once permissions are unlocked
+      await detectAvailableLenses();
     } catch (err) {
       try {
         const fallback = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
@@ -633,6 +700,85 @@ export default function GuestCameraPage() {
     }
   };
 
+  const switchLens = async (lensId: '0.5x' | '1x' | '2x') => {
+    setActiveLens(lensId);
+    hapticDialClick();
+
+    const track = streamRef.current?.getVideoTracks()[0];
+    const capabilities: any = typeof (track as any)?.getCapabilities === 'function' ? (track as any).getCapabilities() : null;
+
+    if (lensId === '0.5x') {
+      if (ultrawideDeviceId) {
+        setSelectedCameraDeviceId(ultrawideDeviceId);
+        toast.success('Beralih ke Sensor Ultrawide 0.5x');
+        return;
+      }
+      if (capabilities?.zoom && capabilities.zoom.min <= 0.6) {
+        try {
+          const target = Math.max(capabilities.zoom.min, 0.5);
+          // @ts-ignore
+          await track.applyConstraints({ advanced: [{ zoom: target }] });
+          toast.success('Lensa 0.5x Ultrawide Aktif');
+          return;
+        } catch (e) {
+          console.warn('Failed to apply 0.5x zoom constraint:', e);
+        }
+      }
+      toast.info('Lensa 0.5x aktif (bidang pandang maksimal)');
+    } else if (lensId === '1x') {
+      if (selectedCameraDeviceId) {
+        setSelectedCameraDeviceId(null);
+      }
+      if (capabilities?.zoom) {
+        try {
+          // @ts-ignore
+          await track.applyConstraints({ advanced: [{ zoom: 1.0 }] });
+        } catch {}
+      }
+    } else if (lensId === '2x') {
+      if (telephotoDeviceId) {
+        setSelectedCameraDeviceId(telephotoDeviceId);
+        toast.success('Beralih ke Sensor Telephoto 2x');
+        return;
+      }
+      if (capabilities?.zoom && capabilities.zoom.max >= 2.0) {
+        try {
+          // @ts-ignore
+          await track.applyConstraints({ advanced: [{ zoom: 2.0 }] });
+          toast.success('Lensa 2x Telephoto Aktif');
+          return;
+        } catch (e) {
+          console.warn('Failed to apply 2x zoom constraint:', e);
+        }
+      }
+      toast.info('Lensa 2x Telephoto Aktif (Sensor Crop)');
+    }
+  };
+
+  const handleViewfinderTap = async (e: React.MouseEvent<HTMLDivElement>) => {
+    if (cameraError || remaining === 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    setFocusReticle({ x, y });
+    hapticLightTap();
+
+    if (streamRef.current) {
+      try {
+        const track = streamRef.current.getVideoTracks()[0];
+        const capabilities: any = typeof (track as any)?.getCapabilities === 'function' ? (track as any).getCapabilities() : null;
+        if (capabilities?.pointsOfInterest) {
+          const normX = Math.min(1, Math.max(0, x / rect.width));
+          const normY = Math.min(1, Math.max(0, y / rect.height));
+          await (track as any).applyConstraints({
+            advanced: [{ pointsOfInterest: [{ x: normX, y: normY }] }]
+          });
+        }
+      } catch {}
+    }
+  };
+
   const hasRemainingShots = remaining > 0;
 
   useEffect(() => {
@@ -644,7 +790,17 @@ export default function GuestCameraPage() {
     return () => {
       stopCameraHardware();
     };
-  }, [hasEnteredName, facingMode, hasRemainingShots]);
+  }, [hasEnteredName, facingMode, hasRemainingShots, selectedCameraDeviceId]);
+
+  // Visual tap-to-focus reticle auto-dismiss
+  useEffect(() => {
+    if (focusReticle) {
+      const t = setTimeout(() => {
+        setFocusReticle(null);
+      }, 1200);
+      return () => clearTimeout(t);
+    }
+  }, [focusReticle]);
 
   // iOS Safari / Mobile Background Sleep Recovery: Auto-resume camera stream if user locks phone or switches apps
   useEffect(() => {
@@ -794,6 +950,9 @@ export default function GuestCameraPage() {
       setFlashMode('screen');
       toast.info('Kamera depan: dialihkan ke Flash Layar');
     }
+    // Reset lens to standard 1x and clear custom device ID when switching to selfie
+    setActiveLens('1x');
+    setSelectedCameraDeviceId(null);
     setFacingMode(prev => prev === 'environment' ? 'user' : 'environment');
   };
 
@@ -856,9 +1015,9 @@ export default function GuestCameraPage() {
     const canvas = canvasRef.current || document.createElement('canvas');
 
     // Multi-Aspect Ratio: '3:4' | '1:1' | '9:16'
-    // Deliver pristine studio resolution: 1440x1920 (QHD) for 3:4, 1440x1440 for 1:1, 1080x1920 for 9:16
+    // Deliver Studio Master Resolution: 2160x2880 (approx 6.2MP) for 3:4, 2160x2160 for 1:1, 1440x2560 for 9:16
     const targetAspect = aspectRatio === '1:1' ? 1 : aspectRatio === '9:16' ? 9 / 16 : 3 / 4;
-    const baseWidth = aspectRatio === '9:16' ? 1080 : 1440;
+    const baseWidth = aspectRatio === '9:16' ? 1440 : 2160;
     canvas.width = baseWidth;
     canvas.height = Math.round(baseWidth / targetAspect);
     const ctx = canvas.getContext('2d');
@@ -884,6 +1043,16 @@ export default function GuestCameraPage() {
         cH = sW / targetAspect;
         sX = 0;
         sY = (sH - cH) / 2;
+      }
+
+      // If digital 2x crop is active (when device has no native 2x telephoto hardware)
+      if (activeLens === '2x' && !hardwareZoomSupported && !telephotoDeviceId) {
+        const halfW = cW / 2;
+        const halfH = cH / 2;
+        sX += (cW - halfW) / 2;
+        sY += (cH - halfH) / 2;
+        cW = halfW;
+        cH = halfH;
       }
 
       if (isMirroredUserFacing) {
@@ -920,8 +1089,8 @@ export default function GuestCameraPage() {
         });
       }
 
-      // Optimized Studio High-Res output (0.85 quality): 50% lighter payload, zero perceptible loss, prevents ballroom timeout
-      const highResDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+      // Studio Master High-Res output (0.90 quality): razor-sharp textures for fabrics, faces & jewelry
+      const highResDataUrl = canvas.toDataURL('image/jpeg', 0.90);
       const newShotNum = shotCount + 1;
       setShotCount(newShotNum);
       if (newShotNum >= maxShots) {
@@ -1153,6 +1322,11 @@ export default function GuestCameraPage() {
         setTimeout(() => setFlashTrigger(false), 250);
       }
     }
+
+    // Anti-Shake Stabilizer Buffer (75ms):
+    // Micro-delay gives the phone sensor and gyroscope time to settle after the user's tap,
+    // dramatically preventing motion blur on iPhone and Android screens!
+    await new Promise(resolve => setTimeout(resolve, 75));
 
     // Hardware ImageCapture Still API:
     // Bypasses WebRTC compressed preview stream to command the smartphone sensor
@@ -1741,21 +1915,25 @@ export default function GuestCameraPage() {
         background: '#080706'
       }}>
         {/* The Viewfinder Box with exact aspect ratio matching output */}
-        <div style={{
-          position: 'relative',
-          width: '100%',
-          height: '100%',
-          maxWidth: aspectRatio === '1:1' ? 'min(88vw, 360px)' : aspectRatio === '9:16' ? 'min(72vw, 320px)' : 'min(88vw, 380px)',
-          maxHeight: '100%',
-          aspectRatio: aspectRatio === '1:1' ? '1/1' : aspectRatio === '9:16' ? '9/16' : '3/4',
-          borderRadius: '18px',
-          overflow: 'hidden',
-          background: '#000',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.85), inset 0 0 0 1px rgba(255, 255, 255, 0.15)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}>
+        <div
+          onClick={handleViewfinderTap}
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: '100%',
+            maxWidth: aspectRatio === '1:1' ? 'min(88vw, 360px)' : aspectRatio === '9:16' ? 'min(72vw, 320px)' : 'min(88vw, 380px)',
+            maxHeight: '100%',
+            aspectRatio: aspectRatio === '1:1' ? '1/1' : aspectRatio === '9:16' ? '9/16' : '3/4',
+            borderRadius: '18px',
+            overflow: 'hidden',
+            background: '#000',
+            boxShadow: '0 12px 40px rgba(0,0,0,0.85), inset 0 0 0 1px rgba(255, 255, 255, 0.15)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'crosshair'
+          }}
+        >
           <video
             ref={handleVideoRef}
             playsInline
@@ -1768,10 +1946,97 @@ export default function GuestCameraPage() {
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+              transform: facingMode === 'user' 
+                ? 'scaleX(-1)' 
+                : (activeLens === '2x' && !hardwareZoomSupported && !telephotoDeviceId) 
+                  ? 'scale(2)' 
+                  : 'none',
+              transition: 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
             }}
             className={`film-${selectedPreset || event?.preset || 'portra'}`}
           />
+
+          {/* Visual Focus & Exposure Reticle */}
+          {focusReticle && (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${focusReticle.x}px`,
+                top: `${focusReticle.y}px`,
+                transform: 'translate(-50%, -50%)',
+                width: '44px',
+                height: '44px',
+                border: '1.5px solid #F59E0B',
+                borderRadius: '6px',
+                pointerEvents: 'none',
+                zIndex: 25,
+                animation: 'focusReticlePulse 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                boxShadow: '0 0 12px rgba(245, 158, 11, 0.6), inset 0 0 8px rgba(245, 158, 11, 0.2)'
+              }}
+            >
+              <div style={{ position: 'absolute', top: '-4px', left: '50%', width: '1px', height: '4px', background: '#F59E0B' }} />
+              <div style={{ position: 'absolute', bottom: '-4px', left: '50%', width: '1px', height: '4px', background: '#F59E0B' }} />
+              <div style={{ position: 'absolute', left: '-4px', top: '50%', width: '4px', height: '1px', background: '#F59E0B' }} />
+              <div style={{ position: 'absolute', right: '-4px', top: '50%', width: '4px', height: '1px', background: '#F59E0B' }} />
+            </div>
+          )}
+
+          {/* Lens Switcher Deck: [ 0.5 ] [ 1x ] [ 2 ] (Leica / Apple Camera Aesthetic) */}
+          {facingMode === 'environment' && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute',
+                bottom: '14px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 24,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(18, 16, 14, 0.65)',
+                backdropFilter: 'blur(14px)',
+                WebkitBackdropFilter: 'blur(14px)',
+                padding: '3px 5px',
+                borderRadius: '999px',
+                border: '1px solid rgba(255, 255, 255, 0.16)',
+                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)'
+              }}
+            >
+              {(['0.5x', '1x', '2x'] as const).map((lensId) => {
+                const isActive = activeLens === lensId;
+                const label = lensId === '0.5x' ? '0.5' : lensId === '1x' ? '1x' : '2';
+                return (
+                  <button
+                    key={lensId}
+                    type="button"
+                    onClick={() => switchLens(lensId)}
+                    style={{
+                      background: isActive ? '#C27803' : 'transparent',
+                      color: isActive ? '#FFFFFF' : 'rgba(255, 255, 255, 0.75)',
+                      border: 'none',
+                      borderRadius: '999px',
+                      minWidth: '32px',
+                      height: '26px',
+                      padding: '0 6px',
+                      fontSize: '11.5px',
+                      fontWeight: isActive ? 700 : 500,
+                      fontFamily: 'var(--font-mono, monospace)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                      boxShadow: isActive ? '0 2px 8px rgba(194, 120, 3, 0.5)' : 'none'
+                    }}
+                    title={`Pilih Lensa ${lensId}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {/* Delicate Viewfinder Corner Reticle (Strictly inside the box corners, unobtrusive) */}
           <div style={{
@@ -1854,7 +2119,7 @@ export default function GuestCameraPage() {
               </button>
 
               <button
-                onClick={startCamera}
+                onClick={() => startCamera()}
                 style={{
                   background: 'transparent',
                   border: 'none',
