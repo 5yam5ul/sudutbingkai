@@ -1287,6 +1287,92 @@ br.mobile-only {
   }
 }
 
+/* ==========================================================================
+   ULTRA-SMOOTH LUXURY SPRING & TACTILE ANIMATION SUITE (Inspired by Apple & Morements)
+   ========================================================================== */
 
+/* 1. Global Tactile Tap & Press Feedback */
+.press, .btn-tap, .btn-apple-black, .glass-pill, button.btn-spring {
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, opacity 0.2s ease, background-color 0.2s ease;
+  will-change: transform;
+}
 
+.press:active, .btn-tap:active, .btn-apple-black:active, .glass-pill:active, button.btn-spring:active {
+  transform: scale(0.96) !important;
+}
 
+/* 2. Organic Ambient Float Physics for Phone Mockup */
+@keyframes phoneOrganicFloat {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.4deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+.hero-camera-phone {
+  animation: phoneOrganicFloat 6.5s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  will-change: transform;
+}
+
+.hero-camera-phone:hover {
+  animation-play-state: paused;
+  transform: translateY(-10px) scale(1.025) !important;
+  box-shadow: 0 45px 90px -15px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.25) !important;
+}
+
+/* 3. Subtle Film Strip Ambient Drift */
+@keyframes filmStripDrift {
+  0% {
+    transform: translateY(0px) rotate(-6.5deg);
+  }
+  50% {
+    transform: translateY(-5px) rotate(-5.8deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(-6.5deg);
+  }
+}
+
+.film-strip-35mm {
+  animation: filmStripDrift 8s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* 4. Luxury Blur-Up Transition for Loaded Content */
+@keyframes blurUpSmooth {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px);
+  }
+}
+
+.blur-fade-in {
+  animation: blurUpSmooth 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 5. Smooth Odometer Digit Transition Curve */
+.odometer-reel {
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+/* 6. Smooth Native Scroll & View Transition Optimization */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

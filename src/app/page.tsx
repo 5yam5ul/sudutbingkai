@@ -8,6 +8,9 @@ import { FilmPresetId, UserAccount } from '@/lib/types';
 import { getClientSession, clearClientSession } from '@/lib/auth';
 import { toast } from 'sonner';
 import Footer from '@/components/Footer';
+import InteractivePricingCalculator from '@/components/InteractivePricingCalculator';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
+import { Language, getStoredLanguage, setStoredLanguage } from '@/lib/i18n';
 
 const CURATED_PARTNERS = [
   {
@@ -109,13 +112,21 @@ function VendorLogoItem({ vendor }: { vendor: any }) {
 
 
 export default function HomePage() {
+  const [lang, setLang] = useState<Language>('id');
   const [activePreset, setActivePreset] = useState<FilmPresetId>('portra');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [vendors, setVendors] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
+  const handleLanguageChange = (newLang: Language) => {
+    setLang(newLang);
+    setStoredLanguage(newLang);
+    toast.info(newLang === 'en' ? 'Switched to English' : 'Beralih ke Bahasa Indonesia');
+  };
+
   useEffect(() => {
+    setLang(getStoredLanguage());
     // If redirected from Supabase OAuth to root with hash (e.g. /#access_token=...)
     if (typeof window !== 'undefined' && window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error_description'))) {
       window.location.replace('/login' + window.location.hash);
@@ -380,6 +391,12 @@ export default function HomePage() {
                 Masuk
               </Link>
             )}
+            <LanguageSwitcher
+              currentLang={lang}
+              onLanguageChange={handleLanguageChange}
+              variant="light"
+              className="action-desktop-only"
+            />
             <Link href="/cam/demo" className="glass-pill action-desktop-only" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
               Coba Kamera
             </Link>
@@ -440,6 +457,15 @@ export default function HomePage() {
             >
               Panduan Pernikahan
             </Link>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
+              <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#1D1D1F' }}>Bahasa / Language:</span>
+              <LanguageSwitcher
+                currentLang={lang}
+                onLanguageChange={handleLanguageChange}
+                variant="light"
+              />
+            </div>
+
             <Link 
               href="/vendor" 
               onClick={() => setMobileMenuOpen(false)}
@@ -1278,140 +1304,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* PRICING TIERS SECTION (Exact match to satualbum.id tiers in light theme) */}
-      <section id="harga" style={{ padding: '100px 24px', maxWidth: '1180px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '64px' }}>
-          <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '12px' }}>
-            HARGA & PAKET
-          </span>
-          <h2 className="font-display-serif" style={{ fontSize: 'clamp(2rem, 4vw, 3.2rem)', fontWeight: 700, color: '#1D1D1F' }}>
-            Pilih paket sesuai <em>ukuran acaramu.</em>
-          </h2>
-          <p style={{ color: '#6E6E73', fontSize: '15px', maxWidth: '540px', margin: '14px auto 0' }}>
-            Mulai gratis untuk hingga 5 tamu. Bayar sekali per acara tanpa langganan tersembunyi.
-          </p>
-        </div>
-
-        <div className="responsive-pricing-grid">
-          {pricingTiers.map((tier) => (
-            <div
-              key={tier.name}
-              className="glass-card"
-              style={{
-                padding: '28px 24px',
-                borderRadius: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-                position: 'relative',
-                border: tier.popular ? '2.5px solid #C27803' : '1px solid rgba(0, 0, 0, 0.08)',
-                background: tier.popular ? '#FFFFFF' : 'rgba(255, 255, 255, 0.85)',
-                boxShadow: tier.popular ? '0 16px 40px rgba(194, 120, 3, 0.15)' : '0 4px 20px rgba(0, 0, 0, 0.03)',
-                transform: tier.popular ? 'scale(1.02)' : 'none',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              {tier.popular && (
-                <div style={{
-                  position: 'absolute',
-                  top: '-13px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  background: 'linear-gradient(135deg, #C27803 0%, #9A5E02 100%)',
-                  color: '#FFFFFF',
-                  fontSize: '10.5px',
-                  fontWeight: 700,
-                  padding: '5px 14px',
-                  borderRadius: '999px',
-                  letterSpacing: '0.06em',
-                  textTransform: 'uppercase',
-                  whiteSpace: 'nowrap',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 4px 14px rgba(194, 120, 3, 0.35)',
-                  zIndex: 2
-                }}>
-                  <Star size={11} fill="#FFFFFF" strokeWidth={0} />
-                  <span>Paling Populer</span>
-                </div>
-              )}
-
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
-                  {tier.name}
-                </h3>
-                <p style={{ fontSize: '12.5px', color: '#C27803', fontWeight: 600, marginBottom: '16px' }}>
-                  {tier.guests}
-                </p>
-
-                <div style={{ marginBottom: '14px' }}>
-                  {tier.originalPrice && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                      <span style={{ textDecoration: 'line-through', color: '#86868B', fontSize: '14px', fontWeight: 500 }}>
-                        {tier.originalPrice}
-                      </span>
-                      {tier.discountBadge && (
-                        <span style={{ background: 'rgba(194, 120, 3, 0.12)', color: '#C27803', fontSize: '10.5px', fontWeight: 700, padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.04em' }}>
-                          {tier.discountBadge}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <div style={{ fontSize: '28px', fontWeight: 800, color: '#1D1D1F', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                    {tier.price}
-                  </div>
-                </div>
-
-                <p style={{ fontSize: '13px', color: '#6E6E73', lineHeight: 1.5, marginBottom: '24px' }}>
-                  {tier.desc}
-                </p>
-
-                <div style={{ borderTop: '1px solid rgba(0, 0, 0, 0.07)', paddingTop: '16px', display: 'flex', flexDirection: 'column', gap: '9px', fontSize: '12.5px', color: '#515154', marginBottom: '28px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={14} color="#C27803" />
-                    <span>Jatah Foto: <strong>{tier.shotsPerGuest}</strong></span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={14} color="#C27803" />
-                    <span>Masa Simpan: <strong>{tier.retention}</strong></span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={14} color="#C27803" />
-                    <span>Preset: <strong>{tier.presets}</strong></span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={14} color={tier.isExclusiveWish ? "#D97706" : "#C27803"} />
-                    <span style={{ fontWeight: tier.isExclusiveWish ? 700 : 400, color: tier.isExclusiveWish ? "#B45309" : undefined }}>
-                      {tier.wishFeature}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={14} color="#C27803" />
-                    <span>Layar proyektor live</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={14} color="#C27803" />
-                    <span>Cetak Kartu QR Tamu</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Check size={14} color="#C27803" />
-                    <span>Unduh Resolusi Asli Penuh (ZIP)</span>
-                  </div>
-                </div>
-              </div>
-
-              <Link
-                href={`/create?package=${tier.id}`}
-                className={tier.popular ? "btn-apple-black" : "btn-glass-secondary"}
-                style={{ width: '100%', padding: '12px', fontSize: '13.5px', textAlign: 'center' }}
-              >
-                <span>{tier.isFree ? 'Mulai Gratis' : 'Pilih Paket'}</span>
-              </Link>
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* REVOLUTIONARY INTERACTIVE PRICING CALCULATOR WITH ANALOG CAMERA & ODOMETER */}
+      <InteractivePricingCalculator lang={lang} />
 
       {/* TESTIMONIALS SECTION (Warm, Humanist & Authentic Indonesian Stories) */}
       <section style={{ padding: '100px 24px 120px', maxWidth: '1240px', margin: '0 auto' }}>
