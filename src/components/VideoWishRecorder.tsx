@@ -10,6 +10,7 @@ interface VideoWishRecorderProps {
   guestName: string;
   sessionId?: string;
   coupleOrHost: string;
+  eventType?: 'wedding' | 'birthday' | 'corporate' | 'other';
   onSuccess: () => void;
   onSkipTextWish?: (textWish: string) => void;
 }
@@ -19,6 +20,7 @@ export default function VideoWishRecorder({
   guestName,
   sessionId,
   coupleOrHost,
+  eventType = 'wedding',
   onSuccess,
   onSkipTextWish
 }: VideoWishRecorderProps) {
@@ -328,7 +330,15 @@ export default function VideoWishRecorder({
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
           {/* Top Vintage Watermark */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', fontSize: '9.5px', fontFamily: 'var(--font-mono)', textShadow: '0 1px 3px rgba(0,0,0,0.8)', color: 'rgba(255,255,255,0.85)' }}>
-            <span>WEDDING OF {coupleOrHost.toUpperCase()}</span>
+            <span>
+              {eventType === 'birthday'
+                ? `BIRTHDAY • ${coupleOrHost.toUpperCase()}`
+                : eventType === 'corporate'
+                  ? `GATHERING • ${coupleOrHost.toUpperCase()}`
+                  : eventType === 'other'
+                    ? `SPECIAL EVENT • ${coupleOrHost.toUpperCase()}`
+                    : `WEDDING OF ${coupleOrHost.toUpperCase()}`}
+            </span>
             <span>KODAK 400</span>
           </div>
 
@@ -388,7 +398,13 @@ export default function VideoWishRecorder({
           </div>
           <textarea
             rows={3}
-            placeholder={`Selamat menempuh hidup baru ${coupleOrHost}, semoga sakinah mawaddah warahmah...`}
+            placeholder={
+              eventType === 'birthday'
+                ? `Selamat ulang tahun ${coupleOrHost}, semoga sehat, bahagia, dan tercapai semua cita-cita...`
+                : eventType === 'corporate' || eventType === 'other'
+                  ? `Sukses dan kompak selalu untuk ${coupleOrHost}, seru banget acaranya hari ini...`
+                  : `Selamat menempuh hidup baru ${coupleOrHost}, semoga sakinah mawaddah warahmah...`
+            }
             value={textWish}
             onChange={(e) => setTextWish(e.target.value)}
             className="glass-input"

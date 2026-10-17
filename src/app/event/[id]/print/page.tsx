@@ -12,8 +12,9 @@ import {
   Send, Layers, Table as TableIcon, FileImage, ShieldCheck, CheckCircle2,
   Trash2, RefreshCw, Eye
 } from 'lucide-react';
-import { EventData } from '@/lib/types';
+import { EventData, resolveEventCategory } from '@/lib/types';
 import { authFetch } from '@/lib/auth';
+import { formatSafeMediaUrl } from '@/lib/media-url';
 
 type CardFormat = 'tent' | 'standing' | 'mini';
 type CardTheme = 'cream' | 'kraft' | 'charcoal';
@@ -140,10 +141,27 @@ export default function PrintTableCardPage() {
           setEvent(data.event);
           setCustomTitle(data.event.title || 'Momen Spesial');
           if (data.event.vendorLogo && data.event.vendorCoBranding?.showLogoOnPrint !== false) {
-            setCustomLogoUrl(data.event.vendorLogo);
+            setCustomLogoUrl(formatSafeMediaUrl(data.event.vendorLogo));
           }
-          const cleanHost = data.event.coupleOrHost?.replace(/[^a-zA-Z0-9]/g, '') || '';
-          setCustomHashtag(cleanHost ? `#${cleanHost}Story` : '#SudutBingkai');
+          const cat = resolveEventCategory(data.event);
+          const presetKey = cat === 'birthday' ? 'birthday' : (cat === 'corporate' || cat === 'other') ? 'corporate' : 'wedding';
+          const matchedPreset = EVENT_PRESETS.find(p => p.id === presetKey);
+          if (matchedPreset) {
+            setCustomBadge(matchedPreset.badge);
+            setCustomSubtitle(matchedPreset.subtitle);
+            setSteps([...matchedPreset.steps] as [string, string, string]);
+            setFont(matchedPreset.font);
+            setTheme(matchedPreset.theme);
+            setBorderStyle(matchedPreset.border);
+          }
+          if (cat === 'wedding') {
+            const cleanHost = data.event.coupleOrHost?.replace(/[^a-zA-Z0-9]/g, '') || '';
+            setCustomHashtag(cleanHost ? `#${cleanHost}Story` : '#SudutBingkai');
+          } else {
+            const cleanTitle = (data.event.title || data.event.coupleOrHost || '')
+              .replace(/[^a-zA-Z0-9]/g, '');
+            setCustomHashtag(cleanTitle ? `#${cleanTitle}` : '#SudutBingkai');
+          }
 
           // Generate QR Code with slug preference
           if (typeof window !== 'undefined') {

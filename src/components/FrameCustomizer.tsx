@@ -14,6 +14,7 @@ interface FrameCustomizerProps {
   initialTagline?: string;
   initialAllowGuestToggle?: boolean;
   initialSampleModel?: 'couple' | 'guests';
+  eventType?: 'wedding' | 'birthday' | 'corporate' | 'other';
   onUpdate: (data: {
     frameId: FrameId;
     customFrameUrl?: string;
@@ -21,6 +22,8 @@ interface FrameCustomizerProps {
     eventDate: string;
     tagline: string;
     allowGuestFrameToggle: boolean;
+    isCoupleEdited?: boolean;
+    isDateEdited?: boolean;
   }) => void;
 }
 
@@ -32,11 +35,21 @@ export default function FrameCustomizer({
   initialTagline = 'The Beginning of Forever',
   initialAllowGuestToggle = true,
   initialSampleModel = 'couple',
+  eventType = 'wedding',
   onUpdate
 }: FrameCustomizerProps) {
+  const defaultTaglineForType =
+    eventType === 'birthday'
+      ? 'Cheers to Another Year'
+      : eventType === 'corporate'
+        ? 'Together We Grow'
+        : eventType === 'other'
+          ? 'Captured Moments Together'
+          : 'The Beginning of Forever';
+
   const extractCleanTagline = (raw?: string) => {
-    if (!raw) return 'The Beginning of Forever';
-    return raw.includes('•') ? (raw.split('•').pop()?.trim() || 'The Beginning of Forever') : raw;
+    if (!raw) return defaultTaglineForType;
+    return raw.includes('•') ? (raw.split('•').pop()?.trim() || defaultTaglineForType) : raw;
   };
 
   const [selectedFrame, setSelectedFrame] = useState<FrameId>(initialFrameId);
@@ -129,10 +142,12 @@ export default function FrameCustomizer({
       coupleName,
       eventDate,
       tagline,
-      allowGuestFrameToggle: allowGuestToggle
+      allowGuestFrameToggle: allowGuestToggle,
+      isCoupleEdited,
+      isDateEdited
     });
     renderLivePreview();
-  }, [selectedFrame, customFrameUrl, coupleName, eventDate, tagline, allowGuestToggle, sampleModel]);
+  }, [selectedFrame, customFrameUrl, coupleName, eventDate, tagline, allowGuestToggle, sampleModel, isCoupleEdited, isDateEdited]);
 
   // Draw simulated live preview on canvas using REAL DUMMY PHOTOS
   const renderLivePreview = async () => {
@@ -468,7 +483,7 @@ export default function FrameCustomizer({
               }}
             >
               <Heart size={13} />
-              <span>Foto Pengantin</span>
+              <span>{eventType === 'wedding' ? 'Foto Pengantin' : 'Potret Utama'}</span>
             </button>
             <button
               type="button"
@@ -510,11 +525,19 @@ export default function FrameCustomizer({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div>
               <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '4px' }}>
-                Nama Pasangan / Inisial di Bingkai
+                {eventType === 'wedding' ? 'Nama Pasangan / Inisial di Bingkai' : 'Teks Utama / Nama Acara di Bingkai'}
               </label>
               <input
                 type="text"
-                placeholder="Contoh: Kevin & Cindy"
+                placeholder={
+                  eventType === 'birthday'
+                    ? 'Contoh: 8 Tahun Mbuy'
+                    : eventType === 'corporate'
+                      ? 'Contoh: Annual Gala 2026'
+                      : eventType === 'other'
+                        ? 'Contoh: Reuni Akbar 2026'
+                        : 'Contoh: Kevin & Cindy'
+                }
                 value={coupleName}
                 onChange={(e) => {
                   setIsCoupleEdited(true);
@@ -549,7 +572,7 @@ export default function FrameCustomizer({
                 </label>
                 <input
                   type="text"
-                  placeholder="The Beginning of Forever"
+                  placeholder={defaultTaglineForType}
                   value={tagline}
                   onChange={(e) => {
                     setIsTaglineEdited(true);

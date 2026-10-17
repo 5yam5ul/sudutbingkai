@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { EventData, PhotoRecord } from '@/lib/types';
 import { authFetch } from '@/lib/auth';
+import { formatSafeMediaUrl } from '@/lib/media-url';
 
 export type SlideshowMode = 
   | 'polaroid' 
@@ -132,7 +133,10 @@ export default function LiveProjectorWallPage() {
       const [dataE, dataP] = await Promise.all([resE.json(), resP.json()]);
       let currentlyLocked = isDelayedAndLocked;
       if (dataE.success && dataE.event) {
-        setEvent(dataE.event);
+        setEvent({
+          ...dataE.event,
+          vendorLogo: formatSafeMediaUrl(dataE.event.vendorLogo) || undefined,
+        });
         if (dataE.event.packageTier === 'starter' || dataE.event.paymentStatus === 'pending') {
           setPhotos([]);
           return;
@@ -145,7 +149,10 @@ export default function LiveProjectorWallPage() {
       }
 
       if (dataP.success) {
-        const newPhotos: PhotoRecord[] = dataP.photos || [];
+        const newPhotos: PhotoRecord[] = (dataP.photos || []).map((p: PhotoRecord) => ({
+          ...p,
+          imageData: formatSafeMediaUrl(p.imageData),
+        }));
         setPhotos(newPhotos);
         setTotalPhotoCount(typeof dataP.count === 'number' ? dataP.count : newPhotos.length);
 
@@ -163,7 +170,7 @@ export default function LiveProjectorWallPage() {
             setNewPhotoToast({
               id: latestPhoto.id,
               guestName: latestPhoto.guestName,
-              imageData: latestPhoto.imageData,
+              imageData: formatSafeMediaUrl(latestPhoto.imageData),
               caption: latestPhoto.caption,
               timestamp: latestPhoto.timestamp
             });
@@ -1105,7 +1112,7 @@ export default function LiveProjectorWallPage() {
                 ← Kembali ke Album Acara
               </Link>
               <Link
-                href={`/invoice/${event.id}`}
+                href={`/invoice/inv_${event.id}`}
                 style={{
                   padding: '12px 24px',
                   borderRadius: '999px',

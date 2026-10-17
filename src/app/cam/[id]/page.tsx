@@ -12,7 +12,7 @@ import {
 import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
-import { EventData, FilmPresetId, PACKAGE_TIERS, EventPackageTier, getEventRetentionInfo } from '@/lib/types';
+import { EventData, FilmPresetId, PACKAGE_TIERS, EventPackageTier, getEventRetentionInfo, resolveEventCategory, getEventCategoryMeta } from '@/lib/types';
 import { FILM_PRESETS, applyAnalogFilterToCanvas, applyPhotoEnhancement } from '@/lib/filters';
 import { playAnalogShutterSound, playFilmWindingSound } from '@/lib/audio';
 import { 
@@ -864,9 +864,10 @@ export default function GuestCameraPage() {
 
       // 2. Apply decorative event frame if enabled
       if (activeFrameId !== 'none') {
+        const activeCat = resolveEventCategory(event);
         await applyFrameToCanvas(canvas, ctx, {
           frameId: activeFrameId,
-          coupleOrTitle: event?.coupleOrHost || event?.title || 'Momen Spesial',
+          coupleOrTitle: (activeCat === 'wedding' ? (event?.coupleOrHost || event?.title) : (event?.title || event?.coupleOrHost)) || 'Momen Spesial',
           eventDate: event?.eventDate,
           tagline: event?.frameText,
           customFrameUrl: formatSafeMediaUrl(event?.customFrameUrl)
@@ -2119,7 +2120,13 @@ export default function GuestCameraPage() {
                 type="text"
                 autoFocus
                 maxLength={60}
-                placeholder={`Contoh: Bahagia selalu ${event?.coupleOrHost || 'kedua mempelai'}!`}
+                placeholder={
+                  resolveEventCategory(event) === 'birthday'
+                    ? `Contoh: Selamat ulang tahun ${event?.title || event?.coupleOrHost || 'kawan'}!`
+                    : resolveEventCategory(event) === 'corporate' || resolveEventCategory(event) === 'other'
+                      ? `Contoh: Seru & sukses selalu ${event?.title || event?.coupleOrHost || 'kita semua'}!`
+                      : `Contoh: Bahagia selalu ${event?.coupleOrHost || 'kedua mempelai'}!`
+                }
                 value={currentWish}
                 onChange={(e) => setCurrentWish(e.target.value)}
                 className="glass-input"
@@ -2202,7 +2209,7 @@ export default function GuestCameraPage() {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                 <div>
                   <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
-                    ROLL FOTO SAYA ({myPhotos.length} JEPETAN)
+                    ROLL FOTO SAYA ({myPhotos.length} JEPRETAN)
                   </span>
                   <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: '2px 0 0' }}>
                     Koleksi Momen {guestName}
@@ -2834,7 +2841,12 @@ export default function GuestCameraPage() {
                       eventId={event?.id || eventId}
                       guestName={guestName}
                       sessionId={guestSessionId || getOrCreateGuestSession(event?.id || eventId, eventId)}
-                      coupleOrHost={event?.coupleOrHost || event?.title || 'Tuan Rumah'}
+                      coupleOrHost={
+                        resolveEventCategory(event) === 'wedding'
+                          ? (event?.coupleOrHost || event?.title || 'Tuan Rumah')
+                          : (event?.title || event?.coupleOrHost || 'Tuan Rumah')
+                      }
+                      eventType={resolveEventCategory(event)}
                       onSuccess={() => {
                         setHasSentVideoWish(true);
                         const canonicalId = event?.id || eventId;
@@ -3200,7 +3212,7 @@ export default function GuestCameraPage() {
         }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
           <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', fontWeight: 600 }}>
-            {event?.coupleOrHost || event?.title || 'SudutBingkai Acara'}
+            {event?.title || event?.coupleOrHost || 'SudutBingkai Acara'}
           </span>
         </div>
 
@@ -3209,7 +3221,7 @@ export default function GuestCameraPage() {
         </h1>
 
         <p style={{ color: '#515154', fontSize: '13px', lineHeight: 1.6, marginBottom: '22px' }}>
-          Jepret momen spontan dan seru bersama para tamu. Foto langsung tersimpan ke album {event?.coupleOrHost || 'tuan rumah'} tanpa unduh aplikasi.
+          Jepret momen spontan dan seru bersama para tamu. Foto langsung tersimpan ke album {event?.title || event?.coupleOrHost || 'tuan rumah'} tanpa unduh aplikasi.
         </p>
 
         <form onSubmit={handleNameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
@@ -3447,7 +3459,7 @@ export default function GuestCameraPage() {
             }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
               <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px' }}>
-                PERNIKAHAN & ACARA
+                {getEventCategoryMeta(resolveEventCategory(event)).heroBadgeText}
               </span>
             </div>
 

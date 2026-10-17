@@ -128,15 +128,19 @@ function CreateEventForm() {
 
   const handleTitleChange = (val: string) => {
     setTitle(val);
-    if (!isSlugManuallyEdited && !coupleOrHost) {
-      setSlug(generateCleanSlug(val));
+    if (!isSlugManuallyEdited) {
+      if (eventType !== 'wedding' || !coupleOrHost) {
+        setSlug(generateCleanSlug(val));
+      }
     }
   };
 
   const handleHostChange = (val: string) => {
     setCoupleOrHost(val);
     if (!isSlugManuallyEdited) {
-      setSlug(generateCleanSlug(val));
+      if (eventType === 'wedding' || !title) {
+        setSlug(generateCleanSlug(val));
+      }
     }
   };
 
@@ -648,7 +652,15 @@ function CreateEventForm() {
                   <input
                     type="text"
                     required
-                    placeholder="sarah-dimas"
+                    placeholder={
+                      eventType === 'birthday'
+                        ? '8-tahun-mbuy'
+                        : eventType === 'corporate'
+                          ? 'gala-dinner-2026'
+                          : eventType === 'other'
+                            ? 'reuni-akbar-2026'
+                            : 'sarah-dimas'
+                    }
                     value={slug}
                     onChange={(e) => {
                       setIsSlugManuallyEdited(true);
@@ -1119,7 +1131,7 @@ function CreateEventForm() {
                     {!allowGuestPresetSwitch && <Check size={16} color="#C27803" />}
                   </div>
                   <p style={{ fontSize: '12px', color: '#6E6E73', margin: 0, lineHeight: 1.45 }}>
-                    Kunci seluruh kamera tamu pada <strong>{FILM_PRESETS[primaryPreset]?.name || 'Filter Utama'}</strong>. Album foto pernikahan akan seragam dan estetik layaknya kurasi fotografer profesional.
+                    Kunci seluruh kamera tamu pada <strong>{FILM_PRESETS[primaryPreset]?.name || 'Filter Utama'}</strong>. Album foto acara Anda akan seragam dan estetik layaknya kurasi fotografer profesional.
                   </p>
                 </div>
 
@@ -1189,11 +1201,12 @@ function CreateEventForm() {
             <FrameCustomizer
               initialFrameId={frameId}
               initialCustomFrameUrl={customFrameUrl}
-              initialCoupleName={coupleOrHost || title || 'Nama Acara'}
+              initialCoupleName={(eventType === 'wedding' ? (coupleOrHost || title) : (title || coupleOrHost)) || 'Nama Acara'}
               initialEventDate={eventDate}
               initialTagline={frameText || getEventCategoryMeta(eventType).defaultFrameTagline}
               initialAllowGuestToggle={allowGuestFrameToggle}
               initialSampleModel={eventType === 'wedding' ? 'couple' : 'guests'}
+              eventType={eventType}
               onUpdate={({ frameId: fId, customFrameUrl: cUrl, tagline: tLine, allowGuestFrameToggle: aToggle }) => {
                 setFrameId(fId);
                 setCustomFrameUrl(cUrl || '');
@@ -1234,7 +1247,9 @@ function CreateEventForm() {
                       <strong style={{ fontSize: '14px', color: '#1D1D1F' }}>Langsung Terbuka</strong>
                     </div>
                     <p style={{ fontSize: '12px', color: '#6E6E73', lineHeight: 1.4 }}>
-                      Tamu dan pengantin bisa langsung melihat foto sesaat setelah dijepret.
+                      {eventType === 'wedding'
+                        ? 'Tamu dan pengantin bisa langsung melihat foto sesaat setelah dijepret.'
+                        : 'Tamu dan tuan rumah bisa langsung melihat foto sesaat setelah dijepret.'}
                     </p>
                   </div>
 

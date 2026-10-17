@@ -937,7 +937,7 @@ export default function EventDashboardPage() {
             {event?.title || event?.coupleOrHost || 'Galeri Acara'}
           </h1>
 
-          {/* Date & Location */}
+          {/* Date, Host & Location */}
           <div
             style={{
               display: 'flex',
@@ -950,6 +950,17 @@ export default function EventDashboardPage() {
               textShadow: '0 1px 4px rgba(0,0,0,0.6)'
             }}
           >
+            {event?.coupleOrHost && (!event?.title || !event.title.toLowerCase().includes(event.coupleOrHost.toLowerCase())) && (
+              <>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <Users size={14} color="#E5C07B" />
+                  <span>Host: <strong style={{ color: '#FFFFFF' }}>{event.coupleOrHost}</strong></span>
+                </span>
+                {(event?.eventDate || event?.location) && (
+                  <span style={{ color: 'rgba(255,255,255,0.4)' }}>•</span>
+                )}
+              </>
+            )}
             {event?.eventDate && (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                 <Calendar size={14} color="#E5C07B" />
@@ -1014,7 +1025,7 @@ export default function EventDashboardPage() {
               >
                 {event.vendorLogo ? (
                   <img
-                    src={event.vendorLogo}
+                    src={formatSafeMediaUrl(event.vendorLogo)}
                     alt={event.vendorName}
                     style={{ width: '18px', height: '18px', borderRadius: '50%', objectFit: 'contain', background: '#FFFFFF' }}
                   />
@@ -1085,7 +1096,7 @@ export default function EventDashboardPage() {
               </p>
             </div>
             <Link
-              href={`/invoice/${event.id}`}
+              href={`/invoice/inv_${event.id}`}
               className="btn-apple-black"
               style={{ padding: '10px 18px', fontSize: '12.5px', textDecoration: 'none', borderRadius: '10px', background: '#D97706', flexShrink: 0 }}
             >

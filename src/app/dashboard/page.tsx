@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Camera, Tv, Printer, Download, Share2, Eye, EyeOff, Trash2, Sliders, Check, RefreshCw, LogOut, ArrowRight, ArrowLeft, Briefcase, AlertCircle, ChevronDown, Mic, Volume2, Layers, Lock, Unlock, CheckCircle2, MessageSquare, X, Heart, Upload, Video, Film, Play, Link2, Globe, Copy, CreditCard, FileText, BookOpen, Users, Clock, Search } from 'lucide-react';
-import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, getEventRetentionInfo, resolveEventCategory, getEventCategoryMeta } from '@/lib/types';
+import { EventData, PhotoRecord, UserAccount, FilmPresetId, EventPackageTier, PACKAGE_TIERS, VideoWishRecord, EventCategoryType, getEventRetentionInfo, resolveEventCategory, getEventCategoryMeta } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, authFetch } from '@/lib/auth';
 import { formatSafeMediaUrl } from '@/lib/media-url';
 import { FILM_PRESETS } from '@/lib/filters';
@@ -98,8 +98,11 @@ export default function BrideDashboardPage() {
   const [frameId, setFrameId] = useState<FrameId>('minimal-gold');
   const [customFrameUrl, setCustomFrameUrl] = useState('');
   const [frameText, setFrameText] = useState('');
+  const [eventTitle, setEventTitle] = useState('');
   const [coupleOrHost, setCoupleOrHost] = useState('');
   const [eventDate, setEventDate] = useState('');
+  const [eventLocation, setEventLocation] = useState('');
+  const [eventCategory, setEventCategory] = useState<EventCategoryType>('wedding');
   const [allowGuestFrameToggle, setAllowGuestFrameToggle] = useState(true);
   const [allowVoiceNote, setAllowVoiceNote] = useState(true);
   const [coverUrl, setCoverUrl] = useState<string>('');
@@ -242,8 +245,11 @@ export default function BrideDashboardPage() {
     setCustomFrameUrl(formatSafeMediaUrl(selected.customFrameUrl || ''));
     const rawTagline = selected.frameText || '';
     setFrameText(rawTagline.includes('•') ? (rawTagline.split('•').pop()?.trim() || '') : rawTagline);
+    setEventTitle(selected.title || '');
     setCoupleOrHost(selected.coupleOrHost || '');
     setEventDate(selected.eventDate || '');
+    setEventLocation(selected.location || '');
+    setEventCategory(resolveEventCategory(selected));
     setAllowGuestFrameToggle(selected.allowGuestFrameToggle !== false);
     setAllowVoiceNote(selected.allowVoiceNote !== false);
     if (unsavedCoverUploadRef.current) {
@@ -630,8 +636,11 @@ export default function BrideDashboardPage() {
         body: JSON.stringify({
           id: event.id,
           slug: cleanSlug || undefined,
+          eventType: eventCategory,
+          title: eventTitle.trim() || event.title,
           coupleOrHost: coupleOrHost.trim() || event.coupleOrHost,
           eventDate: eventDate || event.eventDate,
+          location: eventLocation.trim(),
           shotsPerGuest: safeShots,
           revealMode,
           revealTime: revealMode === 'delayed' ? revealTime : '',
@@ -655,9 +664,10 @@ export default function BrideDashboardPage() {
       if (data.success && data.event) {
         unsavedCoverUploadRef.current = '';
         setEvent(data.event);
+        setEvents(prev => prev.map(ev => ev.id === data.event.id ? data.event : ev));
         if (data.event.slug) setEventSlug(data.event.slug);
         setSaveSuccess(true);
-        toast.success('Pengaturan album & tautan berhasil disimpan!');
+        toast.success('Pengaturan album & identitas acara berhasil disimpan!');
         setTimeout(() => setSaveSuccess(false), 3000);
       } else {
         toast.error('Gagal menyimpan: ' + (data.error || 'Terjadi kesalahan'));
@@ -681,7 +691,7 @@ export default function BrideDashboardPage() {
   }
 
   const presetInfo = event ? FILM_PRESETS[event.preset] || FILM_PRESETS.portra : FILM_PRESETS.portra;
-  const activeCategory = resolveEventCategory(event);
+  const activeCategory = eventCategory || resolveEventCategory(event);
   const categoryMeta = getEventCategoryMeta(activeCategory);
 
   return (
@@ -1716,6 +1726,147 @@ export default function BrideDashboardPage() {
         {/* TAB 2: PENGATURAN ACARA & BINGKAI */}
         {activeTab === 'settings' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+            {/* Section: Identitas, Kategori & Waktu Acara */}
+            <div className="glass-card form-section-card">
+              <div style={{ marginBottom: '20px' }}>
+                <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
+                  IDENTITAS, KATEGORI & WAKTU ACARA
+                </span>
+                <h2 style={{ fontSize: '22px', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
+                  Nama Acara, Kategori Perayaan & Lokasi Venue
+                </h2>
+                <p style={{ color: '#6E6E73', fontSize: '13.5px' }}>
+                  Ubah judul utama album, kategori acara (Pernikahan, Ulang Tahun, Korporat, atau Lainnya), nama penyelenggara, tanggal, serta lokasi acara kapan saja.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+                {/* Kategori Perayaan */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '8px' }}>
+                    Kategori Perayaan
+                  </label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {(['wedding', 'birthday', 'corporate', 'other'] as const).map((cat) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          const prevDefaultTagline = getEventCategoryMeta(eventCategory).defaultFrameTagline;
+                          const nextDefaultTagline = getEventCategoryMeta(cat).defaultFrameTagline;
+                          setEventCategory(cat);
+                          if (!frameText || frameText === prevDefaultTagline || frameText === 'The Beginning of Forever') {
+                            setFrameText(nextDefaultTagline);
+                          }
+                        }}
+                        className="glass-pill"
+                        style={{
+                          padding: '8px 16px',
+                          fontSize: '12.5px',
+                          fontWeight: eventCategory === cat ? 700 : 500,
+                          background: eventCategory === cat ? (cat === 'wedding' ? '#C27803' : '#1D1D1F') : 'rgba(255, 255, 255, 0.8)',
+                          color: eventCategory === cat ? '#FFFFFF' : '#1D1D1F',
+                          border: eventCategory === cat ? 'none' : '1px solid rgba(0,0,0,0.1)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {cat === 'wedding' && 'Pernikahan & Resepsi'}
+                        {cat === 'birthday' && 'Ulang Tahun & Sweet 17'}
+                        {cat === 'corporate' && 'Gathering Kantor & Gala'}
+                        {cat === 'other' && 'Reuni, Konser & Festival'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Grid Input: Judul Acara & Nama Penyelenggara */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      Nama / Judul Acara Utama *
+                    </label>
+                    <input
+                      type="text"
+                      value={eventTitle}
+                      onChange={(e) => setEventTitle(e.target.value)}
+                      placeholder={
+                        eventCategory === 'birthday'
+                          ? 'Contoh: 8 Tahun Mbuy / Sweet 17 Keisha'
+                          : eventCategory === 'corporate'
+                            ? 'Contoh: Gala Dinner & Townhall 2026'
+                            : eventCategory === 'other'
+                              ? 'Contoh: Reuni Akbar & Halal Bihalal'
+                              : 'Contoh: Hari Pernikahan Dimas & Sarah'
+                      }
+                      className="glass-input"
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', fontSize: '14px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      {eventCategory === 'wedding' ? 'Nama Pasangan Pengantin *' : 'Penyelenggara / Tuan Rumah *'}
+                    </label>
+                    <input
+                      type="text"
+                      value={coupleOrHost}
+                      onChange={(e) => setCoupleOrHost(e.target.value)}
+                      placeholder={
+                        eventCategory === 'wedding'
+                          ? 'Contoh: Dimas & Sarah'
+                          : 'Contoh: Keluarga Syamsul / Panitia Acara'
+                      }
+                      className="glass-input"
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', fontSize: '14px' }}
+                    />
+                  </div>
+                </div>
+
+                {/* Grid Input: Tanggal Acara & Lokasi Venue */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      Tanggal Acara
+                    </label>
+                    <input
+                      type="date"
+                      value={eventDate ? eventDate.slice(0, 10) : ''}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      className="glass-input"
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', fontSize: '14px' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
+                      Lokasi / Venue Acara
+                    </label>
+                    <input
+                      type="text"
+                      value={eventLocation}
+                      onChange={(e) => setEventLocation(e.target.value)}
+                      placeholder="Contoh: The Glasshouse, Ritz-Carlton Jakarta"
+                      className="glass-input"
+                      style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', fontSize: '14px' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={handleSaveSettings}
+                    disabled={isSavingSettings}
+                    className="btn-apple-black"
+                    style={{ padding: '10px 22px', fontSize: '13px', cursor: isSavingSettings ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    {saveSuccess && <Check size={14} />}
+                    <span>{isSavingSettings ? 'Menyimpan...' : saveSuccess ? 'Tersimpan!' : 'Simpan Identitas Acara'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {/* Section: Kustomisasi Tautan URL Album (Slug) */}
             <div className="glass-card form-section-card">
               <div style={{ marginBottom: '20px' }}>
@@ -1918,12 +2069,12 @@ export default function BrideDashboardPage() {
                     {categoryMeta.heroBadgeText}
                   </span>
                   <h3 style={{ fontFamily: 'var(--font-serif), Georgia, serif', fontSize: '26px', fontWeight: 700, margin: 0, letterSpacing: '-0.02em', textShadow: '0 2px 8px rgba(0,0,0,0.5)' }}>
-                    {event?.coupleOrHost || event?.title || 'Nama Acara'}
+                    {eventTitle || event?.title || coupleOrHost || event?.coupleOrHost || 'Nama Acara'}
                   </h3>
-                  <p style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.85)', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{event?.eventDate || '14 FEBRUARI 2026'}</span>
+                  <p style={{ fontSize: '12.5px', color: 'rgba(255,255,255,0.85)', margin: '4px 0 0', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span>{eventDate || event?.eventDate || '14 FEBRUARI 2026'}</span>
                     <span>•</span>
-                    <span>{event?.location || 'The Glasshouse, Jakarta'}</span>
+                    <span>{eventLocation || event?.location || 'Venue Acara'}</span>
                   </p>
                 </div>
                 <div
@@ -2123,16 +2274,25 @@ export default function BrideDashboardPage() {
               <FrameCustomizer
                 initialFrameId={frameId}
                 initialCustomFrameUrl={customFrameUrl}
-                initialCoupleName={coupleOrHost || event?.coupleOrHost || event?.title || 'Nama Acara'}
+                initialCoupleName={(activeCategory === 'wedding' ? (coupleOrHost || eventTitle || event?.coupleOrHost || event?.title) : (eventTitle || coupleOrHost || event?.title || event?.coupleOrHost)) || 'Nama Acara'}
                 initialEventDate={eventDate || event?.eventDate || ''}
-                initialTagline={frameText || categoryMeta.defaultTagline}
+                initialTagline={frameText || categoryMeta.defaultFrameTagline}
                 initialAllowGuestToggle={allowGuestFrameToggle}
                 initialSampleModel={activeCategory === 'wedding' ? 'couple' : 'guests'}
-                onUpdate={({ frameId: fId, customFrameUrl: cUrl, coupleName: cName, eventDate: eDate, tagline: tLine, allowGuestFrameToggle: aToggle }) => {
+                eventType={activeCategory}
+                onUpdate={({ frameId: fId, customFrameUrl: cUrl, coupleName: cName, eventDate: eDate, tagline: tLine, allowGuestFrameToggle: aToggle, isCoupleEdited, isDateEdited }) => {
                   setFrameId(fId);
                   setCustomFrameUrl(cUrl || '');
-                  setCoupleOrHost(cName);
-                  setEventDate(eDate);
+                  if (isCoupleEdited && cName) {
+                    if (activeCategory === 'wedding') {
+                      setCoupleOrHost(cName);
+                    } else {
+                      setEventTitle(cName);
+                    }
+                  }
+                  if (isDateEdited && eDate) {
+                    setEventDate(eDate);
+                  }
                   setFrameText(tLine);
                   setAllowGuestFrameToggle(aToggle);
                 }}

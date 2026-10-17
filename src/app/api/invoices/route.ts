@@ -35,8 +35,9 @@ export async function GET(request: Request) {
 
     // If not found in invoice database, check if it corresponds to an existing event and auto-generate invoice
     if (!invoice && (eventId || query)) {
-      const targetEventId = eventId || query;
-      const event = await getEventById(targetEventId);
+      const rawTargetEventId = eventId || query || '';
+      const targetEventId = rawTargetEventId.replace(/^inv_/, '');
+      const event = (await getEventById(targetEventId)) || (targetEventId !== rawTargetEventId ? await getEventById(rawTargetEventId) : null);
 
       if (event) {
         const isOwnerHost = session.role === 'host' && (
