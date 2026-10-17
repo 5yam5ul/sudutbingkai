@@ -202,12 +202,16 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    if (!body.id) {
-      return NextResponse.json({ success: false, error: 'ID vendor diperlukan' }, { status: 400 });
+    const targetEmail = (body.email || session.email || '').trim().toLowerCase();
+    if (!body.id && !targetEmail) {
+      return NextResponse.json({ success: false, error: 'ID atau email vendor diperlukan' }, { status: 400 });
     }
 
     const allVendors = await getAllVendors();
-    const current = allVendors.find(v => isSameVendorId(v.id, body.id));
+    const current = allVendors.find(v =>
+      (body.id && isSameVendorId(v.id, body.id)) ||
+      (targetEmail && v.email && v.email.trim().toLowerCase() === targetEmail)
+    );
     if (!current) {
       return NextResponse.json({ success: false, error: 'Vendor tidak ditemukan' }, { status: 404 });
     }
@@ -293,7 +297,7 @@ export async function PATCH(req: Request) {
       }
     }
 
-    const updated = await updateVendor(body.id, updates);
+    const updated = await updateVendor(current.id, updates);
     if (!updated) {
       return NextResponse.json({ success: false, error: 'Vendor tidak ditemukan' }, { status: 404 });
     }
