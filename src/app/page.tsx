@@ -8,8 +8,6 @@ import { FilmPresetId, UserAccount } from '@/lib/types';
 import { getClientSession, clearClientSession } from '@/lib/auth';
 import { toast } from 'sonner';
 import Footer from '@/components/Footer';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { Language, getStoredLanguage, setStoredLanguage } from '@/lib/i18n';
 
 const CURATED_PARTNERS = [
   {
@@ -111,21 +109,13 @@ function VendorLogoItem({ vendor }: { vendor: any }) {
 
 
 export default function HomePage() {
-  const [lang, setLang] = useState<Language>('id');
   const [activePreset, setActivePreset] = useState<FilmPresetId>('portra');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [vendors, setVendors] = useState<any[]>([]);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const handleLanguageChange = (newLang: Language) => {
-    setLang(newLang);
-    setStoredLanguage(newLang);
-    toast.info(newLang === 'en' ? 'Switched to English' : 'Beralih ke Bahasa Indonesia');
-  };
-
   useEffect(() => {
-    setLang(getStoredLanguage());
     // If redirected from Supabase OAuth to root with hash (e.g. /#access_token=...)
     if (typeof window !== 'undefined' && window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error_description'))) {
       window.location.replace('/login' + window.location.hash);
@@ -390,12 +380,6 @@ export default function HomePage() {
                 Masuk
               </Link>
             )}
-            <LanguageSwitcher
-              currentLang={lang}
-              onLanguageChange={handleLanguageChange}
-              variant="light"
-              className="action-desktop-only"
-            />
             <Link href="/cam/demo" className="glass-pill action-desktop-only" style={{ padding: '7px 14px', fontSize: '12.5px', textDecoration: 'none' }}>
               Coba Kamera
             </Link>
@@ -456,14 +440,6 @@ export default function HomePage() {
             >
               Panduan Pernikahan
             </Link>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-              <span style={{ fontSize: '13.5px', fontWeight: 600, color: '#1D1D1F' }}>Bahasa / Language:</span>
-              <LanguageSwitcher
-                currentLang={lang}
-                onLanguageChange={handleLanguageChange}
-                variant="light"
-              />
-            </div>
 
             <Link 
               href="/vendor" 

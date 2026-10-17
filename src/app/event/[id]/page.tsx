@@ -20,8 +20,6 @@ import MayarPaymentModal from '@/components/MayarPaymentModal';
 import ConfirmModal from '@/components/ConfirmModal';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import VideoWishStoriesPlayer from '@/components/VideoWishStoriesPlayer';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { Language, DICTIONARY, getStoredLanguage, setStoredLanguage } from '@/lib/i18n';
 import { toast } from 'sonner';
 import { getClientSession, authFetch, isSameVendorId } from '@/lib/auth';
 
@@ -91,27 +89,7 @@ export default function EventDashboardPage() {
   const [isHost, setIsHost] = useState(false);
   const wasRollLockedRef = React.useRef<boolean>(false);
 
-  const [lang, setLang] = useState<Language>('id');
-  const t = DICTIONARY[lang].gallery;
 
-  useEffect(() => {
-    const l = getStoredLanguage();
-    setLang(l);
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlLang = urlParams.get('lang') as Language;
-      if (urlLang === 'en' || urlLang === 'id') {
-        setLang(urlLang);
-        setStoredLanguage(urlLang);
-      }
-    }
-  }, []);
-
-  const handleLanguageChange = (newLang: Language) => {
-    setLang(newLang);
-    setStoredLanguage(newLang);
-    toast.info(newLang === 'en' ? 'Switched to English' : 'Beralih ke Bahasa Indonesia');
-  };
 
   // Custom Glass Confirm Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -805,12 +783,7 @@ export default function EventDashboardPage() {
               </>
             )}
 
-            {/* Language Switcher */}
-            <LanguageSwitcher
-              currentLang={lang}
-              onLanguageChange={handleLanguageChange}
-              variant="light"
-            />
+
 
             {/* Open Camera: Black pill with Camera icon + label */}
             <Link
@@ -828,8 +801,8 @@ export default function EventDashboardPage() {
               title="Buka Kamera Tamu"
             >
               <Camera size={14} />
-              <span className="desktop-only">{lang === 'en' ? 'Camera' : 'Buka Kamera'}</span>
-              <span className="mobile-only">{lang === 'en' ? 'Cam' : 'Kamera'}</span>
+              <span className="desktop-only">Buka Kamera</span>
+              <span className="mobile-only">Kamera</span>
             </Link>
           </div>
         </div>

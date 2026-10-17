@@ -29,8 +29,6 @@ import { getDeviceFingerprint, isInAppBrowser } from '@/lib/fingerprint';
 import { formatSafeMediaUrl } from '@/lib/media-url';
 import ConfirmModal from '@/components/ConfirmModal';
 import VideoWishRecorder from '@/components/VideoWishRecorder';
-import LanguageSwitcher from '@/components/LanguageSwitcher';
-import { Language, DICTIONARY, getStoredLanguage, setStoredLanguage } from '@/lib/i18n';
 
 interface GuestPhoto {
   id: string;
@@ -97,27 +95,7 @@ export default function GuestCameraPage() {
   const eventId = params.id as string;
   const isDemo = eventId === 'demo' || eventId === 'simulation' || eventId === 'test';
 
-  const [lang, setLang] = useState<Language>('id');
-  const t = DICTIONARY[lang].cam;
 
-  useEffect(() => {
-    const l = getStoredLanguage();
-    setLang(l);
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlLang = urlParams.get('lang') as Language;
-      if (urlLang === 'en' || urlLang === 'id') {
-        setLang(urlLang);
-        setStoredLanguage(urlLang);
-      }
-    }
-  }, []);
-
-  const handleLanguageChange = (newLang: Language) => {
-    setLang(newLang);
-    setStoredLanguage(newLang);
-    toast.info(newLang === 'en' ? 'Switched to English' : 'Beralih ke Bahasa Indonesia');
-  };
 
   const [event, setEvent] = useState<EventData | null>(null);
   const [guestSessionId, setGuestSessionId] = useState<string>('');
@@ -1688,14 +1666,8 @@ export default function GuestCameraPage() {
           )}
         </button>
 
-        {/* Right Controls: Language Switcher & Mechanical Frame Counter Window */}
+        {/* Right Controls: Mechanical Frame Counter Window */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <LanguageSwitcher
-            currentLang={lang}
-            onLanguageChange={handleLanguageChange}
-            variant="dark"
-            className="scale-90"
-          />
 
           {offlineCount > 0 && (
             <div style={{
@@ -1725,7 +1697,7 @@ export default function GuestCameraPage() {
             boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.7)'
           }}>
             <span style={{ fontSize: '8px', color: '#86868B', fontFamily: 'var(--font-mono)', lineHeight: 1 }}>
-              {lang === 'en' ? 'LEFT' : 'SISA'}
+              SISA
             </span>
             <span style={{
               fontFamily: 'var(--font-mono)',
@@ -1981,7 +1953,7 @@ export default function GuestCameraPage() {
             }}
             title="Ubah Rasio Foto (3:4 Potret / 1:1 Kotak / 9:16 Story)"
           >
-            <span>{lang === 'en' ? 'RATIO' : 'RASIO'} {aspectRatio}</span>
+            <span>RASIO {aspectRatio}</span>
           </button>
 
           {/* Frame Toggle */}
@@ -2006,10 +1978,10 @@ export default function GuestCameraPage() {
                 transition: 'all 0.2s ease',
                 boxShadow: useFrame ? '0 2px 8px rgba(194, 120, 3, 0.35)' : 'none'
               }}
-              title={lang === 'en' ? 'Toggle Frame Overlay or Raw Film' : 'Pilih Pakai Bingkai atau Raw'}
+              title="Pilih Pakai Bingkai atau Raw"
             >
               <Layers size={12} color={useFrame ? '#FFF' : '#F59E0B'} />
-              <span>{useFrame ? (lang === 'en' ? 'FRAME' : 'BINGKAI') : 'RAW'}</span>
+              <span>{useFrame ? 'BINGKAI' : 'RAW'}</span>
             </button>
           )}
 
@@ -2035,11 +2007,11 @@ export default function GuestCameraPage() {
               transition: 'all 0.2s ease',
               boxShadow: currentWish.trim() ? '0 2px 8px rgba(194, 120, 3, 0.35)' : 'none'
             }}
-            title={lang === 'en' ? `Leave a short message for ${event?.coupleOrHost || event?.title || 'the host'}` : `Tuliskan ucapan untuk ${event?.coupleOrHost || event?.title || 'tuan rumah'}`}
+            title={`Tuliskan ucapan untuk ${event?.coupleOrHost || event?.title || 'tuan rumah'}`}
           >
             <Heart size={12} fill={currentWish.trim() ? 'currentColor' : 'none'} color={currentWish.trim() ? '#fff' : '#C27803'} />
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {currentWish.trim() ? (lang === 'en' ? 'Saved' : 'Tersimpan') : (lang === 'en' ? '+ Wish' : '+ Ucapan')}
+              {currentWish.trim() ? 'Tersimpan' : '+ Ucapan'}
             </span>
           </button>
         </div>
@@ -3344,14 +3316,7 @@ export default function GuestCameraPage() {
           style={{ height: '32px', width: 'auto', objectFit: 'contain', margin: '0 auto 12px', display: 'block' }} 
         />
 
-        {/* Bilingual Language Switcher */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '14px' }}>
-          <LanguageSwitcher
-            currentLang={lang}
-            onLanguageChange={handleLanguageChange}
-            variant="glass"
-          />
-        </div>
+
 
         <div style={{
           display: 'inline-flex',
@@ -3365,34 +3330,28 @@ export default function GuestCameraPage() {
         }}>
           <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C27803' }} />
           <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', fontWeight: 600 }}>
-            {event?.title || event?.coupleOrHost || (lang === 'en' ? 'SudutBingkai Event' : 'SudutBingkai Acara')}
+            {event?.title || event?.coupleOrHost || 'SudutBingkai Acara'}
           </span>
         </div>
 
         <h1 className="font-display-serif" style={{ fontSize: '26px', lineHeight: 1.2, marginBottom: '10px', color: '#1D1D1F' }}>
-          {lang === 'en' ? (
-            <>Digital <em>Disposable Camera</em></>
-          ) : (
-            <>Kamera Tamu <em>Digital</em></>
-          )}
+          Kamera Tamu <em>Digital</em>
         </h1>
 
         <p style={{ color: '#515154', fontSize: '13px', lineHeight: 1.6, marginBottom: '22px' }}>
-          {lang === 'en'
-            ? `Snap candid moments without installing apps. Photos are directly saved to ${event?.title || event?.coupleOrHost || 'the event'}'s private album.`
-            : `Jepret momen spontan dan seru bersama para tamu. Foto langsung tersimpan ke album ${event?.title || event?.coupleOrHost || 'tuan rumah'} tanpa unduh aplikasi.`}
+          Jepret momen spontan dan seru bersama para tamu. Foto langsung tersimpan ke album {event?.title || event?.coupleOrHost || 'tuan rumah'} tanpa unduh aplikasi.
         </p>
 
         <form onSubmit={handleNameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px', textAlign: 'left' }}>
           <div>
             <label style={{ display: 'block', fontSize: '11px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '6px' }}>
-              {lang === 'en' ? 'YOUR NAME *' : 'Nama Anda *'}
+              Nama Anda *
             </label>
             <input
               type="text"
               required
               maxLength={24}
-              placeholder={lang === 'en' ? 'Enter your name (e.g. Alex)' : 'Ketik nama Anda (misal: Rian)'}
+              placeholder="Ketik nama Anda (misal: Rian)"
               value={guestName}
               onChange={(e) => setGuestName(e.target.value)}
               className="glass-input"
@@ -3411,7 +3370,7 @@ export default function GuestCameraPage() {
             className="btn-apple-black"
             style={{ width: '100%', padding: '14px', borderRadius: '14px', marginTop: '4px', minHeight: '48px', fontSize: '15px' }}
           >
-            <span>{lang === 'en' ? 'Open Camera Shutter' : 'Buka Rana Kamera'}</span>
+            <span>Buka Rana Kamera</span>
             <ArrowRight size={16} />
           </button>
         </form>
@@ -3419,9 +3378,7 @@ export default function GuestCameraPage() {
         <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(0, 0, 0, 0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', color: '#6E6E73', fontSize: '11.5px' }}>
           <Check size={14} color="#C27803" />
           <span>
-            {lang === 'en'
-              ? <>Available <strong>{maxShots} analog shots</strong> • {presetInfo.name}</>
-              : <>Tersedia <strong>{maxShots} jepretan</strong> analog {presetInfo.name}</>}
+            Tersedia <strong>{maxShots} jepretan</strong> analog {presetInfo.name}
           </span>
         </div>
 
