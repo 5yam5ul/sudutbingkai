@@ -736,7 +736,7 @@ export default function VendorPortalPage() {
         unsavedTestiVideoRef.current = data.url;
         setTestiVideoUrl(data.url);
         setTestiVideoType('file');
-        toast.success('File video testimoni berhasil diunggah ke Cloudflare R2!');
+        toast.success('File video testimoni berhasil diunggah ke database!');
       } else {
         toast.error('Gagal mengunggah video: ' + (data.error || 'Format atau koneksi bermasalah'));
       }
@@ -2356,7 +2356,7 @@ export default function VendorPortalPage() {
                               <CheckCircle2 size={16} color="#10B981" />
                               <div>
                                 <strong style={{ fontSize: '12.5px', color: '#1D1D1F', display: 'block' }}>File Video Berhasil Terunggah</strong>
-                                <span style={{ fontSize: '11px', color: '#6E6E73' }}>Tersimpan aman di Cloudflare R2</span>
+                                <span style={{ fontSize: '11px', color: '#6E6E73' }}>Tersimpan aman di database</span>
                               </div>
                             </div>
                             <button

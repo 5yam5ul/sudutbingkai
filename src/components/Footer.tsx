@@ -87,10 +87,10 @@ export default function Footer() {
             </div>
             <div>
               <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 4px', color: '#1D1D1F' }}>
-                High-Res R2 Storage
+                Penyimpanan Database Aman
               </h4>
               <p style={{ fontSize: '12px', color: '#6E6E73', margin: 0, lineHeight: 1.45 }}>
-                Seluruh arsip foto resolusi asli (ZIP) tersimpan aman di Cloudflare R2.
+                Seluruh arsip foto resolusi asli (ZIP) tersimpan aman di database.
               </p>
             </div>
           </div>
@@ -223,7 +223,7 @@ export default function Footer() {
                 href="https://wa.me/6285782255128"
                 target="_blank"
                 rel="noopener noreferrer"
-                title="WhatsApp Resmi 0857-8225-5128"
+                title="Chat WhatsApp Resmi"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -370,7 +370,7 @@ export default function Footer() {
                   }}
                 >
                   <MessageCircle size={14} />
-                  <span>Chat WhatsApp CS (0857-8225-5128)</span>
+                  <span>Chat WhatsApp CS</span>
                 </a>
               </li>
             </ul>
@@ -401,7 +401,7 @@ export default function Footer() {
               <span>Enkripsi SSL 256-bit</span>
             </span>
             <span>•</span>
-            <span>Cloudflare R2 CDN</span>
+            <span>Database Cloud Aman</span>
             <span>•</span>
             <span>Mayar.id & QRIS Verified</span>
           </div>
