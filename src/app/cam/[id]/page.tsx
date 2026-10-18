@@ -3062,7 +3062,7 @@ export default function GuestCameraPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px' }}>
                 <button
-                  onClick={() => downloadSinglePhoto(previewPhoto.imageData, previewPhoto.shotNumber)}
+                  onClick={() => downloadSinglePhoto(formatSafeMediaUrl(previewPhoto.imageData), previewPhoto.shotNumber)}
                   className="btn-apple-black"
                   style={{
                     background: '#C27803',
@@ -3434,7 +3434,7 @@ export default function GuestCameraPage() {
                         background: '#1A1815'
                       }}
                     >
-                      <img src={p.imageData} alt={`Shot #${p.shotNumber}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={formatSafeMediaUrl(p.imageData)} alt={`Shot #${p.shotNumber}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       <span style={{
                         position: 'absolute',
                         bottom: '2px',
