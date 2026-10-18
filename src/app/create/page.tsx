@@ -976,15 +976,15 @@ function CreateEventForm() {
                     onMouseLeave={handleFilmMouseUpOrLeave}
                     style={{
                       display: 'flex',
-                      gap: '10px',
+                      gap: '12px',
                       overflowX: 'auto',
                       width: '100%',
                       maxWidth: '100%',
                       minWidth: 0,
-                      paddingBottom: '8px',
-                      paddingTop: '2px',
-                      paddingLeft: '2px',
-                      paddingRight: '2px',
+                      paddingBottom: '10px',
+                      paddingTop: '8px',
+                      paddingLeft: '4px',
+                      paddingRight: '4px',
                       scrollSnapType: 'x mandatory',
                       WebkitOverflowScrolling: 'touch',
                       scrollbarWidth: 'none',
@@ -1007,93 +1007,313 @@ function CreateEventForm() {
                             }
                           }}
                           style={{
-                            minWidth: '155px',
-                            maxWidth: '155px',
-                            borderRadius: '16px',
-                            background: isPrimary ? '#FFFFFF' : '#FAFAFA',
-                            border: isPrimary ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
-                            boxShadow: isPrimary ? '0 8px 24px -6px rgba(194, 120, 3, 0.25)' : 'none',
+                            minWidth: '158px',
+                            maxWidth: '158px',
                             cursor: 'pointer',
-                            overflow: 'hidden',
+                            position: 'relative',
                             display: 'flex',
                             flexDirection: 'column',
                             scrollSnapAlign: 'start',
-                            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                            flexShrink: 0
+                            flexShrink: 0,
+                            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                            transform: isPrimary ? 'translateY(-2px)' : 'none',
                           }}
                         >
-                          {/* Tone Swatch Preview Bar */}
+                          {/* Camera Top Hardware Accents (Shutter Button & Winder Dial) */}
+                          <div style={{ height: '7px', position: 'relative', width: '100%', padding: '0 10px' }}>
+                            {/* Shutter Button (Left) */}
+                            <div style={{
+                              position: 'absolute',
+                              left: '16px',
+                              bottom: 0,
+                              width: '24px',
+                              height: '6px',
+                              borderRadius: '4px 4px 0 0',
+                              background: isPrimary 
+                                ? 'linear-gradient(180deg, #F59E0B 0%, #B45309 100%)' 
+                                : 'linear-gradient(180deg, #D1D5DB 0%, #9CA3AF 100%)',
+                              boxShadow: isPrimary ? '0 -1px 4px rgba(245, 158, 11, 0.5)' : 'none',
+                              border: '1px solid rgba(0,0,0,0.15)',
+                              borderBottom: 'none'
+                            }} />
+
+                            {/* Film Winder Dial (Right) */}
+                            <div style={{
+                              position: 'absolute',
+                              right: '16px',
+                              bottom: 0,
+                              width: '26px',
+                              height: '5px',
+                              borderRadius: '3px 3px 0 0',
+                              background: 'repeating-linear-gradient(90deg, #374151 0px, #374151 3px, #1F2937 3px, #1F2937 5px)',
+                              border: '1px solid rgba(0,0,0,0.25)',
+                              borderBottom: 'none'
+                            }} />
+                          </div>
+
+                          {/* Main Camera Body (Chassis) */}
                           <div style={{
-                            height: '42px',
-                            background: swatch?.gradient || preset.accentColor,
-                            position: 'relative',
-                            padding: '6px 8px',
+                            borderRadius: '16px',
+                            overflow: 'hidden',
+                            background: isPrimary ? '#FFFFFF' : '#FAFAFA',
+                            border: isPrimary ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
+                            boxShadow: isPrimary 
+                              ? '0 12px 28px -6px rgba(194, 120, 3, 0.28), 0 2px 6px rgba(0,0,0,0.06)' 
+                              : '0 4px 12px -2px rgba(0,0,0,0.05)',
                             display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start'
+                            flexDirection: 'column',
+                            position: 'relative'
                           }}>
-                            <span style={{
-                              fontSize: '9.5px',
-                              fontFamily: 'var(--font-mono)',
-                              fontWeight: 700,
-                              color: '#FFFFFF',
-                              background: 'rgba(0,0,0,0.35)',
-                              backdropFilter: 'blur(4px)',
-                              padding: '2px 6px',
-                              borderRadius: '6px',
-                              letterSpacing: '0.02em'
+                            {/* Top Metallic Camera Header Plate (Viewfinder, Flash & LED) */}
+                            <div style={{
+                              background: 'linear-gradient(180deg, #F3F4F6 0%, #E5E7EB 100%)',
+                              padding: '7px 9px 5px',
+                              borderBottom: '1px solid rgba(0,0,0,0.08)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              position: 'relative'
                             }}>
-                              {preset.iso}
-                            </span>
-                            {isPrimary && (
-                              <span style={{
+                              {/* Left: Viewfinder Window */}
+                              <div style={{
                                 width: '18px',
-                                height: '18px',
-                                borderRadius: '50%',
-                                background: '#FFFFFF',
-                                color: '#C27803',
+                                height: '13px',
+                                borderRadius: '3px',
+                                background: 'linear-gradient(135deg, #1E293B 0%, #0F172A 100%)',
+                                border: '1.5px solid #94A3B8',
+                                boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.6)',
+                                position: 'relative',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                                overflow: 'hidden'
                               }}>
-                                <Check size={12} strokeWidth={3} />
-                              </span>
-                            )}
-                          </div>
+                                <div style={{
+                                  position: 'absolute',
+                                  top: 0,
+                                  left: 0,
+                                  right: 0,
+                                  height: '50%',
+                                  background: 'linear-gradient(180deg, rgba(56,189,248,0.4) 0%, transparent 100%)'
+                                }} />
+                                <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: 'rgba(255,255,255,0.5)' }} />
+                              </div>
 
-                          {/* Info Body */}
-                          <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            <span style={{
-                              fontSize: '10px',
-                              fontFamily: 'var(--font-mono)',
-                              fontWeight: 700,
-                              textTransform: 'uppercase',
-                              color: isPrimary ? '#C27803' : '#86868B',
-                              letterSpacing: '0.04em'
-                            }}>
-                              {swatch?.toneName || preset.badge}
-                            </span>
-                            <strong style={{
-                              fontSize: '12.5px',
-                              color: '#1D1D1F',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis'
-                            }}>
-                              {preset.name}
-                            </strong>
-                            <span style={{
-                              fontSize: '11px',
-                              color: '#6E6E73',
-                              lineHeight: 1.25,
-                              display: '-webkit-box',
-                              WebkitLineClamp: 1,
-                              WebkitBoxOrient: 'vertical',
+                              {/* ISO Stamp in Center */}
+                              <span style={{
+                                fontSize: '8.5px',
+                                fontFamily: 'var(--font-mono)',
+                                fontWeight: 800,
+                                color: '#374151',
+                                letterSpacing: '0.04em',
+                                background: 'rgba(255,255,255,0.7)',
+                                padding: '1px 5px',
+                                borderRadius: '4px',
+                                border: '1px solid rgba(0,0,0,0.08)'
+                              }}>
+                                {preset.iso}
+                              </span>
+
+                              {/* Right: Flash Unit + Ready LED */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <span style={{
+                                  width: '5px',
+                                  height: '5px',
+                                  borderRadius: '50%',
+                                  background: isPrimary ? '#EF4444' : '#9CA3AF',
+                                  boxShadow: isPrimary ? '0 0 6px #EF4444, 0 0 2px #F87171' : 'none',
+                                  transition: 'all 0.2s ease'
+                                }} title={isPrimary ? 'Flash Siap' : 'Standby'} />
+
+                                <div style={{
+                                  width: '22px',
+                                  height: '13px',
+                                  borderRadius: '3px',
+                                  background: 'repeating-linear-gradient(45deg, #E2E8F0 0px, #E2E8F0 2px, #CBD5E1 2px, #CBD5E1 4px)',
+                                  border: '1.5px solid #94A3B8',
+                                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)'
+                                }} />
+                              </div>
+                            </div>
+
+                            {/* Center Camera Face with Iconic Lens */}
+                            <div style={{
+                              background: 'linear-gradient(180deg, #18181B 0%, #27272A 100%)',
+                              padding: '10px 8px 8px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
                               overflow: 'hidden'
                             }}>
-                              {preset.tagline}
-                            </span>
+                              {/* Camera Face Texture */}
+                              <div style={{
+                                position: 'absolute',
+                                inset: 0,
+                                opacity: 0.12,
+                                backgroundImage: 'radial-gradient(#FFFFFF 1px, transparent 1px)',
+                                backgroundSize: '4px 4px'
+                              }} />
+
+                              {/* Circular 3D Camera Lens */}
+                              <div style={{
+                                width: '68px',
+                                height: '68px',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, #71717A 0%, #27272A 50%, #09090B 100%)',
+                                padding: '3px',
+                                boxShadow: '0 4px 14px rgba(0,0,0,0.5), inset 0 1px 2px rgba(255,255,255,0.3)',
+                                position: 'relative',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                              }}>
+                                {/* Silver Metallic Bezel Ring */}
+                                <div style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  borderRadius: '50%',
+                                  background: 'conic-gradient(from 45deg, #E4E4E7, #71717A, #E4E4E7, #52525B, #E4E4E7)',
+                                  padding: '2px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center'
+                                }}>
+                                  {/* Black Inner Barrel */}
+                                  <div style={{
+                                    width: '100%',
+                                    height: '100%',
+                                    borderRadius: '50%',
+                                    background: '#09090B',
+                                    padding: '3px',
+                                    position: 'relative',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}>
+                                    {/* Optical Glass Lens (Reflecting Film Tone Gradient) */}
+                                    <div style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      borderRadius: '50%',
+                                      background: swatch?.gradient || preset.accentColor,
+                                      boxShadow: 'inset 0 2px 8px rgba(0,0,0,0.6)',
+                                      position: 'relative',
+                                      overflow: 'hidden',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center'
+                                    }}>
+                                      {/* Curved Glass Highlight Reflection */}
+                                      <div style={{
+                                        position: 'absolute',
+                                        top: '2px',
+                                        left: '5px',
+                                        width: '65%',
+                                        height: '45%',
+                                        borderRadius: '50%',
+                                        background: 'linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0) 80%)',
+                                        transform: 'rotate(-25deg)',
+                                        pointerEvents: 'none'
+                                      }} />
+
+                                      {/* Aperture Center Dot */}
+                                      <div style={{
+                                        width: '14px',
+                                        height: '14px',
+                                        borderRadius: '50%',
+                                        background: 'rgba(0,0,0,0.45)',
+                                        backdropFilter: 'blur(2px)',
+                                        border: '1px solid rgba(255,255,255,0.25)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                      }}>
+                                        <span style={{ width: '3px', height: '3px', borderRadius: '50%', background: '#FFFFFF', opacity: 0.9 }} />
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Lens Specs Label */}
+                              <span style={{
+                                marginTop: '5px',
+                                fontSize: '8px',
+                                fontFamily: 'var(--font-mono)',
+                                color: '#A1A1AA',
+                                letterSpacing: '0.08em',
+                                textTransform: 'uppercase',
+                                zIndex: 1
+                              }}>
+                                32mm • f/2.8
+                              </span>
+
+                              {/* Selected Gold Checkmark Badge */}
+                              {isPrimary && (
+                                <div style={{
+                                  position: 'absolute',
+                                  top: '5px',
+                                  right: '5px',
+                                  width: '18px',
+                                  height: '18px',
+                                  borderRadius: '50%',
+                                  background: '#C27803',
+                                  color: '#FFFFFF',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                                  zIndex: 2
+                                }}>
+                                  <Check size={10} strokeWidth={3} />
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Bottom Film Livery & Info Body */}
+                            <div style={{
+                              padding: '8px 10px 10px',
+                              background: '#FFFFFF',
+                              borderTop: '1px solid rgba(0,0,0,0.06)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '2px'
+                            }}>
+                              <span style={{
+                                fontSize: '9px',
+                                fontFamily: 'var(--font-mono)',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                color: isPrimary ? '#C27803' : '#86868B',
+                                letterSpacing: '0.04em'
+                              }}>
+                                {swatch?.toneName || preset.badge}
+                              </span>
+
+                              <strong style={{
+                                fontSize: '11.5px',
+                                color: '#1D1D1F',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis'
+                              }}>
+                                {preset.name}
+                              </strong>
+
+                              <span style={{
+                                fontSize: '10px',
+                                color: '#6E6E73',
+                                lineHeight: 1.25,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 1,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}>
+                                {preset.tagline}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       );
