@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { 
   ArrowLeft, ArrowRight, Check, Calendar, MapPin, Film, Camera,
   Lock, Unlock, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye,
-  Mail, Key, UserCheck, Tag, Percent, Wallet, Briefcase, Loader2, Star, Mic, Sparkles, ChevronRight
+  Mail, Key, UserCheck, Tag, Percent, Wallet, Briefcase, Loader2, Star, Mic, Sparkles, ChevronRight,
+  Cake, Coffee, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FILM_PRESETS } from '@/lib/filters';
@@ -40,6 +41,18 @@ const stepVariants = {
       opacity: { duration: 0.15 }
     }
   })
+};
+
+// Visual Film Tone Swatch & Metadata for Step 2
+const FILM_SWATCHES: Record<FilmPresetId, { gradient: string; toneName: string }> = {
+  portra: { gradient: 'linear-gradient(135deg, #FFF0DB 0%, #E0A96D 50%, #C27803 100%)', toneName: 'Warm Gold' },
+  funsaver: { gradient: 'linear-gradient(135deg, #FEF08A 0%, #F59E0B 50%, #D97706 100%)', toneName: 'Retro Yellow' },
+  quicksnap: { gradient: 'linear-gradient(135deg, #BBF7D0 0%, #10B981 50%, #047857 100%)', toneName: 'Fresh Emerald' },
+  ektar: { gradient: 'linear-gradient(135deg, #FFEDD5 0%, #F97316 50%, #C2410C 100%)', toneName: 'Vivid Amber' },
+  cinestill: { gradient: 'linear-gradient(135deg, #0C4A6E 0%, #0284C7 50%, #BE123C 100%)', toneName: 'Tungsten Neon' },
+  ilford: { gradient: 'linear-gradient(135deg, #F3F4F6 0%, #6B7280 50%, #111827 100%)', toneName: 'Classic B&W' },
+  agfa: { gradient: 'linear-gradient(135deg, #FCE7F3 0%, #F472B6 50%, #9D174D 100%)', toneName: 'Dreamy Pastel' },
+  trix: { gradient: 'linear-gradient(135deg, #E5E7EB 0%, #374151 50%, #000000 100%)', toneName: 'Deep Contrast' },
 };
 
 function CreateEventForm() {
@@ -642,40 +655,48 @@ function CreateEventForm() {
                     </label>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
                       {([
-                        { id: 'wedding', label: '💍 Pernikahan & Resepsi' },
-                        { id: 'birthday', label: '🎂 Ulang Tahun & Party' },
-                        { id: 'corporate', label: '🏢 Kantor & Gathering' },
-                        { id: 'other', label: '☕ Nongkrong / Reuni' }
-                      ] as const).map((cat) => (
-                        <button
-                          key={cat.id}
-                          type="button"
-                          onClick={() => {
-                            hapticLightTap();
-                            const prevDefaultTagline = getEventCategoryMeta(eventType).defaultFrameTagline;
-                            const nextDefaultTagline = getEventCategoryMeta(cat.id).defaultFrameTagline;
-                            setEventType(cat.id);
-                            setPreviewSample(cat.id === 'wedding' ? 'couple' : 'guests');
-                            if (!frameText || frameText === prevDefaultTagline || frameText === 'The Beginning of Forever') {
-                              setFrameText(nextDefaultTagline);
-                            }
-                          }}
-                          style={{
-                            padding: '12px 14px',
-                            fontSize: '13px',
-                            fontWeight: eventType === cat.id ? 700 : 500,
-                            background: eventType === cat.id ? '#1D1D1F' : 'rgba(0, 0, 0, 0.03)',
-                            color: eventType === cat.id ? '#FFFFFF' : '#1D1D1F',
-                            border: eventType === cat.id ? '1.5px solid #1D1D1F' : '1px solid rgba(0, 0, 0, 0.08)',
-                            borderRadius: '12px',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            transition: 'all 0.15s ease'
-                          }}
-                        >
-                          {cat.label}
-                        </button>
-                      ))}
+                        { id: 'wedding', label: 'Pernikahan & Resepsi', icon: Heart },
+                        { id: 'birthday', label: 'Ulang Tahun & Pesta', icon: Cake },
+                        { id: 'corporate', label: 'Kantor & Gathering', icon: Briefcase },
+                        { id: 'other', label: 'Komunitas & Reuni', icon: Coffee }
+                      ] as const).map((cat) => {
+                        const IconComponent = cat.icon;
+                        const isSelected = eventType === cat.id;
+                        return (
+                          <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                              hapticLightTap();
+                              const prevDefaultTagline = getEventCategoryMeta(eventType).defaultFrameTagline;
+                              const nextDefaultTagline = getEventCategoryMeta(cat.id).defaultFrameTagline;
+                              setEventType(cat.id);
+                              setPreviewSample(cat.id === 'wedding' ? 'couple' : 'guests');
+                              if (!frameText || frameText === prevDefaultTagline || frameText === 'The Beginning of Forever') {
+                                setFrameText(nextDefaultTagline);
+                              }
+                            }}
+                            style={{
+                              padding: '12px 14px',
+                              fontSize: '13px',
+                              fontWeight: isSelected ? 700 : 500,
+                              background: isSelected ? '#1D1D1F' : 'rgba(0, 0, 0, 0.03)',
+                              color: isSelected ? '#FFFFFF' : '#1D1D1F',
+                              border: isSelected ? '1.5px solid #1D1D1F' : '1px solid rgba(0, 0, 0, 0.08)',
+                              borderRadius: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '8px',
+                              textAlign: 'left',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            <IconComponent size={15} style={{ color: isSelected ? '#C27803' : '#86868B', flexShrink: 0 }} />
+                            <span>{cat.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -833,22 +854,56 @@ function CreateEventForm() {
                   </p>
                 </div>
 
-                {/* Filter Selector & Live Preview */}
-                <div className="glass-card" style={{ padding: '22px', borderRadius: '20px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.04)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                {/* Filter Selector & Visual Swatch Carousel */}
+                <div className="glass-card" style={{ padding: '20px', borderRadius: '20px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.04)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                     <div>
-                      <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Filter Film Utama</strong>
-                      <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block' }}>Karakter warna default kamera tamu</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <Film size={16} style={{ color: '#C27803' }} />
+                        <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Tone Film Analog</strong>
+                      </div>
+                      <span style={{ fontSize: '11.5px', color: '#86868B', marginTop: '2px', display: 'block' }}>
+                        Pilih karakter warna utama kamera tamu Anda
+                      </span>
                     </div>
-                    <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)', color: '#C27803', background: 'rgba(194,120,3,0.1)', padding: '2px 8px', borderRadius: '6px' }}>
-                      {allowedPresets.length}/{activeTier.maxPresets} Diizinkan
-                    </span>
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '11.5px',
+                      fontFamily: 'var(--font-mono)',
+                      color: '#C27803',
+                      background: 'rgba(194,120,3,0.08)',
+                      padding: '4px 10px',
+                      borderRadius: '20px',
+                      fontWeight: 600
+                    }}>
+                      <span style={{
+                        width: '7px',
+                        height: '7px',
+                        borderRadius: '50%',
+                        background: FILM_PRESETS[primaryPreset]?.accentColor || '#C27803'
+                      }} />
+                      <span>{FILM_PRESETS[primaryPreset]?.name}</span>
+                    </div>
                   </div>
 
-                  {/* Filter Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '18px' }}>
+                  {/* Horizontal Film Reel Carousel with Swatches */}
+                  <div style={{
+                    display: 'flex',
+                    gap: '10px',
+                    overflowX: 'auto',
+                    paddingBottom: '10px',
+                    paddingTop: '2px',
+                    paddingLeft: '2px',
+                    paddingRight: '2px',
+                    scrollSnapType: 'x mandatory',
+                    WebkitOverflowScrolling: 'touch',
+                    scrollbarWidth: 'none'
+                  }}>
                     {Object.values(FILM_PRESETS).map((preset) => {
                       const isPrimary = primaryPreset === preset.id;
+                      const swatch = FILM_SWATCHES[preset.id];
 
                       return (
                         <div
@@ -861,29 +916,94 @@ function CreateEventForm() {
                             }
                           }}
                           style={{
-                            padding: '12px 14px',
-                            borderRadius: '14px',
-                            background: isPrimary ? 'rgba(194, 120, 3, 0.08)' : '#FAFAFA',
+                            minWidth: '155px',
+                            maxWidth: '155px',
+                            borderRadius: '16px',
+                            background: isPrimary ? '#FFFFFF' : '#FAFAFA',
                             border: isPrimary ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
+                            boxShadow: isPrimary ? '0 8px 24px -6px rgba(194, 120, 3, 0.25)' : 'none',
                             cursor: 'pointer',
+                            overflow: 'hidden',
                             display: 'flex',
                             flexDirection: 'column',
-                            gap: '4px',
-                            position: 'relative',
-                            transition: 'all 0.15s ease'
+                            scrollSnapAlign: 'start',
+                            transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                            flexShrink: 0
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <strong style={{ fontSize: '13px', color: isPrimary ? '#C27803' : '#1D1D1F' }}>
-                              {preset.name}
-                            </strong>
+                          {/* Tone Swatch Preview Bar */}
+                          <div style={{
+                            height: '42px',
+                            background: swatch?.gradient || preset.accentColor,
+                            position: 'relative',
+                            padding: '6px 8px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start'
+                          }}>
+                            <span style={{
+                              fontSize: '9.5px',
+                              fontFamily: 'var(--font-mono)',
+                              fontWeight: 700,
+                              color: '#FFFFFF',
+                              background: 'rgba(0,0,0,0.35)',
+                              backdropFilter: 'blur(4px)',
+                              padding: '2px 6px',
+                              borderRadius: '6px',
+                              letterSpacing: '0.02em'
+                            }}>
+                              {preset.iso}
+                            </span>
                             {isPrimary && (
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#C27803' }} />
+                              <span style={{
+                                width: '18px',
+                                height: '18px',
+                                borderRadius: '50%',
+                                background: '#FFFFFF',
+                                color: '#C27803',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                              }}>
+                                <Check size={12} strokeWidth={3} />
+                              </span>
                             )}
                           </div>
-                          <span style={{ fontSize: '11px', color: '#86868B', lineHeight: 1.3 }}>
-                            {preset.description}
-                          </span>
+
+                          {/* Info Body */}
+                          <div style={{ padding: '10px 12px 12px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <span style={{
+                              fontSize: '10px',
+                              fontFamily: 'var(--font-mono)',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              color: isPrimary ? '#C27803' : '#86868B',
+                              letterSpacing: '0.04em'
+                            }}>
+                              {swatch?.toneName || preset.badge}
+                            </span>
+                            <strong style={{
+                              fontSize: '12.5px',
+                              color: '#1D1D1F',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis'
+                            }}>
+                              {preset.name}
+                            </strong>
+                            <span style={{
+                              fontSize: '11px',
+                              color: '#6E6E73',
+                              lineHeight: 1.25,
+                              display: '-webkit-box',
+                              WebkitLineClamp: 1,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}>
+                              {preset.tagline}
+                            </span>
+                          </div>
                         </div>
                       );
                     })}
@@ -891,21 +1011,37 @@ function CreateEventForm() {
 
                   {/* Toggle: Izinkan Tamu Ganti Filter */}
                   <div style={{
+                    marginTop: '12px',
                     padding: '12px 14px',
-                    borderRadius: '12px',
-                    background: 'rgba(0,0,0,0.03)',
+                    borderRadius: '14px',
+                    background: 'rgba(0,0,0,0.025)',
+                    border: '1px solid rgba(0,0,0,0.05)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     gap: '12px'
                   }}>
-                    <div>
-                      <strong style={{ fontSize: '12.5px', color: '#1D1D1F', display: 'block' }}>
-                        Izinkan Tamu Memilih Filter Lain
-                      </strong>
-                      <span style={{ fontSize: '11px', color: '#86868B' }}>
-                        Tamu dapat menggeser pilihan filter film di kamera mereka
-                      </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '10px',
+                        background: allowGuestPresetSwitch ? 'rgba(194,120,3,0.1)' : 'rgba(0,0,0,0.04)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: allowGuestPresetSwitch ? '#C27803' : '#86868B'
+                      }}>
+                        <SlidersHorizontal size={16} />
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>
+                          Izinkan Tamu Ganti Filter Analog
+                        </strong>
+                        <span style={{ fontSize: '11px', color: '#86868B' }}>
+                          Tamu bebas memilih gaya film di kamera saat perayaan berlangsung
+                        </span>
+                      </div>
                     </div>
                     <input
                       type="checkbox"
@@ -1117,17 +1253,22 @@ function CreateEventForm() {
                           setRevealMode('instant');
                         }}
                         style={{
-                          padding: '10px',
+                          padding: '10px 14px',
                           borderRadius: '10px',
                           background: revealMode === 'instant' ? '#1D1D1F' : '#FFFFFF',
                           color: revealMode === 'instant' ? '#FFFFFF' : '#1D1D1F',
                           border: revealMode === 'instant' ? '1px solid #1D1D1F' : '1px solid rgba(0,0,0,0.1)',
                           fontSize: '12.5px',
                           fontWeight: 600,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
                         }}
                       >
-                        ⚡ Tayang Instan
+                        <Zap size={14} style={{ color: revealMode === 'instant' ? '#C27803' : '#86868B' }} />
+                        <span>Tayang Instan</span>
                       </button>
 
                       <button
@@ -1138,17 +1279,22 @@ function CreateEventForm() {
                           if (!revealTime) handleQuickRevealTime('midnight');
                         }}
                         style={{
-                          padding: '10px',
+                          padding: '10px 14px',
                           borderRadius: '10px',
                           background: revealMode === 'delayed' ? '#C27803' : '#FFFFFF',
                           color: revealMode === 'delayed' ? '#FFFFFF' : '#1D1D1F',
                           border: revealMode === 'delayed' ? '1px solid #C27803' : '1px solid rgba(0,0,0,0.1)',
                           fontSize: '12.5px',
                           fontWeight: 600,
-                          cursor: 'pointer'
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px'
                         }}
                       >
-                        🎞️ Rahasia (Cuci Film)
+                        <Clock size={14} style={{ color: revealMode === 'delayed' ? '#FFFFFF' : '#86868B' }} />
+                        <span>Rahasia (Cuci Film)</span>
                       </button>
                     </div>
 
@@ -1441,9 +1587,14 @@ function CreateEventForm() {
                 {loading
                   ? 'Menerbitkan...'
                   : activeTier.isFree
-                    ? 'Terbitkan Album Gratis 🎉'
-                    : `Bayar ${referralDiscount?.valid ? `Rp ${referralDiscount.finalPrice.toLocaleString('id-ID')}` : activeTier.price} ➔`}
+                    ? 'Terbitkan Album Gratis'
+                    : `Bayar ${referralDiscount?.valid ? `Rp ${referralDiscount.finalPrice.toLocaleString('id-ID')}` : activeTier.price}`}
               </span>
+              {activeTier.isFree ? (
+                <Sparkles size={16} />
+              ) : (
+                <ArrowRight size={16} />
+              )}
             </button>
           )}
 
