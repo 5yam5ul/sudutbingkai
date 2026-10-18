@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ArrowLeft, ArrowRight, Check, Calendar, MapPin, Film, Camera,
   Lock, Unlock, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye,
-  Mail, Key, UserCheck, Tag, Percent, Wallet, Briefcase, Loader2, Star, Mic, Sparkles, ChevronRight,
+  Mail, Key, UserCheck, Tag, Percent, Wallet, Briefcase, Loader2, Star, Mic, Sparkles, ChevronRight, ChevronLeft,
   Cake, Coffee, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -64,6 +64,38 @@ function CreateEventForm() {
   // Stepper State (1: Info Acara, 2: Gaya & Frame, 3: Kuota & Fitur, 4: Ringkasan & Bayar)
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [direction, setDirection] = useState<1 | -1>(1);
+
+  // Film Reel Carousel Ref & Drag-to-Scroll Handlers
+  const filmCarouselRef = useRef<HTMLDivElement>(null);
+  const isDraggingFilmRef = useRef(false);
+  const filmStartXRef = useRef(0);
+  const filmScrollLeftRef = useRef(0);
+
+  const handleFilmMouseDown = (e: React.MouseEvent) => {
+    if (!filmCarouselRef.current) return;
+    isDraggingFilmRef.current = true;
+    filmStartXRef.current = e.pageX - filmCarouselRef.current.offsetLeft;
+    filmScrollLeftRef.current = filmCarouselRef.current.scrollLeft;
+  };
+
+  const handleFilmMouseMove = (e: React.MouseEvent) => {
+    if (!isDraggingFilmRef.current || !filmCarouselRef.current) return;
+    e.preventDefault();
+    const x = e.pageX - filmCarouselRef.current.offsetLeft;
+    const walk = (x - filmStartXRef.current) * 1.5;
+    filmCarouselRef.current.scrollLeft = filmScrollLeftRef.current - walk;
+  };
+
+  const handleFilmMouseUpOrLeave = () => {
+    isDraggingFilmRef.current = false;
+  };
+
+  const scrollFilm = (dir: 'left' | 'right') => {
+    if (!filmCarouselRef.current) return;
+    hapticLightTap();
+    const offset = dir === 'left' ? -200 : 200;
+    filmCarouselRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+  };
 
   const [loading, setLoading] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
@@ -856,51 +888,107 @@ function CreateEventForm() {
 
                 {/* Filter Selector & Visual Swatch Carousel */}
                 <div className="glass-card" style={{ padding: '20px', borderRadius: '20px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.04)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <Film size={16} style={{ color: '#C27803' }} />
                         <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Tone Film Analog</strong>
                       </div>
                       <span style={{ fontSize: '11.5px', color: '#86868B', marginTop: '2px', display: 'block' }}>
-                        Pilih karakter warna utama kamera tamu Anda
+                        Geser untuk memilih karakter warna foto tamu
                       </span>
                     </div>
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      fontSize: '11.5px',
-                      fontFamily: 'var(--font-mono)',
-                      color: '#C27803',
-                      background: 'rgba(194,120,3,0.08)',
-                      padding: '4px 10px',
-                      borderRadius: '20px',
-                      fontWeight: 600
-                    }}>
-                      <span style={{
-                        width: '7px',
-                        height: '7px',
-                        borderRadius: '50%',
-                        background: FILM_PRESETS[primaryPreset]?.accentColor || '#C27803'
-                      }} />
-                      <span>{FILM_PRESETS[primaryPreset]?.name}</span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        fontSize: '11.5px',
+                        fontFamily: 'var(--font-mono)',
+                        color: '#C27803',
+                        background: 'rgba(194,120,3,0.08)',
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontWeight: 600
+                      }}>
+                        <span style={{
+                          width: '7px',
+                          height: '7px',
+                          borderRadius: '50%',
+                          background: FILM_PRESETS[primaryPreset]?.accentColor || '#C27803'
+                        }} />
+                        <span>{FILM_PRESETS[primaryPreset]?.name}</span>
+                      </div>
+
+                      {/* Desktop / Quick Navigation Arrows */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => scrollFilm('left')}
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: 'rgba(0,0,0,0.04)',
+                            border: '1px solid rgba(0,0,0,0.06)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#1D1D1F',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title="Geser film ke kiri"
+                        >
+                          <ChevronLeft size={15} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => scrollFilm('right')}
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: 'rgba(0,0,0,0.04)',
+                            border: '1px solid rgba(0,0,0,0.06)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#1D1D1F',
+                            transition: 'all 0.15s ease'
+                          }}
+                          title="Geser film ke kanan"
+                        >
+                          <ChevronRight size={15} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
                   {/* Horizontal Film Reel Carousel with Swatches */}
-                  <div style={{
-                    display: 'flex',
-                    gap: '10px',
-                    overflowX: 'auto',
-                    paddingBottom: '10px',
-                    paddingTop: '2px',
-                    paddingLeft: '2px',
-                    paddingRight: '2px',
-                    scrollSnapType: 'x mandatory',
-                    WebkitOverflowScrolling: 'touch',
-                    scrollbarWidth: 'none'
-                  }}>
+                  <div
+                    ref={filmCarouselRef}
+                    onMouseDown={handleFilmMouseDown}
+                    onMouseMove={handleFilmMouseMove}
+                    onMouseUp={handleFilmMouseUpOrLeave}
+                    onMouseLeave={handleFilmMouseUpOrLeave}
+                    style={{
+                      display: 'flex',
+                      gap: '10px',
+                      overflowX: 'auto',
+                      paddingBottom: '8px',
+                      paddingTop: '2px',
+                      paddingLeft: '2px',
+                      paddingRight: '2px',
+                      scrollSnapType: 'x mandatory',
+                      WebkitOverflowScrolling: 'touch',
+                      scrollbarWidth: 'none',
+                      cursor: 'grab',
+                      userSelect: 'none'
+                    }}
+                  >
                     {Object.values(FILM_PRESETS).map((preset) => {
                       const isPrimary = primaryPreset === preset.id;
                       const swatch = FILM_SWATCHES[preset.id];
@@ -1005,6 +1093,41 @@ function CreateEventForm() {
                             </span>
                           </div>
                         </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Pagination Dots Indicator */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: '6px',
+                    marginTop: '10px',
+                    marginBottom: '4px'
+                  }}>
+                    {Object.values(FILM_PRESETS).map((preset) => {
+                      const isPrimary = primaryPreset === preset.id;
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => {
+                            hapticDialClick();
+                            setPrimaryPreset(preset.id);
+                          }}
+                          style={{
+                            width: isPrimary ? '18px' : '6px',
+                            height: '6px',
+                            borderRadius: '3px',
+                            background: isPrimary ? '#C27803' : 'rgba(0,0,0,0.18)',
+                            border: 'none',
+                            padding: 0,
+                            cursor: 'pointer',
+                            transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)'
+                          }}
+                          title={preset.name}
+                        />
                       );
                     })}
                   </div>

@@ -1084,18 +1084,24 @@ br.mobile-only {
   }
 }
 
-/* Frame Customizer Grid */
-.frame-customizer-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 24px;
-  align-items: start;
+/* Frame Customizer Grid & Modern Split Layout */
+.frame-customizer-grid,
+.frame-customizer-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-@media (max-width: 680px) {
-  .frame-customizer-grid {
-    grid-template-columns: 1fr !important;
-    gap: 20px !important;
+@media (min-width: 900px) {
+  .frame-customizer-container {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 28px;
+    align-items: start;
+  }
+  .frame-preview-section {
+    position: sticky;
+    top: 24px;
   }
 }
 
