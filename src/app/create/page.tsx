@@ -650,7 +650,7 @@ function CreateEventForm() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} style={{ width: '100%', minWidth: 0 }}>
           <AnimatePresence mode="wait" custom={direction}>
             
             {/* ============================================================== */}
@@ -872,7 +872,7 @@ function CreateEventForm() {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}
+                style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, maxWidth: '100%' }}
               >
                 <div>
                   <span style={{ fontSize: '12px', fontFamily: 'var(--font-mono)', color: '#C27803', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -887,7 +887,7 @@ function CreateEventForm() {
                 </div>
 
                 {/* Filter Selector & Visual Swatch Carousel */}
-                <div className="glass-card" style={{ padding: '20px', borderRadius: '20px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.04)' }}>
+                <div className="glass-card" style={{ padding: '20px', borderRadius: '20px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.04)', width: '100%', minWidth: 0, maxWidth: '100%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -978,6 +978,9 @@ function CreateEventForm() {
                       display: 'flex',
                       gap: '10px',
                       overflowX: 'auto',
+                      width: '100%',
+                      maxWidth: '100%',
+                      minWidth: 0,
                       paddingBottom: '8px',
                       paddingTop: '2px',
                       paddingLeft: '2px',
@@ -1179,7 +1182,7 @@ function CreateEventForm() {
                 </div>
 
                 {/* Frame Customizer Component */}
-                <div className="glass-card" style={{ padding: '22px', borderRadius: '20px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.04)' }}>
+                <div className="glass-card" style={{ padding: '22px', borderRadius: '20px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.04)', width: '100%', minWidth: 0, maxWidth: '100%' }}>
                   <div style={{ marginBottom: '14px' }}>
                     <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Desain Bingkai Polaroid</strong>
                     <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block' }}>Pilih frame klasik untuk kartu foto tamu</span>

@@ -322,10 +322,10 @@ export default function FrameCustomizer({
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <div className="frame-customizer-container">
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', minWidth: 0, maxWidth: '100%' }}>
+      <div className="frame-customizer-container" style={{ width: '100%', minWidth: 0, maxWidth: '100%' }}>
         {/* 1. Live Interactive Canvas Preview (HERO on Mobile, STICKY LEFT on Desktop) */}
-        <div className="frame-preview-section">
+        <div className="frame-preview-section" style={{ width: '100%', minWidth: 0 }}>
           <div style={{
             padding: '16px',
             borderRadius: '20px',
@@ -414,13 +414,16 @@ export default function FrameCustomizer({
         </div>
 
         {/* 2. Controls Section (Carousel + Form + Upload) */}
-        <div className="frame-controls-section" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div className="frame-controls-section" style={{ display: 'flex', flexDirection: 'column', gap: '16px', width: '100%', minWidth: 0, maxWidth: '100%' }}>
           {/* Frame Picker Reel Card */}
           <div style={{
             padding: '16px',
             borderRadius: '20px',
             background: 'rgba(0,0,0,0.02)',
-            border: '1px solid rgba(0,0,0,0.06)'
+            border: '1px solid rgba(0,0,0,0.06)',
+            width: '100%',
+            minWidth: 0,
+            maxWidth: '100%'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
               <div>
@@ -488,7 +491,7 @@ export default function FrameCustomizer({
             </div>
 
             {/* Category Pills */}
-            <div className="horizontal-scroll-row" style={{ gap: '6px', paddingBottom: '8px', marginBottom: '8px' }}>
+            <div className="horizontal-scroll-row" style={{ gap: '6px', paddingBottom: '8px', marginBottom: '8px', width: '100%', maxWidth: '100%', minWidth: 0, overflowX: 'auto' }}>
               {(['all', 'wedding', 'classic', 'retro', 'party'] as const).map((cat) => (
                 <button
                   key={cat}
@@ -529,6 +532,9 @@ export default function FrameCustomizer({
                 display: 'flex',
                 gap: '10px',
                 overflowX: 'auto',
+                width: '100%',
+                maxWidth: '100%',
+                minWidth: 0,
                 paddingBottom: '8px',
                 paddingTop: '2px',
                 paddingLeft: '2px',
@@ -661,7 +667,10 @@ export default function FrameCustomizer({
             border: '1px solid rgba(0,0,0,0.06)',
             display: 'flex',
             flexDirection: 'column',
-            gap: '12px'
+            gap: '12px',
+            width: '100%',
+            minWidth: 0,
+            maxWidth: '100%'
           }}>
             <div>
               <label style={{ display: 'block', fontSize: '10.5px', fontFamily: 'var(--font-mono)', textTransform: 'uppercase', color: '#86868B', marginBottom: '4px' }}>
@@ -759,7 +768,10 @@ export default function FrameCustomizer({
             alignItems: 'center',
             justifyContent: 'space-between',
             flexWrap: 'wrap',
-            gap: '8px'
+            gap: '8px',
+            width: '100%',
+            minWidth: 0,
+            maxWidth: '100%'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Upload size={16} color="#C27803" />
