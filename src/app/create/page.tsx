@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Check, Calendar, MapPin, Film, Camera,
   Lock, Unlock, Clock, CheckCircle2, ShieldCheck, Heart, Users, SlidersHorizontal, Eye,
   Mail, Key, UserCheck, Tag, Percent, Wallet, Briefcase, Loader2, Star, Mic, Sparkles, ChevronRight, ChevronLeft,
-  Cake, Coffee, Zap
+  Cake, Coffee, Zap, Video
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FILM_PRESETS } from '@/lib/filters';
@@ -161,7 +161,8 @@ function CreateEventForm() {
   const [customFrameUrl, setCustomFrameUrl] = useState<string>('');
   const [frameText, setFrameText] = useState<string>('');
   const [allowGuestFrameToggle, setAllowGuestFrameToggle] = useState<boolean>(true);
-  const [allowVoiceNote, setAllowVoiceNote] = useState<boolean>(true);
+  const isVideoTier = selectedTier === 'wedding' || selectedTier === 'unlimited';
+  const [wishType, setWishType] = useState<'video' | 'voice' | 'none'>('video');
 
   // Step 4 Host Account & Dashboard Credentials
   const [hostEmail, setHostEmail] = useState<string>('');
@@ -374,12 +375,8 @@ function CreateEventForm() {
       customFrameUrl: frameId === 'custom' ? (customFrameUrl || undefined) : undefined,
       frameText,
       allowGuestFrameToggle,
-      allowVoiceNote,
-      closingWishType: !allowVoiceNote
-        ? 'none'
-        : (selectedTier === 'wedding' || selectedTier === 'unlimited')
-          ? 'video'
-          : 'voice',
+      allowVoiceNote: wishType !== 'none',
+      closingWishType: wishType,
       hostEmail: cleanEmail,
       paymentStatus,
     };
@@ -1463,6 +1460,7 @@ function CreateEventForm() {
                     {PRIMARY_PACKAGE_TIER_KEYS.map((tierKey) => {
                       const tier = PACKAGE_TIERS[tierKey];
                       const isSelected = selectedTier === tier.id;
+                      const tierHasVideo = tier.id === 'wedding' || tier.id === 'unlimited';
 
                       return (
                         <button
@@ -1474,6 +1472,11 @@ function CreateEventForm() {
                             if (tier.maxPresets <= 1) {
                               setAllowedPresets([primaryPreset]);
                               setAllowGuestPresetSwitch(false);
+                            }
+                            if (tierHasVideo) {
+                              if (wishType !== 'none') setWishType('video');
+                            } else {
+                              if (wishType === 'video') setWishType('voice');
                             }
                           }}
                           style={{
@@ -1487,19 +1490,27 @@ function CreateEventForm() {
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '4px',
-                            transition: 'all 0.15s ease'
+                            transition: 'all 0.15s ease',
+                            position: 'relative'
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <strong style={{ fontSize: '13.5px' }}>{tier.name}</strong>
-                            {tier.isFree && (
+                            {tier.isFree ? (
                               <span style={{ fontSize: '10px', background: '#27AE60', color: '#FFF', padding: '1px 6px', borderRadius: '999px', fontWeight: 700 }}>
                                 FREE
                               </span>
-                            )}
+                            ) : tierHasVideo ? (
+                              <span style={{ fontSize: '9.5px', background: isSelected ? '#C27803' : 'rgba(194, 120, 3, 0.15)', color: isSelected ? '#FFF' : '#C27803', padding: '1px 6px', borderRadius: '999px', fontWeight: 700 }}>
+                                VIDEO 15s
+                              </span>
+                            ) : null}
                           </div>
                           <span style={{ fontSize: '11.5px', opacity: 0.8 }}>
                             {tier.guestsLabel}
+                          </span>
+                          <span style={{ fontSize: '10.5px', color: isSelected ? 'rgba(255,255,255,0.7)' : '#6E6E73', marginTop: '2px' }}>
+                            {tierHasVideo ? '🎥 Video 15s + 🎙️ Suara' : '🎙️ Pesan Suara'} • {tier.shotsPerGuest} Foto
                           </span>
                           <strong style={{ fontSize: '14px', color: isSelected ? '#C27803' : '#1D1D1F', marginTop: '4px' }}>
                             {tier.price}
@@ -1513,63 +1524,272 @@ function CreateEventForm() {
                   <div style={{
                     padding: '14px 16px',
                     borderRadius: '14px',
-                    background: 'rgba(194, 120, 3, 0.06)',
-                    border: '1px solid rgba(194, 120, 3, 0.2)',
+                    background: isVideoTier ? 'rgba(194, 120, 3, 0.08)' : 'rgba(0, 0, 0, 0.03)',
+                    border: isVideoTier ? '1.5px solid rgba(194, 120, 3, 0.25)' : '1px solid rgba(0, 0, 0, 0.08)',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: '6px'
+                    gap: '8px'
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '12.5px', color: '#1D1D1F', fontWeight: 600 }}>
-                        {activeTier.shotsPerGuest} Foto per Tamu • {activeTier.retentionLabel}
+                      <span style={{ fontSize: '12.5px', color: '#1D1D1F', fontWeight: 700 }}>
+                        {activeTier.guestsLabel} • {activeTier.shotsPerGuest} Foto per Tamu
                       </span>
                       <span style={{ fontSize: '11px', color: '#27AE60', fontWeight: 700 }}>
                         Maks {activeTier.maxPresets} Filter
                       </span>
                     </div>
-                    <span style={{ fontSize: '11.5px', color: '#6E6E73', lineHeight: 1.4 }}>
-                      {activeTier.isFree
-                        ? 'Coba gratis bersama keluarga atau teman dekat. Anda bisa menambah kuota kapan saja dari dashboard.'
-                        : 'Kapasitas penuh siap digunakan di hari-H acara tanpa batasan.'}
-                    </span>
+
+                    <div style={{ fontSize: '11.5px', color: '#6E6E73', lineHeight: 1.4 }}>
+                      Masa Aktif: <strong>{activeTier.retentionLabel}</strong>
+                    </div>
+
+                    {/* Benefit Video Wishes vs Voice Note Highlight */}
+                    {isVideoTier ? (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'rgba(194, 120, 3, 0.12)',
+                        padding: '8px 10px',
+                        borderRadius: '10px',
+                        border: '1px solid rgba(194, 120, 3, 0.25)'
+                      }}>
+                        <Video size={16} color="#C27803" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '11.5px', color: '#1D1D1F', fontWeight: 600 }}>
+                          Benefit Spesial Paket {activeTier.name}: Termasuk <strong>Video Ucapan 15 Detik (Reels VHS)</strong> & Pesan Suara Tamu!
+                        </span>
+                      </div>
+                    ) : (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: 'rgba(0, 0, 0, 0.04)',
+                        padding: '7px 10px',
+                        borderRadius: '10px'
+                      }}>
+                        <Mic size={15} color="#C27803" style={{ flexShrink: 0 }} />
+                        <span style={{ fontSize: '11.5px', color: '#6E6E73' }}>
+                          Termasuk <strong>Pesan Suara & Doa Tamu (15 Detik)</strong>. <em>(Video Ucapan 15s eksklusif di Paket Wedding & Unlimited)</em>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Fitur Spesial (Voice Note & Reveal Mode) */}
+                {/* Fitur Spesial (Voice / Video Wish & Reveal Mode) */}
                 <div className="glass-card" style={{ padding: '22px', borderRadius: '20px', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.07)', boxShadow: '0 4px 20px -4px rgba(0,0,0,0.04)', display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <strong style={{ fontSize: '15px', color: '#1D1D1F' }}>Fitur Interaktif Acara</strong>
 
-                  {/* Toggle Voice / Video Wish */}
-                  <div style={{
-                    padding: '14px',
-                    borderRadius: '14px',
-                    background: 'rgba(0,0,0,0.02)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '12px'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
-                      <Mic size={20} color="#C27803" style={{ marginTop: '2px', flexShrink: 0 }} />
-                      <div>
-                        <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>
-                          Pesan Suara & Doa Tamu (15 Detik)
-                        </strong>
-                        <span style={{ fontSize: '11.5px', color: '#86868B', lineHeight: 1.4 }}>
-                          Tamu dapat merekam ucapan selamat lewat mikrofon HP mereka
+                  {/* Dynamic Voice / Video Wish Selector */}
+                  {isVideoTier ? (
+                    <div style={{
+                      padding: '16px',
+                      borderRadius: '16px',
+                      background: 'rgba(194, 120, 3, 0.04)',
+                      border: '1.5px solid rgba(194, 120, 3, 0.22)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                        <div style={{
+                          width: '36px',
+                          height: '36px',
+                          borderRadius: '10px',
+                          background: 'rgba(194, 120, 3, 0.12)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <Video size={18} color="#C27803" />
+                        </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <strong style={{ fontSize: '13.5px', color: '#1D1D1F' }}>
+                              Format Pesan Ucapan Tamu
+                            </strong>
+                            <span style={{ fontSize: '10px', background: '#C27803', color: '#FFF', padding: '1px 6px', borderRadius: '6px', fontWeight: 700 }}>
+                              PAKET {activeTier.name.toUpperCase()}
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '11.5px', color: '#86868B', lineHeight: 1.4, display: 'block', marginTop: '2px' }}>
+                            Pilih format yang akan direkam tamu di akhir kuota roll film mereka
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Video vs Voice Radio Buttons */}
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            hapticLightTap();
+                            setWishType('video');
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '12px',
+                            background: wishType === 'video' ? '#1D1D1F' : '#FFFFFF',
+                            color: wishType === 'video' ? '#FFFFFF' : '#1D1D1F',
+                            border: wishType === 'video' ? '1.5px solid #1D1D1F' : '1px solid rgba(0,0,0,0.1)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '3px',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Video size={14} color={wishType === 'video' ? '#F59E0B' : '#C27803'} />
+                              <strong style={{ fontSize: '12.5px' }}>Video Ucapan</strong>
+                            </div>
+                            <span style={{ fontSize: '9px', background: wishType === 'video' ? '#C27803' : 'rgba(194, 120, 3, 0.1)', color: wishType === 'video' ? '#FFF' : '#C27803', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                              15s REELS
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '10.5px', opacity: 0.8 }}>
+                            Video selfie 15 detik filter VHS
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            hapticLightTap();
+                            setWishType('voice');
+                          }}
+                          style={{
+                            padding: '10px 12px',
+                            borderRadius: '12px',
+                            background: wishType === 'voice' ? '#1D1D1F' : '#FFFFFF',
+                            color: wishType === 'voice' ? '#FFFFFF' : '#1D1D1F',
+                            border: wishType === 'voice' ? '1.5px solid #1D1D1F' : '1px solid rgba(0,0,0,0.1)',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '3px',
+                            transition: 'all 0.15s ease'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <Mic size={14} color={wishType === 'voice' ? '#F59E0B' : '#C27803'} />
+                              <strong style={{ fontSize: '12.5px' }}>Pesan Suara</strong>
+                            </div>
+                            <span style={{ fontSize: '9px', background: wishType === 'voice' ? '#6E6E73' : 'rgba(0,0,0,0.06)', color: wishType === 'voice' ? '#FFF' : '#6E6E73', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                              15s AUDIO
+                            </span>
+                          </div>
+                          <span style={{ fontSize: '10.5px', opacity: 0.8 }}>
+                            Rekaman suara ucapan via mic
+                          </span>
+                        </button>
+                      </div>
+
+                      {/* Toggle On / Off */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '4px', borderTop: '1px solid rgba(194, 120, 3, 0.15)' }}>
+                        <span style={{ fontSize: '11.5px', color: '#6E6E73' }}>
+                          {wishType !== 'none' ? 'Fitur ucapan tamu aktif' : 'Fitur ucapan tamu dinonaktifkan'}
                         </span>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#1D1D1F', cursor: 'pointer' }}>
+                          <input
+                            type="checkbox"
+                            checked={wishType !== 'none'}
+                            onChange={(e) => {
+                              hapticToggle();
+                              setWishType(e.target.checked ? 'video' : 'none');
+                            }}
+                            style={{ width: '18px', height: '18px', accentColor: '#C27803' }}
+                          />
+                          <span>{wishType !== 'none' ? 'Aktif' : 'Nonaktif'}</span>
+                        </label>
                       </div>
                     </div>
-                    <input
-                      type="checkbox"
-                      checked={allowVoiceNote}
-                      onChange={(e) => {
-                        hapticToggle();
-                        setAllowVoiceNote(e.target.checked);
-                      }}
-                      style={{ width: '20px', height: '20px', accentColor: '#C27803', cursor: 'pointer' }}
-                    />
-                  </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {/* Toggle Pesan Suara */}
+                      <div style={{
+                        padding: '14px',
+                        borderRadius: '14px',
+                        background: 'rgba(0,0,0,0.02)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                          <Mic size={20} color="#C27803" style={{ marginTop: '2px', flexShrink: 0 }} />
+                          <div>
+                            <strong style={{ fontSize: '13px', color: '#1D1D1F', display: 'block' }}>
+                              Pesan Suara & Doa Tamu (15 Detik)
+                            </strong>
+                            <span style={{ fontSize: '11.5px', color: '#86868B', lineHeight: 1.4 }}>
+                              Tamu dapat merekam ucapan selamat lewat mikrofon HP mereka saat roll film habis
+                            </span>
+                          </div>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={wishType !== 'none'}
+                          onChange={(e) => {
+                            hapticToggle();
+                            setWishType(e.target.checked ? 'voice' : 'none');
+                          }}
+                          style={{ width: '20px', height: '20px', accentColor: '#C27803', cursor: 'pointer' }}
+                        />
+                      </div>
+
+                      {/* Upgrade Banner ke Video Wishes */}
+                      <div style={{
+                        padding: '12px 14px',
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, rgba(194, 120, 3, 0.08) 0%, rgba(245, 158, 11, 0.04) 100%)',
+                        border: '1px dashed rgba(194, 120, 3, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        gap: '12px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Video size={18} color="#C27803" style={{ flexShrink: 0 }} />
+                          <div>
+                            <strong style={{ fontSize: '12px', color: '#1D1D1F', display: 'block' }}>
+                              Mau Tamu Bisa Merekam Video Ucapan 15s (Reels VHS)?
+                            </strong>
+                            <span style={{ fontSize: '11px', color: '#6E6E73' }}>
+                              Fitur video selfie 15 detik tersedia mulai Paket Wedding (Hingga 300 Tamu).
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            hapticDialClick();
+                            setSelectedTier('wedding');
+                            setWishType('video');
+                          }}
+                          style={{
+                            padding: '7px 12px',
+                            borderRadius: '8px',
+                            background: '#1D1D1F',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            fontSize: '11.5px',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap'
+                          }}
+                        >
+                          Pilih Wedding
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Reveal Mode (Cuci Film Analog) */}
                   <div style={{
@@ -1757,6 +1977,13 @@ function CreateEventForm() {
                       <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', display: 'block' }}>REVEAL MODE</span>
                       <strong style={{ fontSize: '13px' }}>
                         {revealMode === 'instant' ? 'Tayang Instan' : 'Cuci Roll Film'}
+                      </strong>
+                    </div>
+
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', display: 'block' }}>FITUR UCAPAN TAMU</span>
+                      <strong style={{ fontSize: '12.5px', color: wishType === 'video' ? '#F59E0B' : '#FFF' }}>
+                        {wishType === 'video' ? '🎥 Video Ucapan 15s (Reels VHS) & Suara' : wishType === 'voice' ? '🎙️ Pesan Suara 15s' : 'Nonaktif'}
                       </strong>
                     </div>
                   </div>
