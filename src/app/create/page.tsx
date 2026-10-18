@@ -618,7 +618,7 @@ function CreateEventForm() {
       </header>
 
       {/* Main Multi-Step Container */}
-      <main style={{ maxWidth: '680px', margin: '0 auto', width: '100%', padding: '24px 20px 120px', position: 'relative', zIndex: 1, flex: 1 }}>
+      <main style={{ maxWidth: currentStep === 2 ? '1040px' : '720px', margin: '0 auto', width: '100%', padding: '24px 20px 120px', position: 'relative', zIndex: 1, flex: 1, transition: 'max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
 
         {/* Vendor Mode Banner if Active */}
         {isVendor && currentUser && (
@@ -1193,6 +1193,7 @@ function CreateEventForm() {
                     initialTagline={frameText}
                     initialAllowGuestToggle={allowGuestFrameToggle}
                     eventType={eventType as any}
+                    activeFilmPreset={primaryPreset}
                     onUpdate={(data) => {
                       if (data.frameId) setFrameId(data.frameId);
                       if (data.customFrameUrl !== undefined) setCustomFrameUrl(data.customFrameUrl);

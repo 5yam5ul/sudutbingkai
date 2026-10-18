@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { FRAME_TEMPLATES, FrameId, applyFrameToCanvas } from '@/lib/frames';
+import { applyAnalogFilterToCanvas } from '@/lib/filters';
+import { FilmPresetId } from '@/lib/types';
 import { Upload, Image as ImageIcon, HelpCircle, Check, Sliders, Info, Download, Heart, Camera, Film, PartyPopper, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { authFetch } from '@/lib/auth';
 import { toast } from 'sonner';
@@ -15,6 +17,7 @@ interface FrameCustomizerProps {
   initialAllowGuestToggle?: boolean;
   initialSampleModel?: 'couple' | 'guests';
   eventType?: 'wedding' | 'birthday' | 'corporate' | 'other';
+  activeFilmPreset?: FilmPresetId;
   onUpdate: (data: {
     frameId: FrameId;
     customFrameUrl?: string;
@@ -36,6 +39,7 @@ export default function FrameCustomizer({
   initialAllowGuestToggle = true,
   initialSampleModel = 'couple',
   eventType = 'wedding',
+  activeFilmPreset = 'portra',
   onUpdate
 }: FrameCustomizerProps) {
   const defaultTaglineForType =
@@ -178,7 +182,7 @@ export default function FrameCustomizer({
       isDateEdited
     });
     renderLivePreview();
-  }, [selectedFrame, customFrameUrl, coupleName, eventDate, tagline, allowGuestToggle, sampleModel, isCoupleEdited, isDateEdited]);
+  }, [selectedFrame, customFrameUrl, coupleName, eventDate, tagline, allowGuestToggle, sampleModel, isCoupleEdited, isDateEdited, activeFilmPreset]);
 
   // Draw simulated live preview on canvas using REAL DUMMY PHOTOS
   const renderLivePreview = async () => {
@@ -225,6 +229,11 @@ export default function FrameCustomizer({
       }
 
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+
+      // Apply selected analog film filter curves, grain & tone
+      if (activeFilmPreset) {
+        applyAnalogFilterToCanvas(canvas, ctx, activeFilmPreset, false);
+      }
     } else {
       // Fallback elegant dark slate background
       ctx.fillStyle = '#1D1D1F';
