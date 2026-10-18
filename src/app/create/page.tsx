@@ -549,7 +549,7 @@ function CreateEventForm() {
         borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
         padding: '14px 20px'
       }}>
-        <div style={{ maxWidth: '680px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: currentStep === 2 ? '1040px' : '720px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', transition: 'max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           <Link href={isVendor ? "/vendor?tab=clients" : "/"} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '6px', color: '#6E6E73' }}>
             <ArrowLeft size={16} />
             <span style={{ fontSize: '13px', fontWeight: 500 }}>
@@ -567,7 +567,7 @@ function CreateEventForm() {
         </div>
 
         {/* Stepper Progress Bar (Invistory Style) */}
-        <div style={{ maxWidth: '680px', margin: '12px auto 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ maxWidth: currentStep === 2 ? '1040px' : '720px', margin: '12px auto 0', display: 'flex', alignItems: 'center', gap: '6px', transition: 'max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           {stepsList.map((s) => {
             const isActive = currentStep === s.num;
             const isCompleted = currentStep > s.num;
@@ -1633,7 +1633,7 @@ function CreateEventForm() {
         borderTop: '1px solid rgba(0, 0, 0, 0.08)',
         padding: '14px 20px'
       }}>
-        <div style={{ maxWidth: '680px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+        <div style={{ maxWidth: currentStep === 2 ? '1040px' : '720px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', transition: 'max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1)' }}>
           
           {/* Back Button (Only for Step 2, 3, 4) */}
           {currentStep > 1 ? (
