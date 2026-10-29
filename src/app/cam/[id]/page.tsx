@@ -33,6 +33,7 @@ import { formatSafeMediaUrl } from '@/lib/media-url';
 import ConfirmModal from '@/components/ConfirmModal';
 import VideoWishRecorder from '@/components/VideoWishRecorder';
 import FilmPresetDrawer from '@/components/FilmPresetDrawer';
+import PhotostripModal from '@/components/PhotostripModal';
 
 interface GuestPhoto {
   id: string;
@@ -146,6 +147,7 @@ export default function GuestCameraPage() {
   const [selectedPreset, setSelectedPreset] = useState<FilmPresetId>('portra');
   const [isPresetDrawerOpen, setIsPresetDrawerOpen] = useState(false);
   const [isSoundMuted, setIsSoundMuted] = useState(false);
+  const [isPhotostripOpen, setIsPhotostripOpen] = useState(false);
 
   // Point 5: Offline queue status
   const [offlineCount, setOfflineCount] = useState(0);
@@ -3502,6 +3504,32 @@ export default function GuestCameraPage() {
                 <span>Buka & Simpan Foto Saya ({Math.max(shotCount, myPhotos.length)})</span>
               </button>
 
+              {myPhotos.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setIsPhotostripOpen(true)}
+                  style={{
+                    background: 'rgba(194, 120, 3, 0.16)',
+                    border: '1.5px solid rgba(194, 120, 3, 0.65)',
+                    color: '#F59E0B',
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '999px',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 16px rgba(194, 120, 3, 0.2)'
+                  }}
+                >
+                  <Film size={16} color="#F59E0B" />
+                  <span>Cetak Photostrip 4-Frame (Life Four Cuts)</span>
+                </button>
+              )}
+
               <Link
                 href={`/event/${event?.slug || eventId}`}
                 style={{
@@ -3976,6 +4004,19 @@ export default function GuestCameraPage() {
           }}
           canSwitch={canSwitchPresets && availablePresets.length > 1}
         />
+
+        <PhotostripModal
+          isOpen={isPhotostripOpen}
+          onClose={() => setIsPhotostripOpen(false)}
+          availablePhotos={myPhotos.map((p, idx) => ({
+            id: p.id,
+            url: p.imageData,
+            shotNumber: p.shotNumber || idx + 1
+          }))}
+          eventTitle={event?.title || 'SudutBingkai Event'}
+          coupleOrHost={event?.coupleOrHost}
+          dateStr={event?.eventDate ? new Date(event.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined}
+        />
       </div>
     );
   }
@@ -4011,6 +4052,19 @@ export default function GuestCameraPage() {
           toast.success(`Rol film diubah ke ${FILM_PRESETS[newPreset]?.name || newPreset}`);
         }}
         canSwitch={canSwitchPresets && availablePresets.length > 1}
+      />
+
+      <PhotostripModal
+        isOpen={isPhotostripOpen}
+        onClose={() => setIsPhotostripOpen(false)}
+        availablePhotos={myPhotos.map((p, idx) => ({
+          id: p.id,
+          url: p.imageData,
+          shotNumber: p.shotNumber || idx + 1
+        }))}
+        eventTitle={event?.title || 'SudutBingkai Event'}
+        coupleOrHost={event?.coupleOrHost}
+        dateStr={event?.eventDate ? new Date(event.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined}
       />
     </div>
   );

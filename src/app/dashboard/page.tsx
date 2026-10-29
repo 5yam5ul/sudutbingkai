@@ -13,7 +13,9 @@ import FrameCustomizer from '@/components/FrameCustomizer';
 import ConfirmModal from '@/components/ConfirmModal';
 import SkeletonLoader from '@/components/SkeletonLoader';
 import VideoWishStoriesPlayer from '@/components/VideoWishStoriesPlayer';
+import VoiceWaveformPlayer from '@/components/VoiceWaveformPlayer';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
+import PhotostripModal from '@/components/PhotostripModal';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 
@@ -59,6 +61,7 @@ export default function BrideDashboardPage() {
   const [filterTab, setFilterTab] = useState<'all' | 'visible' | 'hidden' | 'wishes'>('all');
   const [activePhoto, setActivePhoto] = useState<PhotoRecord | null>(null);
   const [copied, setCopied] = useState(false);
+  const [isPhotostripOpen, setIsPhotostripOpen] = useState(false);
 
   // Pending Payment Modal State
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -1301,16 +1304,41 @@ export default function BrideDashboardPage() {
           </div>
 
           {activeTab === 'photos' && gallerySubTab === 'photos' && (
-            <button
-              onClick={downloadAllPhotosAsZip}
-              disabled={isZipping || photos.length === 0}
-              className="btn-apple-black"
-              style={{ padding: '8px 16px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: isZipping ? 'wait' : 'pointer' }}
-            >
-              {isZipping ? <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={13} />}
-              <span className="desktop-only">{isZipping ? zipProgress : 'Unduh Semua Foto (.ZIP)'}</span>
-              <span className="mobile-only">{isZipping ? zipProgress : 'Unduh ZIP'}</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setIsPhotostripOpen(true)}
+                disabled={photos.length === 0}
+                className="glass-pill"
+                style={{
+                  padding: '8px 14px',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: photos.length === 0 ? 'not-allowed' : 'pointer',
+                  color: '#C27803',
+                  background: 'rgba(194, 120, 3, 0.12)',
+                  border: '1px solid rgba(194, 120, 3, 0.25)'
+                }}
+              >
+                <Film size={13} />
+                <span className="desktop-only">Buat Photostrip 4-Frame</span>
+                <span className="mobile-only">Photostrip</span>
+              </button>
+
+              <button
+                onClick={downloadAllPhotosAsZip}
+                disabled={isZipping || photos.length === 0}
+                className="btn-apple-black"
+                style={{ padding: '8px 16px', fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '6px', cursor: isZipping ? 'wait' : 'pointer' }}
+              >
+                {isZipping ? <RefreshCw size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Download size={13} />}
+                <span className="desktop-only">{isZipping ? zipProgress : 'Unduh Semua Foto (.ZIP)'}</span>
+                <span className="mobile-only">{isZipping ? zipProgress : 'Unduh ZIP'}</span>
+              </button>
+            </div>
           )}
         </div>
 
@@ -1639,11 +1667,11 @@ export default function BrideDashboardPage() {
                           </div>
                         </div>
 
-                        {/* Audio Player */}
-                        <audio
-                          controls
-                          src={note.audioUrl}
-                          style={{ width: '100%', height: '40px', borderRadius: '12px' }}
+                        {/* Audio Waveform Player */}
+                        <VoiceWaveformPlayer
+                          audioUrl={note.audioUrl}
+                          guestName={note.guestName}
+                          duration={note.duration}
                         />
                       </div>
                     ))}
@@ -3335,6 +3363,20 @@ export default function BrideDashboardPage() {
         amount={pendingPaymentData?.amount || 499000}
         invoiceId={event ? `inv_${event.id}` : undefined}
         isSimulation={pendingPaymentData?.isSimulation}
+      />
+
+      {/* Photostrip 4-Frame Modal */}
+      <PhotostripModal
+        isOpen={isPhotostripOpen}
+        onClose={() => setIsPhotostripOpen(false)}
+        availablePhotos={photos.map(p => ({
+          id: p.id,
+          url: formatSafeMediaUrl(p.imageData),
+          shotNumber: p.shotNumber
+        }))}
+        eventTitle={event?.title || 'SudutBingkai Event'}
+        coupleOrHost={event?.coupleOrHost}
+        dateStr={event?.eventDate ? new Date(event.eventDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) : undefined}
       />
     </div>
   );

@@ -15,6 +15,7 @@ import {
 import { EventData, resolveEventCategory } from '@/lib/types';
 import { authFetch, getClientSession, isSameVendorId } from '@/lib/auth';
 import { formatSafeMediaUrl } from '@/lib/media-url';
+import CustomStyledQrCode from '@/components/CustomStyledQrCode';
 
 type CardFormat = 'tent' | 'standing' | 'mini';
 type CardTheme = 'cream' | 'kraft' | 'charcoal';
@@ -2157,12 +2158,22 @@ export default function PrintTableCardPage() {
               </p>
             </div>
 
-            {/* QR Code Preview */}
+            {/* Custom Styled Monogram QR Code Preview */}
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '22px' }}>
-              <div style={{ padding: '14px', background: '#FAF8F5', borderRadius: '16px', border: '1px solid rgba(0,0,0,0.08)' }}>
-                {qrDataUrl && (
+              <div style={{ padding: '16px', background: '#FAF8F5', borderRadius: '20px', border: '1px solid rgba(0,0,0,0.08)' }}>
+                {guestCameraUrl ? (
+                  <CustomStyledQrCode
+                    url={guestCameraUrl}
+                    size={200}
+                    dotType="rounded"
+                    cornerType="extra-rounded"
+                    primaryColor="#1D1D1F"
+                    accentColor="#C27803"
+                    showDownloadButtons={true}
+                  />
+                ) : qrDataUrl ? (
                   <img src={qrDataUrl} alt="QR Code" width={180} height={180} style={{ display: 'block', borderRadius: '8px' }} />
-                )}
+                ) : null}
               </div>
             </div>
 
@@ -2183,7 +2194,7 @@ export default function PrintTableCardPage() {
                 }}
               >
                 <Download size={15} />
-                <span>Unduh PNG Resolusi Tinggi (1000 x 1000 px)</span>
+                <span>Unduh Standar PNG (1000 x 1000 px)</span>
               </button>
 
               <button
@@ -2205,7 +2216,7 @@ export default function PrintTableCardPage() {
                 }}
               >
                 <Download size={15} />
-                <span>Unduh Vektor SVG (Untuk Canva & Illustrator)</span>
+                <span>Unduh Vektor SVG Standar</span>
               </button>
 
               <button

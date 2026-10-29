@@ -16,6 +16,7 @@ import { getClientSession, clearClientSession, getSignedClientToken, authFetch }
 import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, VoiceNoteRecord, getEventRetentionInfo } from '@/lib/types';
 import { formatSafeMediaUrl } from '@/lib/media-url';
 import ConfirmModal from '@/components/ConfirmModal';
+import VoiceWaveformPlayer from '@/components/VoiceWaveformPlayer';
 import { toast } from 'sonner';
 
 export type AdminTab = 'overview' | 'events' | 'hosts' | 'moderation' | 'vendors' | 'invoices' | 'payouts' | 'testimonials' | 'addons';
@@ -3097,7 +3098,11 @@ export default function SuperAdminDashboard() {
                           </div>
                         </div>
 
-                        <audio controls src={safeAudioUrl} style={{ width: '100%', height: '36px', borderRadius: '8px' }} />
+                        <VoiceWaveformPlayer
+                          audioUrl={safeAudioUrl}
+                          guestName={v.guestName}
+                          duration={v.duration}
+                        />
 
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <a
