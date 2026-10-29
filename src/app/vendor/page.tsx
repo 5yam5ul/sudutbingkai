@@ -8,12 +8,12 @@ import {
   ExternalLink, ArrowRight, Check, Sliders, LogOut, 
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
-  CreditCard, Wallet, Share2, Video, Film, PlayCircle,
+  CreditCard, Wallet, Share2, Video, Film, PlayCircle, FolderHeart,
   Printer, Tv, Eye, Award, X, AlertTriangle, Calendar, MapPin, Mail, Lightbulb, Clock,
   Heart, ChevronDown, ChevronUp, Shield, FileX,
   Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic
 } from 'lucide-react';
-import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo, PACKAGE_TIERS, EventPackageTier, resolveEventCategory, getEventCategoryMeta } from '@/lib/types';
+import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo, PACKAGE_TIERS, EventPackageTier, resolveEventCategory, getEventCategoryMeta, VendorProofingSession } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, authFetch, isSameVendorId } from '@/lib/auth';
 import { formatSafeMediaUrl } from '@/lib/media-url';
 import ConfirmModal from '@/components/ConfirmModal';
@@ -70,7 +70,17 @@ export default function VendorPortalPage() {
     email: '',
     role: 'vendor'
   });
-  const [activeTab, setActiveTab] = useState<'wallet' | 'clients' | 'branding' | 'testimonials' | 'marketing'>('wallet');
+  const [activeTab, setActiveTab] = useState<'wallet' | 'clients' | 'proofing' | 'branding' | 'testimonials' | 'marketing'>('wallet');
+
+  // Vendor Client Proofing Portal State
+  const [proofings, setProofings] = useState<VendorProofingSession[]>([]);
+  const [loadingProofings, setLoadingProofings] = useState(false);
+  const [createProofingModalOpen, setCreateProofingModalOpen] = useState(false);
+  const [newProofingClient, setNewProofingClient] = useState('');
+  const [newProofingGdrive, setNewProofingGdrive] = useState('');
+  const [newProofingQuota, setNewProofingQuota] = useState(50);
+  const [isCreatingProofing, setIsCreatingProofing] = useState(false);
+  const [selectedProofingNotes, setSelectedProofingNotes] = useState<VendorProofingSession | null>(null);
 
   // Partner Testimonial Rewards State
   const [testimonials, setTestimonials] = useState<VideoTestimonialSubmission[]>([]);
@@ -445,6 +455,16 @@ export default function VendorPortalPage() {
         .then(data => {
           if (data.success && data.payouts) {
             setPayoutsList(data.payouts);
+          }
+        })
+        .catch(console.error);
+
+      // Fetch vendor client proofing sessions
+      authFetch(`/api/proofing/session?vendorId=${encodeURIComponent(vendorId)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.proofings) {
+            setProofings(data.proofings);
           }
         })
         .catch(console.error);
@@ -866,6 +886,86 @@ export default function VendorPortalPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Proofing Handlers
+  const handleCreateProofing = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProofingClient.trim() || !newProofingGdrive.trim()) {
+      toast.error('Nama klien dan Link Google Drive wajib diisi.');
+      return;
+    }
+    setIsCreatingProofing(true);
+
+    try {
+      const vendorId = vendor.id || `vendor_${Date.now()}`;
+      const res = await authFetch('/api/proofing/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          vendorId,
+          clientName: newProofingClient.trim(),
+          gdriveFolderId: newProofingGdrive.trim(),
+          quotaLimit: newProofingQuota || 50
+        })
+      });
+      const data = await res.json();
+
+      if (data.success && data.session) {
+        setProofings(prev => [data.session, ...prev]);
+        setCreateProofingModalOpen(false);
+        setNewProofingClient('');
+        setNewProofingGdrive('');
+        setNewProofingQuota(50);
+        toast.success(`Sesi proofing untuk ${data.session.clientName} berhasil dibuat!`);
+      } else {
+        toast.error(data.error || 'Gagal membuat sesi proofing.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    } finally {
+      setIsCreatingProofing(false);
+    }
+  };
+
+  const handleDeleteProofing = async (id: string, name: string) => {
+    if (!confirm(`Hapus sesi proofing ${name}?`)) return;
+    try {
+      const res = await authFetch(`/api/proofing/session?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProofings(prev => prev.filter(p => p.id !== id));
+        toast.success(`Sesi proofing ${name} dihapus.`);
+      } else {
+        toast.error(data.error || 'Gagal menghapus sesi.');
+      }
+    } catch {
+      toast.error('Gagal menghubungi server.');
+    }
+  };
+
+  const handleCopyLightroomFilter = (pSession: VendorProofingSession) => {
+    if (!pSession.selectedPhotos || pSession.selectedPhotos.length === 0) {
+      toast.info('Klien belum memilih foto.');
+      return;
+    }
+    const fileBaseNames = pSession.selectedPhotos.map(p => {
+      const dotIdx = p.name.lastIndexOf('.');
+      return dotIdx > 0 ? p.name.substring(0, dotIdx) : p.name;
+    });
+
+    const query = fileBaseNames.join(', ');
+    navigator.clipboard.writeText(query);
+    toast.success(`${pSession.selectedPhotos.length} nama file disalin! Buka Adobe Lightroom > Filter Library > Paste nama file.`);
+  };
+
+  const handleCopyProofingLink = (slug: string) => {
+    if (typeof window === 'undefined') return;
+    const url = `${window.location.origin}/proof/${slug}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Tautan portal klien berhasil disalin!');
   };
 
   // Partner Commission Calculator Mathematics
@@ -1779,6 +1879,28 @@ export default function VendorPortalPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('proofing')}
+            className="glass-pill"
+            style={{
+              background: activeTab === 'proofing' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
+              color: activeTab === 'proofing' ? '#FFFFFF' : '#1D1D1F',
+              padding: '10px 18px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              whiteSpace: 'nowrap',
+              border: activeTab === 'proofing' ? '1px solid #C27803' : '1px solid rgba(194, 120, 3, 0.3)'
+            }}
+          >
+            <FolderHeart size={14} color="#C27803" />
+            <span className="desktop-only">Portal Proofing Klien ({proofings.length})</span>
+            <span className="mobile-only">Proofing ({proofings.length})</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('branding')}
             className="glass-pill"
             style={{
@@ -2589,6 +2711,250 @@ export default function VendorPortalPage() {
                 )}
               </div>
             </div>
+          </div>
+        )}
+
+        {/* TAB: PORTAL PROOFING FOTO KLIEN */}
+        {activeTab === 'proofing' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+            {/* Header Card */}
+            <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px' }}>
+                <div style={{ maxWidth: '640px' }}>
+                  <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
+                    MODUL PROOFING EKSKLUSIF VENDOR
+                  </span>
+                  <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#1D1D1F', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+                    Portal Pilih Foto Klien & Integrasi Adobe Lightroom
+                  </h2>
+                  <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>
+                    Sajikan ratusan hasil foto kamera dari folder Google Drive Anda ke dalam portal estetik SudutBingkai untuk dipilih klien secara elegan. Salin hasil filter langsung ke Adobe Lightroom hanya dengan 1 klik.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setCreateProofingModalOpen(true)}
+                  className="btn-apple-black"
+                  style={{
+                    padding: '12px 24px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Plus size={16} />
+                  Buat Sesi Proofing Baru
+                </button>
+              </div>
+
+              {/* Workflow Highlights */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '28px', paddingTop: '24px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(194,120,3,0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700, fontSize: '13px' }}>1</div>
+                  <div>
+                    <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 2px 0' }}>Google Drive Milik Anda</h4>
+                    <p style={{ fontSize: '12px', color: '#86868B', margin: 0, lineHeight: 1.4 }}>Paste link folder Drive Anda yang diset &quot;Anyone with the link&quot;.</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(194,120,3,0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700, fontSize: '13px' }}>2</div>
+                  <div>
+                    <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 2px 0' }}>Tampilan Mewah Klien</h4>
+                    <p style={{ fontSize: '12px', color: '#86868B', margin: 0, lineHeight: 1.4 }}>Klien memilih foto dengan kuota, counter odometer, dan watermark proteksi.</p>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '10px', background: 'rgba(194,120,3,0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700, fontSize: '13px' }}>3</div>
+                  <div>
+                    <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 2px 0' }}>1-Klik Filter Lightroom</h4>
+                    <p style={{ fontSize: '12px', color: '#86868B', margin: 0, lineHeight: 1.4 }}>Salin query daftar file untuk langsung difilter di Library Adobe Lightroom.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Proofings List */}
+            {proofings.length === 0 ? (
+              <div className="glass-card" style={{ padding: '64px 32px', textAlign: 'center', borderRadius: '24px' }}>
+                <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(194,120,3,0.08)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto' }}>
+                  <FolderHeart size={26} />
+                </div>
+                <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
+                  Belum Ada Sesi Proofing Klien
+                </h3>
+                <p style={{ fontSize: '13.5px', color: '#86868B', maxWidth: '440px', margin: '0 auto 24px auto', lineHeight: 1.5 }}>
+                  Buat sesi proofing pertama Anda untuk memudahkan klien memilih foto prawedding, wedding, atau album wisuda mereka.
+                </p>
+                <button
+                  onClick={() => setCreateProofingModalOpen(true)}
+                  className="btn-apple-black"
+                  style={{ padding: '11px 22px', fontSize: '13px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+                >
+                  <Plus size={15} /> Buat Sesi Proofing
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '20px' }}>
+                {proofings.map(session => {
+                  const selectedCount = session.selectedPhotos?.length || 0;
+                  const isSubmitted = session.status === 'submitted' || session.status === 'completed';
+
+                  return (
+                    <div
+                      key={session.id}
+                      className="glass-card"
+                      style={{
+                        padding: '24px',
+                        borderRadius: '20px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '18px',
+                        border: isSubmitted ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(0,0,0,0.06)'
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', marginBottom: '12px' }}>
+                          <span
+                            style={{
+                              fontSize: '11px',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em',
+                              padding: '4px 10px',
+                              borderRadius: '999px',
+                              background: isSubmitted ? 'rgba(16, 185, 129, 0.1)' : 'rgba(194, 120, 3, 0.1)',
+                              color: isSubmitted ? '#059669' : '#C27803'
+                            }}
+                          >
+                            {isSubmitted ? 'Selesai Dipilih' : 'Sedang Memilih Foto'}
+                          </span>
+                          <span style={{ fontSize: '12px', color: '#86868B' }}>
+                            {new Date(session.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                          </span>
+                        </div>
+
+                        <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 6px 0' }}>
+                          {session.clientName}
+                        </h3>
+                        <p className="font-mono-film" style={{ fontSize: '12px', color: '#86868B', margin: '0 0 16px 0' }}>
+                          /proof/{session.slug}
+                        </p>
+
+                        <div style={{ background: '#FBFBFA', padding: '12px 14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.04)' }}>
+                          <div>
+                            <span style={{ fontSize: '11px', color: '#86868B', display: 'block' }}>Foto Dipilih</span>
+                            <span style={{ fontSize: '15px', fontWeight: 700, color: '#1D1D1F' }}>
+                              {selectedCount} <span style={{ fontSize: '12px', color: '#86868B', fontWeight: 500 }}>/ {session.quotaLimit} foto</span>
+                            </span>
+                          </div>
+                          {selectedCount > 0 && (
+                            <button
+                              onClick={() => setSelectedProofingNotes(session)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                color: '#C27803',
+                                cursor: 'pointer',
+                                textDecoration: 'underline'
+                              }}
+                            >
+                              Lihat Catatan Klien
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <button
+                            onClick={() => handleCopyProofingLink(session.slug)}
+                            className="glass-pill"
+                            style={{
+                              padding: '9px 12px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <Copy size={13} /> Salin Link Klien
+                          </button>
+                          <a
+                            href={`/proof/${session.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="glass-pill"
+                            style={{
+                              padding: '9px 12px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              cursor: 'pointer',
+                              textDecoration: 'none',
+                              color: '#1D1D1F'
+                            }}
+                          >
+                            <ExternalLink size={13} /> Buka Portal
+                          </a>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '8px' }}>
+                          <button
+                            onClick={() => handleCopyLightroomFilter(session)}
+                            disabled={selectedCount === 0}
+                            className="btn-apple-black"
+                            style={{
+                              padding: '9px 12px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              cursor: selectedCount > 0 ? 'pointer' : 'not-allowed',
+                              opacity: selectedCount > 0 ? 1 : 0.5
+                            }}
+                            title="Salin query nama file untuk difilter di Adobe Lightroom"
+                          >
+                            <Sliders size={13} /> Salin Filter Lightroom
+                          </button>
+                          <button
+                            onClick={() => handleDeleteProofing(session.id, session.clientName)}
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '10px',
+                              background: 'rgba(239, 68, 68, 0.08)',
+                              color: '#DC2626',
+                              border: 'none',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer'
+                            }}
+                            title="Hapus sesi proofing"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -4495,6 +4861,228 @@ export default function VendorPortalPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {/* Modal: Buat Sesi Proofing Baru */}
+      {createProofingModalOpen && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '16px'
+        }}>
+          <div className="glass-card" style={{
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            padding: '32px',
+            maxWidth: '520px',
+            width: '100%',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(194,120,3,0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FolderHeart size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
+                    Buat Sesi Proofing Klien
+                  </h3>
+                  <span style={{ fontSize: '12px', color: '#86868B' }}>Penyajian Google Drive Tanpa Beban Storage</span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCreateProofingModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#86868B' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateProofing} style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+              <div>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+                  Nama Klien / Acara:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newProofingClient}
+                  onChange={(e) => setNewProofingClient(e.target.value)}
+                  placeholder="Contoh: Nabel & Shaka Prewedding"
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '13.5px', outline: 'none' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+                  Link Folder Google Drive:
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={newProofingGdrive}
+                  onChange={(e) => setNewProofingGdrive(e.target.value)}
+                  placeholder="https://drive.google.com/drive/folders/1A4ec8..."
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '13.5px', outline: 'none', fontFamily: 'monospace' }}
+                />
+                <span style={{ fontSize: '11.5px', color: '#86868B', marginTop: '6px', display: 'block', lineHeight: 1.4 }}>
+                  Pastikan izin share folder di Google Drive diset ke <strong>&quot;Anyone with the link / Siapa saja yang memiliki link&quot;</strong>.
+                </span>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
+                  Batas Kuota Foto yang Boleh Dipilih:
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={1000}
+                    required
+                    value={newProofingQuota}
+                    onChange={(e) => setNewProofingQuota(parseInt(e.target.value) || 50)}
+                    style={{ width: '120px', padding: '11px 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '14px', fontWeight: 700, outline: 'none' }}
+                  />
+                  <span style={{ fontSize: '13px', color: '#6E6E73' }}>Foto pilihan klien</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCreateProofingModalOpen(false)}
+                  disabled={isCreatingProofing}
+                  className="glass-pill"
+                  style={{ padding: '11px', fontSize: '13.5px', cursor: 'pointer', textAlign: 'center' }}
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isCreatingProofing}
+                  className="btn-apple-black"
+                  style={{ padding: '11px', fontSize: '13.5px', cursor: 'pointer', textAlign: 'center' }}
+                >
+                  {isCreatingProofing ? 'Membuat Sesi...' : 'Terbitkan Sesi Proofing'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Lihat Catatan Retouch Klien */}
+      {selectedProofingNotes && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.5)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '16px'
+        }}>
+          <div className="glass-card" style={{
+            background: '#FFFFFF',
+            borderRadius: '24px',
+            padding: '32px',
+            maxWidth: '640px',
+            width: '100%',
+            maxHeight: '85vh',
+            display: 'flex',
+            flexDirection: 'column',
+            boxShadow: '0 24px 64px rgba(0,0,0,0.2)'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
+                  Catatan Retouch: {selectedProofingNotes.clientName}
+                </h3>
+                <span style={{ fontSize: '12px', color: '#86868B' }}>
+                  Total {selectedProofingNotes.selectedPhotos?.length || 0} foto dipilih oleh klien
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedProofingNotes(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#86868B' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '12px', paddingRight: '4px' }}>
+              {selectedProofingNotes.selectedPhotos?.length === 0 ? (
+                <p style={{ color: '#86868B', fontSize: '13px', textAlign: 'center', padding: '40px 0' }}>
+                  Belum ada foto yang dipilih oleh klien.
+                </p>
+              ) : (
+                selectedProofingNotes.selectedPhotos?.map((item, idx) => (
+                  <div
+                    key={item.id}
+                    style={{
+                      padding: '14px 16px',
+                      borderRadius: '14px',
+                      background: '#FBFBFA',
+                      border: '1px solid rgba(0,0,0,0.06)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span className="font-mono-film" style={{ fontSize: '13px', fontWeight: 700, color: '#1D1D1F' }}>
+                        #{idx + 1} &middot; {item.name}
+                      </span>
+                      {item.folderName && (
+                        <span style={{ fontSize: '11px', color: '#86868B', background: 'rgba(0,0,0,0.04)', padding: '2px 8px', borderRadius: '6px' }}>
+                          {item.folderName}
+                        </span>
+                      )}
+                    </div>
+                    {item.notes ? (
+                      <div style={{ fontSize: '12.5px', color: '#C27803', background: 'rgba(194,120,3,0.08)', padding: '8px 12px', borderRadius: '8px', lineHeight: 1.4 }}>
+                        <strong>Catatan Klien:</strong> &quot;{item.notes}&quot;
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '11.5px', color: '#A1A1A6', fontStyle: 'italic' }}>
+                        Tidak ada catatan khusus (retouch standar)
+                      </span>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+              <button
+                type="button"
+                onClick={() => handleCopyLightroomFilter(selectedProofingNotes)}
+                className="btn-apple-black"
+                style={{ padding: '10px 18px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
+              >
+                <Sliders size={14} /> Salin Filter Lightroom
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedProofingNotes(null)}
+                className="glass-pill"
+                style={{ padding: '10px 20px', fontSize: '13px', cursor: 'pointer' }}
+              >
+                Tutup
+              </button>
+            </div>
           </div>
         </div>
       )}

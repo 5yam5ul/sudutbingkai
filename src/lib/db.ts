@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { EventData, EventCategoryType, FilmPresetId, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem, VideoWishRecord, PACKAGE_TIERS, EventPackageTier, resolveEventCategory } from './types';
+import { EventData, EventCategoryType, FilmPresetId, PhotoRecord, InvoiceRecord, PayoutRequest, UserAccount, VideoTestimonialSubmission, EventAddonItem, VideoWishRecord, PACKAGE_TIERS, EventPackageTier, resolveEventCategory, VendorProofingSession } from './types';
 import { supabase, isSupabaseConfigured } from './supabase';
 import { uploadBufferToR2, isR2Configured, deleteFromR2, formatSafeMediaUrl } from './r2';
 import { isSameVendorId } from './auth';
@@ -15,6 +15,7 @@ const TESTIMONIALS_FILE = path.join(DATA_DIR, 'testimonials.json');
 const ADDONS_FILE = path.join(DATA_DIR, 'addons.json');
 const VIDEO_WISHES_FILE = path.join(DATA_DIR, 'video_wishes.json');
 const VOICES_FILE = path.join(DATA_DIR, 'voice_notes.json');
+const PROOFINGS_FILE = path.join(DATA_DIR, 'vendor_proofings.json');
 const PROCESSED_WEBHOOKS_FILE = path.join(DATA_DIR, 'processed_webhooks.json');
 const UPLOADS_DIR = path.join(process.cwd(), 'public', 'uploads');
 const VIDEOS_DIR = path.join(UPLOADS_DIR, 'videos');
@@ -3059,6 +3060,198 @@ export async function markWebhookProcessed(txId: string, details?: any): Promise
     }
   } catch (err) {
     console.warn('markWebhookProcessed local write error:', err);
+  }
+}
+
+// ==========================================
+// VENDOR HELPER
+// ==========================================
+
+export async function getVendorById(vendorId: string): Promise<any | null> {
+  const vendors = await getAllVendors();
+  return vendors.find(v => isSameVendorId(v.id, vendorId)) || null;
+}
+
+// ==========================================
+// VENDOR CLIENT PROOFING MODULE (ZERO R2 STORAGE)
+// ==========================================
+
+export async function getVendorProofings(vendorId?: string): Promise<VendorProofingSession[]> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      let query = supabase.from('vendor_proofings').select('*').order('created_at', { ascending: false });
+      if (vendorId) {
+        query = query.eq('vendor_id', vendorId);
+      }
+      const { data, error } = await query;
+      if (!error && data) {
+        return data.map(d => ({
+          id: d.id,
+          vendorId: d.vendor_id,
+          vendorName: d.vendor_name,
+          vendorLogo: d.vendor_logo,
+          vendorWhatsapp: d.vendor_whatsapp,
+          clientName: d.client_name,
+          slug: d.slug,
+          gdriveFolderId: d.gdrive_folder_id,
+          quotaLimit: d.quota_limit || 50,
+          deadlineAt: d.deadline_at,
+          status: d.status || 'selecting',
+          selectedPhotos: d.selected_photos || [],
+          submittedAt: d.submitted_at,
+          createdAt: d.created_at,
+          updatedAt: d.updated_at
+        }));
+      }
+    } catch (err) {
+      console.warn('getVendorProofings Supabase fallback:', err);
+    }
+  }
+
+  // 2. Local Fallback
+  try {
+    ensureLocalDataFiles();
+    if (fs.existsSync(PROOFINGS_FILE)) {
+      const all: VendorProofingSession[] = JSON.parse(fs.readFileSync(PROOFINGS_FILE, 'utf8') || '[]');
+      if (vendorId) {
+        return all.filter(p => isSameVendorId(p.vendorId, vendorId));
+      }
+      return all;
+    }
+  } catch (err) {
+    console.warn('getVendorProofings local error:', err);
+  }
+  return [];
+}
+
+export async function getProofingBySlugOrId(identifier: string): Promise<VendorProofingSession | null> {
+  if (!identifier) return null;
+  const clean = identifier.trim().toLowerCase();
+
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('vendor_proofings')
+        .select('*')
+        .or(`slug.eq.${clean},id.eq.${identifier}`)
+        .maybeSingle();
+
+      if (!error && data) {
+        return {
+          id: data.id,
+          vendorId: data.vendor_id,
+          vendorName: data.vendor_name,
+          vendorLogo: data.vendor_logo,
+          vendorWhatsapp: data.vendor_whatsapp,
+          clientName: data.client_name,
+          slug: data.slug,
+          gdriveFolderId: data.gdrive_folder_id,
+          quotaLimit: data.quota_limit || 50,
+          deadlineAt: data.deadline_at,
+          status: data.status || 'selecting',
+          selectedPhotos: data.selected_photos || [],
+          submittedAt: data.submitted_at,
+          createdAt: data.created_at,
+          updatedAt: data.updated_at
+        };
+      }
+    } catch (err) {
+      console.warn('getProofingBySlugOrId Supabase fallback:', err);
+    }
+  }
+
+  // 2. Local fallback
+  try {
+    ensureLocalDataFiles();
+    if (fs.existsSync(PROOFINGS_FILE)) {
+      const all: VendorProofingSession[] = JSON.parse(fs.readFileSync(PROOFINGS_FILE, 'utf8') || '[]');
+      const found = all.find(p => p.slug.toLowerCase() === clean || p.id === identifier);
+      if (found) return found;
+    }
+  } catch (err) {
+    console.warn('getProofingBySlugOrId local error:', err);
+  }
+  return null;
+}
+
+export async function saveVendorProofing(session: VendorProofingSession): Promise<VendorProofingSession> {
+  // 1. Try Supabase
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const row = {
+        id: session.id,
+        vendor_id: session.vendorId,
+        client_name: session.clientName,
+        slug: session.slug,
+        gdrive_folder_id: session.gdriveFolderId,
+        quota_limit: session.quotaLimit,
+        deadline_at: session.deadlineAt || null,
+        status: session.status || 'selecting',
+        selected_photos: session.selectedPhotos || [],
+        created_at: session.createdAt,
+        updated_at: session.updatedAt
+      };
+      await supabase.from('vendor_proofings').upsert(row, { onConflict: 'id' });
+    } catch (err) {
+      console.warn('saveVendorProofing Supabase fallback:', err);
+    }
+  }
+
+  // 2. Local fallback
+  try {
+    ensureLocalDataFiles();
+    let all: VendorProofingSession[] = [];
+    if (fs.existsSync(PROOFINGS_FILE)) {
+      all = JSON.parse(fs.readFileSync(PROOFINGS_FILE, 'utf8') || '[]');
+    }
+    const idx = all.findIndex(p => p.id === session.id);
+    if (idx >= 0) {
+      all[idx] = session;
+    } else {
+      all.unshift(session);
+    }
+    fs.writeFileSync(PROOFINGS_FILE, JSON.stringify(all, null, 2), 'utf8');
+  } catch (err) {
+    console.warn('saveVendorProofing local error:', err);
+  }
+
+  return session;
+}
+
+export async function updateVendorProofing(id: string, updates: Partial<VendorProofingSession>): Promise<VendorProofingSession | null> {
+  const existing = await getProofingBySlugOrId(id);
+  if (!existing) return null;
+
+  const merged: VendorProofingSession = {
+    ...existing,
+    ...updates,
+    updatedAt: new Date().toISOString()
+  };
+
+  return await saveVendorProofing(merged);
+}
+
+export async function deleteVendorProofing(id: string): Promise<boolean> {
+  if (isSupabaseConfigured && supabase) {
+    try {
+      await supabase.from('vendor_proofings').delete().eq('id', id);
+    } catch (err) {
+      console.warn('deleteVendorProofing Supabase fallback:', err);
+    }
+  }
+
+  try {
+    ensureLocalDataFiles();
+    if (fs.existsSync(PROOFINGS_FILE)) {
+      let all: VendorProofingSession[] = JSON.parse(fs.readFileSync(PROOFINGS_FILE, 'utf8') || '[]');
+      all = all.filter(p => p.id !== id && p.slug !== id);
+      fs.writeFileSync(PROOFINGS_FILE, JSON.stringify(all, null, 2), 'utf8');
+    }
+    return true;
+  } catch {
+    return false;
   }
 }
 

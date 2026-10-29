@@ -552,3 +552,31 @@ export interface EventAddonItem {
   createdAt?: string;
 }
 
+export interface ProofingSelectedItem {
+  id: string;
+  name: string;
+  folderName?: string;
+  url?: string;
+  note?: string;
+  notes?: string;
+}
+
+export interface VendorProofingSession {
+  id: string;
+  vendorId: string;
+  vendorName?: string;
+  vendorLogo?: string;
+  vendorWhatsapp?: string;
+  clientName: string;
+  slug: string;
+  gdriveFolderId: string;
+  quotaLimit: number;
+  deadlineAt?: string;
+  status: 'selecting' | 'submitted' | 'completed';
+  selectedPhotos: ProofingSelectedItem[];
+  submittedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+
