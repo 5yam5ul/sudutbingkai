@@ -567,6 +567,8 @@ export interface VendorProofingSession {
   vendorName?: string;
   vendorLogo?: string;
   vendorWhatsapp?: string;
+  vendorInstagram?: string;
+  referralCode?: string;
   clientName: string;
   slug: string;
   gdriveFolderId: string;

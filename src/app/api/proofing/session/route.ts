@@ -26,9 +26,11 @@ export async function GET(request: Request) {
       const vendor = await getVendorById(session.vendorId);
       const enriched: VendorProofingSession = {
         ...session,
-        vendorName: vendor?.brandName || vendor?.name || session.vendorName || 'Studio Fotografi',
+        vendorName: vendor?.brandName || vendor?.companyName || vendor?.name || session.vendorName || 'Studio Fotografi',
         vendorLogo: vendor?.logoUrl || session.vendorLogo,
-        vendorWhatsapp: vendor?.whatsapp || session.vendorWhatsapp
+        vendorWhatsapp: vendor?.whatsapp || vendor?.phone || session.vendorWhatsapp,
+        vendorInstagram: vendor?.instagram || session.vendorInstagram,
+        referralCode: vendor?.referralCode || session.referralCode
       };
 
       return NextResponse.json({ success: true, session: enriched });
@@ -78,9 +80,11 @@ export async function POST(request: Request) {
     const newSession: VendorProofingSession = {
       id: `prf_${Date.now()}_${randomSuffix}`,
       vendorId,
-      vendorName: vendor?.brandName || vendor?.name || 'Studio Fotografi',
+      vendorName: vendor?.brandName || vendor?.companyName || vendor?.name || 'Studio Fotografi',
       vendorLogo: vendor?.logoUrl,
-      vendorWhatsapp: vendor?.whatsapp,
+      vendorWhatsapp: vendor?.whatsapp || vendor?.phone,
+      vendorInstagram: vendor?.instagram,
+      referralCode: vendor?.referralCode,
       clientName: clientName.trim(),
       slug: finalSlug,
       gdriveFolderId: cleanFolderId,

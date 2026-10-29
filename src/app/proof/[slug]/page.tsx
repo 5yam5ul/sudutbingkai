@@ -7,7 +7,7 @@ import {
   Check, ChevronLeft, ChevronRight, Download,
   Folder, FolderOpen, Heart, MessageSquare, RefreshCw,
   Send, Sliders, X, ZoomIn, Camera, AlertCircle, FileText,
-  Lock, ShieldCheck, CheckCircle2
+  Lock, ShieldCheck, CheckCircle2, BadgeCheck, ExternalLink, MessageCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { VendorProofingSession, ProofingSelectedItem } from '@/lib/types';
@@ -335,27 +335,27 @@ export default function ClientProofingPage() {
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#FBFBFA', color: '#1D1D1F' }}>
       
-      {/* 1. TOP NAVBAR BRANDING */}
+      {/* 1. TOP NAVBAR BRANDING & CO-BRANDED BADGE */}
       <header
         style={{
           position: 'sticky',
           top: 0,
           zIndex: 40,
-          background: 'rgba(255, 255, 255, 0.88)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
+          background: 'rgba(255, 255, 255, 0.92)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
           borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
           padding: '12px 24px'
         }}
       >
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-          {/* Studio Brand */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+          {/* Studio Brand + Co-Branding */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', minWidth: 0 }}>
             {session.vendorLogo ? (
               <img
                 src={formatSafeMediaUrl(session.vendorLogo)}
                 alt={session.vendorName || 'Studio'}
-                style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.1)', flexShrink: 0 }}
+                style={{ width: '42px', height: '42px', borderRadius: '12px', objectFit: 'cover', border: '1.5px solid #C27803', boxShadow: '0 2px 8px rgba(194,120,3,0.15)', flexShrink: 0 }}
               />
             ) : (
               <div 
@@ -363,24 +363,56 @@ export default function ClientProofingPage() {
                   width: '42px',
                   height: '42px',
                   borderRadius: '12px',
-                  background: '#1D1D1F',
+                  background: 'linear-gradient(135deg, #1D1D1F 0%, #2D2D30 100%)',
                   color: '#C27803',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  flexShrink: 0
+                  flexShrink: 0,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
                 }}
               >
                 <Camera size={20} />
               </div>
             )}
-            <div style={{ minWidth: 0 }}>
-              <span className="font-mono-film" style={{ fontSize: '11px', color: '#C27803', textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>
-                {session.vendorName || 'STUDIO FOTOGRAFI'}
-              </span>
-              <h1 style={{ fontSize: '16px', fontWeight: 700, color: '#1D1D1F', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {session.clientName}
-              </h1>
+            
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flexWrap: 'wrap' }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontSize: '15px', fontWeight: 800, color: '#1D1D1F', whiteSpace: 'nowrap' }}>
+                    {session.vendorName || 'STUDIO FOTOGRAFI'}
+                  </span>
+                  <BadgeCheck size={16} color="#C27803" />
+                </div>
+                <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#86868B', display: 'block' }}>
+                  PORTAL KURASI FOTO KLIEN
+                </span>
+              </div>
+
+              {/* Powered by SudutBingkai Co-Brand Badge */}
+              <a
+                href="https://sudutbingkai.id"
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Teknologi Proofing & Galeri Digital Interaktif oleh SudutBingkai"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 10px',
+                  borderRadius: '999px',
+                  background: 'rgba(194, 120, 3, 0.08)',
+                  border: '1px solid rgba(194, 120, 3, 0.22)',
+                  fontSize: '11px',
+                  fontWeight: 600,
+                  color: '#C27803',
+                  textDecoration: 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span>Powered by SudutBingkai</span>
+                <ExternalLink size={10} />
+              </a>
             </div>
           </div>
 
@@ -389,19 +421,19 @@ export default function ClientProofingPage() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '14px',
-              padding: '8px 18px',
+              gap: '12px',
+              padding: '6px 16px',
               borderRadius: '999px',
               background: '#FFFFFF',
-              border: currentCount >= quota ? '1.5px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
+              border: currentCount >= quota ? '1.5px solid #10B981' : '1px solid rgba(0,0,0,0.08)',
               boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
             }}
           >
             <div style={{ textAlign: 'right' }}>
-              <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B', display: 'block', textTransform: 'uppercase' }}>
+              <span className="font-mono-film" style={{ fontSize: '9.5px', color: '#86868B', display: 'block', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                 KUOTA TERPILIH
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontWeight: 700, fontSize: '16px', fontFamily: 'monospace', color: currentCount >= quota ? '#C27803' : '#1D1D1F' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '3px', fontWeight: 700, fontSize: '15px', fontFamily: 'monospace', color: currentCount >= quota ? '#10B981' : '#1D1D1F' }}>
                 <NumberFlow value={currentCount} format={{ minimumIntegerDigits: 2 }} />
                 <span style={{ color: '#86868B', fontWeight: 500 }}>/ {quota}</span>
               </div>
@@ -410,42 +442,194 @@ export default function ClientProofingPage() {
         </div>
       </header>
 
-      {/* 2. HERO / WELCOME & PROGRESS SECTION */}
-      <section style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '32px 24px 16px' }}>
-        <div className="glass-card" style={{ padding: '28px 32px', borderRadius: '24px', background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(254,249,242,0.7) 100%)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
-            <div style={{ maxWidth: '680px' }}>
-              <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px', fontSize: '12px' }}>
-                PORTAL SELEKSI FOTO EKSKLUSIF
-              </span>
-              <h2 style={{ fontSize: '32px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
-                {session.clientName}
-              </h2>
-              <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>
-                Silakan tandai foto-foto favorit Anda hingga batas <strong>{quota} foto</strong> untuk diproses retouching dan dicetak ke dalam album. Ketuk foto mana saja untuk memperbesar atau memberikan catatan edit khusus.
-              </p>
+      {/* 2. GRAND BESPOKE HERO: VENDOR SPOTLIGHT & CLIENT ALBUM CURATION */}
+      <section style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '36px 24px 20px' }}>
+        <div 
+          className="glass-card" 
+          style={{ 
+            padding: '36px 40px', 
+            borderRadius: '28px', 
+            background: 'linear-gradient(145deg, rgba(255,255,255,0.98) 0%, rgba(253, 248, 240, 0.92) 100%)',
+            border: '1px solid rgba(194, 120, 3, 0.22)',
+            boxShadow: '0 24px 60px -12px rgba(194, 120, 3, 0.12), 0 2px 8px rgba(0,0,0,0.02)'
+          }}
+        >
+          {/* LEVEL 1: VENDOR STUDIO SHOWCASE BILLBOARD */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '20px', paddingBottom: '24px', borderBottom: '1px solid rgba(194, 120, 3, 0.12)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+              {session.vendorLogo ? (
+                <img
+                  src={formatSafeMediaUrl(session.vendorLogo)}
+                  alt={session.vendorName || 'Studio'}
+                  style={{
+                    width: '68px',
+                    height: '68px',
+                    borderRadius: '20px',
+                    objectFit: 'cover',
+                    border: '2.5px solid #C27803',
+                    boxShadow: '0 8px 24px rgba(194, 120, 3, 0.25)',
+                    flexShrink: 0
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: '68px',
+                    height: '68px',
+                    borderRadius: '20px',
+                    background: 'linear-gradient(135deg, #1D1D1F 0%, #2D2D30 100%)',
+                    color: '#C27803',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
+                  }}
+                >
+                  <Camera size={32} />
+                </div>
+              )}
+
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#FFFFFF', background: '#C27803', padding: '3px 9px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    <BadgeCheck size={13} /> MITRA FOTOGRAFI RESMI
+                  </span>
+                  <span className="font-mono-film" style={{ fontSize: '11px', color: '#86868B' }}>
+                    DIKELOLA OLEH STUDIO
+                  </span>
+                </div>
+
+                <h2 style={{ fontSize: '24px', fontWeight: 800, color: '#1D1D1F', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+                  {session.vendorName || 'Studio Fotografi'}
+                </h2>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  {session.vendorInstagram && (
+                    <a
+                      href={`https://instagram.com/${session.vendorInstagram.replace('@', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontSize: '12px',
+                        color: '#C27803',
+                        textDecoration: 'none',
+                        fontWeight: 600,
+                        background: 'rgba(194, 120, 3, 0.08)',
+                        padding: '3px 10px',
+                        borderRadius: '999px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <span>@{session.vendorInstagram.replace('@', '')}</span>
+                      <ExternalLink size={10} />
+                    </a>
+                  )}
+
+                  {session.vendorWhatsapp && (
+                    <a
+                      href={`https://wa.me/${session.vendorWhatsapp.replace(/[^0-9]/g, '').startsWith('0') ? '62' + session.vendorWhatsapp.replace(/[^0-9]/g, '').slice(1) : session.vendorWhatsapp.replace(/[^0-9]/g, '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontSize: '12px',
+                        color: '#059669',
+                        textDecoration: 'none',
+                        fontWeight: 600,
+                        background: 'rgba(16, 185, 129, 0.1)',
+                        padding: '3px 10px',
+                        borderRadius: '999px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <MessageCircle size={12} />
+                      <span>Hubungi Studio</span>
+                    </a>
+                  )}
+                </div>
+              </div>
             </div>
 
-            {/* Quota Progress Pill */}
-            <div style={{ minWidth: '220px', background: '#FFFFFF', padding: '16px 20px', borderRadius: '18px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F' }}>
-                  {currentCount >= quota ? 'Kuota Lengkap' : `${quota - currentCount} Foto Tersisa`}
+            {/* Official Portal Stamp */}
+            <div style={{ textAlign: 'right' }}>
+              <span className="font-mono-film" style={{ fontSize: '10.5px', color: '#C27803', fontWeight: 700, letterSpacing: '0.08em', display: 'block', textTransform: 'uppercase' }}>
+                PORTAL SELEKSI EKSKLUSIF
+              </span>
+              <span style={{ fontSize: '12px', color: '#86868B', display: 'block' }}>
+                Didukung oleh Teknologi SudutBingkai
+              </span>
+            </div>
+          </div>
+
+          {/* LEVEL 2: CLIENT BESPOKE ALBUM & PROGRESS */}
+          <div style={{ paddingTop: '28px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '28px' }}>
+            <div style={{ maxWidth: '680px' }}>
+              <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '8px', fontSize: '12px', letterSpacing: '0.08em' }}>
+                PRIVATE ALBUM SELECTION &bull; BESPOKE CURATION
+              </span>
+              <h1 style={{ fontSize: '36px', fontWeight: 800, color: '#1D1D1F', margin: '0 0 12px 0', letterSpacing: '-0.03em', lineHeight: 1.15 }}>
+                {session.clientName}
+              </h1>
+              <p style={{ color: '#6E6E73', fontSize: '14.5px', lineHeight: 1.6, margin: '0 0 20px 0' }}>
+                Tandai foto-foto terbaik Anda untuk proses retouching warna, tone kulit, dan cetak album mewah. Anda dapat memperbesar foto kapan saja dan menambahkan catatan revisi/retouch per-foto.
+              </p>
+
+              {/* 3 Prestige Pillars */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', padding: '6px 14px', borderRadius: '999px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                  Resolusi Penuh (QHD)
                 </span>
-                <span className="font-mono-film" style={{ fontSize: '12px', fontWeight: 700, color: '#C27803' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', background: '#FFFFFF', border: '1px solid rgba(0,0,0,0.06)', padding: '6px 14px', borderRadius: '999px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                  Instruksi Retouching Per-Foto
+                </span>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#C27803', background: 'rgba(194, 120, 3, 0.08)', border: '1px solid rgba(194, 120, 3, 0.2)', padding: '6px 14px', borderRadius: '999px' }}>
+                  Target Kuota: {quota} Foto
+                </span>
+              </div>
+            </div>
+
+            {/* Quota Progress Gauge Box */}
+            <div 
+              style={{ 
+                minWidth: '260px', 
+                background: '#FFFFFF', 
+                padding: '20px 24px', 
+                borderRadius: '20px', 
+                border: '1px solid rgba(194, 120, 3, 0.18)', 
+                boxShadow: '0 8px 24px rgba(0,0,0,0.04)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: '#1D1D1F' }}>
+                  {currentCount >= quota ? 'Kuota Lengkap Terpenuhi!' : `${quota - currentCount} Foto Lagi`}
+                </span>
+                <span className="font-mono-film" style={{ fontSize: '13px', fontWeight: 800, color: currentCount >= quota ? '#10B981' : '#C27803' }}>
                   {quotaPercent}%
                 </span>
               </div>
-              <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.06)', borderRadius: '999px', overflow: 'hidden' }}>
+
+              <div style={{ width: '100%', height: '10px', background: 'rgba(0,0,0,0.06)', borderRadius: '999px', overflow: 'hidden' }}>
                 <div
                   style={{
                     height: '100%',
                     width: `${quotaPercent}%`,
-                    background: currentCount >= quota ? '#10B981' : '#C27803',
+                    background: currentCount >= quota ? 'linear-gradient(90deg, #10B981, #059669)' : 'linear-gradient(90deg, #F59E0B, #C27803)',
                     borderRadius: '999px',
-                    transition: 'width 0.3s ease'
+                    transition: 'width 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                   }}
                 />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '11.5px', color: '#86868B', paddingTop: '4px' }}>
+                <span>Foto Terpilih: <strong>{currentCount}</strong></span>
+                <span>Batas Album: <strong>{quota}</strong></span>
               </div>
             </div>
           </div>
@@ -653,7 +837,7 @@ export default function ClientProofingPage() {
                       width: '90%'
                     }}
                   >
-                    {session.vendorName || 'STUDIO PROOFING'}
+                    {session.vendorName || 'STUDIO FOTOGRAFI'} &bull; SUDUTBINGKAI PROOFING
                   </div>
 
                   {/* Top Right Badges (Checkmark & Note) */}
@@ -746,6 +930,72 @@ export default function ClientProofingPage() {
           </div>
         )}
       </main>
+
+      {/* VIRAL CO-BRANDING & MARKETING SHOWCASE: POWERED BY SUDUTBINGKAI */}
+      <section style={{ maxWidth: '1280px', margin: '10px auto 40px', padding: '0 24px', width: '100%' }}>
+        <div
+          className="glass-card"
+          style={{
+            background: 'linear-gradient(135deg, #1D1D1F 0%, #29292C 100%)',
+            color: '#FFFFFF',
+            borderRadius: '26px',
+            padding: '38px 42px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '26px',
+            boxShadow: '0 24px 52px -10px rgba(0, 0, 0, 0.25)',
+            border: '1px solid rgba(255, 255, 255, 0.12)'
+          }}
+        >
+          <div style={{ maxWidth: '680px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '11px', fontWeight: 800, letterSpacing: '0.08em', color: '#F59E0B', textTransform: 'uppercase', background: 'rgba(245, 158, 11, 0.18)', padding: '4px 12px', borderRadius: '999px', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                POWERED BY SUDUTBINGKAI
+              </span>
+              <span style={{ fontSize: '12.5px', color: 'rgba(255, 255, 255, 0.65)' }}>
+                &bull; Mitra Resmi {session.vendorName || 'Studio Fotografi'}
+              </span>
+            </div>
+
+            <h3 style={{ fontSize: '24px', fontWeight: 800, margin: '0 0 10px 0', letterSpacing: '-0.02em', color: '#FFFFFF', lineHeight: 1.3 }}>
+              Ingin Seluruh Tamu Ikut Mengabadikan Momen dari Kamera Mereka Sendiri?
+            </h3>
+            <p style={{ fontSize: '14px', color: 'rgba(255, 255, 255, 0.8)', lineHeight: 1.6, margin: 0 }}>
+              Hadirkan <strong>Kamera Tamu Digital SudutBingkai</strong> di momen pernikahan, intimate party, atau gathering Anda. Tamu cukup scan kartu QR di meja tanpa install aplikasi, memotret dengan filter film analog eksklusif, dan seluruh foto langsung masuk ke galeri Anda secara real-time.
+            </p>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-start' }}>
+            <a
+              href={`https://sudutbingkai.id${session.referralCode ? `?ref=${session.referralCode}` : ''}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                background: 'linear-gradient(135deg, #F59E0B 0%, #C27803 100%)',
+                color: '#FFFFFF',
+                padding: '13px 26px',
+                borderRadius: '999px',
+                fontWeight: 700,
+                fontSize: '13.5px',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 8px 24px rgba(194, 120, 3, 0.35)',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              <span>Pelajari Kamera Tamu Digital</span>
+              <ExternalLink size={15} />
+            </a>
+            <span style={{ fontSize: '11px', color: 'rgba(255, 255, 255, 0.5)', paddingLeft: '4px' }}>
+              Tersedia Coba Demo Kamera Gratis
+            </span>
+          </div>
+        </div>
+      </section>
 
       {/* 6. FLOATING BOTTOM BAR (APPLE STYLE) */}
       <footer
@@ -1020,7 +1270,7 @@ export default function ClientProofingPage() {
                   width: '90%'
                 }}
               >
-                {session.vendorName || 'STUDIO PROOFING'}
+                {session.vendorName || 'STUDIO FOTOGRAFI'} &bull; SUDUTBINGKAI PROOFING
               </div>
             </div>
 
