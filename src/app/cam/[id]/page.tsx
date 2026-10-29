@@ -7,14 +7,17 @@ import {
   Zap, ZapOff, RotateCcw, ArrowLeft, ArrowRight, Camera, QrCode as QrIcon, 
   Check, Eye, Download, X, Heart, MessageSquare, CheckCircle2, Film,
   Share2, Layers, Mic, MicOff, Play, Square, WifiOff,
-  Image as ImageIcon, AlertTriangle, Upload, Trash2, Pencil
+  Image as ImageIcon, AlertTriangle, Upload, Trash2, Pencil,
+  Volume2, VolumeX
 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { motion, AnimatePresence } from 'motion/react';
+import NumberFlow from '@number-flow/react';
 import { toast } from 'sonner';
 import { EventData, FilmPresetId, PACKAGE_TIERS, EventPackageTier, getEventRetentionInfo, resolveEventCategory, getEventCategoryMeta } from '@/lib/types';
 import { FILM_PRESETS, applyAnalogFilterToCanvas, applyPhotoEnhancement } from '@/lib/filters';
 import { playAnalogShutterSound, playFilmWindingSound } from '@/lib/audio';
+import { cameraSounds } from '@/lib/sound-effects';
 import { 
   hapticShutterPress, 
   hapticShutterSlap, 
@@ -29,6 +32,7 @@ import { getDeviceFingerprint, isInAppBrowser } from '@/lib/fingerprint';
 import { formatSafeMediaUrl } from '@/lib/media-url';
 import ConfirmModal from '@/components/ConfirmModal';
 import VideoWishRecorder from '@/components/VideoWishRecorder';
+import FilmPresetDrawer from '@/components/FilmPresetDrawer';
 
 interface GuestPhoto {
   id: string;
@@ -140,6 +144,8 @@ export default function GuestCameraPage() {
 
   // Analog Film Preset Selection (defaults to event preset, switchable if host allows)
   const [selectedPreset, setSelectedPreset] = useState<FilmPresetId>('portra');
+  const [isPresetDrawerOpen, setIsPresetDrawerOpen] = useState(false);
+  const [isSoundMuted, setIsSoundMuted] = useState(false);
 
   // Point 5: Offline queue status
   const [offlineCount, setOfflineCount] = useState(0);
@@ -1005,9 +1011,9 @@ export default function GuestCameraPage() {
     }
     setIsCapturing(true);
 
-    // Audio effects: Shutter click + mechanical film winding ratchet
-    playAnalogShutterSound();
-    playFilmWindingSound();
+    // Audio effects: Shutter click + mechanical film winding ratchet (Howler + Web Audio synthesis)
+    cameraSounds.playShutterSound();
+    cameraSounds.playFilmWindingSound();
 
     // Haptic feedback (hentakan rana mekanik analog)
     hapticShutterSlap();
@@ -1766,57 +1772,80 @@ export default function GuestCameraPage() {
             SIMULASI DEMO • LOKAL
           </div>
         )}
-        {/* Flash Mode Minimal Button */}
-        <button
-          onClick={cycleFlashMode}
-          style={{
-            background: flashMode === 'torch'
-              ? '#F59E0B'
-              : flashMode === 'screen'
-                ? 'rgba(245, 158, 11, 0.25)'
-                : 'rgba(255, 255, 255, 0.08)',
-            border: flashMode !== 'off'
-              ? '1.5px solid #F59E0B'
-              : '1px solid rgba(255, 255, 255, 0.18)',
-            width: '38px',
-            height: '38px',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#FFFFFF',
-            cursor: 'pointer',
-            transition: 'all 0.2s ease',
-            boxShadow: flashMode === 'torch'
-              ? '0 0 16px rgba(245, 158, 11, 0.6)'
-              : flashMode === 'screen'
-                ? '0 0 10px rgba(245, 158, 11, 0.3)'
-                : 'none'
-          }}
-          title={flashMode === 'torch' ? 'Senter LED Kamera Aktif (Menyala)' : flashMode === 'screen' ? 'Flash Layar Aktif (Kilat saat jepret)' : 'Flash Mati'}
-        >
-          {flashMode === 'off' ? (
-            <ZapOff size={16} color="#86868B" />
-          ) : flashMode === 'torch' ? (
-            <Zap size={16} fill="#000000" color="#000000" />
-          ) : (
-            <Zap size={16} fill="#F59E0B" color="#F59E0B" />
-          )}
-        </button>
+        {/* Left Controls: Flash & Shutter Sound FX */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Flash Mode Minimal Button */}
+          <button
+            onClick={cycleFlashMode}
+            style={{
+              background: flashMode === 'torch'
+                ? '#F59E0B'
+                : flashMode === 'screen'
+                  ? 'rgba(245, 158, 11, 0.25)'
+                  : 'rgba(255, 255, 255, 0.08)',
+              border: flashMode !== 'off'
+                ? '1.5px solid #F59E0B'
+                : '1px solid rgba(255, 255, 255, 0.18)',
+              width: '38px',
+              height: '38px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#FFFFFF',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              boxShadow: flashMode === 'torch'
+                ? '0 0 16px rgba(245, 158, 11, 0.6)'
+                : flashMode === 'screen'
+                  ? '0 0 10px rgba(245, 158, 11, 0.3)'
+                  : 'none'
+            }}
+            title={flashMode === 'torch' ? 'Senter LED Kamera Aktif (Menyala)' : flashMode === 'screen' ? 'Flash Layar Aktif (Kilat saat jepret)' : 'Flash Mati'}
+          >
+            {flashMode === 'off' ? (
+              <ZapOff size={16} color="#86868B" />
+            ) : flashMode === 'torch' ? (
+              <Zap size={16} fill="#000000" color="#000000" />
+            ) : (
+              <Zap size={16} fill="#F59E0B" color="#F59E0B" />
+            )}
+          </button>
 
-        {/* Center Film Canister Pill */}
+          {/* Sound FX Toggle (Howler / Web Audio analog shutter & winding) */}
+          <button
+            onClick={() => {
+              const muted = cameraSounds.toggleMute();
+              setIsSoundMuted(muted);
+              hapticToggle();
+              toast.info(muted ? 'Efek audio rana dimatikan' : 'Efek audio rana analog aktif');
+            }}
+            style={{
+              background: isSoundMuted ? 'rgba(255, 255, 255, 0.05)' : 'rgba(255, 255, 255, 0.08)',
+              border: isSoundMuted ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(194, 120, 3, 0.45)',
+              width: '38px',
+              height: '38px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: isSoundMuted ? '#86868B' : '#F59E0B',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+            title={isSoundMuted ? 'Suara rana analog mati (ketuk untuk aktifkan)' : 'Suara analog aktif (ketuk untuk bisukan)'}
+          >
+            {isSoundMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          </button>
+        </div>
+
+        {/* Center Film Canister Pill (Taps to open bottom drawer preset selector) */}
         <button
           onClick={() => {
-            if (canSwitchPresets && availablePresets.length > 1) {
-              const currentIndex = availablePresets.indexOf(selectedPreset);
-              const nextIndex = (currentIndex + 1) % availablePresets.length;
-              const nextPreset = availablePresets[nextIndex];
-              hapticDialClick();
-              setSelectedPreset(nextPreset);
-              toast.info(`Film: ${FILM_PRESETS[nextPreset]?.name || nextPreset}`);
-            }
+            hapticDialClick();
+            cameraSounds.playDialTick();
+            setIsPresetDrawerOpen(true);
           }}
-          disabled={!canSwitchPresets || availablePresets.length <= 1}
           style={{
             background: '#1D1B18',
             border: canSwitchPresets && availablePresets.length > 1 ? '1px solid rgba(194, 120, 3, 0.65)' : '1px solid rgba(255, 255, 255, 0.12)',
@@ -1826,21 +1855,23 @@ export default function GuestCameraPage() {
             alignItems: 'center',
             gap: '7px',
             color: '#FFFFFF',
-            cursor: canSwitchPresets && availablePresets.length > 1 ? 'pointer' : 'default',
+            cursor: 'pointer',
             boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.5)'
           }}
-          title={canSwitchPresets ? 'Ketuk untuk ganti film analog' : 'Emulasi film acara'}
+          title={canSwitchPresets && availablePresets.length > 1 ? 'Ketuk untuk pilih rol film analog' : 'Emulasi film resmi acara'}
         >
           <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: presetInfo.accentColor || '#C27803' }} />
           <span className="font-mono-film" style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '0.1em' }}>
             {presetInfo.name.toUpperCase()}
           </span>
-          {canSwitchPresets && availablePresets.length > 1 && (
-            <span style={{ fontSize: '10px', opacity: 0.75, color: '#C27803' }}>⇄</span>
+          {canSwitchPresets && availablePresets.length > 1 ? (
+            <span style={{ fontSize: '10px', opacity: 0.85, color: '#C27803' }}>⇄</span>
+          ) : (
+            <Film size={11} className="opacity-50 text-[#86868B]" />
           )}
         </button>
 
-        {/* Right Controls: Mechanical Frame Counter Window */}
+        {/* Right Controls: Mechanical Frame Counter Window powered by NumberFlow */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
 
           {offlineCount > 0 && (
@@ -1877,26 +1908,18 @@ export default function GuestCameraPage() {
               SISA
             </span>
             <span style={{ height: '16px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span
-                  key={remaining}
-                  initial={{ y: -12, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  exit={{ y: 12, opacity: 0 }}
-                  transition={{ type: 'spring', stiffness: 450, damping: 25 }}
-                  style={{
-                    display: 'block',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '13.5px',
-                    fontWeight: 800,
-                    color: remaining <= 3 ? '#FF6B6B' : '#F59E0B',
-                    lineHeight: 1.1,
-                    letterSpacing: '0.04em'
-                  }}
-                >
-                  {remaining.toString().padStart(2, '0')}
-                </motion.span>
-              </AnimatePresence>
+              <NumberFlow
+                value={remaining}
+                format={{ minimumIntegerDigits: 2 }}
+                style={{
+                  fontFamily: 'var(--font-mono)',
+                  fontSize: '13.5px',
+                  fontWeight: 800,
+                  color: remaining <= 3 ? '#FF6B6B' : '#F59E0B',
+                  lineHeight: 1.1,
+                  letterSpacing: '0.04em'
+                }}
+              />
             </span>
           </div>
         </div>
@@ -3941,6 +3964,18 @@ export default function GuestCameraPage() {
           onConfirm={confirmModal.onConfirm}
           onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
         />
+
+        <FilmPresetDrawer
+          isOpen={isPresetDrawerOpen}
+          onOpenChange={setIsPresetDrawerOpen}
+          selectedPreset={selectedPreset}
+          availablePresets={availablePresets}
+          onSelectPreset={(newPreset) => {
+            setSelectedPreset(newPreset);
+            toast.success(`Rol film diubah ke ${FILM_PRESETS[newPreset]?.name || newPreset}`);
+          }}
+          canSwitch={canSwitchPresets && availablePresets.length > 1}
+        />
       </div>
     );
   }
@@ -3964,6 +3999,18 @@ export default function GuestCameraPage() {
         variant={confirmModal.variant}
         onConfirm={confirmModal.onConfirm}
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+      />
+
+      <FilmPresetDrawer
+        isOpen={isPresetDrawerOpen}
+        onOpenChange={setIsPresetDrawerOpen}
+        selectedPreset={selectedPreset}
+        availablePresets={availablePresets}
+        onSelectPreset={(newPreset) => {
+          setSelectedPreset(newPreset);
+          toast.success(`Rol film diubah ke ${FILM_PRESETS[newPreset]?.name || newPreset}`);
+        }}
+        canSwitch={canSwitchPresets && availablePresets.length > 1}
       />
     </div>
   );
