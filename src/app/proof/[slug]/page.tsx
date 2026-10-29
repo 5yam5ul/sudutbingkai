@@ -2,13 +2,11 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
 import NumberFlow from '@number-flow/react';
 import {
-  Check, CheckCircle2, ChevronLeft, ChevronRight, Download,
-  Folder, FolderOpen, Heart, Layers, MessageSquare, RefreshCw,
-  Search, Send, Share2, Sliders, X, ZoomIn, Camera,
-  AlertCircle, ShieldCheck, Clock, ExternalLink
+  Check, ChevronLeft, ChevronRight, Download,
+  Folder, FolderOpen, Heart, MessageSquare, RefreshCw,
+  Send, Sliders, X, ZoomIn, Camera, AlertCircle, FileText
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { VendorProofingSession, ProofingSelectedItem } from '@/lib/types';
@@ -47,13 +45,11 @@ export default function ClientProofingPage() {
   // Selection state
   const [selectedMap, setSelectedMap] = useState<Map<string, ProofingSelectedItem>>(new Map());
   const [viewFilter, setViewFilter] = useState<'all' | 'selected'>('all');
-  const [gridColumns, setGridColumns] = useState<2 | 4 | 6>(2);
+  const [gridColumns, setGridColumns] = useState<2 | 4 | 6>(4);
   const [sortOrder, setSortOrder] = useState<'default' | 'random'>('default');
 
   // Lightbox state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
-  const touchStartXRef = useRef<number>(0);
-  const touchEndXRef = useRef<number>(0);
 
   // 1. Fetch proofing session data
   useEffect(() => {
@@ -67,14 +63,12 @@ export default function ClientProofingPage() {
           setSession(data.session);
           setCurrentFolderId(data.session.gdriveFolderId);
 
-          // Populate existing selections if any
           const initialMap = new Map<string, ProofingSelectedItem>();
           (data.session.selectedPhotos || []).forEach((item: ProofingSelectedItem) => {
             initialMap.set(item.id, item);
           });
           setSelectedMap(initialMap);
 
-          // Fetch Drive files for the root folder
           loadDriveFolder(data.session.gdriveFolderId, 'Galeri Utama');
         } else {
           toast.error(data.error || 'Sesi proofing tidak ditemukan');
@@ -164,7 +158,8 @@ export default function ClientProofingPage() {
       if (existing) {
         next.set(photoId, {
           ...existing,
-          note: noteText
+          note: noteText,
+          notes: noteText
         });
       }
       return next;
@@ -174,7 +169,6 @@ export default function ClientProofingPage() {
   // Sorting
   const toggleSort = () => {
     if (sortOrder === 'default') {
-      // Shuffle photos
       const shuffled = [...photos];
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -186,7 +180,7 @@ export default function ClientProofingPage() {
     } else {
       setPhotos([...originalPhotos]);
       setSortOrder('default');
-      toast.info('Urutan foto dikembalikan ke default');
+      toast.info('Urutan foto dikembalikan ke awal');
     }
   };
 
@@ -228,7 +222,6 @@ export default function ClientProofingPage() {
       if (data.success) {
         toast.success('Pilihan foto berhasil disimpan!');
 
-        // Format WhatsApp chat message
         const vendorPhone = session.vendorWhatsapp ? session.vendorWhatsapp.replace(/[^0-9]/g, '') : '';
         const studioName = session.vendorName || 'Studio Fotografi';
 
@@ -250,7 +243,6 @@ export default function ClientProofingPage() {
           const cleanPhone = vendorPhone.startsWith('0') ? '62' + vendorPhone.slice(1) : vendorPhone;
           window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`, '_blank');
         } else {
-          // Fallback copy to clipboard
           navigator.clipboard.writeText(waMessage);
           toast.success('Daftar foto disalin! Silakan kirimkan ke WhatsApp studio.');
         }
@@ -311,10 +303,12 @@ export default function ClientProofingPage() {
 
   if (loadingSession) {
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#FBFBFA' }}>
-        <div className="flex flex-col items-center gap-3 text-[#C27803]">
-          <RefreshCw size={32} className="animate-spin" />
-          <span className="font-mono text-[13px] font-bold tracking-wider">MEMUAT PORTAL EKSKLUSIF...</span>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FBFBFA' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', color: '#C27803' }}>
+          <RefreshCw size={36} className="animate-spin" />
+          <span className="font-mono-film" style={{ fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: '#C27803' }}>
+            MEMUAT PORTAL EKSKLUSIF...
+          </span>
         </div>
       </div>
     );
@@ -322,11 +316,13 @@ export default function ClientProofingPage() {
 
   if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 text-center" style={{ background: '#FBFBFA' }}>
-        <div className="glass-card max-w-md p-8 rounded-3xl flex flex-col items-center gap-4">
-          <AlertCircle size={48} className="text-[#C27803]" />
-          <h2 className="text-[20px] font-bold text-[#1D1D1F]">Sesi Proofing Tidak Ditemukan</h2>
-          <p className="text-[14px] text-[#6E6E73] leading-relaxed">
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#FBFBFA' }}>
+        <div className="glass-card" style={{ maxWidth: '440px', padding: '36px', borderRadius: '24px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '56px', height: '56px', borderRadius: '16px', background: 'rgba(194,120,3,0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <AlertCircle size={32} />
+          </div>
+          <h2 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>Sesi Proofing Tidak Ditemukan</h2>
+          <p style={{ fontSize: '14px', color: '#6E6E73', lineHeight: 1.6, margin: 0 }}>
             Tautan ini tidak valid atau telah dihapus oleh pihak studio foto. Silakan hubungi studio Anda untuk konfirmasi tautan.
           </p>
         </div>
@@ -339,115 +335,201 @@ export default function ClientProofingPage() {
   const quotaPercent = Math.min(100, Math.round((currentCount / quota) * 100));
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#FBFBFA', color: '#1D1D1F' }}>
-      {/* 1. TOP HEADER BRANDING */}
-      <header className="sticky top-0 z-40 glass-nav border-b border-black/5 px-4 md:px-8 py-3.5 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-          {/* Vendor Studio Info */}
-          <div className="flex items-center gap-3 min-w-0">
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#FBFBFA', color: '#1D1D1F' }}>
+      
+      {/* 1. TOP NAVBAR BRANDING */}
+      <header
+        style={{
+          position: 'sticky',
+          top: 0,
+          zIndex: 40,
+          background: 'rgba(255, 255, 255, 0.88)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderBottom: '1px solid rgba(0, 0, 0, 0.06)',
+          padding: '12px 24px'
+        }}
+      >
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+          {/* Studio Brand */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
             {session.vendorLogo ? (
               <img
                 src={formatSafeMediaUrl(session.vendorLogo)}
                 alt={session.vendorName || 'Studio'}
-                className="w-10 h-10 rounded-full object-cover border border-black/10 shadow-sm flex-shrink-0"
+                style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover', border: '1px solid rgba(0,0,0,0.1)', flexShrink: 0 }}
               />
             ) : (
               <div 
-                className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm flex-shrink-0"
-                style={{ background: '#1D1D1F' }}
+                style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '12px',
+                  background: '#1D1D1F',
+                  color: '#C27803',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0
+                }}
               >
-                <Camera size={18} color="#C27803" />
+                <Camera size={20} />
               </div>
             )}
-            <div className="min-w-0">
-              <span className="text-[10.5px] font-mono tracking-widest text-[#C27803] uppercase font-bold block">
+            <div style={{ minWidth: 0 }}>
+              <span className="font-mono-film" style={{ fontSize: '11px', color: '#C27803', textTransform: 'uppercase', display: 'block', letterSpacing: '0.04em' }}>
                 {session.vendorName || 'STUDIO FOTOGRAFI'}
               </span>
-              <h1 className="text-[15px] md:text-[17px] font-bold text-[#1D1D1F] truncate m-0">
+              <h1 style={{ fontSize: '16px', fontWeight: 700, color: '#1D1D1F', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {session.clientName}
               </h1>
             </div>
           </div>
 
-          {/* Odometer Quota Box */}
-          <div 
-            className="flex items-center gap-3 px-4 py-2 rounded-2xl border"
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.85)', 
-              borderColor: currentCount >= quota ? '#C27803' : 'rgba(0, 0, 0, 0.08)',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.03)'
+          {/* Odometer Capsule */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '14px',
+              padding: '8px 18px',
+              borderRadius: '999px',
+              background: '#FFFFFF',
+              border: currentCount >= quota ? '1.5px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
+              boxShadow: '0 2px 10px rgba(0,0,0,0.03)'
             }}
           >
-            <div className="text-right">
-              <span className="text-[9.5px] font-mono uppercase tracking-wider text-[#86868B] block">
+            <div style={{ textAlign: 'right' }}>
+              <span className="font-mono-film" style={{ fontSize: '10px', color: '#86868B', display: 'block', textTransform: 'uppercase' }}>
                 KUOTA TERPILIH
               </span>
-              <div className="flex items-center justify-end gap-1 font-bold text-[15px] font-mono" style={{ color: currentCount >= quota ? '#C27803' : '#1D1D1F' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', fontWeight: 700, fontSize: '16px', fontFamily: 'monospace', color: currentCount >= quota ? '#C27803' : '#1D1D1F' }}>
                 <NumberFlow value={currentCount} format={{ minimumIntegerDigits: 2 }} />
-                <span className="text-[#86868B]">/ {quota}</span>
+                <span style={{ color: '#86868B', fontWeight: 500 }}>/ {quota}</span>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* 2. SUB-BAR: CONTROLS & FOLDER NAVIGATION */}
-      <section className="border-b border-black/5 bg-white/60 px-4 md:px-8 py-3">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          {/* Breadcrumb & Subfolder Navigation */}
-          <div className="flex items-center gap-2 flex-wrap text-[13px]">
+      {/* 2. HERO / WELCOME & PROGRESS SECTION */}
+      <section style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '32px 24px 16px' }}>
+        <div className="glass-card" style={{ padding: '28px 32px', borderRadius: '24px', background: 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(254,249,242,0.7) 100%)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
+            <div style={{ maxWidth: '680px' }}>
+              <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px', fontSize: '12px' }}>
+                PORTAL SELEKSI FOTO EKSKLUSIF
+              </span>
+              <h2 style={{ fontSize: '32px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
+                {session.clientName}
+              </h2>
+              <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6, margin: 0 }}>
+                Silakan tandai foto-foto favorit Anda hingga batas <strong>{quota} foto</strong> untuk diproses retouching dan dicetak ke dalam album. Ketuk foto mana saja untuk memperbesar atau memberikan catatan edit khusus.
+              </p>
+            </div>
+
+            {/* Quota Progress Pill */}
+            <div style={{ minWidth: '220px', background: '#FFFFFF', padding: '16px 20px', borderRadius: '18px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 4px 16px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F' }}>
+                  {currentCount >= quota ? 'Kuota Lengkap' : `${quota - currentCount} Foto Tersisa`}
+                </span>
+                <span className="font-mono-film" style={{ fontSize: '12px', fontWeight: 700, color: '#C27803' }}>
+                  {quotaPercent}%
+                </span>
+              </div>
+              <div style={{ width: '100%', height: '8px', background: 'rgba(0,0,0,0.06)', borderRadius: '999px', overflow: 'hidden' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${quotaPercent}%`,
+                    background: currentCount >= quota ? '#10B981' : '#C27803',
+                    borderRadius: '999px',
+                    transition: 'width 0.3s ease'
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. SUB-BAR: CONTROLS & FOLDER NAVIGATION */}
+      <section style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '12px 24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px', background: '#FFFFFF', padding: '12px 20px', borderRadius: '18px', border: '1px solid rgba(0,0,0,0.06)', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
+          {/* Breadcrumb / Current Folder */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             {folderHistory.length > 0 && (
               <button
                 onClick={handleNavigateBackFolder}
-                className="glass-pill px-3 py-1.5 flex items-center gap-1 font-medium text-[12px] text-[#1D1D1F] hover:bg-black/5"
+                className="glass-pill"
+                style={{ padding: '6px 14px', fontSize: '12.5px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
               >
-                <ChevronLeft size={14} />
-                <span>Kembali</span>
+                <ChevronLeft size={15} />
+                Kembali
               </button>
             )}
-            <div className="flex items-center gap-1.5 font-semibold text-[#1D1D1F]">
-              <FolderOpen size={15} className="text-[#C27803]" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13.5px', fontWeight: 700, color: '#1D1D1F' }}>
+              <FolderOpen size={17} color="#C27803" />
               <span>{currentFolderName}</span>
-              <span className="text-[#86868B] text-[11.5px] font-normal">
+              <span style={{ fontSize: '12px', color: '#86868B', fontWeight: 400 }}>
                 ({displayedPhotos.length} foto)
               </span>
             </div>
           </div>
 
-          {/* Action Tools: Filter, Sort, Grid Mode */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* View Mode Toggle: All vs Selected */}
+          {/* Action Tools */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            {/* View Filter Pill */}
             <button
               onClick={() => setViewFilter(prev => prev === 'all' ? 'selected' : 'all')}
-              className={`glass-pill px-3.5 py-1.5 text-[12px] font-medium flex items-center gap-1.5 transition-all ${
-                viewFilter === 'selected' 
-                  ? 'bg-[#1D1D1F] text-white shadow-sm' 
-                  : 'text-[#1D1D1F] hover:bg-black/5'
-              }`}
+              className="glass-pill"
+              style={{
+                background: viewFilter === 'selected' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.9)',
+                color: viewFilter === 'selected' ? '#FFFFFF' : '#1D1D1F',
+                padding: '8px 16px',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                border: viewFilter === 'selected' ? '1px solid #1D1D1F' : '1px solid rgba(0,0,0,0.1)'
+              }}
             >
-              <Heart size={13} fill={viewFilter === 'selected' ? '#C27803' : 'none'} color={viewFilter === 'selected' ? '#C27803' : 'currentColor'} />
+              <Heart size={14} fill={viewFilter === 'selected' ? '#C27803' : 'none'} color={viewFilter === 'selected' ? '#C27803' : 'currentColor'} />
               <span>{viewFilter === 'selected' ? 'Lihat Semua Foto' : `Pilihan Saya (${currentCount})`}</span>
             </button>
 
-            {/* Randomize / Sort */}
+            {/* Randomize order */}
             <button
               onClick={toggleSort}
-              className="glass-pill px-3 py-1.5 text-[12px] font-medium flex items-center gap-1.5 text-[#1D1D1F] hover:bg-black/5"
-              title="Acak urutan foto agar tidak bosan melihat pose mirip berturut-turut"
+              className="glass-pill"
+              style={{ padding: '8px 14px', fontSize: '12.5px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+              title="Acak urutan foto agar tidak jenuh melihat pose berturut-turut"
             >
-              <RefreshCw size={12} className={sortOrder === 'random' ? 'text-[#C27803]' : ''} />
-              <span>{sortOrder === 'random' ? 'Urutan Acak' : 'Urutan Asli'}</span>
+              <RefreshCw size={13} color={sortOrder === 'random' ? '#C27803' : 'currentColor'} />
+              <span>{sortOrder === 'random' ? 'Acak' : 'Urutan Asli'}</span>
             </button>
 
-            {/* Grid density toggle */}
-            <div className="hidden sm:flex items-center bg-black/5 p-1 rounded-xl">
+            {/* Grid density buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(0,0,0,0.04)', padding: '3px', borderRadius: '12px' }}>
               {[2, 4, 6].map((col) => (
                 <button
                   key={col}
                   onClick={() => setGridColumns(col as any)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-mono font-bold transition-all ${
-                    gridColumns === col ? 'bg-white text-[#1D1D1F] shadow-xs' : 'text-[#86868B]'
-                  }`}
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    fontSize: '11px',
+                    fontFamily: 'monospace',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    background: gridColumns === col ? '#FFFFFF' : 'transparent',
+                    color: gridColumns === col ? '#1D1D1F' : '#86868B',
+                    boxShadow: gridColumns === col ? '0 1px 4px rgba(0,0,0,0.08)' : 'none'
+                  }}
                 >
                   {col}x
                 </button>
@@ -457,21 +539,32 @@ export default function ClientProofingPage() {
         </div>
       </section>
 
-      {/* 3. SUB-FOLDERS CARDS (IF ANY) */}
+      {/* 4. SUB-FOLDERS CHIPS (IF ANY) */}
       {subFolders.length > 0 && viewFilter === 'all' && (
-        <section className="px-4 md:px-8 pt-4 pb-2 max-w-7xl mx-auto w-full">
-          <span className="text-[11px] font-bold text-[#86868B] uppercase tracking-wider block mb-2">
-            Sub-Folder Sesi Foto:
+        <section style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '0 24px 16px' }}>
+          <span style={{ fontSize: '11.5px', fontWeight: 700, color: '#86868B', textTransform: 'uppercase', letterSpacing: '0.04em', display: 'block', marginBottom: '8px' }}>
+            Sub-Folder Acara / Sesi:
           </span>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '10px' }}>
             {subFolders.map(folder => (
               <button
                 key={folder.id}
                 onClick={() => handleOpenSubFolder(folder)}
-                className="p-3 rounded-2xl border border-black/8 bg-white hover:border-[#C27803] hover:shadow-md transition-all flex items-center gap-2.5 text-left group cursor-pointer"
+                style={{
+                  padding: '12px 16px',
+                  borderRadius: '14px',
+                  border: '1px solid rgba(0,0,0,0.08)',
+                  background: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.2s ease'
+                }}
               >
-                <Folder size={18} className="text-[#C27803] group-hover:scale-110 transition-transform" />
-                <span className="text-[12.5px] font-semibold text-[#1D1D1F] truncate flex-1">
+                <Folder size={18} color="#C27803" />
+                <span style={{ fontSize: '13px', fontWeight: 600, color: '#1D1D1F', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {folder.name}
                 </span>
               </button>
@@ -480,36 +573,38 @@ export default function ClientProofingPage() {
         </section>
       )}
 
-      {/* 4. MAIN GALLERY GRID */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 md:px-8 py-6 pb-36">
+      {/* 5. MAIN PHOTO GALLERY GRID */}
+      <main style={{ maxWidth: '1280px', margin: '0 auto', width: '100%', padding: '0 24px 140px', flex: 1 }}>
         {loadingDrive ? (
-          <div className="py-24 flex flex-col items-center justify-center gap-3 text-[#C27803]">
-            <RefreshCw size={28} className="animate-spin" />
-            <span className="font-mono text-[12px] font-semibold">MENARIK FOTO DARI GOOGLE DRIVE...</span>
+          <div style={{ padding: '80px 0', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', color: '#C27803' }}>
+            <RefreshCw size={32} className="animate-spin" />
+            <span className="font-mono-film" style={{ fontSize: '13px', fontWeight: 700 }}>MENARIK FOTO DARI GOOGLE DRIVE...</span>
           </div>
         ) : displayedPhotos.length === 0 ? (
-          <div className="py-24 text-center">
-            <div className="glass-card max-w-md mx-auto p-8 rounded-3xl">
-              <Heart size={36} className="text-[#C27803] mx-auto mb-3" />
-              <h3 className="text-[16px] font-bold text-[#1D1D1F] mb-1">
-                {viewFilter === 'selected' ? 'Belum Ada Foto yang Dipilih' : 'Folder ini Kosong'}
+          <div style={{ padding: '80px 0', textAlign: 'center' }}>
+            <div className="glass-card" style={{ maxWidth: '420px', margin: '0 auto', padding: '36px', borderRadius: '24px' }}>
+              <Heart size={36} color="#C27803" style={{ margin: '0 auto 12px auto' }} />
+              <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1D1D1F', marginBottom: '6px' }}>
+                {viewFilter === 'selected' ? 'Belum Ada Foto Dipilih' : 'Folder ini Kosong'}
               </h3>
-              <p className="text-[13px] text-[#6E6E73]">
-                {viewFilter === 'selected' 
-                  ? 'Ketuk foto mana saja di galeri untuk menandainya ke dalam pilihan album Anda.' 
-                  : 'Tidak ada file foto dalam folder ini.'}
+              <p style={{ fontSize: '13.5px', color: '#6E6E73', margin: 0, lineHeight: 1.5 }}>
+                {viewFilter === 'selected'
+                  ? 'Klik tombol centang di foto mana saja pada galeri untuk menyimpannya ke pilihan album Anda.'
+                  : 'Tidak ada file foto di folder ini.'}
               </p>
             </div>
           </div>
         ) : (
-          <div 
-            className={`grid gap-3 md:gap-4.5 ${
-              gridColumns === 2 
-                ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4' 
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: gridColumns === 2 
+                ? 'repeat(auto-fill, minmax(360px, 1fr))' 
                 : gridColumns === 4 
-                  ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-6' 
-                  : 'grid-cols-4 sm:grid-cols-6 md:grid-cols-8'
-            }`}
+                  ? 'repeat(auto-fill, minmax(240px, 1fr))' 
+                  : 'repeat(auto-fill, minmax(170px, 1fr))',
+              gap: '16px'
+            }}
           >
             {displayedPhotos.map((photo, index) => {
               const isSelected = selectedMap.has(photo.id);
@@ -519,61 +614,132 @@ export default function ClientProofingPage() {
               return (
                 <div
                   key={photo.id}
-                  className={`group relative rounded-2xl overflow-hidden aspect-[4/5] bg-black/5 shadow-xs transition-all cursor-pointer ${
-                    isSelected ? 'ring-3 ring-[#C27803] shadow-md scale-[0.98]' : 'hover:shadow-md'
-                  }`}
                   onClick={() => toggleSelectPhoto(photo)}
+                  style={{
+                    position: 'relative',
+                    borderRadius: '16px',
+                    overflow: 'hidden',
+                    aspectRatio: '4 / 3',
+                    background: '#EEEEEC',
+                    cursor: 'pointer',
+                    border: isSelected ? '2.5px solid #C27803' : '1px solid rgba(0,0,0,0.06)',
+                    boxShadow: isSelected ? '0 12px 28px rgba(194, 120, 3, 0.22)' : '0 2px 8px rgba(0,0,0,0.04)',
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                    transform: isSelected ? 'scale(0.985)' : 'none'
+                  }}
                 >
-                  {/* Photo Thumbnail */}
+                  {/* Photo Image */}
                   <img
                     src={photo.url}
                     alt={photo.name}
                     loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
 
-                  {/* Subtle Studio Watermark Protection */}
-                  <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 text-center pointer-events-none opacity-25 select-none">
-                    <span className="font-mono text-[9px] md:text-[10px] uppercase font-bold text-white drop-shadow-md tracking-widest">
-                      {session.vendorName || 'STUDIO PROOFING'}
-                    </span>
+                  {/* Watermark Protection */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      pointerEvents: 'none',
+                      color: 'rgba(255, 255, 255, 0.35)',
+                      fontFamily: 'monospace',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      letterSpacing: '0.12em',
+                      textShadow: '0 2px 4px rgba(0,0,0,0.6)',
+                      textTransform: 'uppercase',
+                      textAlign: 'center',
+                      width: '90%'
+                    }}
+                  >
+                    {session.vendorName || 'STUDIO PROOFING'}
                   </div>
 
-                  {/* Top Badges (Selection & Note) */}
-                  <div className="absolute top-2 right-2 flex items-center gap-1.5 z-10 pointer-events-none">
+                  {/* Top Right Badges (Checkmark & Note) */}
+                  <div style={{ position: 'absolute', top: '10px', right: '10px', display: 'flex', alignItems: 'center', gap: '6px', zIndex: 10 }}>
                     {hasNote && (
-                      <div 
-                        className="w-6 h-6 rounded-full flex items-center justify-center text-white shadow-md text-[10px]"
-                        style={{ background: '#F59E0B' }}
-                        title="Ada catatan retouch"
+                      <div
+                        style={{
+                          width: '26px',
+                          height: '26px',
+                          borderRadius: '50%',
+                          background: '#F59E0B',
+                          color: '#FFFFFF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
+                        }}
+                        title="Ada catatan retouch khusus"
                       >
-                        <MessageSquare size={12} />
+                        <MessageSquare size={13} />
                       </div>
                     )}
-                    <div 
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-white shadow-md transition-transform ${
-                        isSelected ? 'bg-[#C27803] scale-100' : 'bg-black/30 backdrop-blur-sm scale-90 opacity-80'
-                      }`}
+                    <div
+                      style={{
+                        width: '30px',
+                        height: '30px',
+                        borderRadius: '50%',
+                        background: isSelected ? '#C27803' : 'rgba(0,0,0,0.45)',
+                        backdropFilter: 'blur(8px)',
+                        color: '#FFFFFF',
+                        border: isSelected ? 'none' : '1.5px solid rgba(255,255,255,0.8)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                        transition: 'all 0.15s ease'
+                      }}
                     >
-                      {isSelected ? <Check size={14} strokeWidth={3} /> : null}
+                      {isSelected && <Check size={16} strokeWidth={3} />}
                     </div>
                   </div>
 
-                  {/* Bottom File Label & Zoom Button */}
-                  <div className="absolute inset-x-0 bottom-0 p-2 pt-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex items-center justify-between text-white z-10">
-                    <span className="text-[10.5px] font-mono truncate max-w-[70%] drop-shadow-sm font-medium">
+                  {/* Bottom Gradient Bar: Name & Zoom */}
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      padding: '24px 12px 10px',
+                      background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0) 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      color: '#FFFFFF',
+                      zIndex: 10
+                    }}
+                  >
+                    <span className="font-mono-film" style={{ fontSize: '11px', fontWeight: 600, maxWidth: '75%', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}>
                       {photo.name}
                     </span>
+
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setLightboxIndex(index);
                       }}
-                      className="w-6 h-6 rounded-lg bg-black/40 hover:bg-[#C27803] transition-colors flex items-center justify-center text-white"
-                      title="Perbesar & beri instruksi edit"
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '8px',
+                        background: 'rgba(255,255,255,0.25)',
+                        backdropFilter: 'blur(4px)',
+                        border: 'none',
+                        color: '#FFFFFF',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer'
+                      }}
+                      title="Perbesar foto & beri instruksi retouch"
                     >
-                      <ZoomIn size={12} />
+                      <ZoomIn size={14} />
                     </button>
                   </div>
                 </div>
@@ -583,166 +749,328 @@ export default function ClientProofingPage() {
         )}
       </main>
 
-      {/* 5. FLOATING BOTTOM ACTION BAR */}
-      <footer 
-        className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-lg border-t border-black/8 shadow-2xl p-4 transition-transform"
+      {/* 6. FLOATING BOTTOM BAR (APPLE STYLE) */}
+      <footer
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 40,
+          background: 'rgba(29, 29, 31, 0.94)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          borderRadius: '999px',
+          padding: '10px 18px 10px 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+          boxShadow: '0 20px 48px rgba(0,0,0,0.35)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          maxWidth: '92vw'
+        }}
       >
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3.5">
-          {/* Progress description */}
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <div 
-              className="w-11 h-11 rounded-2xl flex items-center justify-center font-mono font-bold text-white text-[15px] shadow-sm flex-shrink-0"
-              style={{ background: '#1D1D1F' }}
-            >
-              {currentCount}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <strong className="text-[13.5px] text-[#1D1D1F]">
-                  {currentCount >= quota ? 'Kuota Terpenuhi!' : `${quota - currentCount} Foto Lagi Diperlukan`}
-                </strong>
-                <span className="text-[11px] text-[#86868B] font-mono">
-                  ({quotaPercent}%)
-                </span>
-              </div>
-              <div className="w-48 bg-black/8 rounded-full h-1.5 mt-1 overflow-hidden">
-                <div 
-                  className="h-full rounded-full transition-all duration-300"
-                  style={{ width: `${quotaPercent}%`, background: '#C27803' }}
-                />
-              </div>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '50%',
+              background: '#C27803',
+              color: '#FFFFFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 700,
+              fontFamily: 'monospace',
+              fontSize: '14px'
+            }}
+          >
+            {currentCount}
           </div>
-
-          {/* Action Buttons */}
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-            <button
-              type="button"
-              onClick={handleDownloadTxt}
-              disabled={currentCount === 0}
-              className="glass-pill px-3.5 py-2.5 text-[12.5px] font-semibold text-[#1D1D1F] hover:bg-black/5 disabled:opacity-40"
-              title="Unduh daftar nama file (.txt)"
-            >
-              <Download size={14} className="inline mr-1" />
-              <span>Unduh TXT</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSubmitSelection}
-              disabled={isSubmitting || currentCount === 0}
-              className="px-6 py-2.5 rounded-full text-white font-bold text-[13.5px] flex items-center justify-center gap-2 shadow-md transition-all active:scale-95 disabled:opacity-50"
-              style={{ background: '#C27803' }}
-            >
-              <Send size={14} />
-              <span>{isSubmitting ? 'Menyimpan...' : 'Kirim Pilihan ke Studio'}</span>
-            </button>
+          <div>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: '#FFFFFF', display: 'block' }}>
+              {currentCount >= quota ? 'Kuota Terpenuhi!' : `${quota - currentCount} Foto Lagi`}
+            </span>
+            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.6)' }}>
+              Target: {quota} Foto Album
+            </span>
           </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={handleDownloadTxt}
+            disabled={currentCount === 0}
+            style={{
+              padding: '9px 14px',
+              borderRadius: '999px',
+              background: 'rgba(255,255,255,0.12)',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: '12px',
+              fontWeight: 600,
+              cursor: currentCount > 0 ? 'pointer' : 'not-allowed',
+              opacity: currentCount > 0 ? 1 : 0.4,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+            title="Download daftar foto sebagai file teks"
+          >
+            <Download size={13} />
+            <span className="desktop-only">Unduh .TXT</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSubmitSelection}
+            disabled={isSubmitting || currentCount === 0}
+            style={{
+              padding: '10px 20px',
+              borderRadius: '999px',
+              background: currentCount >= quota ? '#10B981' : '#C27803',
+              border: 'none',
+              color: '#FFFFFF',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: currentCount > 0 ? 'pointer' : 'not-allowed',
+              opacity: currentCount > 0 ? 1 : 0.5,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+            }}
+          >
+            <Send size={14} />
+            <span>{isSubmitting ? 'Menyimpan...' : 'Kirim Pilihan (WhatsApp)'}</span>
+          </button>
         </div>
       </footer>
 
-      {/* 6. FULL-SCREEN LIGHTBOX MODAL */}
-      {currentLightboxPhoto && (
-        <div 
-          className="fixed inset-0 z-50 flex flex-col bg-black/95 text-white animate-fadeIn"
+      {/* 7. FULLSCREEN LIGHTBOX & NOTE MODAL */}
+      {lightboxIndex !== null && currentLightboxPhoto && (
+        <div
           onClick={() => setLightboxIndex(null)}
-          onTouchStart={(e) => {
-            touchStartXRef.current = e.changedTouches[0].screenX;
-          }}
-          onTouchEnd={(e) => {
-            touchEndXRef.current = e.changedTouches[0].screenX;
-            if (touchStartXRef.current - touchEndXRef.current > 50) {
-              handleNextPhoto();
-            } else if (touchEndXRef.current - touchStartXRef.current > 50) {
-              handlePrevPhoto();
-            }
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0, 0, 0, 0.94)',
+            backdropFilter: 'blur(20px)',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '20px'
           }}
         >
-          {/* Lightbox Header */}
-          <div 
-            className="p-4 flex items-center justify-between border-b border-white/10 bg-black/40 backdrop-blur-md z-10"
+          {/* Top Bar Lightbox */}
+          <div
             onClick={(e) => e.stopPropagation()}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              color: '#FFFFFF',
+              maxWidth: '1200px',
+              margin: '0 auto',
+              width: '100%'
+            }}
           >
             <div>
-              <h4 className="text-[14px] font-bold text-white m-0">
-                {currentLightboxPhoto.name}
-              </h4>
-              <span className="text-[11px] text-white/60 font-mono">
-                Foto {lightboxIndex! + 1} dari {displayedPhotos.length}
+              <span className="font-mono-film" style={{ fontSize: '13px', color: '#C27803', display: 'block' }}>
+                FOTO #{lightboxIndex + 1} DARI {displayedPhotos.length}
               </span>
+              <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 600 }}>{currentLightboxPhoto.name}</h4>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                type="button"
+                onClick={() => toggleSelectPhoto(currentLightboxPhoto)}
+                style={{
+                  padding: '8px 16px',
+                  borderRadius: '999px',
+                  background: selectedMap.has(currentLightboxPhoto.id) ? '#C27803' : 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  fontSize: '12.5px',
+                  fontWeight: 600,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  cursor: 'pointer'
+                }}
+              >
+                <Check size={14} />
+                {selectedMap.has(currentLightboxPhoto.id) ? 'Foto Terpilih' : 'Pilih Foto Ini'}
+              </button>
+
               <button
                 type="button"
                 onClick={() => setLightboxIndex(null)}
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white"
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.15)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
               >
-                <X size={18} />
+                <X size={20} />
               </button>
             </div>
           </div>
 
-          {/* Central Image View */}
-          <div className="flex-1 relative flex items-center justify-center p-4 min-h-0">
-            <img
-              src={currentLightboxPhoto.fullUrl || currentLightboxPhoto.url}
-              alt={currentLightboxPhoto.name}
-              className="max-h-full max-w-full object-contain rounded-xl select-none shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            />
-
-            {/* Navigation Arrows */}
-            {lightboxIndex! > 0 && (
+          {/* Center Image Container */}
+          <div
+            style={{
+              flex: 1,
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              padding: '16px 0'
+            }}
+          >
+            {/* Prev Button */}
+            {lightboxIndex > 0 && (
               <button
                 type="button"
                 onClick={handlePrevPhoto}
-                className="absolute left-4 w-11 h-11 rounded-full bg-black/60 hover:bg-[#C27803] flex items-center justify-center text-white transition-colors"
+                style={{
+                  position: 'absolute',
+                  left: '20px',
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(8px)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 20
+                }}
               >
-                <ChevronLeft size={22} />
+                <ChevronLeft size={28} />
               </button>
             )}
-            {lightboxIndex! < displayedPhotos.length - 1 && (
+
+            {/* High-Res Image with Watermark */}
+            <div style={{ position: 'relative', maxHeight: '100%', maxWidth: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <img
+                src={currentLightboxPhoto.fullUrl || currentLightboxPhoto.url}
+                alt={currentLightboxPhoto.name}
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  maxHeight: '70vh',
+                  maxWidth: '85vw',
+                  objectFit: 'contain',
+                  borderRadius: '12px',
+                  boxShadow: '0 20px 48px rgba(0,0,0,0.5)'
+                }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  pointerEvents: 'none',
+                  color: 'rgba(255, 255, 255, 0.3)',
+                  fontFamily: 'monospace',
+                  fontSize: '16px',
+                  fontWeight: 700,
+                  letterSpacing: '0.2em',
+                  textTransform: 'uppercase',
+                  textShadow: '0 2px 8px rgba(0,0,0,0.7)',
+                  textAlign: 'center',
+                  width: '90%'
+                }}
+              >
+                {session.vendorName || 'STUDIO PROOFING'}
+              </div>
+            </div>
+
+            {/* Next Button */}
+            {lightboxIndex < displayedPhotos.length - 1 && (
               <button
                 type="button"
                 onClick={handleNextPhoto}
-                className="absolute right-4 w-11 h-11 rounded-full bg-black/60 hover:bg-[#C27803] flex items-center justify-center text-white transition-colors"
+                style={{
+                  position: 'absolute',
+                  right: '20px',
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  background: 'rgba(255,255,255,0.15)',
+                  backdropFilter: 'blur(8px)',
+                  border: 'none',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  zIndex: 20
+                }}
               >
-                <ChevronRight size={22} />
+                <ChevronRight size={28} />
               </button>
             )}
           </div>
 
-          {/* Bottom Retouch Instruction & Selection Controls */}
-          <div 
-            className="p-4 border-t border-white/10 bg-black/70 backdrop-blur-lg flex flex-col md:flex-row items-center justify-between gap-3 z-10"
+          {/* Bottom Retouch Note Box */}
+          <div
             onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '640px',
+              margin: '0 auto',
+              width: '100%',
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(16px)',
+              borderRadius: '16px',
+              padding: '12px 16px',
+              border: '1px solid rgba(255, 255, 255, 0.15)'
+            }}
           >
-            {/* Note input for this specific photo */}
-            <div className="w-full md:w-2/3">
-              <input
-                type="text"
-                placeholder="Catatan edit khusus (contoh: tolong hilangkan jerawat, perbaiki dasi)..."
-                value={selectedMap.get(currentLightboxPhoto.id)?.note || ''}
-                onChange={(e) => updatePhotoNote(currentLightboxPhoto.id, e.target.value)}
-                disabled={!selectedMap.has(currentLightboxPhoto.id)}
-                className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/15 text-[13px] text-white placeholder:text-white/40 focus:outline-none focus:border-[#C27803] disabled:opacity-40"
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+              <MessageSquare size={14} color="#C27803" />
+              <span style={{ fontSize: '12px', fontWeight: 600, color: '#FFFFFF' }}>
+                Catatan Khusus Retouch / Edit (Opsional):
+              </span>
             </div>
-
-            {/* Select/Deselect button */}
-            <button
-              type="button"
-              onClick={() => toggleSelectPhoto(currentLightboxPhoto)}
-              className={`w-full md:w-auto px-6 py-2.5 rounded-full font-bold text-[13px] flex items-center justify-center gap-2 transition-all ${
-                selectedMap.has(currentLightboxPhoto.id)
-                  ? 'bg-[#C27803] text-white shadow-lg'
-                  : 'bg-white/15 hover:bg-white/25 text-white'
-              }`}
-            >
-              <Check size={16} />
-              <span>{selectedMap.has(currentLightboxPhoto.id) ? 'Foto Terpilih' : 'Pilih Foto Ini'}</span>
-            </button>
+            <input
+              type="text"
+              value={selectedMap.get(currentLightboxPhoto.id)?.note || ''}
+              onChange={(e) => {
+                // Auto-select if note is typed
+                if (!selectedMap.has(currentLightboxPhoto.id)) {
+                  toggleSelectPhoto(currentLightboxPhoto);
+                }
+                updatePhotoNote(currentLightboxPhoto.id, e.target.value);
+              }}
+              placeholder="Contoh: Tolong hilangkan kerutan jas atau rapikan poni rambut..."
+              style={{
+                width: '100%',
+                background: 'rgba(0,0,0,0.4)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: '10px',
+                padding: '10px 14px',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                outline: 'none'
+              }}
+            />
           </div>
         </div>
       )}
