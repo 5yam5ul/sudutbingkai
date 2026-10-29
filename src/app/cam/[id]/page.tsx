@@ -34,6 +34,7 @@ import ConfirmModal from '@/components/ConfirmModal';
 import VideoWishRecorder from '@/components/VideoWishRecorder';
 import FilmPresetDrawer from '@/components/FilmPresetDrawer';
 import PhotostripModal from '@/components/PhotostripModal';
+import { classifyImageSafety } from '@/lib/ai-shield';
 
 interface GuestPhoto {
   id: string;
@@ -1163,6 +1164,16 @@ export default function GuestCameraPage() {
       const displayName = guestName;
       const currentSession = guestSessionId || getOrCreateGuestSession(canonicalId, eventId);
 
+      // AI Projector Shield (client-side nsfwjs guard)
+      let isShieldedFromLiveWall = false;
+      try {
+        const shieldCheck = await classifyImageSafety(canvas, 1200);
+        if (!shieldCheck.isSafe) {
+          isShieldedFromLiveWall = true;
+          console.warn('AI Projector Shield: foto disaring otomatis dari proyektor live wall');
+        }
+      } catch {}
+
       if (isDemo) {
         // PURE LOCAL SIMULATION DEMO!
         // DO NOT hit server / database!
@@ -1198,6 +1209,7 @@ export default function GuestCameraPage() {
             shotNumber: newShotNum,
             imageData: highResDataUrl,
             caption: currentWish.trim(),
+            isHidden: isShieldedFromLiveWall,
             aspectRatio,
             frameId: activeFrameId,
             deviceId: deviceFp

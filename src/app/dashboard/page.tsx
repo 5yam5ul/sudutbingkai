@@ -16,6 +16,7 @@ import VideoWishStoriesPlayer from '@/components/VideoWishStoriesPlayer';
 import VoiceWaveformPlayer from '@/components/VoiceWaveformPlayer';
 import MayarPaymentModal from '@/components/MayarPaymentModal';
 import PhotostripModal from '@/components/PhotostripModal';
+import { exportGuestbookToExcel } from '@/lib/excel-export';
 import { toast } from 'sonner';
 import JSZip from 'jszip';
 
@@ -585,6 +586,32 @@ export default function BrideDashboardPage() {
     link.click();
     document.body.removeChild(link);
     toast.success('Buku tamu berhasil diekspor ke CSV!');
+  };
+
+  const exportGuestsToExcelAction = async () => {
+    if (guests.length === 0) {
+      toast.info('Belum ada data tamu untuk diekspor.');
+      return;
+    }
+    try {
+      await exportGuestbookToExcel(
+        `Buku_Tamu_${(event?.title || 'SudutBingkai')}_${new Date().toISOString().slice(0, 10)}`,
+        event?.title || 'SudutBingkai Event',
+        event?.coupleOrHost,
+        guests.map((g, idx) => ({
+          no: idx + 1,
+          guestName: g.guestName || 'Tamu Undangan',
+          checkedInAt: new Date(g.checkedInAt).toLocaleString('id-ID'),
+          photoCount: g.shotsCount,
+          hasVoiceNote: g.hasVoiceNote,
+          hasVideoWish: g.hasVideoWish
+        }))
+      );
+      toast.success('Buku tamu berhasil diekspor ke Excel (.XLSX)!');
+    } catch (err) {
+      console.error(err);
+      exportGuestsToCSV();
+    }
   };
 
   const filteredGuests = guests.filter(g =>
@@ -2923,7 +2950,7 @@ export default function BrideDashboardPage() {
 
                 <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                   <button
-                    onClick={exportGuestsToCSV}
+                    onClick={exportGuestsToExcelAction}
                     disabled={guests.length === 0}
                     className="glass-pill"
                     style={{
@@ -2934,14 +2961,35 @@ export default function BrideDashboardPage() {
                       alignItems: 'center',
                       gap: '8px',
                       cursor: guests.length === 0 ? 'not-allowed' : 'pointer',
-                      border: '1px solid rgba(194, 120, 3, 0.3)',
-                      background: 'rgba(194, 120, 3, 0.08)',
+                      border: '1.5px solid rgba(194, 120, 3, 0.45)',
+                      background: 'rgba(194, 120, 3, 0.12)',
                       color: '#C27803'
                     }}
-                    title="Unduh data buku tamu dalam format Excel / CSV"
+                    title="Unduh data buku tamu dalam format Excel Spreadsheet (.xlsx)"
                   >
                     <Download size={14} />
-                    <span>Ekspor Buku Tamu (.CSV)</span>
+                    <span>Ekspor Excel (.XLSX)</span>
+                  </button>
+
+                  <button
+                    onClick={exportGuestsToCSV}
+                    disabled={guests.length === 0}
+                    className="glass-pill"
+                    style={{
+                      padding: '9px 14px',
+                      fontSize: '12px',
+                      fontWeight: 500,
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      cursor: guests.length === 0 ? 'not-allowed' : 'pointer',
+                      border: '1px solid rgba(0, 0, 0, 0.1)',
+                      color: '#6E6E73'
+                    }}
+                    title="Unduh data buku tamu dalam format CSV mentah"
+                  >
+                    <Download size={12} />
+                    <span>.CSV</span>
                   </button>
 
                   <button

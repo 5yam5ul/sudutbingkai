@@ -234,7 +234,7 @@ export async function POST(request: Request) {
       imageData: body.imageData,
       timestamp: new Date().toISOString(),
       caption: (body.caption || '').trim(),
-      isHidden: false,
+      isHidden: typeof body.isHidden === 'boolean' ? body.isHidden : false,
       aspectRatio: body.aspectRatio || '3:4',
       frameId: body.frameId || 'none'
     };

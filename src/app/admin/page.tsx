@@ -13,10 +13,12 @@ import {
   Phone, Mail, MessageSquare
 } from 'lucide-react';
 import { getClientSession, clearClientSession, getSignedClientToken, authFetch } from '@/lib/auth';
-import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, VoiceNoteRecord, getEventRetentionInfo } from '@/lib/types';
+import { EventData, PhotoRecord, InvoiceRecord, PayoutRequest, VideoTestimonialSubmission, UserAccount, EventAddonItem, FilmPresetId, EventPackageTier, VideoWishRecord, VoiceNoteRecord, getEventRetentionInfo, resolveEventCategory } from '@/lib/types';
 import { formatSafeMediaUrl } from '@/lib/media-url';
 import ConfirmModal from '@/components/ConfirmModal';
 import VoiceWaveformPlayer from '@/components/VoiceWaveformPlayer';
+import AdminCommandPalette from '@/components/AdminCommandPalette';
+import { exportAdminOverviewToExcel } from '@/lib/excel-export';
 import { toast } from 'sonner';
 
 export type AdminTab = 'overview' | 'events' | 'hosts' | 'moderation' | 'vendors' | 'invoices' | 'payouts' | 'testimonials' | 'addons';
@@ -76,6 +78,7 @@ export default function SuperAdminDashboard() {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [activeTab, setActiveTab] = useState<AdminTab>(() => resolveTabFromPath(pathname, slugParam));
   const [loading, setLoading] = useState(true);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
 
   // Sync activeTab with URL path and browser Back/Forward navigation
   useEffect(() => {
@@ -1649,6 +1652,31 @@ export default function SuperAdminDashboard() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {/* Quick Command Palette Button (Ctrl+K / Cmd+K) */}
+            <button
+              type="button"
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="glass-pill"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '5px 12px',
+                fontSize: '12px',
+                color: '#6E6E73',
+                background: 'rgba(0,0,0,0.04)',
+                cursor: 'pointer',
+                border: '1px solid rgba(0,0,0,0.08)'
+              }}
+              title="Cari perintah atau buka tab cepat (Ctrl+K / Cmd+K)"
+            >
+              <Search size={13} color="#C27803" />
+              <span>Cari Perintah...</span>
+              <kbd style={{ fontSize: '10px', background: '#FFFFFF', padding: '1px 5px', borderRadius: '4px', border: '1px solid rgba(0,0,0,0.1)', fontFamily: 'var(--font-mono)' }}>
+                ⌘K
+              </kbd>
+            </button>
+
             {/* System Health Indicators */}
             {systemHealth && (
               <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2113,6 +2141,46 @@ export default function SuperAdminDashboard() {
                   <option value="paid">Lunas (Aktif)</option>
                   <option value="pending">Pending Bayar</option>
                 </select>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await exportAdminOverviewToExcel(
+                        `Rekap_Acara_SudutBingkai_${new Date().toISOString().slice(0, 10)}`,
+                        filteredEvents.map(ev => ({
+                          id: ev.id,
+                          title: ev.title,
+                          category: resolveEventCategory(ev),
+                          packageTier: ev.packageTier || 'starter',
+                          paymentStatus: ev.paymentStatus || 'paid',
+                          eventDate: ev.eventDate,
+                          photoCount: photos.filter(p => p.eventId === ev.id).length
+                        }))
+                      );
+                      toast.success('Rekap seluruh acara berhasil diekspor ke Excel (.XLSX)!');
+                    } catch (err) {
+                      console.error(err);
+                      toast.error('Gagal mengekspor data ke Excel.');
+                    }
+                  }}
+                  className="glass-pill"
+                  style={{
+                    padding: '9px 14px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    color: '#C27803',
+                    background: 'rgba(194, 120, 3, 0.1)',
+                    border: '1.5px solid rgba(194, 120, 3, 0.4)'
+                  }}
+                  title="Unduh rekapitulasi data acara dalam format Excel Spreadsheet (.xlsx)"
+                >
+                  <Download size={14} />
+                  <span>Ekspor Excel (.XLSX)</span>
+                </button>
+
                 <button
                   onClick={() => setCreateEventModalOpen(true)}
                   className="btn-apple-black"
@@ -5766,6 +5834,13 @@ export default function SuperAdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Admin Command Palette (Ctrl+K / Cmd+K) */}
+      <AdminCommandPalette
+        isOpen={isCommandPaletteOpen}
+        onOpenChange={setIsCommandPaletteOpen}
+        onSelectTab={(tab) => navigateToTab(tab as AdminTab)}
+      />
     </div>
   );
 }
