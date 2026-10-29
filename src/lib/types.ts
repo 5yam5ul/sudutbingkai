@@ -564,6 +564,8 @@ export interface ProofingSelectedItem {
 export interface VendorProofingSession {
   id: string;
   vendorId: string;
+  vendorSlug?: string;
+  clientSlug?: string;
   vendorName?: string;
   vendorLogo?: string;
   vendorWhatsapp?: string;

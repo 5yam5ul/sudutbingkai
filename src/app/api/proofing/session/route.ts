@@ -15,17 +15,28 @@ export async function GET(request: Request) {
     const slug = searchParams.get('slug');
     const id = searchParams.get('id');
     const vendorId = searchParams.get('vendorId');
+    const vendorSlug = searchParams.get('vendorSlug');
+    const clientSlug = searchParams.get('clientSlug');
 
-    if (slug || id) {
-      const session = await getProofingBySlugOrId((slug || id) as string);
+    const lookupSlug = clientSlug || slug || id;
+    if (lookupSlug) {
+      const session = await getProofingBySlugOrId(lookupSlug, vendorSlug || undefined);
       if (!session) {
         return NextResponse.json({ success: false, error: 'Sesi proofing tidak ditemukan' }, { status: 404 });
       }
 
       // Attach latest vendor branding if available
       const vendor = await getVendorById(session.vendorId);
+      const computedVendorSlug = vendorSlug || session.vendorSlug || (vendor?.companyName || vendor?.name || 'studio')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      const computedClientSlug = clientSlug || session.clientSlug || (session.slug.includes('/') ? session.slug.split('/')[1] : session.slug);
+
       const enriched: VendorProofingSession = {
         ...session,
+        vendorSlug: computedVendorSlug,
+        clientSlug: computedClientSlug,
         vendorName: vendor?.brandName || vendor?.companyName || vendor?.name || session.vendorName || 'Studio Fotografi',
         vendorLogo: vendor?.logoUrl || session.vendorLogo,
         vendorWhatsapp: vendor?.whatsapp || vendor?.phone || session.vendorWhatsapp,
@@ -67,19 +78,30 @@ export async function POST(request: Request) {
       cleanFolderId = folderMatch[1];
     }
 
-    // Generate readable clean slug
-    const baseSlug = clientName
+    const vendor = await getVendorById(vendorId);
+
+    // Generate readable clean vendorSlug and clientSlug
+    const rawVendorName = vendor?.brandName || vendor?.companyName || vendor?.name || 'studio';
+    const vendorSlug = rawVendorName
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '');
-    const randomSuffix = Math.random().toString(36).substring(2, 6);
-    const finalSlug = `${baseSlug || 'klien'}-${randomSuffix}`;
+      .replace(/^-+|-+$/g, '') || 'studio';
 
-    const vendor = await getVendorById(vendorId);
+    const baseClientSlug = clientName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'klien';
+
+    const randomSuffix = Math.random().toString(36).substring(2, 6);
+    const clientSlug = baseClientSlug;
+    // Final slug format: vendorSlug/clientSlug
+    const finalSlug = `${vendorSlug}/${clientSlug}`;
 
     const newSession: VendorProofingSession = {
       id: `prf_${Date.now()}_${randomSuffix}`,
       vendorId,
+      vendorSlug,
+      clientSlug,
       vendorName: vendor?.brandName || vendor?.companyName || vendor?.name || 'Studio Fotografi',
       vendorLogo: vendor?.logoUrl,
       vendorWhatsapp: vendor?.whatsapp || vendor?.phone,

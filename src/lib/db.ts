@@ -3125,36 +3125,48 @@ export async function getVendorProofings(vendorId?: string): Promise<VendorProof
   return [];
 }
 
-export async function getProofingBySlugOrId(identifier: string): Promise<VendorProofingSession | null> {
+export async function getProofingBySlugOrId(identifier: string, vendorSlug?: string): Promise<VendorProofingSession | null> {
   if (!identifier) return null;
   const clean = identifier.trim().toLowerCase();
+  const cleanVendor = vendorSlug ? vendorSlug.trim().toLowerCase() : '';
+  const combined = cleanVendor ? `${cleanVendor}/${clean}` : '';
 
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
-      const { data, error } = await supabase
-        .from('vendor_proofings')
-        .select('*')
-        .or(`slug.eq.${clean},id.eq.${identifier}`)
-        .maybeSingle();
+      let query = supabase.from('vendor_proofings').select('*');
+      if (combined) {
+        query = query.or(`slug.eq.${combined},slug.eq.${clean},id.eq.${identifier}`);
+      } else {
+        query = query.or(`slug.eq.${clean},id.eq.${identifier}`);
+      }
+      const { data, error } = await query.limit(5);
 
-      if (!error && data) {
+      if (!error && data && data.length > 0) {
+        // Prioritize exact combined or vendor match
+        const found = data.find(d => {
+          const s = (d.slug || '').toLowerCase();
+          return s === combined || s === clean || d.id === identifier;
+        }) || data[0];
+
         return {
-          id: data.id,
-          vendorId: data.vendor_id,
-          vendorName: data.vendor_name,
-          vendorLogo: data.vendor_logo,
-          vendorWhatsapp: data.vendor_whatsapp,
-          clientName: data.client_name,
-          slug: data.slug,
-          gdriveFolderId: data.gdrive_folder_id,
-          quotaLimit: data.quota_limit || 50,
-          deadlineAt: data.deadline_at,
-          status: data.status || 'selecting',
-          selectedPhotos: data.selected_photos || [],
-          submittedAt: data.submitted_at,
-          createdAt: data.created_at,
-          updatedAt: data.updated_at
+          id: found.id,
+          vendorId: found.vendor_id,
+          vendorSlug: cleanVendor || (found.slug && found.slug.includes('/') ? found.slug.split('/')[0] : undefined),
+          clientSlug: found.slug && found.slug.includes('/') ? found.slug.split('/')[1] : found.slug,
+          vendorName: found.vendor_name,
+          vendorLogo: found.vendor_logo,
+          vendorWhatsapp: found.vendor_whatsapp,
+          clientName: found.client_name,
+          slug: found.slug,
+          gdriveFolderId: found.gdrive_folder_id,
+          quotaLimit: found.quota_limit || 50,
+          deadlineAt: found.deadline_at,
+          status: found.status || 'selecting',
+          selectedPhotos: found.selected_photos || [],
+          submittedAt: found.submitted_at,
+          createdAt: found.created_at,
+          updatedAt: found.updated_at
         };
       }
     } catch (err) {
@@ -3167,7 +3179,14 @@ export async function getProofingBySlugOrId(identifier: string): Promise<VendorP
     ensureLocalDataFiles();
     if (fs.existsSync(PROOFINGS_FILE)) {
       const all: VendorProofingSession[] = JSON.parse(fs.readFileSync(PROOFINGS_FILE, 'utf8') || '[]');
-      const found = all.find(p => p.slug.toLowerCase() === clean || p.id === identifier);
+      const found = all.find(p => {
+        const s = (p.slug || '').toLowerCase();
+        if (combined && s === combined) return true;
+        if (cleanVendor && (p.vendorSlug?.toLowerCase() === cleanVendor || s.startsWith(cleanVendor + '/'))) {
+          if (p.clientSlug?.toLowerCase() === clean || s === combined || s === clean) return true;
+        }
+        return s === clean || p.id === identifier;
+      });
       if (found) return found;
     }
   } catch (err) {

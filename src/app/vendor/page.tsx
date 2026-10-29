@@ -961,9 +961,25 @@ export default function VendorPortalPage() {
     toast.success(`${pSession.selectedPhotos.length} nama file disalin! Buka Adobe Lightroom > Filter Library > Paste nama file.`);
   };
 
-  const handleCopyProofingLink = (slug: string) => {
+  const getProofingPath = (pSession: VendorProofingSession) => {
+    if (pSession.vendorSlug && pSession.clientSlug) {
+      return `/${pSession.vendorSlug}/proof/${pSession.clientSlug}`;
+    }
+    if (pSession.slug && pSession.slug.includes('/')) {
+      const parts = pSession.slug.split('/');
+      return `/${parts[0]}/proof/${parts[1]}`;
+    }
+    const fallbackVendorSlug = (vendor?.companyName || vendor?.name || 'studio')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'studio';
+    return `/${fallbackVendorSlug}/proof/${pSession.slug}`;
+  };
+
+  const handleCopyProofingLink = (pSession: VendorProofingSession) => {
     if (typeof window === 'undefined') return;
-    const url = `${window.location.origin}/proof/${slug}`;
+    const path = getProofingPath(pSession);
+    const url = `${window.location.origin}${path}`;
     navigator.clipboard.writeText(url);
     toast.success('Tautan portal klien berhasil disalin!');
   };
@@ -2840,7 +2856,7 @@ export default function VendorPortalPage() {
                           {session.clientName}
                         </h3>
                         <p className="font-mono-film" style={{ fontSize: '12px', color: '#86868B', margin: '0 0 16px 0' }}>
-                          /proof/{session.slug}
+                          {getProofingPath(session)}
                         </p>
 
                         <div style={{ background: '#FBFBFA', padding: '12px 14px', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', border: '1px solid rgba(0,0,0,0.04)' }}>
@@ -2873,7 +2889,7 @@ export default function VendorPortalPage() {
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '12px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                           <button
-                            onClick={() => handleCopyProofingLink(session.slug)}
+                            onClick={() => handleCopyProofingLink(session)}
                             className="glass-pill"
                             style={{
                               padding: '9px 12px',
@@ -2889,7 +2905,7 @@ export default function VendorPortalPage() {
                             <Copy size={13} /> Salin Link Klien
                           </button>
                           <a
-                            href={`/proof/${session.slug}`}
+                            href={getProofingPath(session)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="glass-pill"
