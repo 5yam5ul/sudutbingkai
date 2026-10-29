@@ -6,7 +6,8 @@ import NumberFlow from '@number-flow/react';
 import {
   Check, ChevronLeft, ChevronRight, Download,
   Folder, FolderOpen, Heart, MessageSquare, RefreshCw,
-  Send, Sliders, X, ZoomIn, Camera, AlertCircle, FileText
+  Send, Sliders, X, ZoomIn, Camera, AlertCircle, FileText,
+  Lock, ShieldCheck, CheckCircle2
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { VendorProofingSession, ProofingSelectedItem } from '@/lib/types';
@@ -50,6 +51,7 @@ export default function ClientProofingPage() {
 
   // Lightbox state
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
   // 1. Fetch proofing session data
   useEffect(() => {
@@ -195,7 +197,7 @@ export default function ClientProofingPage() {
       }))
     : photos;
 
-  // Submit selection to server and WhatsApp
+  // Submit selection directly to Studio Database & open confirmation
   const [isSubmitting, setIsSubmitting] = useState(false);
   const handleSubmitSelection = async () => {
     if (selectedMap.size === 0) {
@@ -220,32 +222,9 @@ export default function ClientProofingPage() {
       const data = await res.json();
 
       if (data.success) {
-        toast.success('Pilihan foto berhasil disimpan!');
-
-        const vendorPhone = session.vendorWhatsapp ? session.vendorWhatsapp.replace(/[^0-9]/g, '') : '';
-        const studioName = session.vendorName || 'Studio Fotografi';
-
-        let waMessage = `Halo ${studioName},\nSaya *${session.clientName}* telah selesai menyeleksi foto untuk sesi album kami.\n\n`;
-        waMessage += `*Total Foto Dipilih:* ${selectedList.length} / ${session.quotaLimit} Foto\n`;
-        waMessage += `*Tautan Portal:* ${window.location.href}\n\n`;
-        waMessage += `*Daftar File Foto:*\n`;
-
-        selectedList.forEach((item, index) => {
-          waMessage += `${index + 1}. ${item.name}${item.folderName ? ` (${item.folderName})` : ''}\n`;
-          if (item.note && item.note.trim()) {
-            waMessage += `   _Catatan Edit: ${item.note.trim()}_\n`;
-          }
-        });
-
-        waMessage += `\nTerima kasih! Mohon diproses untuk tahapan editing ya.`;
-
-        if (vendorPhone) {
-          const cleanPhone = vendorPhone.startsWith('0') ? '62' + vendorPhone.slice(1) : vendorPhone;
-          window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`, '_blank');
-        } else {
-          navigator.clipboard.writeText(waMessage);
-          toast.success('Daftar foto disalin! Silakan kirimkan ke WhatsApp studio.');
-        }
+        setSession(prev => prev ? ({ ...prev, status: 'submitted', selectedPhotos: selectedList }) : prev);
+        setIsSuccessModalOpen(true);
+        toast.success('Pilihan foto Anda berhasil disimpan ke sistem studio!');
       } else {
         toast.error(data.error || 'Gagal menyimpan pilihan');
       }
@@ -253,6 +232,25 @@ export default function ClientProofingPage() {
       toast.error('Terjadi kesalahan saat menyimpan pilihan');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleSendWaNotification = () => {
+    if (!session) return;
+    const vendorPhone = session.vendorWhatsapp ? session.vendorWhatsapp.replace(/[^0-9]/g, '') : '';
+    const studioName = session.vendorName || 'Studio Fotografi';
+    const selectedList = Array.from(selectedMap.values());
+
+    let waMessage = `Halo ${studioName},\nSaya *${session.clientName}* telah selesai mengunci ${selectedList.length} foto pilihan untuk album kami di portal proofing.\n\n`;
+    waMessage += `*Tautan Portal:* ${window.location.href}\n\n`;
+    waMessage += `Mohon dicek di dashboard ya kak. Terima kasih!`;
+
+    if (vendorPhone) {
+      const cleanPhone = vendorPhone.startsWith('0') ? '62' + vendorPhone.slice(1) : vendorPhone;
+      window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(waMessage)}`, '_blank');
+    } else {
+      navigator.clipboard.writeText(waMessage);
+      toast.success('Pesan disalin! Silakan kirimkan ke WhatsApp studio.');
     }
   };
 
@@ -823,29 +821,53 @@ export default function ClientProofingPage() {
             <span className="desktop-only">Unduh .TXT</span>
           </button>
 
-          <button
-            type="button"
-            onClick={handleSubmitSelection}
-            disabled={isSubmitting || currentCount === 0}
-            style={{
-              padding: '10px 20px',
-              borderRadius: '999px',
-              background: currentCount >= quota ? '#10B981' : '#C27803',
-              border: 'none',
-              color: '#FFFFFF',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: currentCount > 0 ? 'pointer' : 'not-allowed',
-              opacity: currentCount > 0 ? 1 : 0.5,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
-            }}
-          >
-            <Send size={14} />
-            <span>{isSubmitting ? 'Menyimpan...' : 'Kirim Pilihan (WhatsApp)'}</span>
-          </button>
+          {session?.status === 'submitted' ? (
+            <button
+              type="button"
+              onClick={() => setIsSuccessModalOpen(true)}
+              style={{
+                padding: '10px 22px',
+                borderRadius: '999px',
+                background: '#10B981',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.3)'
+              }}
+            >
+              <ShieldCheck size={16} />
+              <span>Pilihan Terkunci &amp; Terkirim</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleSubmitSelection}
+              disabled={isSubmitting || currentCount === 0}
+              style={{
+                padding: '10px 22px',
+                borderRadius: '999px',
+                background: currentCount >= quota ? '#10B981' : '#C27803',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: currentCount > 0 ? 'pointer' : 'not-allowed',
+                opacity: currentCount > 0 ? 1 : 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: '0 4px 14px rgba(0,0,0,0.2)'
+              }}
+            >
+              <Lock size={14} />
+              <span>{isSubmitting ? 'Menyimpan...' : 'Kunci & Kirim Pilihan Album'}</span>
+            </button>
+          )}
         </div>
       </footer>
 
@@ -1071,6 +1093,168 @@ export default function ClientProofingPage() {
                 outline: 'none'
               }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* 8. PRESTIGE SUBMISSION SUCCESS MODAL */}
+      {isSuccessModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10000,
+            background: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+        >
+          <div
+            className="glass-card"
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '28px',
+              padding: '36px',
+              maxWidth: '520px',
+              width: '100%',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.25)',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px',
+              position: 'relative'
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setIsSuccessModalOpen(false)}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                background: 'rgba(0,0,0,0.05)',
+                border: 'none',
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#86868B'
+              }}
+            >
+              <X size={18} />
+            </button>
+
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '20px',
+                background: 'rgba(16, 185, 129, 0.1)',
+                color: '#10B981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <ShieldCheck size={36} />
+            </div>
+
+            <div>
+              <span className="font-mono-film" style={{ fontSize: '11px', color: '#C27803', display: 'block', marginBottom: '6px' }}>
+                STATUS: TERKUNCI &amp; TERSIMPAN DI SERVER
+              </span>
+              <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 8px 0', letterSpacing: '-0.02em' }}>
+                Pilihan Foto Berhasil Diterima!
+              </h2>
+              <p style={{ fontSize: '14px', color: '#6E6E73', lineHeight: 1.6, margin: 0 }}>
+                Terima kasih, <strong>{session?.clientName}</strong>. Sebanyak <strong>{selectedMap.size} foto</strong> pilihan Anda beserta catatan retouch telah berhasil tersimpan dan langsung masuk ke dashboard tim <strong>{session?.vendorName || 'Studio'}</strong>.
+              </p>
+            </div>
+
+            <div
+              style={{
+                width: '100%',
+                background: '#FBFBFA',
+                padding: '16px',
+                borderRadius: '16px',
+                border: '1px solid rgba(0,0,0,0.06)',
+                textAlign: 'left'
+              }}
+            >
+              <span style={{ fontSize: '11px', fontWeight: 700, color: '#86868B', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                Alur Tahapan Selanjutnya:
+              </span>
+              <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '13px', color: '#515154', lineHeight: 1.6 }}>
+                <li>Fotografer mengunduh &amp; memfilter file RAW sesuai nomor foto ini.</li>
+                <li>Proses retouching warna &amp; kulit dilakukan sesuai catatan Anda.</li>
+                <li>Anda akan dihubungi kembali ketika layout album siap direview.</li>
+              </ul>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', marginTop: '6px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={handleDownloadTxt}
+                  className="glass-pill"
+                  style={{
+                    padding: '11px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Download size={14} /> Unduh Bukti (.TXT)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSendWaNotification}
+                  style={{
+                    padding: '11px',
+                    borderRadius: '999px',
+                    background: 'rgba(37, 211, 102, 0.1)',
+                    color: '#059669',
+                    border: '1px solid rgba(37, 211, 102, 0.25)',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <Send size={14} /> Sapa via WA (Opsional)
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsSuccessModalOpen(false)}
+                className="btn-apple-black"
+                style={{
+                  padding: '12px',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  textAlign: 'center'
+                }}
+              >
+                Selesai &amp; Kembali ke Galeri
+              </button>
+            </div>
           </div>
         </div>
       )}
