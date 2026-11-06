@@ -194,12 +194,29 @@ CREATE POLICY video_wishes_public_insert ON public.video_wishes
   WITH CHECK (true);
 
 -- ------------------------------------------------------------------------------
--- 5. POLICY AMAN: TABEL VENDORS
--- Data Super Admin disembunyikan dari koneksi publik
+-- 5. POLICY AMAN: TABEL VENDORS & DIREKTORI PUBLIK
+-- Data Super Admin & Data Rekening Perbankan terlindungi dari kebocoran publik
 -- ------------------------------------------------------------------------------
 CREATE POLICY vendors_public_read ON public.vendors
   FOR SELECT
   USING (role != 'admin');
+
+-- View aman untuk direktori publik yang mengecualikan data rekening & saldo
+CREATE OR REPLACE VIEW public.vendors_directory AS
+  SELECT 
+    id, 
+    name, 
+    company_name, 
+    logo_url, 
+    city, 
+    instagram, 
+    tier, 
+    partner_tier, 
+    referral_code
+  FROM public.vendors
+  WHERE role != 'admin';
+
+GRANT SELECT ON public.vendors_directory TO anon, authenticated;
 
 -- ------------------------------------------------------------------------------
 -- 6. POLICY AMAN: TABEL ADDONS

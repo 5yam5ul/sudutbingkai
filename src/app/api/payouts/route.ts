@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { getPayoutRequests, createPayoutRequest, updatePayoutStatus, deletePayout, getAllVendors, updateVendor } from '@/lib/db';
 import { getServerSession, isSameVendorId, signSessionPayload } from '@/lib/auth';
 
+// In-process lock to prevent concurrent double-withdrawal race conditions
+const activePayoutLocks = new Set<string>();
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -84,73 +87,85 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Batas minimal penarikan adalah Rp 100.000' }, { status: 400 });
     }
 
-    // Verify vendor balance in database (except demo account vendor_vows_co if not yet persisted)
-    const allVendors = await getAllVendors();
-    const matchedVendor = allVendors.find(v => isSameVendorId(v.id, vendorId) || (vendorEmail && v.email?.toLowerCase() === vendorEmail.toLowerCase()));
-
-    let nextBalance: number | undefined;
-    let sessionToken: string | undefined;
-
-    if (matchedVendor) {
-      if (!isAdmin && matchedVendor.status === 'suspended') {
-        return NextResponse.json({
-          success: false,
-          error: 'Akses ditolak: Akun kemitraan Anda sedang ditangguhkan dan tidak dapat mengajukan penarikan komisi.'
-        }, { status: 403 });
-      }
-      const availableBalance = Number(matchedVendor.walletBalance || 0);
-      if (!isAdmin && requestedAmount > availableBalance) {
-        return NextResponse.json({
-          success: false,
-          error: `Saldo komisi tidak mencukupi (Tersedia: Rp ${availableBalance.toLocaleString('id-ID')}).`
-        }, { status: 400 });
-      }
-      nextBalance = Math.max(0, availableBalance - requestedAmount);
-      // Deduct balance upon payout request creation to prevent double withdrawal
-      const updatedVendor = await updateVendor(matchedVendor.id, {
-        walletBalance: nextBalance
-      });
-      if (isSelf && updatedVendor) {
-        const vendorSessionPayload = {
-          id: updatedVendor.id,
-          name: updatedVendor.name,
-          companyName: updatedVendor.companyName || updatedVendor.name,
-          email: updatedVendor.email,
-          role: 'vendor' as const,
-          phone: updatedVendor.phone || '',
-          instagram: updatedVendor.instagram || '',
-          city: updatedVendor.city || 'Jakarta',
-          logoUrl: updatedVendor.logoUrl,
-          partnerTier: updatedVendor.partnerTier || 'regular',
-          referralCode: updatedVendor.referralCode,
-          walletBalance: updatedVendor.walletBalance || 0,
-          totalEarnings: updatedVendor.totalEarnings || 0,
-        };
-        sessionToken = signSessionPayload(JSON.stringify(vendorSessionPayload));
-      }
-    } else if (!isAdmin) {
+    if (activePayoutLocks.has(vendorId)) {
       return NextResponse.json({
         success: false,
-        error: 'Akun mitra vendor tidak ditemukan atau belum memiliki saldo komisi terverifikasi.'
-      }, { status: 400 });
+        error: 'Permintaan penarikan lain untuk vendor ini sedang diproses. Mohon tunggu sejenak.'
+      }, { status: 429 });
     }
 
-    const payout = await createPayoutRequest({
-      vendorId,
-      vendorEmail: vendorEmail || session.email || 'vendor@sudutbingkai.id',
-      vendorName: vendorName || session.name || 'Mitra Vendor',
-      companyName,
-      amount: requestedAmount,
-      bankDetails,
-      notes
-    });
+    activePayoutLocks.add(vendorId);
+    try {
+      // Verify vendor balance in database (except demo account vendor_vows_co if not yet persisted)
+      const allVendors = await getAllVendors();
+      const matchedVendor = allVendors.find(v => isSameVendorId(v.id, vendorId) || (vendorEmail && v.email?.toLowerCase() === vendorEmail.toLowerCase()));
 
-    return NextResponse.json({
-      success: true,
-      payout,
-      ...(nextBalance !== undefined ? { walletBalance: nextBalance } : {}),
-      ...(sessionToken ? { sessionToken } : {})
-    });
+      let nextBalance: number | undefined;
+      let sessionToken: string | undefined;
+
+      if (matchedVendor) {
+        if (!isAdmin && matchedVendor.status === 'suspended') {
+          return NextResponse.json({
+            success: false,
+            error: 'Akses ditolak: Akun kemitraan Anda sedang ditangguhkan dan tidak dapat mengajukan penarikan komisi.'
+          }, { status: 403 });
+        }
+        const availableBalance = Number(matchedVendor.walletBalance || 0);
+        if (!isAdmin && requestedAmount > availableBalance) {
+          return NextResponse.json({
+            success: false,
+            error: `Saldo komisi tidak mencukupi (Tersedia: Rp ${availableBalance.toLocaleString('id-ID')}).`
+          }, { status: 400 });
+        }
+        nextBalance = Math.max(0, availableBalance - requestedAmount);
+        // Deduct balance upon payout request creation to prevent double withdrawal
+        const updatedVendor = await updateVendor(matchedVendor.id, {
+          walletBalance: nextBalance
+        });
+        if (isSelf && updatedVendor) {
+          const vendorSessionPayload = {
+            id: updatedVendor.id,
+            name: updatedVendor.name,
+            companyName: updatedVendor.companyName || updatedVendor.name,
+            email: updatedVendor.email,
+            role: 'vendor' as const,
+            phone: updatedVendor.phone || '',
+            instagram: updatedVendor.instagram || '',
+            city: updatedVendor.city || 'Jakarta',
+            logoUrl: updatedVendor.logoUrl,
+            partnerTier: updatedVendor.partnerTier || 'regular',
+            referralCode: updatedVendor.referralCode,
+            walletBalance: updatedVendor.walletBalance || 0,
+            totalEarnings: updatedVendor.totalEarnings || 0,
+          };
+          sessionToken = signSessionPayload(JSON.stringify(vendorSessionPayload));
+        }
+      } else if (!isAdmin) {
+        return NextResponse.json({
+          success: false,
+          error: 'Akun mitra vendor tidak ditemukan atau belum memiliki saldo komisi terverifikasi.'
+        }, { status: 400 });
+      }
+
+      const payout = await createPayoutRequest({
+        vendorId,
+        vendorEmail: vendorEmail || session.email || 'vendor@sudutbingkai.id',
+        vendorName: vendorName || session.name || 'Mitra Vendor',
+        companyName,
+        amount: requestedAmount,
+        bankDetails,
+        notes
+      });
+
+      return NextResponse.json({
+        success: true,
+        payout,
+        ...(nextBalance !== undefined ? { walletBalance: nextBalance } : {}),
+        ...(sessionToken ? { sessionToken } : {})
+      });
+    } finally {
+      activePayoutLocks.delete(vendorId);
+    }
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

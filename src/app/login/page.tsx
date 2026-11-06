@@ -171,14 +171,13 @@ function LoginFormContent() {
       assignedRole = 'admin';
     }
 
-    // Protection: If user already has an active host session and did NOT explicitly ask to register as vendor
+    // Seamless switching: If user already has an active host session and signs in as vendor, clear host session
     const currentSession = getClientSession();
     if (currentSession && currentSession.role === 'host' && assignedRole === 'vendor') {
-      if (pendingMode !== 'register' && authMode !== 'register') {
-        toast.info(`Anda saat ini masuk sebagai Pengantin (${currentSession.name}). Mengarahkan ke Dashboard Acara.`);
-        router.push(resolveRedirectDestination('/dashboard', 'host'));
-        return;
-      }
+      try {
+        localStorage.removeItem('sb_session');
+        localStorage.removeItem('sb_session_token');
+      } catch {}
     }
 
     const signOAuthSessionOnServer = async (u: UserAccount): Promise<string | undefined> => {

@@ -43,6 +43,14 @@ export async function GET(request: Request) {
       }, { status: 500 });
     }
 
+    // Strict validation to prevent Google Drive API query parameter injection
+    if (!/^[a-zA-Z0-9_-]{5,100}$/.test(folderId)) {
+      return NextResponse.json({
+        success: false,
+        error: 'Format ID folder Google Drive tidak valid. Hanya karakter alfanumerik, strip, dan garis bawah yang diperbolehkan.'
+      }, { status: 400 });
+    }
+
     const cacheKey = `${folderId}_${pageToken}`;
     const cached = driveCache.get(cacheKey);
     if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
@@ -91,6 +99,12 @@ export async function GET(request: Request) {
       photos,
       nextPageToken: data.nextPageToken || undefined
     };
+
+    // Enforce LRU cache upper bound (max 200 entries to prevent memory exhaustion)
+    if (driveCache.size >= 200) {
+      const oldestKey = driveCache.keys().next().value;
+      if (oldestKey) driveCache.delete(oldestKey);
+    }
 
     driveCache.set(cacheKey, {
       timestamp: Date.now(),

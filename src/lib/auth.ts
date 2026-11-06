@@ -52,13 +52,14 @@ export function authenticateUser(email: string, pass: string, role?: 'host' | 'v
   const cleanEmail = email.trim().toLowerCase();
   const cleanPass = pass.trim();
 
-  // Check Super Admin - STRICT SECURITY: Admin role MUST match authorized credentials
+// Check Super Admin - STRICT SECURITY: Admin role MUST match authorized credentials
   const isAdminEmail = cleanEmail === 'admin@sudutbingkai.id' || cleanEmail === 'superadmin@sudutbingkai.id' || cleanEmail === 'admin';
   if (role === 'admin' || isAdminEmail) {
+    const isProd = typeof process !== 'undefined' && process.env?.NODE_ENV === 'production';
     const masterAdminPass = (typeof process !== 'undefined' && process.env?.ADMIN_MASTER_PASSWORD?.trim()) || '';
     const isPasswordValid = masterAdminPass.length > 0
       ? cleanPass === masterAdminPass
-      : (cleanPass === 'admin123' || cleanPass === 'adminpass2026' || cleanPass === 'sudutbingkai2026');
+      : (!isProd && (cleanPass === 'admin123' || cleanPass === 'adminpass2026' || cleanPass === 'sudutbingkai2026'));
     if (isAdminEmail && isPasswordValid) {
       const { password: _, ...safeAdmin } = SYSTEM_USERS['admin'];
       return safeAdmin;
@@ -98,10 +99,13 @@ export function authenticateUser(email: string, pass: string, role?: 'host' | 'v
 // CRYPTOGRAPHIC SESSION INTEGRITY (HMAC-SHA256)
 // ---------------------------------------------------------------------------
 const STORAGE_KEY = 'sb_auth_session';
-const FALLBACK_SECRET = 'sb_sec_hmac_2026_salt_9841';
 const SESSION_SECRET =
-  (typeof process !== 'undefined' && process.env?.AUTH_SECRET) ||
-  FALLBACK_SECRET;
+  (typeof process !== 'undefined' && process.env?.AUTH_SECRET?.trim()) ||
+  '';
+
+if (typeof window === 'undefined' && (!SESSION_SECRET || SESSION_SECRET.length < 16)) {
+  console.warn('CRITICAL SECURITY: AUTH_SECRET is not configured or insufficiently long in server environment.');
+}
 
 function sha256Sync(ascii: string): string {
   function rightRotate(value: number, amount: number) {
@@ -204,6 +208,10 @@ function decodeB64(b64: string): string {
 }
 
 export function signSessionPayload(payloadJson: string): string {
+  if (!SESSION_SECRET) {
+    console.error('Cannot sign session payload: AUTH_SECRET is not set');
+    return '';
+  }
   const sig = sha256Sync(`${payloadJson}#${SESSION_SECRET}`);
   return `${encodeB64(payloadJson)}.${sig}`;
 }
@@ -218,34 +226,48 @@ export function verifyAndParseSession(rawInput: string): UserAccount | null {
       const parts = token.split('.');
       if (parts.length === 2) {
         const [b64Payload, sig] = parts;
+        if (!sig || !/^[0-9a-f]{64}$/i.test(sig)) return null;
+
         const payloadJson = decodeB64(b64Payload);
         const parsed = JSON.parse(payloadJson);
         if (!parsed || !parsed.id || !parsed.role) return null;
 
-        const expectedSig = sha256Sync(`${payloadJson}#${SESSION_SECRET}`);
         const isClientSide = typeof window !== 'undefined';
 
-        const isSignatureValid =
-          sig === expectedSig ||
-          (isClientSide && /^[0-9a-f]{64}$/i.test(sig));
-
-        if (isSignatureValid) {
+        if (isClientSide) {
+          // In the browser, admin privileges can NEVER be activated through client-side parsing alone
           if (parsed.role === 'admin') {
-            const isAdminValid =
-              (parsed.id === 'admin_sudutbingkai' && parsed.email?.toLowerCase().includes('admin@sudutbingkai.id')) ||
-              parsed.email?.toLowerCase().includes('superadmin');
-            if (isAdminValid) {
-              const { password: _, ...safeAdmin } = SYSTEM_USERS['admin'];
-              return safeAdmin;
-            }
             return null;
           }
           const { password: _, ...safeUser } = parsed;
           return safeUser as UserAccount;
-        } else {
-          console.warn('Tampered or invalid session signature detected!');
+        }
+
+        // Server-side strict cryptographic HMAC validation
+        if (!SESSION_SECRET) {
+          console.error('Server cannot verify session: AUTH_SECRET is missing or empty.');
           return null;
         }
+
+        const expectedSig = sha256Sync(`${payloadJson}#${SESSION_SECRET}`);
+        if (sig !== expectedSig) {
+          console.warn('Tampered or invalid session signature rejected on server!');
+          return null;
+        }
+
+        if (parsed.role === 'admin') {
+          const isAdminValid =
+            (parsed.id === 'admin_sudutbingkai' && parsed.email?.toLowerCase().includes('admin@sudutbingkai.id')) ||
+            parsed.email?.toLowerCase().includes('superadmin');
+          if (isAdminValid) {
+            const { password: _, ...safeAdmin } = SYSTEM_USERS['admin'];
+            return safeAdmin;
+          }
+          return null;
+        }
+
+        const { password: _, ...safeUser } = parsed;
+        return safeUser as UserAccount;
       }
     } catch {}
   }

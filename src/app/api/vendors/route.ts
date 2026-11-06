@@ -273,8 +273,8 @@ export async function PATCH(req: Request) {
         const currentBal = current.walletBalance || 0;
         updates.walletBalance = Math.max(0, currentBal + Number(body.adjustBalance));
       }
-    } else if (!isMayarConfigured && isSelf) {
-      // Only in local sandbox simulation mode when Mayar is not configured
+    } else if (!isMayarConfigured && isSelf && process.env.NODE_ENV !== 'production') {
+      // Strictly allowed only in offline development sandbox (never in production)
       if (body.adjustBalance !== undefined) {
         const currentBal = current.walletBalance || 0;
         updates.walletBalance = Math.max(0, currentBal + Number(body.adjustBalance));

@@ -24,26 +24,22 @@ CREATE INDEX IF NOT EXISTS idx_vendor_proofings_slug ON public.vendor_proofings(
 -- Enable Row Level Security (RLS)
 ALTER TABLE public.vendor_proofings ENABLE ROW LEVEL SECURITY;
 
--- Policy: Publik (Klien) & Server dapat membaca sesi proofing berdasarkan slug/id
+-- Policy: Publik (Klien) dapat membaca sesi proofing untuk memilih foto
+DROP POLICY IF EXISTS "Public can view proofing session by slug" ON public.vendor_proofings;
 CREATE POLICY "Public can view proofing session by slug"
     ON public.vendor_proofings
     FOR SELECT
     USING (true);
 
--- Policy: Publik (Klien) dapat mengupdate selected_photos dan status saat submit
+-- Policy: Klien publik hanya dapat memperbarui foto yang dipilih saat submit
+DROP POLICY IF EXISTS "Public can submit selected photos" ON public.vendor_proofings;
 CREATE POLICY "Public can submit selected photos"
     ON public.vendor_proofings
     FOR UPDATE
-    USING (true)
-    WITH CHECK (true);
+    USING (status = 'selecting')
+    WITH CHECK (status IN ('selecting', 'submitted'));
 
--- Policy: Vendor / Server dapat insert & delete sesi proofing
-CREATE POLICY "Vendor and server can insert proofings"
-    ON public.vendor_proofings
-    FOR INSERT
-    WITH CHECK (true);
-
-CREATE POLICY "Vendor and server can delete proofings"
-    ON public.vendor_proofings
-    FOR DELETE
-    USING (true);
+-- Operasi INSERT dan DELETE terkunci dari koneksi publik anonim.
+-- Hanya backend server terautentikasi (Service Role Key) yang diizinkan membuat atau menghapus sesi.
+DROP POLICY IF EXISTS "Vendor and server can insert proofings" ON public.vendor_proofings;
+DROP POLICY IF EXISTS "Vendor and server can delete proofings" ON public.vendor_proofings;

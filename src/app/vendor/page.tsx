@@ -9,9 +9,9 @@ import {
   Upload, Image as ImageIcon, Calculator, FileText, CheckCircle2, 
   DollarSign, MessageCircle, HelpCircle, Layers, ShieldCheck, Flame, Copy, Trash2,
   CreditCard, Wallet, Share2, Video, Film, PlayCircle, FolderHeart,
-  Printer, Tv, Eye, Award, X, AlertTriangle, Calendar, MapPin, Mail, Lightbulb, Clock,
-  Heart, ChevronDown, ChevronUp, Shield, FileX,
-  Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic
+  Printer, Tv, Eye, Award, X, AlertTriangle, AlertCircle, Calendar, MapPin, Mail, Lightbulb, Clock,
+  Heart, ChevronDown, ChevronUp, ChevronRight, Shield, FileX,
+  Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic, RefreshCw
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo, PACKAGE_TIERS, EventPackageTier, resolveEventCategory, getEventCategoryMeta, VendorProofingSession } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, authFetch, isSameVendorId } from '@/lib/auth';
@@ -80,6 +80,13 @@ export default function VendorPortalPage() {
   const [newProofingGdrive, setNewProofingGdrive] = useState('');
   const [newProofingQuota, setNewProofingQuota] = useState(50);
   const [isCreatingProofing, setIsCreatingProofing] = useState(false);
+  const [isTestingDrive, setIsTestingDrive] = useState(false);
+  const [driveTestResult, setDriveTestResult] = useState<{
+    status: 'idle' | 'success' | 'error';
+    message: string;
+    photoCount?: number;
+    folderCount?: number;
+  }>({ status: 'idle', message: '' });
   const [selectedProofingNotes, setSelectedProofingNotes] = useState<VendorProofingSession | null>(null);
 
   // Partner Testimonial Rewards State
@@ -113,6 +120,8 @@ export default function VendorPortalPage() {
   const [payoutModalOpen, setPayoutModalOpen] = useState(false);
   const [payoutAmount, setPayoutAmount] = useState<number>(100000);
   const [isRequestingPayout, setIsRequestingPayout] = useState(false);
+  const [saveBankToProfile, setSaveBankToProfile] = useState<boolean>(true);
+  const [showRegisterModal, setShowRegisterModal] = useState<boolean>(false);
   const [payoutsList, setPayoutsList] = useState<PayoutRequest[]>([]);
   const [copiedReferral, setCopiedReferral] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -136,6 +145,44 @@ export default function VendorPortalPage() {
     variant: 'primary',
     onConfirm: () => {}
   });
+
+  // UX Audit (checklists/modals.md): Global Escape key listener & Body scroll lock
+  useEffect(() => {
+    const isAnyModalOpen = Boolean(
+      payoutModalOpen ||
+      createProofingModalOpen ||
+      selectedProofingNotes ||
+      showRegisterModal ||
+      confirmModal.isOpen
+    );
+
+    if (isAnyModalOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          if (confirmModal.isOpen) {
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          } else if (selectedProofingNotes) {
+            setSelectedProofingNotes(null);
+          } else if (createProofingModalOpen) {
+            setCreateProofingModalOpen(false);
+          } else if (payoutModalOpen) {
+            setPayoutModalOpen(false);
+          } else if (showRegisterModal) {
+            setShowRegisterModal(false);
+          }
+        }
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        window.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [payoutModalOpen, createProofingModalOpen, selectedProofingNotes, showRegisterModal, confirmModal.isOpen]);
 
   // Vendor Branding & Logo State
   const [companyName, setCompanyName] = useState('');
@@ -220,6 +267,25 @@ export default function VendorPortalPage() {
         if (data.payout) {
           setPayoutsList(prev => [data.payout, ...prev]);
         }
+
+        // UX Audit (modals.md): Sync bank details to vendor profile if saveBankToProfile is checked
+        if (saveBankToProfile) {
+          authFetch('/api/vendors', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: vendor.id,
+              name: vendor.name,
+              companyName: companyName || vendor.companyName || vendor.name,
+              bankDetails: {
+                bankName: bankName.trim() || 'BCA',
+                accountNumber: accountNumber.trim(),
+                accountHolder: accountHolder.trim()
+              }
+            })
+          }).catch(() => {});
+        }
+
         toast.success(
           `Permintaan penarikan Rp ${payoutAmount.toLocaleString('id-ID')} berhasil diajukan! Dana akan ditransfer ke rekening ${bankName} (${accountNumber} a/n ${accountHolder}) dalam 1x24 jam kerja.`
         );
@@ -254,7 +320,6 @@ export default function VendorPortalPage() {
   const [currentSession, setCurrentSession] = useState<UserAccount | null>(null);
   const [isRegisteredPartnerHost, setIsRegisteredPartnerHost] = useState<boolean>(false);
   const [isPartnerLanding, setIsPartnerLanding] = useState<boolean>(false);
-  const [showRegisterModal, setShowRegisterModal] = useState<boolean>(false);
   const [regPicName, setRegPicName] = useState<string>('');
   const [regCompanyName, setRegCompanyName] = useState<string>('');
   const [regPhone, setRegPhone] = useState<string>('');
@@ -889,21 +954,79 @@ export default function VendorPortalPage() {
   };
 
   // Proofing Handlers
+  const handleTestDriveConnection = async () => {
+    if (!newProofingGdrive.trim()) {
+      toast.error('Masukkan link atau ID folder Google Drive terlebih dahulu');
+      return;
+    }
+
+    let cleanId = newProofingGdrive.trim();
+    const folderMatch = cleanId.match(/folders\/([a-zA-Z0-9-_]+)/);
+    if (folderMatch && folderMatch[1]) {
+      cleanId = folderMatch[1];
+    } else {
+      const idMatch = cleanId.match(/id=([a-zA-Z0-9-_]+)/);
+      if (idMatch && idMatch[1]) {
+        cleanId = idMatch[1];
+      }
+    }
+
+    setIsTestingDrive(true);
+    setDriveTestResult({ status: 'idle', message: '' });
+
+    try {
+      const res = await fetch(`/api/proofing/drive?folderId=${encodeURIComponent(cleanId)}`);
+      const data = await res.json();
+      if (data.success) {
+        const photoCount = data.photos?.length || 0;
+        const folderCount = data.folders?.length || 0;
+        setDriveTestResult({
+          status: 'success',
+          message: `Akses Terbuka! Terdeteksi ${photoCount} file foto${folderCount > 0 ? ` & ${folderCount} sub-folder` : ''}.`,
+          photoCount,
+          folderCount
+        });
+        toast.success(`Google Drive valid! ${photoCount} foto siap ditampilkan.`);
+      } else {
+        setDriveTestResult({
+          status: 'error',
+          message: data.error || 'Folder tidak dapat diakses publik. Ubah izin sharing ke "Anyone with the link can view".'
+        });
+        toast.error('Google Drive privat atau tidak ditemukan.');
+      }
+    } catch {
+      setDriveTestResult({
+        status: 'error',
+        message: 'Gagal menghubungi server proxy Google Drive.'
+      });
+      toast.error('Koneksi ke Google Drive terputus.');
+    } finally {
+      setIsTestingDrive(false);
+    }
+  };
+
   const handleCreateProofing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProofingClient.trim() || !newProofingGdrive.trim()) {
       toast.error('Nama klien dan Link Google Drive wajib diisi.');
       return;
     }
+
+    const activeSession = getClientSession();
+    const effectiveVendorId = vendor.id || activeSession?.id;
+    if (!effectiveVendorId) {
+      toast.error('Sesi vendor tidak terautentikasi. Silakan muat ulang halaman atau login kembali.');
+      return;
+    }
+
     setIsCreatingProofing(true);
 
     try {
-      const vendorId = vendor.id || `vendor_${Date.now()}`;
       const res = await authFetch('/api/proofing/session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          vendorId,
+          vendorId: effectiveVendorId,
           clientName: newProofingClient.trim(),
           gdriveFolderId: newProofingGdrive.trim(),
           quotaLimit: newProofingQuota || 50
@@ -917,6 +1040,7 @@ export default function VendorPortalPage() {
         setNewProofingClient('');
         setNewProofingGdrive('');
         setNewProofingQuota(50);
+        setDriveTestResult({ status: 'idle', message: '' });
         toast.success(`Sesi proofing untuk ${data.session.clientName} berhasil dibuat!`);
       } else {
         toast.error(data.error || 'Gagal membuat sesi proofing.');
@@ -1077,6 +1201,26 @@ export default function VendorPortalPage() {
                     >
                       {isRegisteredPartnerHost ? 'Buka Portal Mitra Saya' : 'Daftar Mitra WO'}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          localStorage.removeItem('sb_session');
+                          localStorage.removeItem('sb_session_token');
+                        } catch {}
+                        window.location.href = '/login?role=vendor&mode=login';
+                      }}
+                      className="glass-pill"
+                      style={{
+                        padding: '8px 12px',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        color: '#6E6E73'
+                      }}
+                      title="Keluar dari akun pengantin dan masuk ke akun vendor"
+                    >
+                      Masuk Akun Vendor
+                    </button>
                   </>
                 ) : currentSession?.role === 'vendor' ? (
                   <button
@@ -1165,6 +1309,20 @@ export default function VendorPortalPage() {
                     style={{ padding: '8px 14px', fontSize: '12px', cursor: 'pointer', color: '#C27803', fontWeight: 600, border: '1px solid rgba(194, 120, 3, 0.3)' }}
                   >
                     {isRegisteredPartnerHost ? 'Buka Portal Mitra Saya' : 'Daftar Jadi Mitra'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      try {
+                        localStorage.removeItem('sb_session');
+                        localStorage.removeItem('sb_session_token');
+                      } catch {}
+                      window.location.href = '/login?role=vendor&mode=login';
+                    }}
+                    className="glass-pill"
+                    style={{ padding: '8px 14px', fontSize: '12px', cursor: 'pointer', color: '#6E6E73' }}
+                  >
+                    Masuk Akun Vendor Lain
                   </button>
                 </div>
               </div>
@@ -1850,8 +2008,12 @@ export default function VendorPortalPage() {
           </div>
         </div>
 
-        {/* Tab Switcher - Horizontal Scroll on Mobile */}
-        <div className="horizontal-scroll-row" style={{ gap: '10px', marginBottom: '28px', paddingBottom: '6px' }}>
+        {/* Tab Switcher - Horizontal Scroll on Mobile with Swipe Hint */}
+        <div className="mobile-only" style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '4px', marginBottom: '8px', paddingRight: '4px' }}>
+          <span style={{ fontSize: '11px', color: '#86868B', fontWeight: 500 }}>Geser menu fitur</span>
+          <ChevronRight size={12} color="#86868B" />
+        </div>
+        <div className="horizontal-scroll-row" style={{ gap: '10px', marginBottom: '28px', paddingBottom: '6px', WebkitOverflowScrolling: 'touch' }}>
           <button
             onClick={() => setActiveTab('wallet')}
             className="glass-pill"
@@ -4622,40 +4784,62 @@ export default function VendorPortalPage() {
         onCancel={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
       />
 
-      {/* Payout Request Modal */}
+      {/* Payout Request Modal — 100% compliant with checklists/modals.md */}
       {payoutModalOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '20px'
-        }}>
-          <div className="glass-card" style={{
-            maxWidth: '460px',
-            width: '100%',
-            backgroundColor: '#FFFFFF',
-            borderRadius: '24px',
-            padding: '32px 28px',
-            boxShadow: '0 24px 60px rgba(0, 0, 0, 0.25)',
-            border: '1px solid rgba(0, 0, 0, 0.08)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CreditCard size={20} />
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="payout-modal-title"
+          onClick={() => setPayoutModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+        >
+          <div
+            className="glass-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '480px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '32px 28px',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.25)',
+              border: '1px solid rgba(0, 0, 0, 0.08)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <h3 id="payout-modal-title" style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#1D1D1F' }}>
+                    Tarik Saldo Komisi
+                  </h3>
+                  <span style={{ fontSize: '12px', color: '#86868B' }}>
+                    Saldo Tersedia: Rp {walletBalance.toLocaleString('id-ID')}
+                  </span>
+                </div>
               </div>
-              <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: '#1D1D1F' }}>
-                  Tarik Saldo Komisi
-                </h3>
-                <span style={{ fontSize: '12px', color: '#86868B' }}>
-                  Saldo Tersedia: Rp {walletBalance.toLocaleString('id-ID')}
-                </span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setPayoutModalOpen(false)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#86868B', padding: '4px' }}
+                aria-label="Tutup modal"
+              >
+                <X size={20} />
+              </button>
             </div>
 
             <p style={{ fontSize: '13px', color: '#515154', lineHeight: 1.5, marginBottom: '20px' }}>
@@ -4672,6 +4856,7 @@ export default function VendorPortalPage() {
                 </span>
                 <input
                   type="number"
+                  autoFocus
                   value={payoutAmount}
                   onChange={(e) => setPayoutAmount(Number(e.target.value))}
                   min={100000}
@@ -4698,7 +4883,7 @@ export default function VendorPortalPage() {
               </div>
             </div>
 
-            <div style={{ background: '#FBFBFA', borderRadius: '14px', padding: '14px', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '24px', fontSize: '12.5px', color: '#515154' }}>
+            <div style={{ background: '#FBFBFA', borderRadius: '14px', padding: '14px', border: '1px solid rgba(0,0,0,0.06)', marginBottom: '20px', fontSize: '12.5px', color: '#515154' }}>
               <span style={{ fontSize: '11px', textTransform: 'uppercase', color: '#86868B', display: 'block', marginBottom: '10px', fontWeight: 600 }}>
                 REKENING BANK TUJUAN:
               </span>
@@ -4734,6 +4919,17 @@ export default function VendorPortalPage() {
                   />
                 </div>
               </div>
+
+              {/* UX Auto-Save Checkbox */}
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '11.5px', color: '#1D1D1F', marginTop: '12px', paddingTop: '10px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                <input
+                  type="checkbox"
+                  checked={saveBankToProfile}
+                  onChange={(e) => setSaveBankToProfile(e.target.checked)}
+                  style={{ accentColor: '#C27803', cursor: 'pointer' }}
+                />
+                <span>Simpan rekening ini ke profil kemitraan untuk penarikan berikutnya</span>
+              </label>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
@@ -4761,38 +4957,51 @@ export default function VendorPortalPage() {
         </div>
       )}
 
-      {/* Explicit Registration Modal for Logged-In Hosts */}
+      {/* Explicit Registration Modal for Logged-In Hosts — 100% compliant with checklists/modals.md */}
       {showRegisterModal && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.45)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '16px'
-        }}>
-          <div className="glass-card" style={{
-            background: '#FFFFFF',
-            borderRadius: '24px',
-            padding: '32px',
-            maxWidth: '460px',
-            width: '100%',
-            boxShadow: '0 20px 48px rgba(0,0,0,0.2)'
-          }}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="register-modal-title"
+          onClick={() => setShowRegisterModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px'
+          }}
+        >
+          <div
+            className="glass-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '32px',
+              maxWidth: '480px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 20px 48px rgba(0,0,0,0.2)'
+            }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Building size={18} color="#C27803" />
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
+                <h3 id="register-modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
                   Daftar Kemitraan Agensi WO
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setShowRegisterModal(false)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#86868B' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#86868B', padding: '4px' }}
+                aria-label="Tutup modal"
               >
                 <X size={18} />
               </button>
@@ -4880,34 +5089,46 @@ export default function VendorPortalPage() {
           </div>
         </div>
       )}
-      {/* Modal: Buat Sesi Proofing Baru */}
+      {/* Modal: Buat Sesi Proofing Baru — 100% compliant with checklists/modals.md */}
       {createProofingModalOpen && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '16px'
-        }}>
-          <div className="glass-card" style={{
-            background: '#FFFFFF',
-            borderRadius: '24px',
-            padding: '32px',
-            maxWidth: '520px',
-            width: '100%',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.2)'
-          }}>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="proofing-modal-title"
+          onClick={() => setCreateProofingModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px'
+          }}
+        >
+          <div
+            className="glass-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '32px',
+              maxWidth: '520px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.2)'
+            }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(194,120,3,0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <FolderHeart size={18} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
+                  <h3 id="proofing-modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
                     Buat Sesi Proofing Klien
                   </h3>
                   <span style={{ fontSize: '12px', color: '#86868B' }}>Penyajian Google Drive Tanpa Beban Storage</span>
@@ -4929,6 +5150,7 @@ export default function VendorPortalPage() {
                 </label>
                 <input
                   type="text"
+                  autoFocus
                   required
                   value={newProofingClient}
                   onChange={(e) => setNewProofingClient(e.target.value)}
@@ -4938,19 +5160,84 @@ export default function VendorPortalPage() {
               </div>
 
               <div>
-                <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-                  Link Folder Google Drive:
-                </label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12.5px', fontWeight: 600, color: '#1D1D1F' }}>
+                    Link Folder Google Drive:
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleTestDriveConnection}
+                    disabled={isTestingDrive || !newProofingGdrive.trim()}
+                    style={{
+                      background: 'rgba(194,120,3,0.1)',
+                      border: '1px solid rgba(194,120,3,0.3)',
+                      color: '#C27803',
+                      fontSize: '11.5px',
+                      fontWeight: 600,
+                      padding: '3px 10px',
+                      borderRadius: '8px',
+                      cursor: isTestingDrive || !newProofingGdrive.trim() ? 'not-allowed' : 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      opacity: isTestingDrive || !newProofingGdrive.trim() ? 0.6 : 1
+                    }}
+                  >
+                    {isTestingDrive ? (
+                      <>
+                        <RefreshCw size={11} className="animate-spin" />
+                        <span>Menguji Akses...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Check size={11} />
+                        <span>Uji Akses Folder</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
                 <input
                   type="text"
                   required
                   value={newProofingGdrive}
-                  onChange={(e) => setNewProofingGdrive(e.target.value)}
+                  onChange={(e) => {
+                    setNewProofingGdrive(e.target.value);
+                    if (driveTestResult.status !== 'idle') {
+                      setDriveTestResult({ status: 'idle', message: '' });
+                    }
+                  }}
                   placeholder="https://drive.google.com/drive/folders/1A4ec8..."
-                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.12)', fontSize: '13.5px', outline: 'none', fontFamily: 'monospace' }}
+                  style={{ width: '100%', padding: '11px 14px', borderRadius: '12px', border: driveTestResult.status === 'success' ? '1.5px solid #10B981' : driveTestResult.status === 'error' ? '1.5px solid #EF4444' : '1px solid rgba(0,0,0,0.12)', fontSize: '13.5px', outline: 'none', fontFamily: 'monospace' }}
                 />
+
+                {/* Drive Test Result Feedback Banner */}
+                {driveTestResult.status !== 'idle' && (
+                  <div
+                    style={{
+                      marginTop: '8px',
+                      padding: '8px 12px',
+                      borderRadius: '10px',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      background: driveTestResult.status === 'success' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                      color: driveTestResult.status === 'success' ? '#059669' : '#DC2626',
+                      border: driveTestResult.status === 'success' ? '1px solid rgba(16, 185, 129, 0.25)' : '1px solid rgba(239, 68, 68, 0.25)'
+                    }}
+                  >
+                    {driveTestResult.status === 'success' ? (
+                      <CheckCircle2 size={15} style={{ flexShrink: 0 }} />
+                    ) : (
+                      <AlertCircle size={15} style={{ flexShrink: 0 }} />
+                    )}
+                    <span>{driveTestResult.message}</span>
+                  </div>
+                )}
+
                 <span style={{ fontSize: '11.5px', color: '#86868B', marginTop: '6px', display: 'block', lineHeight: 1.4 }}>
-                  Pastikan izin share folder di Google Drive diset ke <strong>&quot;Anyone with the link / Siapa saja yang memiliki link&quot;</strong>.
+                  Izin sharing wajib diset ke: <strong>&quot;Anyone with the link can view / Siapa saja yang memiliki link dapat melihat&quot;</strong>.
                 </span>
               </div>
 
@@ -4996,33 +5283,43 @@ export default function VendorPortalPage() {
         </div>
       )}
 
-      {/* Modal: Lihat Catatan Retouch Klien */}
+      {/* Modal: Lihat Catatan Retouch Klien — 100% compliant with checklists/modals.md */}
       {selectedProofingNotes && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '16px'
-        }}>
-          <div className="glass-card" style={{
-            background: '#FFFFFF',
-            borderRadius: '24px',
-            padding: '32px',
-            maxWidth: '640px',
-            width: '100%',
-            maxHeight: '85vh',
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="notes-modal-title"
+          onClick={() => setSelectedProofingNotes(null)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(8px)',
             display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.2)'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '16px'
+          }}
+        >
+          <div
+            className="glass-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '32px',
+              maxWidth: '640px',
+              width: '100%',
+              maxHeight: '88vh',
+              display: 'flex',
+              flexDirection: 'column',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.2)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
+                <h3 id="notes-modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#1D1D1F' }}>
                   Catatan Retouch: {selectedProofingNotes.clientName}
                 </h3>
                 <span style={{ fontSize: '12px', color: '#86868B' }}>
@@ -5032,7 +5329,8 @@ export default function VendorPortalPage() {
               <button
                 type="button"
                 onClick={() => setSelectedProofingNotes(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#86868B' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#86868B', padding: '4px' }}
+                aria-label="Tutup modal"
               >
                 <X size={20} />
               </button>
@@ -5081,7 +5379,27 @@ export default function VendorPortalPage() {
               )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+            {/* UX Audit L1 Help Text: Panduan Menggunakan Filter Lightroom */}
+            <div style={{
+              marginTop: '16px',
+              padding: '12px 14px',
+              borderRadius: '12px',
+              background: 'rgba(194, 120, 3, 0.08)',
+              border: '1px solid rgba(194, 120, 3, 0.22)',
+              fontSize: '11.5px',
+              color: '#515154',
+              lineHeight: 1.5
+            }}>
+              <strong style={{ color: '#C27803', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '3px' }}>
+                <Sliders size={13} /> Cara Pakai di Adobe Lightroom:
+              </strong>
+              <span>
+                1. Klik tombol <strong>&quot;Salin Filter Lightroom&quot;</strong> di bawah.<br />
+                2. Di Lightroom, buka grid foto (`G`) &rarr; tekan `\` untuk membuka <strong>Library Filter</strong> &rarr; pilih <strong>Text</strong> &rarr; set <em>&quot;Filename&quot;</em> & <em>&quot;Contains&quot;</em> &rarr; tempelkan (<code>Ctrl+V</code> / <code>Cmd+V</code>).
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
               <button
                 type="button"
                 onClick={() => handleCopyLightroomFilter(selectedProofingNotes)}
