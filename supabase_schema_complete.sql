@@ -160,9 +160,16 @@ ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS bank_account_number TEXT;
 ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS bank_account_holder TEXT;
 ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS city TEXT DEFAULT 'Jakarta';
 ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS client_count INTEGER DEFAULT 0;
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS slug TEXT UNIQUE;
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS bio TEXT;
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS cover_url TEXT;
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS whatsapp TEXT;
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS website TEXT;
+ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS portfolio_albums JSONB DEFAULT '[]'::jsonb;
 ALTER TABLE public.vendors ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 
 CREATE INDEX IF NOT EXISTS idx_vendors_referral_code ON public.vendors(referral_code);
+CREATE INDEX IF NOT EXISTS idx_vendors_slug ON public.vendors(slug);
 CREATE INDEX IF NOT EXISTS idx_vendors_email ON public.vendors(email);
 
 -- ------------------------------------------------------------------------------
