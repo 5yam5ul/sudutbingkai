@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   X, ChevronLeft, ChevronRight, Loader2, AlertCircle, 
-  ExternalLink, Maximize2, Minimize2, Image as ImageIcon, BookOpen 
+  ExternalLink, Maximize2, Minimize2, BookOpen 
 } from 'lucide-react';
 import { VendorPortfolioAlbum } from '@/lib/types';
 
@@ -34,12 +34,10 @@ export function PortfolioViewerModal({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isFlipping, setIsFlipping] = useState<'next' | 'prev' | null>(null);
 
-  // Touch swipe tracking
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
   const modalContainerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch photos from Google Drive folder via existing proxy API
   useEffect(() => {
     if (!isOpen || !album?.driveFolderUrl) {
       setPhotos([]);
@@ -61,7 +59,7 @@ export function PortfolioViewerModal({
         if (!isMounted) return;
 
         if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Gagal memuat foto dari Google Drive. Pastikan folder dapat diakses publik.');
+          throw new Error(data.error || 'Gagal memuat foto dari Google Drive. Pastikan izin folder disetel ke "Siapa saja yang memiliki link dapat melihat".');
         }
 
         const drivePhotos: DrivePhoto[] = data.photos || [];
@@ -86,14 +84,13 @@ export function PortfolioViewerModal({
     };
   }, [isOpen, album?.driveFolderUrl]);
 
-  // Navigation handlers
   const handleNext = useCallback(() => {
     if (photos.length <= 1) return;
     setIsFlipping('next');
     setTimeout(() => {
       setCurrentIndex(prev => (prev + 1) % photos.length);
       setIsFlipping(null);
-    }, 200);
+    }, 180);
   }, [photos.length]);
 
   const handlePrev = useCallback(() => {
@@ -102,10 +99,9 @@ export function PortfolioViewerModal({
     setTimeout(() => {
       setCurrentIndex(prev => (prev - 1 + photos.length) % photos.length);
       setIsFlipping(null);
-    }, 200);
+    }, 180);
   }, [photos.length]);
 
-  // Keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
 
@@ -123,7 +119,6 @@ export function PortfolioViewerModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleNext, handlePrev, onClose]);
 
-  // Prevent background body scroll when open
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -135,7 +130,6 @@ export function PortfolioViewerModal({
     };
   }, [isOpen]);
 
-  // Swipe handlers for mobile
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
   };
@@ -147,14 +141,11 @@ export function PortfolioViewerModal({
   const handleTouchEnd = () => {
     if (touchStartX.current === null || touchEndX.current === null) return;
     const diffX = touchStartX.current - touchEndX.current;
-    const minSwipeDistance = 45;
-
-    if (diffX > minSwipeDistance) {
+    if (diffX > 45) {
       handleNext();
-    } else if (diffX < -minSwipeDistance) {
+    } else if (diffX < -45) {
       handlePrev();
     }
-
     touchStartX.current = null;
     touchEndX.current = null;
   };
@@ -177,79 +168,161 @@ export function PortfolioViewerModal({
   return (
     <div 
       ref={modalContainerRef}
-      className="fixed inset-0 z-[9999] flex flex-col bg-black/95 backdrop-blur-md select-none text-white transition-opacity duration-300"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        backgroundColor: 'rgba(0, 0, 0, 0.94)',
+        backdropFilter: 'blur(20px)',
+        display: 'flex',
+        flexDirection: 'column',
+        color: '#FFFFFF',
+        userSelect: 'none'
+      }}
     >
-      {/* Top Header Bar */}
-      <div className="flex items-center justify-between px-4 py-3 sm:px-6 bg-gradient-to-b from-black/80 to-transparent z-20">
-        <div className="flex items-center gap-3 min-w-0 pr-4">
-          <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-            <BookOpen size={16} />
+      {/* 1. TOP HEADER BAR */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '16px 24px',
+        background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%)',
+        zIndex: 20
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(194, 120, 3, 0.2)', border: '1px solid rgba(194, 120, 3, 0.4)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <BookOpen size={18} />
           </div>
-          <div className="min-w-0">
-            <h3 className="text-sm sm:text-base font-semibold truncate text-white">
+          <div style={{ minWidth: 0 }}>
+            <h3 style={{ fontSize: '15px', fontWeight: 700, margin: 0, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {album.title}
             </h3>
-            <p className="text-xs text-white/60 truncate">
-              {vendorName} {photos.length > 0 && `• ${currentIndex + 1} dari ${photos.length} Foto`}
-            </p>
+            <span style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.65)' }}>
+              {vendorName} {photos.length > 0 && `• Foto ${currentIndex + 1} dari ${photos.length}`}
+            </span>
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Header Controls */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           {album.driveFolderUrl && (
             <a 
               href={album.driveFolderUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors hidden sm:flex items-center justify-center"
+              style={{
+                padding: '8px 14px',
+                borderRadius: '10px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
               title="Buka di Google Drive"
             >
-              <ExternalLink size={18} />
+              <span>Drive</span>
+              <ExternalLink size={13} />
             </a>
           )}
 
           <button
+            type="button"
             onClick={toggleFullscreen}
-            className="p-2 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors hidden sm:flex items-center justify-center"
+            style={{
+              padding: '8px',
+              borderRadius: '10px',
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              color: '#FFFFFF',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
             title={isFullscreen ? 'Keluar Fullscreen' : 'Layar Penuh'}
           >
-            {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
           </button>
 
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-full text-white/80 hover:text-white hover:bg-white/15 transition-all"
+            style={{
+              padding: '8px',
+              borderRadius: '10px',
+              background: 'rgba(239, 68, 68, 0.2)',
+              border: '1px solid rgba(239, 68, 68, 0.4)',
+              color: '#F87171',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
             title="Tutup (Esc)"
           >
-            <X size={22} />
+            <X size={18} />
           </button>
         </div>
       </div>
 
-      {/* Main Slideshow Stage */}
-      <div className="relative flex-1 flex items-center justify-center overflow-hidden px-2 sm:px-16 pb-3">
+      {/* 2. MAIN SLIDESHOW STAGE */}
+      <div style={{
+        flex: 1,
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        padding: '12px 20px'
+      }}>
         {loading && (
-          <div className="flex flex-col items-center gap-3 text-white/70">
-            <Loader2 size={36} className="animate-spin text-amber-400" />
-            <p className="text-xs sm:text-sm font-medium animate-pulse">Menghubungkan ke Google Drive...</p>
+          <div style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
+            <Loader2 size={40} className="animate-spin" color="#F59E0B" style={{ margin: '0 auto 12px' }} />
+            <p style={{ fontSize: '13.5px', fontWeight: 600 }}>Menghubungkan ke Google Drive...</p>
           </div>
         )}
 
         {error && !loading && (
-          <div className="max-w-md mx-auto text-center p-6 rounded-2xl bg-white/5 border border-white/10 flex flex-col items-center gap-3">
-            <AlertCircle size={36} className="text-amber-400" />
-            <h4 className="font-semibold text-white text-base">Tidak Dapat Memuat Foto</h4>
-            <p className="text-xs sm:text-sm text-white/70 leading-relaxed">{error}</p>
+          <div style={{
+            maxWidth: '440px',
+            textAlign: 'center',
+            padding: '28px',
+            borderRadius: '20px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.15)'
+          }}>
+            <AlertCircle size={36} color="#F59E0B" style={{ margin: '0 auto 12px' }} />
+            <h4 style={{ fontSize: '16px', fontWeight: 700, margin: '0 0 6px 0', color: '#FFFFFF' }}>
+              Tidak Dapat Memuat Foto
+            </h4>
+            <p style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', lineHeight: 1.5, margin: '0 0 16px 0' }}>
+              {error}
+            </p>
             {album.driveFolderUrl && (
               <a
                 href={album.driveFolderUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-semibold text-xs transition"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '10px 20px',
+                  borderRadius: '12px',
+                  backgroundColor: '#C27803',
+                  color: '#FFFFFF',
+                  textDecoration: 'none',
+                  fontSize: '13px',
+                  fontWeight: 600
+                }}
               >
                 <span>Buka Link Drive</span>
                 <ExternalLink size={14} />
@@ -260,21 +333,32 @@ export function PortfolioViewerModal({
 
         {!loading && !error && currentPhoto && (
           <div 
-            className={`relative max-h-full max-w-full flex items-center justify-center transition-all duration-300 ease-out ${
-              isFlipping === 'next' 
-                ? 'opacity-30 scale-95 [transform:rotateY(-15deg)]' 
-                : isFlipping === 'prev' 
-                  ? 'opacity-30 scale-95 [transform:rotateY(15deg)]' 
-                  : 'opacity-100 scale-100 [transform:rotateY(0deg)]'
-            }`}
-            style={{ perspective: '1200px' }}
+            style={{
+              position: 'relative',
+              maxHeight: '100%',
+              maxWidth: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.22s cubic-bezier(0.4, 0, 0.2, 1)',
+              perspective: '1200px',
+              transform: isFlipping === 'next' ? 'scale(0.96) rotateY(-12deg)' : isFlipping === 'prev' ? 'scale(0.96) rotateY(12deg)' : 'scale(1) rotateY(0deg)',
+              opacity: isFlipping ? 0.4 : 1
+            }}
           >
-            {/* The main active photo */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={currentPhoto.fullUrl || currentPhoto.url}
               alt={currentPhoto.name || album.title}
-              className="max-h-[75vh] sm:max-h-[80vh] w-auto max-w-[95vw] sm:max-w-[85vw] object-contain rounded-lg shadow-2xl drop-shadow-[0_20px_40px_rgba(0,0,0,0.8)] pointer-events-auto"
+              style={{
+                maxHeight: '74vh',
+                maxWidth: '86vw',
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                borderRadius: '14px',
+                boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)'
+              }}
               loading="eager"
             />
           </div>
@@ -284,42 +368,106 @@ export function PortfolioViewerModal({
         {!loading && !error && photos.length > 1 && (
           <>
             <button
+              type="button"
               onClick={handlePrev}
-              className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-black/70 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition shadow-lg z-10 active:scale-95"
+              style={{
+                position: 'absolute',
+                left: '16px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#FFFFFF',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                zIndex: 10
+              }}
               title="Foto Sebelumnya (Panah Kiri)"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={26} />
             </button>
+
             <button
+              type="button"
               onClick={handleNext}
-              className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-black/40 hover:bg-black/70 backdrop-blur-md border border-white/10 flex items-center justify-center text-white/80 hover:text-white transition shadow-lg z-10 active:scale-95"
+              style={{
+                position: 'absolute',
+                right: '16px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '46px',
+                height: '46px',
+                borderRadius: '50%',
+                background: 'rgba(255, 255, 255, 0.15)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                color: '#FFFFFF',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+                zIndex: 10
+              }}
               title="Foto Berikutnya (Panah Kanan)"
             >
-              <ChevronRight size={24} />
+              <ChevronRight size={26} />
             </button>
           </>
         )}
       </div>
 
-      {/* Bottom Thumbnail Strip */}
+      {/* 3. BOTTOM THUMBNAIL STRIP */}
       {!loading && !error && photos.length > 1 && (
-        <div className="bg-black/80 backdrop-blur-md border-t border-white/10 px-4 py-2 z-20">
-          <div className="max-w-4xl mx-auto flex items-center justify-center gap-2 overflow-x-auto py-1 scrollbar-none">
+        <div style={{
+          backgroundColor: 'rgba(0, 0, 0, 0.85)',
+          backdropFilter: 'blur(16px)',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          padding: '10px 16px',
+          zIndex: 20
+        }}>
+          <div style={{
+            maxWidth: '880px',
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            overflowX: 'auto',
+            padding: '2px 0'
+          }}>
             {photos.map((p, idx) => (
               <button
                 key={p.id || idx}
+                type="button"
                 onClick={() => setCurrentIndex(idx)}
-                className={`relative shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden border-2 transition-all duration-200 ${
-                  idx === currentIndex 
-                    ? 'border-amber-400 scale-105 shadow-md shadow-amber-500/20 opacity-100' 
-                    : 'border-transparent opacity-50 hover:opacity-80'
-                }`}
+                style={{
+                  width: '52px',
+                  height: '52px',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                  border: idx === currentIndex ? '2px solid #F59E0B' : '2px solid transparent',
+                  opacity: idx === currentIndex ? 1 : 0.45,
+                  cursor: 'pointer',
+                  padding: 0,
+                  background: '#1D1D1F',
+                  transition: 'all 0.15s ease',
+                  transform: idx === currentIndex ? 'scale(1.08)' : 'scale(1)'
+                }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={p.url || p.fullUrl}
                   alt={p.name}
-                  className="w-full h-full object-cover"
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   loading="lazy"
                 />
               </button>

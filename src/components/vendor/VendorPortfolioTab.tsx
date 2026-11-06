@@ -4,11 +4,23 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, ExternalLink, Copy, Check, Plus, Trash2, Edit3, 
   Image as ImageIcon, BookOpen, AlertCircle, Loader2, Save, 
-  Globe, MessageCircle, RefreshCw, Upload, Eye
+  Globe, MessageCircle, RefreshCw, Upload, Eye, CheckCircle2
 } from 'lucide-react';
 import { UserAccount, VendorPortfolioAlbum } from '@/lib/types';
 import { authFetch } from '@/lib/auth';
 import { toast } from 'sonner';
+
+interface VendorPortfolioTabProps {
+  vendor: UserAccount;
+  onUpdateVendor?: (updated: Partial<UserAccount>) => void;
+}
+
+interface DriveSamplePhoto {
+  id: string;
+  name: string;
+  url: string;
+  fullUrl: string;
+}
 
 function InstagramIcon({ size = 15, className = '' }: { size?: number; className?: string }) {
   return (
@@ -30,18 +42,6 @@ function InstagramIcon({ size = 15, className = '' }: { size?: number; className
   );
 }
 
-interface VendorPortfolioTabProps {
-  vendor: UserAccount;
-  onUpdateVendor?: (updated: Partial<UserAccount>) => void;
-}
-
-interface DriveSamplePhoto {
-  id: string;
-  name: string;
-  url: string;
-  fullUrl: string;
-}
-
 export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPortfolioTabProps) {
   // Form profile states
   const [slug, setSlug] = useState('');
@@ -54,7 +54,6 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
   
   // UI states
   const [isSavingProfile, setIsSavingProfile] = useState(false);
-  const [isLoadingPortfolio, setIsLoadingPortfolio] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Modal Add/Edit Album states
@@ -90,7 +89,6 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
     }
 
     // Refresh from API
-    setIsLoadingPortfolio(true);
     authFetch(`/api/vendors/portfolio?vendorId=${encodeURIComponent(vendor.id)}`)
       .then(res => res.json())
       .then(data => {
@@ -105,8 +103,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
           if (Array.isArray(p.albums)) setAlbums(p.albums);
         }
       })
-      .catch(err => console.warn('Portfolio load notice:', err))
-      .finally(() => setIsLoadingPortfolio(false));
+      .catch(err => console.warn('Portfolio load notice:', err));
   }, [vendor]);
 
   const publicPortfolioUrl = typeof window !== 'undefined' 
@@ -177,14 +174,13 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
 
       const fetchedPhotos: DriveSamplePhoto[] = data.photos || [];
       if (fetchedPhotos.length === 0) {
-        setDriveCheckError('Folder Google Drive terdeteksi, namun belum ada file gambar atau sedang diproses.');
+        setDriveCheckError('Folder Google Drive terdeteksi, namun belum ada file gambar foto di dalamnya.');
       } else {
         setDrivePhotos(fetchedPhotos);
-        // Automatically select the 1st photo as cover if no cover selected yet
-        if (!albumCoverUrl) {
+        if (!albumCoverUrl && fetchedPhotos[0]) {
           setAlbumCoverUrl(fetchedPhotos[0].url || fetchedPhotos[0].fullUrl);
         }
-        toast.success(`Ditemukan ${fetchedPhotos.length} foto dari Google Drive!`);
+        toast.success(`Berhasil mendeteksi ${fetchedPhotos.length} foto dari Google Drive!`);
       }
     } catch (err: any) {
       console.error('Drive check error:', err);
@@ -195,7 +191,6 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
     }
   };
 
-  // Open modal to add new album
   const openAddAlbumModal = () => {
     setEditingAlbumId(null);
     setAlbumTitle('');
@@ -208,7 +203,6 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
     setAlbumModalOpen(true);
   };
 
-  // Open modal to edit existing album
   const openEditAlbumModal = (album: VendorPortfolioAlbum) => {
     setEditingAlbumId(album.id);
     setAlbumTitle(album.title);
@@ -221,7 +215,6 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
     setAlbumModalOpen(true);
   };
 
-  // Save or update album inside state
   const handleSaveAlbum = () => {
     if (!albumTitle.trim()) {
       toast.error('Nama kategori/album wajib diisi');
@@ -262,7 +255,6 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
     setAlbumModalOpen(false);
   };
 
-  // Delete album
   const handleDeleteAlbum = (id: string) => {
     if (confirm('Apakah Anda yakin ingin menghapus kategori album ini dari portofolio?')) {
       setAlbums(prev => prev.filter(a => a.id !== id));
@@ -270,7 +262,6 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
     }
   };
 
-  // Save all profile and albums to backend
   const handleSaveAllPortfolio = async () => {
     setIsSavingProfile(true);
 
@@ -323,103 +314,199 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
-      {/* 1. TOP LIVE PREVIEW & SHARE BAR */}
-      <div className="p-6 rounded-2xl bg-gradient-to-r from-stone-900 via-stone-850 to-amber-950/40 border border-amber-500/20 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-              <Sparkles size={13} />
-              <span>Landing Page Portofolio Eksklusif</span>
-            </span>
-            <span className="text-xs text-white/50">• 0 Byte Server Storage</span>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      
+      {/* 1. TOP HEADER BANNER CARD (SudutBingkai Signature Glass Card) */}
+      <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '24px' }}>
+          <div style={{ maxWidth: '640px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', letterSpacing: '0.08em', fontWeight: 700 }}>
+                PORTOFOLIO EKSKLUSIF VENDOR
+              </span>
+              <span style={{ fontSize: '11px', color: '#10B981', background: 'rgba(16, 185, 129, 0.1)', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                0 Byte Server Storage
+              </span>
+            </div>
+            
+            <h2 style={{ fontSize: '24px', fontWeight: 700, color: '#1D1D1F', marginBottom: '8px', letterSpacing: '-0.02em' }}>
+              Tampilkan Karya Terbaik Anda dengan URL Personal & Google Drive
+            </h2>
+            
+            <p style={{ color: '#6E6E73', fontSize: '14px', lineHeight: 1.6, margin: '0 0 16px 0' }}>
+              Bagikan link eksklusif ini di bio Instagram atau WhatsApp Anda. Calon klien dapat langsung menjelajahi album foto interaktif beranimasi <em>photobook slideshow</em> yang terhubung langsung ke Google Drive Anda.
+            </p>
+
+            {/* URL Pill Display */}
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '8px 14px',
+              borderRadius: '12px',
+              background: 'rgba(194, 120, 3, 0.08)',
+              border: '1px solid rgba(194, 120, 3, 0.25)',
+              fontSize: '12.5px',
+              fontFamily: 'var(--font-mono)',
+              color: '#8C5400'
+            }}>
+              <Globe size={14} color="#C27803" />
+              <strong>{publicPortfolioUrl}</strong>
+            </div>
           </div>
-          <h2 className="text-lg sm:text-xl font-bold text-white tracking-tight">
-            Tampilkan Karya Terbaik Anda dengan URL Personal
-          </h2>
-          <p className="text-xs sm:text-sm text-stone-300 max-w-2xl leading-relaxed">
-            Bagikan link eksklusif ini di bio Instagram atau WhatsApp Anda. Calon klien dapat langsung menjelajahi album foto interaktif dari Google Drive Anda.
-          </p>
-          <div className="pt-1 flex items-center gap-2 text-xs font-mono text-amber-300/90 break-all">
-            <Globe size={13} className="shrink-0 text-amber-400" />
-            <span>{publicPortfolioUrl}</span>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="glass-pill"
+              style={{
+                padding: '12px 18px',
+                fontSize: '13px',
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#FFFFFF',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                color: '#1D1D1F'
+              }}
+            >
+              {copiedLink ? <Check size={15} color="#10B981" /> : <Copy size={15} />}
+              <span>{copiedLink ? 'Tersalin' : 'Salin Link'}</span>
+            </button>
+
+            <a
+              href={`/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-apple-black"
+              style={{
+                padding: '12px 22px',
+                fontSize: '13px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                textDecoration: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <Eye size={15} />
+              <span>Buka Portofolio</span>
+              <ExternalLink size={13} />
+            </a>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto shrink-0">
-          <button
-            type="button"
-            onClick={handleCopyLink}
-            className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/15 text-white font-semibold text-xs border border-white/15 transition shadow-sm active:scale-95"
-          >
-            {copiedLink ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
-            <span>{copiedLink ? 'Tersalin' : 'Salin Link'}</span>
-          </button>
-
-          <a
-            href={`/${slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-1 md:flex-none inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-stone-950 font-bold text-xs shadow-lg shadow-amber-500/20 transition active:scale-95"
-          >
-            <Eye size={15} />
-            <span>Buka Portofolio</span>
-            <ExternalLink size={13} />
-          </a>
+        {/* Workflow Highlights Steps */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginTop: '28px', paddingTop: '24px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'rgba(194,120,3,0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700, fontSize: '13px' }}>1</div>
+            <div>
+              <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 2px 0' }}>URL & Branding Eksklusif</h4>
+              <p style={{ fontSize: '12px', color: '#86868B', margin: 0, lineHeight: 1.4 }}>Tentukan URL unik Anda (sudutbingkai.id/[nama-vendor]) & upload cover banner.</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'rgba(194,120,3,0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700, fontSize: '13px' }}>2</div>
+            <div>
+              <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 2px 0' }}>Hubungkan Google Drive</h4>
+              <p style={{ fontSize: '12px', color: '#86868B', margin: 0, lineHeight: 1.4 }}>Paste link folder Drive per kategori (Wedding, Prewed, dll) tanpa perlu upload ulang.</p>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+            <div style={{ width: '30px', height: '30px', borderRadius: '10px', background: 'rgba(194,120,3,0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontWeight: 700, fontSize: '13px' }}>3</div>
+            <div>
+              <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 2px 0' }}>Booking Langsung ke WA</h4>
+              <p style={{ fontSize: '12px', color: '#86868B', margin: 0, lineHeight: 1.4 }}>Calon klien terpukau dengan slideshow dan langsung chat ke nomor WhatsApp Anda.</p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* 2. PROFILE & BRANDING EDITOR */}
-      <div className="p-6 rounded-2xl bg-white/80 dark:bg-stone-900/80 backdrop-blur-md border border-stone-200/80 dark:border-white/10 shadow-sm space-y-6">
-        <div className="flex items-center justify-between pb-4 border-b border-stone-200 dark:border-white/10">
-          <div>
-            <h3 className="text-base font-bold text-stone-900 dark:text-white">
-              Identitas & Tampilan Landing Page
-            </h3>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-              Atur banner sampul profil, biodata singkat, nomor WhatsApp reservasi, dan alamat URL Anda.
-            </p>
-          </div>
+      {/* 2. PROFILE & BRANDING EDITOR CARD */}
+      <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+        <div style={{ marginBottom: '24px' }}>
+          <span className="font-mono-film" style={{ color: '#C27803', display: 'block', marginBottom: '6px' }}>
+            IDENTITAS & TAMPILAN LANDING PAGE
+          </span>
+          <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 6px 0' }}>
+            Kustomisasi Profil Portofolio Anda
+          </h3>
+          <p style={{ color: '#6E6E73', fontSize: '13.5px', margin: 0 }}>
+            Atur banner sampul profil, biodata singkat, nomor WhatsApp reservasi, dan alamat URL Anda.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Cover Banner Uploader */}
-          <div className="space-y-2 md:col-span-2">
-            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '22px' }}>
+          
+          {/* Banner Sampul Profil */}
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '8px' }}>
               Banner Sampul Profil (Cover Header)
             </label>
-            <div className="relative w-full h-40 sm:h-48 rounded-2xl overflow-hidden border-2 border-dashed border-stone-300 dark:border-stone-700 bg-stone-100 dark:bg-stone-850 flex items-center justify-center group">
+            <div style={{
+              border: '2px dashed rgba(0, 0, 0, 0.12)',
+              borderRadius: '18px',
+              padding: '16px',
+              background: 'rgba(255, 255, 255, 0.7)',
+              position: 'relative',
+              minHeight: '160px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden'
+            }}>
               {coverUrl ? (
-                <>
+                <div style={{ width: '100%', position: 'relative' }}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={coverUrl} alt="Cover Preview" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                  <img 
+                    src={coverUrl} 
+                    alt="Cover Preview" 
+                    style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '12px' }} 
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    display: 'flex',
+                    gap: '8px'
+                  }}>
                     <button
                       type="button"
                       onClick={() => coverFileInputRef.current?.click()}
-                      className="px-3.5 py-1.5 rounded-lg bg-white/90 text-stone-900 text-xs font-semibold hover:bg-white transition"
+                      className="glass-pill"
+                      style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', background: '#FFFFFF' }}
                     >
-                      Ganti Foto Cover
+                      Ganti Foto
                     </button>
                     <button
                       type="button"
                       onClick={() => setCoverUrl('')}
-                      className="px-3.5 py-1.5 rounded-lg bg-red-600/90 text-white text-xs font-semibold hover:bg-red-600 transition"
+                      className="glass-pill"
+                      style={{ padding: '6px 14px', fontSize: '12px', fontWeight: 600, cursor: 'pointer', background: 'rgba(239, 68, 68, 0.1)', color: '#DC2626', border: 'none' }}
                     >
                       Hapus
                     </button>
                   </div>
-                </>
+                </div>
               ) : (
                 <div 
                   onClick={() => coverFileInputRef.current?.click()}
-                  className="flex flex-col items-center gap-2 text-stone-500 dark:text-stone-400 cursor-pointer p-4 text-center"
+                  style={{ textAlign: 'center', cursor: 'pointer', padding: '24px 16px' }}
                 >
-                  <Upload size={24} className="text-amber-500" />
-                  <p className="text-xs font-semibold text-stone-800 dark:text-stone-200">
-                    Klik untuk upload foto banner sampul (16:6 atau rasio lanskap)
-                  </p>
-                  <p className="text-[11px] text-stone-400">Format JPG, PNG, WEBP hingga 5MB</p>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                    <Upload size={22} />
+                  </div>
+                  <strong style={{ display: 'block', fontSize: '13.5px', color: '#1D1D1F', marginBottom: '4px' }}>
+                    Klik untuk upload foto banner sampul
+                  </strong>
+                  <span style={{ fontSize: '12px', color: '#86868B' }}>
+                    Format JPG, PNG, WEBP hingga 5MB (rasio lanskap lebar direkomendasikan)
+                  </span>
                 </div>
               )}
             </div>
@@ -427,54 +514,90 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
               ref={coverFileInputRef}
               type="file" 
               accept="image/*" 
-              className="hidden" 
+              style={{ display: 'none' }}
               onChange={handleCoverFileUpload} 
             />
           </div>
 
-          {/* URL Slug Input */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
-              Alamat URL Portofolio (Slug) *
-            </label>
-            <div className="flex items-center rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-850 px-3 py-2 text-xs focus-within:border-amber-500 transition">
-              <span className="text-stone-400 select-none font-mono">sudutbingkai.id/</span>
-              <input
-                type="text"
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
-                placeholder="nama-vendor"
-                className="bg-transparent text-stone-900 dark:text-white font-semibold outline-none flex-1 font-mono text-xs pl-0.5"
-              />
+          {/* Grid: Slug & WhatsApp */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
+            {/* Slug */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
+                Alamat URL Portofolio (Slug) *
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '12px',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                background: '#FFFFFF',
+                padding: '10px 14px'
+              }}>
+                <span style={{ color: '#86868B', fontSize: '13px', fontFamily: 'var(--font-mono)', userSelect: 'none' }}>
+                  sudutbingkai.id/
+                </span>
+                <input
+                  type="text"
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ''))}
+                  placeholder="nama-vendor"
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '13px',
+                    fontFamily: 'var(--font-mono)',
+                    fontWeight: 600,
+                    color: '#1D1D1F',
+                    width: '100%',
+                    paddingLeft: '4px'
+                  }}
+                />
+              </div>
+              <span style={{ fontSize: '11.5px', color: '#86868B', marginTop: '4px', display: 'block' }}>
+                Hanya huruf kecil, angka, dan tanda strip (-). Contoh: <code>aletheia-photo</code>
+              </span>
             </div>
-            <p className="text-[11px] text-stone-400">
-              Hanya huruf kecil, angka, dan tanda strip (-). Contoh: <code>aletheia-photo</code>
-            </p>
+
+            {/* WhatsApp */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
+                Nomor WhatsApp Konsultasi / Reservasi *
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '12px',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                background: '#FFFFFF',
+                padding: '10px 14px',
+                gap: '8px'
+              }}>
+                <MessageCircle size={16} color="#10B981" />
+                <input
+                  type="text"
+                  value={whatsapp}
+                  onChange={(e) => setWhatsapp(e.target.value)}
+                  placeholder="081234567890"
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    color: '#1D1D1F',
+                    width: '100%'
+                  }}
+                />
+              </div>
+              <span style={{ fontSize: '11.5px', color: '#86868B', marginTop: '4px', display: 'block' }}>
+                Tombol &quot;Konsultasi & Reservasi&quot; di landing page akan langsung membuka chat ke nomor ini.
+              </span>
+            </div>
           </div>
 
-          {/* WhatsApp Direct Booking */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
-              Nomor WhatsApp Konsultasi / Reservasi *
-            </label>
-            <div className="flex items-center rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-850 px-3 py-2 text-xs focus-within:border-amber-500 transition">
-              <MessageCircle size={15} className="text-green-500 mr-2 shrink-0" />
-              <input
-                type="text"
-                value={whatsapp}
-                onChange={(e) => setWhatsapp(e.target.value)}
-                placeholder="081234567890"
-                className="bg-transparent text-stone-900 dark:text-white font-medium outline-none flex-1 text-xs"
-              />
-            </div>
-            <p className="text-[11px] text-stone-400">
-              Tombol "Konsultasi & Reservasi" di landing page akan langsung membuka chat ke nomor ini.
-            </p>
-          </div>
-
-          {/* Bio / Tagline */}
-          <div className="space-y-1.5 md:col-span-2">
-            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
+          {/* Bio Singkat */}
+          <div>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
               Bio Singkat & Gaya Fotografi
             </label>
             <textarea
@@ -482,122 +605,214 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               placeholder="Contoh: Mengabadikan kehangatan cinta melalui sentuhan visual sinematik & candid. Berpengalaman menangani 150+ wedding di seluruh Indonesia."
-              className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-850 p-3 text-xs text-stone-900 dark:text-white outline-none focus:border-amber-500 transition resize-none"
+              className="glass-input"
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                background: '#FFFFFF',
+                fontSize: '13px',
+                resize: 'none',
+                lineHeight: 1.5
+              }}
             />
           </div>
 
-          {/* Instagram Handle */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
-              Instagram
-            </label>
-            <div className="flex items-center rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-850 px-3 py-2 text-xs focus-within:border-amber-500 transition">
-              <InstagramIcon size={15} className="text-pink-500 mr-2 shrink-0" />
-              <input
-                type="text"
-                value={instagram}
-                onChange={(e) => setInstagram(e.target.value)}
-                placeholder="@nama.vendor"
-                className="bg-transparent text-stone-900 dark:text-white outline-none flex-1 text-xs"
-              />
+          {/* Grid: Instagram & Website */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '18px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
+                Akun Instagram Resmi
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '12px',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                background: '#FFFFFF',
+                padding: '10px 14px',
+                gap: '8px'
+              }}>
+                <InstagramIcon size={16} className="text-pink-500" />
+                <input
+                  type="text"
+                  value={instagram}
+                  onChange={(e) => setInstagram(e.target.value)}
+                  placeholder="@nama.vendor"
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '13px',
+                    color: '#1D1D1F',
+                    width: '100%'
+                  }}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
+                Website Eksternal (Opsional)
+              </label>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '12px',
+                border: '1px solid rgba(0, 0, 0, 0.12)',
+                background: '#FFFFFF',
+                padding: '10px 14px',
+                gap: '8px'
+              }}>
+                <Globe size={16} color="#0284C7" />
+                <input
+                  type="text"
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                  placeholder="https://vendoranda.com"
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '13px',
+                    color: '#1D1D1F',
+                    width: '100%'
+                  }}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Website External */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
-              Website Eksternal (Opsional)
-            </label>
-            <div className="flex items-center rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-850 px-3 py-2 text-xs focus-within:border-amber-500 transition">
-              <Globe size={15} className="text-sky-500 mr-2 shrink-0" />
-              <input
-                type="text"
-                value={website}
-                onChange={(e) => setWebsite(e.target.value)}
-                placeholder="https://vendoranda.com"
-                className="bg-transparent text-stone-900 dark:text-white outline-none flex-1 text-xs"
-              />
-            </div>
+          {/* Save Profile Button */}
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px' }}>
+            <button
+              type="button"
+              onClick={handleSaveAllPortfolio}
+              disabled={isSavingProfile}
+              className="btn-apple-black"
+              style={{
+                padding: '12px 28px',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: isSavingProfile ? 'wait' : 'pointer',
+                opacity: isSavingProfile ? 0.6 : 1
+              }}
+            >
+              {isSavingProfile ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              <span>{isSavingProfile ? 'Menyimpan...' : 'Simpan Pengaturan Portofolio'}</span>
+            </button>
           </div>
-        </div>
-
-        <div className="pt-2 flex justify-end">
-          <button
-            type="button"
-            onClick={handleSaveAllPortfolio}
-            disabled={isSavingProfile}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs shadow-md transition disabled:opacity-50 active:scale-95"
-          >
-            {isSavingProfile ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
-            <span>{isSavingProfile ? 'Menyimpan Perubahan...' : 'Simpan Pengaturan Portofolio'}</span>
-          </button>
         </div>
       </div>
 
-      {/* 3. ALBUMS / CATEGORIES MANAGER */}
-      <div className="p-6 rounded-2xl bg-white/80 dark:bg-stone-900/80 backdrop-blur-md border border-stone-200/80 dark:border-white/10 shadow-sm space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-stone-200 dark:border-white/10">
+      {/* 3. ALBUMS / CATEGORIES MANAGER CARD */}
+      <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-bold text-stone-900 dark:text-white">
-                Kategori Album Karya ({albums.length})
-              </h3>
-              <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-green-500/10 text-green-600 dark:text-green-400 border border-green-500/20">
-                Google Drive Sync
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span className="font-mono-film" style={{ color: '#C27803', display: 'block' }}>
+                KATALOG KARYA
+              </span>
+              <span style={{ fontSize: '11px', color: '#C27803', background: 'rgba(194, 120, 3, 0.1)', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+                {albums.length} Kategori Album
               </span>
             </div>
-            <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-              Setiap kategori berisi link folder Google Drive. Foto tampil dalam kartu estetik dan terbuka otomatis dalam slideshow elegan.
+            <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', margin: '4px 0 2px 0' }}>
+              Kategori Album Portofolio (Google Drive)
+            </h3>
+            <p style={{ color: '#6E6E73', fontSize: '13.5px', margin: 0 }}>
+              Setiap kategori berisi link folder Google Drive. Foto tampil dalam kartu thumbnail estetik dan dapat dibuka sebagai slideshow buku foto.
             </p>
           </div>
 
           <button
             type="button"
             onClick={openAddAlbumModal}
-            className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-black dark:bg-amber-500 dark:hover:bg-amber-400 text-white dark:text-stone-950 font-bold text-xs shadow-md transition active:scale-95 shrink-0"
+            className="btn-apple-black"
+            style={{
+              padding: '11px 20px',
+              fontSize: '13px',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer'
+            }}
           >
             <Plus size={15} />
             <span>Tambah Kategori / Album</span>
           </button>
         </div>
 
-        {/* Albums List Grid */}
+        {/* Albums Grid */}
         {albums.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+            gap: '20px'
+          }}>
             {albums.map((album, idx) => (
               <div 
                 key={album.id}
-                className="group rounded-2xl border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-850 overflow-hidden flex flex-col transition shadow-sm hover:shadow-md"
+                style={{
+                  borderRadius: '18px',
+                  border: '1px solid rgba(0, 0, 0, 0.08)',
+                  background: '#FFFFFF',
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.03)',
+                  transition: 'all 0.2s ease'
+                }}
               >
-                {/* Thumbnail Preview */}
-                <div className="relative aspect-[16/10] bg-stone-900 overflow-hidden">
+                {/* Thumbnail Preview Aspect Ratio 16:10 */}
+                <div style={{
+                  position: 'relative',
+                  width: '100%',
+                  height: '170px',
+                  background: '#1D1D1F',
+                  overflow: 'hidden'
+                }}>
                   {album.coverImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img 
                       src={album.coverImageUrl} 
                       alt={album.title} 
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                     />
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-stone-500 gap-1.5">
+                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#86868B', gap: '6px' }}>
                       <BookOpen size={28} />
-                      <span className="text-[11px]">Sampul Otomatis Drive</span>
+                      <span style={{ fontSize: '11.5px' }}>Sampul Otomatis Drive</span>
                     </div>
                   )}
 
-                  <div className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-semibold border border-white/10">
+                  <div style={{
+                    position: 'absolute',
+                    top: '10px',
+                    left: '10px',
+                    padding: '3px 10px',
+                    borderRadius: '8px',
+                    background: 'rgba(0, 0, 0, 0.65)',
+                    backdropFilter: 'blur(8px)',
+                    color: '#FFFFFF',
+                    fontSize: '11px',
+                    fontWeight: 600
+                  }}>
                     Album #{idx + 1}
                   </div>
                 </div>
 
                 {/* Details */}
-                <div className="p-4 flex-1 flex flex-col justify-between gap-3">
+                <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px' }}>
                   <div>
-                    <h4 className="font-bold text-sm text-stone-900 dark:text-white line-clamp-1">
+                    <h4 style={{ fontSize: '14.5px', fontWeight: 700, color: '#1D1D1F', margin: '0 0 4px 0' }}>
                       {album.title}
                     </h4>
                     {album.description && (
-                      <p className="text-xs text-stone-500 dark:text-stone-400 line-clamp-2 mt-0.5">
+                      <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: '0 0 8px 0', lineHeight: 1.4 }}>
                         {album.description}
                       </p>
                     )}
@@ -605,30 +820,68 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                       href={album.driveFolderUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="mt-2 inline-flex items-center gap-1 text-[11px] text-amber-600 dark:text-amber-400 hover:underline max-w-full truncate"
+                      style={{
+                        fontSize: '11.5px',
+                        color: '#C27803',
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        fontWeight: 600
+                      }}
                     >
-                      <ExternalLink size={12} className="shrink-0" />
-                      <span className="truncate">Buka Folder Google Drive</span>
+                      <ExternalLink size={12} />
+                      <span>Buka Folder Google Drive</span>
                     </a>
                   </div>
 
                   {/* Actions */}
-                  <div className="pt-3 border-t border-stone-200 dark:border-stone-800 flex items-center justify-between text-xs">
+                  <div style={{
+                    paddingTop: '12px',
+                    borderTop: '1px solid rgba(0, 0, 0, 0.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between'
+                  }}>
                     <button
                       type="button"
                       onClick={() => openEditAlbumModal(album)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-200 dark:bg-stone-700/50 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 font-medium transition"
+                      className="glass-pill"
+                      style={{
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'rgba(0,0,0,0.04)',
+                        border: 'none',
+                        color: '#1D1D1F'
+                      }}
                     >
-                      <Edit3 size={13} />
+                      <Edit3 size={12} />
                       <span>Edit</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleDeleteAlbum(album.id)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 font-medium transition"
+                      className="glass-pill"
+                      style={{
+                        padding: '6px 14px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        background: 'rgba(239, 68, 68, 0.08)',
+                        border: 'none',
+                        color: '#DC2626'
+                      }}
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={12} />
                       <span>Hapus</span>
                     </button>
                   </div>
@@ -637,20 +890,51 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
             ))}
           </div>
         ) : (
-          <div className="py-12 px-6 text-center rounded-2xl border-2 border-dashed border-stone-300 dark:border-stone-800 flex flex-col items-center justify-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500">
-              <BookOpen size={24} />
+          <div style={{
+            padding: '48px 24px',
+            textAlign: 'center',
+            borderRadius: '18px',
+            border: '2px dashed rgba(0, 0, 0, 0.1)',
+            background: 'rgba(255, 255, 255, 0.5)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <div style={{
+              width: '52px',
+              height: '52px',
+              borderRadius: '16px',
+              background: 'rgba(194, 120, 3, 0.1)',
+              color: '#C27803',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <BookOpen size={26} />
             </div>
-            <h4 className="font-bold text-sm text-stone-800 dark:text-stone-200">
-              Belum Ada Kategori Album
-            </h4>
-            <p className="text-xs text-stone-500 dark:text-stone-400 max-w-sm">
-              Tambahkan kategori seperti "Wedding Adat", "Prewedding", atau "Lamaran". Cukup tempel link folder Google Drive foto Anda.
-            </p>
+            <div>
+              <strong style={{ fontSize: '15px', color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
+                Belum Ada Kategori Album
+              </strong>
+              <p style={{ fontSize: '13px', color: '#86868B', maxWidth: '380px', margin: 0, lineHeight: 1.5 }}>
+                Tambahkan kategori seperti &ldquo;Wedding Adat Jawa&rdquo;, &ldquo;Intimate Prewedding&rdquo;, atau &ldquo;Siraman&rdquo;. Cukup tempel link folder Google Drive foto Anda.
+              </p>
+            </div>
             <button
               type="button"
               onClick={openAddAlbumModal}
-              className="mt-1 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs transition"
+              className="btn-apple-black"
+              style={{
+                marginTop: '6px',
+                padding: '10px 20px',
+                fontSize: '13px',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
             >
               <Plus size={14} />
               <span>Tambah Album Pertama</span>
@@ -659,48 +943,91 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
         )}
       </div>
 
-      {/* 4. MODAL ADD / EDIT ALBUM */}
+      {/* 4. MODAL TAMBAH / EDIT ALBUM (Apple Style Dialog) */}
       {albumModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setAlbumModalOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+        >
+          <div
+            className="glass-card"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: '540px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '24px',
+              padding: '30px',
+              boxShadow: '0 24px 60px rgba(0, 0, 0, 0.25)',
+              border: '1px solid rgba(0, 0, 0, 0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px'
+            }}
+          >
             {/* Modal Header */}
-            <div className="px-6 py-4 border-b border-stone-200 dark:border-stone-800 flex items-center justify-between">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-500 flex items-center justify-center font-bold">
-                  <BookOpen size={16} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(194, 120, 3, 0.1)', color: '#C27803', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <BookOpen size={18} />
                 </div>
-                <h3 className="font-bold text-base text-stone-900 dark:text-white">
-                  {editingAlbumId ? 'Edit Kategori Album' : 'Tambah Kategori Album Portofolio'}
-                </h3>
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                    {editingAlbumId ? 'Edit Kategori Album' : 'Tambah Kategori Album Portofolio'}
+                  </h3>
+                  <span style={{ fontSize: '11.5px', color: '#86868B' }}>Terhubung ke Google Drive Anda</span>
+                </div>
               </div>
               <button
                 type="button"
                 onClick={() => setAlbumModalOpen(false)}
-                className="text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 transition"
+                style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#86868B' }}
               >
                 ✕
               </button>
             </div>
 
-            {/* Modal Form Body */}
-            <div className="p-6 overflow-y-auto space-y-5 flex-1">
-              {/* Category Name */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
-                  Nama Kategori Album *
+            {/* Modal Form */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Category Title */}
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
+                  Nama Kategori / Judul Album *
                 </label>
                 <input
                   type="text"
                   value={albumTitle}
                   onChange={(e) => setAlbumTitle(e.target.value)}
-                  placeholder="Contoh: Wedding Adat Sunda di Plataran"
-                  className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-850 px-3.5 py-2.5 text-xs text-stone-900 dark:text-white outline-none focus:border-amber-500 transition font-medium"
+                  placeholder="Contoh: Wedding Adat Jawa di Plataran"
+                  className="glass-input"
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    background: '#FFFFFF',
+                    fontSize: '13px'
+                  }}
                 />
               </div>
 
               {/* Description */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1D1D1F', marginBottom: '6px' }}>
                   Deskripsi Singkat (Opsional)
                 </label>
                 <input
@@ -708,67 +1035,124 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                   value={albumDesc}
                   onChange={(e) => setAlbumDesc(e.target.value)}
                   placeholder="Contoh: Momen sakral pernikahan adat dengan sentuhan sinematik."
-                  className="w-full rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-850 px-3.5 py-2.5 text-xs text-stone-900 dark:text-white outline-none focus:border-amber-500 transition"
+                  className="glass-input"
+                  style={{
+                    width: '100%',
+                    padding: '11px 14px',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(0, 0, 0, 0.12)',
+                    background: '#FFFFFF',
+                    fontSize: '13px'
+                  }}
                 />
               </div>
 
-              {/* Google Drive Link */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
+              {/* Google Drive URL */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#1D1D1F' }}>
                     Link Folder Google Drive *
                   </label>
-                  <span className="text-[11px] text-amber-500 font-medium">Bebas Kapasitas</span>
+                  <span style={{ fontSize: '11px', color: '#10B981', fontWeight: 600 }}>Bebas Kapasitas</span>
                 </div>
-                <div className="flex gap-2">
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <input
                     type="text"
                     value={albumDriveUrl}
                     onChange={(e) => setAlbumDriveUrl(e.target.value)}
                     placeholder="https://drive.google.com/drive/folders/..."
-                    className="flex-1 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-850 px-3.5 py-2.5 text-xs text-stone-900 dark:text-white outline-none focus:border-amber-500 transition font-mono"
+                    className="glass-input"
+                    style={{
+                      flex: 1,
+                      padding: '11px 14px',
+                      borderRadius: '12px',
+                      border: '1px solid rgba(0, 0, 0, 0.12)',
+                      background: '#FFFFFF',
+                      fontSize: '12.5px',
+                      fontFamily: 'var(--font-mono)'
+                    }}
                   />
                   <button
                     type="button"
                     onClick={handleCheckDriveFolder}
                     disabled={isCheckingDrive || !albumDriveUrl.trim()}
-                    className="px-3.5 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-white text-xs font-semibold shrink-0 transition disabled:opacity-40 flex items-center gap-1.5"
-                    title="Periksa folder dan muat foto sampul"
+                    className="glass-pill"
+                    style={{
+                      padding: '0 16px',
+                      fontSize: '12.5px',
+                      fontWeight: 600,
+                      cursor: isCheckingDrive ? 'wait' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#1D1D1F',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      flexShrink: 0
+                    }}
                   >
                     {isCheckingDrive ? <Loader2 size={14} className="animate-spin text-amber-400" /> : <RefreshCw size={14} />}
                     <span>Cek Drive</span>
                   </button>
                 </div>
-                <p className="text-[11px] text-stone-400 leading-relaxed">
-                  💡 <strong>Penting:</strong> Pastikan setelan folder Google Drive sudah diubah ke <em>"Siapa saja yang memiliki link dapat melihat"</em>.
-                </p>
+                <span style={{ fontSize: '11.5px', color: '#86868B', marginTop: '6px', display: 'block', lineHeight: 1.4 }}>
+                  💡 <strong>Penting:</strong> Pastikan folder Google Drive disetel ke <em>&quot;Siapa saja yang memiliki link dapat melihat&quot;</em>.
+                </span>
 
                 {driveCheckError && (
-                  <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-                    <AlertCircle size={15} className="shrink-0" />
+                  <div style={{
+                    marginTop: '8px',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    color: '#DC2626',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <AlertCircle size={15} style={{ flexShrink: 0 }} />
                     <span>{driveCheckError}</span>
                   </div>
                 )}
               </div>
 
               {/* Cover Image Selector */}
-              <div className="space-y-3 pt-2 border-t border-stone-200 dark:border-stone-800">
-                <div className="flex items-center justify-between">
-                  <label className="block text-xs font-semibold text-stone-700 dark:text-stone-300">
+              <div style={{ paddingTop: '10px', borderTop: '1px solid rgba(0, 0, 0, 0.06)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#1D1D1F' }}>
                     Foto Sampul Depan Kartu
                   </label>
-                  <div className="flex items-center gap-2 text-xs">
+                  <div style={{ display: 'flex', gap: '6px' }}>
                     <button
                       type="button"
                       onClick={() => setCoverSource('drive')}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${coverSource === 'drive' ? 'bg-amber-500 text-stone-950' : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'}`}
+                      className="glass-pill"
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: coverSource === 'drive' ? '#1D1D1F' : 'rgba(0,0,0,0.05)',
+                        color: coverSource === 'drive' ? '#FFFFFF' : '#1D1D1F',
+                        border: 'none'
+                      }}
                     >
-                      Pilih dari Drive
+                      Dari Drive
                     </button>
                     <button
                       type="button"
                       onClick={() => setCoverSource('custom')}
-                      className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition ${coverSource === 'custom' ? 'bg-amber-500 text-stone-950' : 'bg-stone-200 dark:bg-stone-800 text-stone-600 dark:text-stone-400'}`}
+                      className="glass-pill"
+                      style={{
+                        padding: '4px 10px',
+                        fontSize: '11.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: coverSource === 'custom' ? '#1D1D1F' : 'rgba(0,0,0,0.05)',
+                        color: coverSource === 'custom' ? '#FFFFFF' : '#1D1D1F',
+                        border: 'none'
+                      }}
                     >
                       Upload Kustom
                     </button>
@@ -779,98 +1163,145 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 {coverSource === 'drive' && (
                   <div>
                     {drivePhotos.length > 0 ? (
-                      <div className="space-y-2">
-                        <p className="text-[11px] text-stone-500 dark:text-stone-400">
-                          Klik salah satu foto di bawah untuk dijadikan sampul kartu:
-                        </p>
-                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-44 overflow-y-auto p-1 bg-stone-100 dark:bg-stone-950 rounded-xl border border-stone-200 dark:border-stone-800">
+                      <div>
+                        <span style={{ fontSize: '11.5px', color: '#86868B', display: 'block', marginBottom: '8px' }}>
+                          Klik salah satu foto untuk dijadikan sampul depan:
+                        </span>
+                        <div style={{
+                          display: 'grid',
+                          gridTemplateColumns: 'repeat(5, 1fr)',
+                          gap: '8px',
+                          maxHeight: '160px',
+                          overflowY: 'auto',
+                          padding: '6px',
+                          background: 'rgba(0,0,0,0.02)',
+                          borderRadius: '12px',
+                          border: '1px solid rgba(0,0,0,0.08)'
+                        }}>
                           {drivePhotos.map((photo) => (
                             <button
                               key={photo.id}
                               type="button"
                               onClick={() => setAlbumCoverUrl(photo.url || photo.fullUrl)}
-                              className={`relative aspect-square rounded-lg overflow-hidden border-2 transition ${albumCoverUrl === (photo.url || photo.fullUrl) ? 'border-amber-500 scale-95 shadow-md shadow-amber-500/20' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                              style={{
+                                width: '100%',
+                                aspectRatio: '1',
+                                borderRadius: '8px',
+                                overflow: 'hidden',
+                                border: albumCoverUrl === (photo.url || photo.fullUrl) ? '2px solid #C27803' : '2px solid transparent',
+                                padding: 0,
+                                cursor: 'pointer',
+                                background: '#1D1D1F',
+                                position: 'relative'
+                              }}
                             >
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={photo.url || photo.fullUrl} alt={photo.name} className="w-full h-full object-cover" />
+                              <img src={photo.url || photo.fullUrl} alt={photo.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             </button>
                           ))}
                         </div>
                       </div>
                     ) : (
-                      <div className="p-4 rounded-xl bg-stone-100 dark:bg-stone-850 text-center text-xs text-stone-500 space-y-1">
-                        <p>Klik tombol <strong>"Cek Drive"</strong> di atas untuk memuat foto dari Google Drive Anda.</p>
-                        <p className="text-[11px] text-stone-400">Foto pertama akan otomatis menjadi sampul kartu.</p>
+                      <div style={{ padding: '16px', borderRadius: '12px', background: 'rgba(0,0,0,0.02)', textAlign: 'center', fontSize: '12px', color: '#86868B' }}>
+                        Klik tombol <strong>&quot;Cek Drive&quot;</strong> di atas untuk melihat pilihan foto sampul. Foto pertama otomatis dijadikan sampul default.
                       </div>
                     )}
                   </div>
                 )}
 
-                {/* Option 2: Custom upload / URL */}
+                {/* Option 2: Custom upload */}
                 {coverSource === 'custom' && (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={albumCoverUrl}
-                        onChange={(e) => setAlbumCoverUrl(e.target.value)}
-                        placeholder="https://... atau upload foto"
-                        className="flex-1 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-850 px-3.5 py-2 text-xs text-stone-900 dark:text-white outline-none focus:border-amber-500 transition"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => albumCoverInputRef.current?.click()}
-                        className="px-3.5 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-white text-xs font-semibold shrink-0 transition"
-                      >
-                        Upload Foto
-                      </button>
-                    </div>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => albumCoverInputRef.current?.click()}
+                      className="glass-pill"
+                      style={{
+                        padding: '10px 18px',
+                        fontSize: '12.5px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        background: '#FFFFFF',
+                        border: '1px solid rgba(0,0,0,0.12)'
+                      }}
+                    >
+                      <Upload size={14} />
+                      <span>Pilih Foto Sampul dari Komputer</span>
+                    </button>
                     <input 
                       ref={albumCoverInputRef}
                       type="file" 
                       accept="image/*" 
-                      className="hidden" 
+                      style={{ display: 'none' }} 
                       onChange={handleAlbumCoverFileUpload} 
                     />
                   </div>
                 )}
 
-                {/* Cover Preview */}
+                {/* Selected Cover Preview */}
                 {albumCoverUrl && (
-                  <div className="flex items-center gap-3 p-2.5 rounded-xl bg-stone-100 dark:bg-stone-850 border border-stone-200 dark:border-stone-800">
-                    <div className="w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-stone-900">
+                  <div style={{
+                    marginTop: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    background: 'rgba(194, 120, 3, 0.06)',
+                    border: '1px solid rgba(194, 120, 3, 0.2)'
+                  }}>
+                    <div style={{ width: '50px', height: '50px', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, background: '#1D1D1F' }}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={albumCoverUrl} alt="Cover Preview" className="w-full h-full object-cover" />
+                      <img src={albumCoverUrl} alt="Cover Preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-stone-900 dark:text-white">Sampul Dipilih</p>
-                      <p className="text-[11px] text-stone-500 truncate">Foto ini akan menjadi thumbnail depan kartu album.</p>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <strong style={{ fontSize: '12.5px', color: '#1D1D1F', display: 'block' }}>Sampul Terpilih</strong>
+                      <span style={{ fontSize: '11px', color: '#86868B' }}>Foto ini akan menjadi thumbnail depan kartu album</span>
                     </div>
                     <button
                       type="button"
                       onClick={() => setAlbumCoverUrl('')}
-                      className="text-xs text-red-500 hover:underline px-2"
+                      style={{ border: 'none', background: 'none', color: '#DC2626', fontSize: '12px', cursor: 'pointer', fontWeight: 600 }}
                     >
-                      Reset
+                      Ganti
                     </button>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="px-6 py-4 border-t border-stone-200 dark:border-stone-800 flex items-center justify-end gap-3 bg-stone-50 dark:bg-stone-850">
+            {/* Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '10px', borderTop: '1px solid rgba(0, 0, 0, 0.06)' }}>
               <button
                 type="button"
                 onClick={() => setAlbumModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-stone-600 dark:text-stone-300 text-xs font-semibold hover:bg-stone-200 dark:hover:bg-stone-800 transition"
+                className="glass-pill"
+                style={{
+                  padding: '10px 18px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  background: 'rgba(0,0,0,0.04)',
+                  border: 'none',
+                  color: '#1D1D1F'
+                }}
               >
                 Batal
               </button>
+
               <button
                 type="button"
                 onClick={handleSaveAlbum}
-                className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 text-xs font-bold shadow-md transition active:scale-95"
+                className="btn-apple-black"
+                style={{
+                  padding: '10px 22px',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
               >
                 {editingAlbumId ? 'Simpan Perubahan' : 'Tambahkan ke Portofolio'}
               </button>
@@ -878,6 +1309,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
           </div>
         </div>
       )}
+
     </div>
   );
 }
