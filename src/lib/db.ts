@@ -2407,7 +2407,16 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       }
       if (updates.whatsapp !== undefined) dbUpdates.whatsapp = updates.whatsapp;
       if (updates.website !== undefined) dbUpdates.website = updates.website;
-      if (updates.portfolioAlbums !== undefined) dbUpdates.portfolio_albums = updates.portfolioAlbums;
+      if (Array.isArray(updates.portfolioAlbums)) {
+        for (const alb of updates.portfolioAlbums) {
+          if (alb.coverImageUrl && typeof alb.coverImageUrl === 'string' && alb.coverImageUrl.startsWith('data:image')) {
+            alb.coverImageUrl = await resolveVendorCoverR2(id, alb.coverImageUrl);
+          }
+        }
+        dbUpdates.portfolio_albums = updates.portfolioAlbums;
+      } else if (updates.portfolioAlbums !== undefined) {
+        dbUpdates.portfolio_albums = updates.portfolioAlbums;
+      }
       if (updates.bankDetails) {
         if (updates.bankDetails.bankName) dbUpdates.bank_name = updates.bankDetails.bankName;
         if (updates.bankDetails.accountNumber) dbUpdates.bank_account_number = updates.bankDetails.accountNumber;

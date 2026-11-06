@@ -64,6 +64,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
   const [albumDriveUrl, setAlbumDriveUrl] = useState('');
   const [albumCoverUrl, setAlbumCoverUrl] = useState('');
   const [coverSource, setCoverSource] = useState<'drive' | 'custom'>('drive');
+  const [isSavingAlbum, setIsSavingAlbum] = useState(false);
 
   // Drive test & thumbnail picker states
   const [isCheckingDrive, setIsCheckingDrive] = useState(false);
@@ -215,61 +216,13 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
     setAlbumModalOpen(true);
   };
 
-  const handleSaveAlbum = () => {
-    if (!albumTitle.trim()) {
-      toast.error('Nama kategori/album wajib diisi');
-      return;
-    }
-    if (!albumDriveUrl.trim()) {
-      toast.error('Link folder Google Drive wajib diisi');
-      return;
-    }
-
-    const currentCover = albumCoverUrl || (drivePhotos[0]?.url || drivePhotos[0]?.fullUrl) || '';
-
-    if (editingAlbumId) {
-      setAlbums(prev => prev.map(a => a.id === editingAlbumId ? {
-        ...a,
-        title: albumTitle.trim(),
-        description: albumDesc.trim(),
-        driveFolderUrl: albumDriveUrl.trim(),
-        coverImageUrl: currentCover,
-        photoCount: drivePhotos.length > 0 ? drivePhotos.length : a.photoCount
-      } : a));
-      toast.success('Album berhasil diperbarui di daftar');
-    } else {
-      const newAlbum: VendorPortfolioAlbum = {
-        id: `alb_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-        title: albumTitle.trim(),
-        description: albumDesc.trim(),
-        driveFolderUrl: albumDriveUrl.trim(),
-        coverImageUrl: currentCover,
-        photoCount: drivePhotos.length > 0 ? drivePhotos.length : undefined,
-        order: albums.length,
-        createdAt: new Date().toISOString()
-      };
-      setAlbums(prev => [...prev, newAlbum]);
-      toast.success('Album baru ditambahkan ke daftar');
-    }
-
-    setAlbumModalOpen(false);
-  };
-
-  const handleDeleteAlbum = (id: string) => {
-    if (confirm('Apakah Anda yakin ingin menghapus kategori album ini dari portofolio?')) {
-      setAlbums(prev => prev.filter(a => a.id !== id));
-      toast.success('Album dihapus dari daftar');
-    }
-  };
-
-  const handleSaveAllPortfolio = async () => {
-    setIsSavingProfile(true);
-
+  // Save all profile and albums to backend
+  const persistPortfolio = async (updatedAlbums?: VendorPortfolioAlbum[]) => {
+    const albumsToSave = updatedAlbums !== undefined ? updatedAlbums : albums;
     const cleanSlug = slug.toLowerCase().trim().replace(/[^a-z0-9_-]/g, '-').replace(/-+/g, '-').replace(/^-+|-+$/g, '');
     if (!cleanSlug || cleanSlug.length < 2) {
       toast.error('Slug URL minimal 2 karakter (huruf, angka, strip)');
-      setIsSavingProfile(false);
-      return;
+      return false;
     }
 
     try {
@@ -280,7 +233,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
         whatsapp,
         website,
         instagram,
-        albums
+        albums: albumsToSave
       };
 
       const res = await authFetch('/api/vendors/portfolio', {
@@ -294,7 +247,6 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
         throw new Error(data.error || 'Gagal menyimpan portofolio');
       }
 
-      toast.success('Portofolio landing page berhasil disimpan & dipublikasikan!');
       if (onUpdateVendor) {
         onUpdateVendor({
           slug: cleanSlug,
@@ -302,14 +254,83 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
           coverUrl,
           whatsapp,
           website,
-          portfolioAlbums: albums
+          portfolioAlbums: albumsToSave
         });
       }
+      return true;
     } catch (err: any) {
       console.error('Error saving portfolio:', err);
-      toast.error(err.message || 'Gagal menyimpan portofolio');
-    } finally {
-      setIsSavingProfile(false);
+      toast.error(err.message || 'Gagal menyimpan perubahan ke server');
+      return false;
+    }
+  };
+
+  const handleSaveAlbum = async () => {
+    if (!albumTitle.trim()) {
+      toast.error('Nama kategori/album wajib diisi');
+      return;
+    }
+    if (!albumDriveUrl.trim()) {
+      toast.error('Link folder Google Drive wajib diisi');
+      return;
+    }
+
+    setIsSavingAlbum(true);
+    const currentCover = albumCoverUrl || (drivePhotos[0]?.url || drivePhotos[0]?.fullUrl) || '';
+
+    let updatedAlbums: VendorPortfolioAlbum[];
+    if (editingAlbumId) {
+      updatedAlbums = albums.map(a => a.id === editingAlbumId ? {
+        ...a,
+        title: albumTitle.trim(),
+        description: albumDesc.trim(),
+        driveFolderUrl: albumDriveUrl.trim(),
+        coverImageUrl: currentCover,
+        photoCount: drivePhotos.length > 0 ? drivePhotos.length : a.photoCount
+      } : a);
+    } else {
+      const newAlbum: VendorPortfolioAlbum = {
+        id: `alb_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        title: albumTitle.trim(),
+        description: albumDesc.trim(),
+        driveFolderUrl: albumDriveUrl.trim(),
+        coverImageUrl: currentCover,
+        photoCount: drivePhotos.length > 0 ? drivePhotos.length : undefined,
+        order: albums.length,
+        createdAt: new Date().toISOString()
+      };
+      updatedAlbums = [...albums, newAlbum];
+    }
+
+    setAlbums(updatedAlbums);
+
+    // Auto-save immediately to database
+    const saved = await persistPortfolio(updatedAlbums);
+    setIsSavingAlbum(false);
+
+    if (saved) {
+      toast.success(editingAlbumId ? 'Album berhasil diperbarui dan dipublikasikan!' : 'Album berhasil ditambahkan & langsung tayang di portofolio!');
+      setAlbumModalOpen(false);
+    }
+  };
+
+  const handleDeleteAlbum = async (id: string) => {
+    if (confirm('Apakah Anda yakin ingin menghapus kategori album ini dari portofolio?')) {
+      const updatedAlbums = albums.filter(a => a.id !== id);
+      setAlbums(updatedAlbums);
+      const saved = await persistPortfolio(updatedAlbums);
+      if (saved) {
+        toast.success('Album dihapus dari portofolio');
+      }
+    }
+  };
+
+  const handleSaveAllPortfolio = async () => {
+    setIsSavingProfile(true);
+    const saved = await persistPortfolio();
+    setIsSavingProfile(false);
+    if (saved) {
+      toast.success('Pengaturan portofolio berhasil disimpan & dipublikasikan!');
     }
   };
 
@@ -1295,15 +1316,21 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
               <button
                 type="button"
                 onClick={handleSaveAlbum}
+                disabled={isSavingAlbum}
                 className="btn-apple-black"
                 style={{
                   padding: '10px 22px',
                   fontSize: '13px',
                   fontWeight: 600,
-                  cursor: 'pointer'
+                  cursor: isSavingAlbum ? 'wait' : 'pointer',
+                  opacity: isSavingAlbum ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
-                {editingAlbumId ? 'Simpan Perubahan' : 'Tambahkan ke Portofolio'}
+                {isSavingAlbum && <Loader2 size={14} className="animate-spin" />}
+                <span>{editingAlbumId ? 'Simpan Perubahan' : 'Tambahkan ke Portofolio'}</span>
               </button>
             </div>
           </div>
