@@ -6,7 +6,7 @@ import {
   ShieldCheck, MapPin, Globe, MessageCircle, 
   Sparkles, Layers, BookOpen, ArrowRight, Share2, Check
 } from 'lucide-react';
-import { VendorPortfolioAlbum } from '@/lib/types';
+import { VendorPortfolioAlbum, VendorPortfolioTheme } from '@/lib/types';
 import { PortfolioViewerModal } from './PortfolioViewerModal';
 import { toast } from 'sonner';
 
@@ -26,6 +26,9 @@ interface PortfolioClientViewProps {
     tier?: string;
     partnerTier?: string;
     albums: VendorPortfolioAlbum[];
+    theme?: VendorPortfolioTheme;
+    views?: number;
+    whatsappClicks?: number;
   };
 }
 

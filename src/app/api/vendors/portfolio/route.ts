@@ -53,7 +53,10 @@ export async function GET(req: Request) {
       partnerTier: vendor.partnerTier || 'regular',
       albums: Array.isArray(vendor.portfolioAlbums) 
         ? vendor.portfolioAlbums 
-        : (Array.isArray(vendor.portfolio_albums) ? vendor.portfolio_albums : [])
+        : (Array.isArray(vendor.portfolio_albums) ? vendor.portfolio_albums : []),
+      theme: vendor.portfolioTheme || vendor.portfolio_theme || {},
+      views: Number(vendor.portfolioViews || vendor.portfolio_views || 0),
+      whatsappClicks: Number(vendor.portfolioWhatsappClicks || vendor.portfolio_whatsapp_clicks || 0)
     };
 
     return NextResponse.json({ success: true, portfolio: publicProfile });
@@ -127,6 +130,7 @@ export async function PUT(req: Request) {
     if (body.whatsapp !== undefined) updates.whatsapp = String(body.whatsapp).trim();
     if (body.website !== undefined) updates.website = String(body.website).trim();
     if (body.instagram !== undefined) updates.instagram = String(body.instagram).trim();
+    if (body.theme !== undefined && typeof body.theme === 'object') updates.portfolioTheme = body.theme;
 
     if (Array.isArray(body.albums)) {
       // Validate each album
@@ -163,7 +167,10 @@ export async function PUT(req: Request) {
         instagram: updated.instagram,
         whatsapp: updated.whatsapp,
         website: updated.website,
-        albums: updated.portfolioAlbums || updated.portfolio_albums || []
+        albums: updated.portfolioAlbums || updated.portfolio_albums || [],
+        theme: updated.portfolioTheme || updated.portfolio_theme || {},
+        views: Number(updated.portfolioViews ?? updated.portfolio_views ?? 0),
+        whatsappClicks: Number(updated.portfolioWhatsappClicks ?? updated.portfolio_whatsapp_clicks ?? 0)
       }
     });
   } catch (error: any) {

@@ -2169,6 +2169,9 @@ export async function getAllVendors(): Promise<any[]> {
           whatsapp: v.whatsapp || v.phone || '',
           website: v.website || '',
           portfolioAlbums: Array.isArray(v.portfolio_albums) ? v.portfolio_albums : (Array.isArray(v.portfolioAlbums) ? v.portfolioAlbums : []),
+          portfolioTheme: v.portfolio_theme || v.portfolioTheme || {},
+          portfolioViews: Number(v.portfolio_views || v.portfolioViews || 0),
+          portfolioWhatsappClicks: Number(v.portfolio_whatsapp_clicks || v.portfolioWhatsappClicks || 0),
           createdAt: v.created_at
         }));
       }
@@ -2423,6 +2426,15 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       } else if (updates.portfolioAlbums !== undefined) {
         dbUpdates.portfolio_albums = updates.portfolioAlbums;
       }
+      if (updates.portfolioTheme !== undefined) {
+        dbUpdates.portfolio_theme = updates.portfolioTheme;
+      }
+      if (updates.portfolioViews !== undefined) {
+        dbUpdates.portfolio_views = updates.portfolioViews;
+      }
+      if (updates.portfolioWhatsappClicks !== undefined) {
+        dbUpdates.portfolio_whatsapp_clicks = updates.portfolioWhatsappClicks;
+      }
       if (updates.bankDetails) {
         if (updates.bankDetails.bankName) dbUpdates.bank_name = updates.bankDetails.bankName;
         if (updates.bankDetails.accountNumber) dbUpdates.bank_account_number = updates.bankDetails.accountNumber;
@@ -2469,6 +2481,9 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
           whatsapp: data.whatsapp || updates.whatsapp || data.phone || '',
           website: data.website || updates.website || '',
           portfolioAlbums: Array.isArray(data.portfolio_albums) ? data.portfolio_albums : (updates.portfolioAlbums || []),
+          portfolioTheme: data.portfolio_theme || updates.portfolioTheme || {},
+          portfolioViews: Number(data.portfolio_views ?? updates.portfolioViews ?? 0),
+          portfolioWhatsappClicks: Number(data.portfolio_whatsapp_clicks ?? updates.portfolioWhatsappClicks ?? 0),
           createdAt: data.created_at,
           updatedAt: new Date().toISOString()
         };
@@ -2552,6 +2567,9 @@ export async function getVendorBySlug(rawSlug: string): Promise<any | null> {
           whatsapp: v.whatsapp || v.phone || '',
           website: v.website || '',
           portfolioAlbums: Array.isArray(v.portfolio_albums) ? v.portfolio_albums : (Array.isArray(v.portfolioAlbums) ? v.portfolioAlbums : []),
+          portfolioTheme: v.portfolio_theme || v.portfolioTheme || {},
+          portfolioViews: Number(v.portfolio_views || v.portfolioViews || 0),
+          portfolioWhatsappClicks: Number(v.portfolio_whatsapp_clicks || v.portfolioWhatsappClicks || 0),
           createdAt: v.created_at
         };
       }

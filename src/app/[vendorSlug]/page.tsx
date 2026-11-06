@@ -66,7 +66,10 @@ export default async function VendorPortfolioPage({ params }: PageProps) {
     website: vendor.website || '',
     tier: vendor.tier || 'pro',
     partnerTier: vendor.partnerTier || 'regular',
-    albums: Array.isArray(vendor.portfolioAlbums) ? vendor.portfolioAlbums : (Array.isArray(vendor.portfolio_albums) ? vendor.portfolio_albums : [])
+    albums: Array.isArray(vendor.portfolioAlbums) ? vendor.portfolioAlbums : (Array.isArray(vendor.portfolio_albums) ? vendor.portfolio_albums : []),
+    theme: vendor.portfolioTheme || vendor.portfolio_theme || {},
+    views: Number(vendor.portfolioViews || vendor.portfolio_views || 0),
+    whatsappClicks: Number(vendor.portfolioWhatsappClicks || vendor.portfolio_whatsapp_clicks || 0)
   };
 
   return <PortfolioClientView vendor={publicProfile} />;

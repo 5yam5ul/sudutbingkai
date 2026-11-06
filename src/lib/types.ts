@@ -470,6 +470,86 @@ export interface VendorPortfolioAlbum {
   createdAt: string;
 }
 
+export interface VendorPortfolioTestimonial {
+  id: string;
+  clientName: string;
+  eventDate?: string;
+  rating: number; // 1 - 5
+  quote: string;
+}
+
+export interface VendorPortfolioFaq {
+  question: string;
+  answer: string;
+}
+
+export interface VendorPortfolioTheme {
+  // 1. Card Album Style
+  cardStyle?: 'photobook' | 'polaroid' | 'editorial' | 'cinematic';
+  
+  // 2. Background & Atmosphere
+  backgroundMode?: 'preset' | 'custom_color' | 'custom_gradient' | 'image' | 'texture';
+  bgPreset?: 'alabaster' | 'champagne' | 'obsidian' | 'slate';
+  bgColor?: string; // hex color e.g. #FBFBFA
+  bgGradient?: { from: string; to: string; angle?: number };
+  bgImageUrl?: string;
+  bgBlur?: number; // 0 - 20px
+  bgDimmer?: number; // 0 - 90% opacity overlay
+  bgTexture?: 'none' | 'grain' | 'canvas' | 'linen';
+
+  // 3. Header / Hero Style
+  heroStyle?: 'social' | 'cinematic_fullscreen' | 'split' | 'minimalist';
+  tagline?: string;
+
+  // 4. Gallery Grid Layout
+  gridLayout?: 'grid' | 'masonry' | 'filmstrip' | 'fullwidth_rows';
+
+  // 5. Background Audio Player
+  audioUrl?: string;
+  audioTitle?: string;
+  audioAutoPlay?: boolean;
+
+  // 6. Security & Protection
+  watermarkEnabled?: boolean;
+  watermarkLogoUrl?: string;
+  disableRightClick?: boolean;
+
+  // 7. Actions & Conversion Modules
+  enableStickyMobileBar?: boolean;
+  enableLeadForm?: boolean;
+  pricelistPdfUrl?: string;
+  pricelistButtonText?: string;
+  socialLinks?: {
+    instagram?: string;
+    tiktok?: string;
+    youtube?: string;
+    pinterest?: string;
+    mapsUrl?: string;
+  };
+
+  // 8. Modular Sections (Toggle On/Off)
+  showTestimonials?: boolean;
+  testimonials?: VendorPortfolioTestimonial[];
+  showFaq?: boolean;
+  faqs?: VendorPortfolioFaq[];
+  showBadges?: boolean;
+  badges?: string[];
+  showBehindTheLens?: boolean;
+  behindTheLens?: {
+    leadPhotographerName?: string;
+    bio?: string;
+    avatarUrl?: string;
+    gearList?: string[];
+  };
+  showVideoHighlight?: boolean;
+  videoHighlightUrl?: string;
+  videoHighlightTitle?: string;
+
+  // 9. Typography & Accent Color
+  fontStyle?: 'sans' | 'serif' | 'mono';
+  accentColor?: string; // Hex for button & badges e.g. #C27803
+}
+
 export interface VendorPortfolioProfile {
   slug: string;
   bio?: string;
@@ -478,6 +558,9 @@ export interface VendorPortfolioProfile {
   instagram?: string;
   website?: string;
   albums: VendorPortfolioAlbum[];
+  theme?: VendorPortfolioTheme;
+  views?: number;
+  whatsappClicks?: number;
 }
 
 export interface UserAccount {
@@ -506,6 +589,9 @@ export interface UserAccount {
   whatsapp?: string;
   website?: string;
   portfolioAlbums?: VendorPortfolioAlbum[];
+  portfolioTheme?: VendorPortfolioTheme;
+  portfolioViews?: number;
+  portfolioWhatsappClicks?: number;
 }
 
 export interface InvoiceRecord {
