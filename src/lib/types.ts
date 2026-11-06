@@ -459,6 +459,27 @@ export interface PartnerBankAccount {
   accountHolder: string;
 }
 
+export interface VendorPortfolioAlbum {
+  id: string;
+  title: string;
+  description?: string;
+  driveFolderUrl: string;
+  coverImageUrl: string;
+  photoCount?: number;
+  order: number;
+  createdAt: string;
+}
+
+export interface VendorPortfolioProfile {
+  slug: string;
+  bio?: string;
+  coverUrl?: string;
+  whatsapp?: string;
+  instagram?: string;
+  website?: string;
+  albums: VendorPortfolioAlbum[];
+}
+
 export interface UserAccount {
   id: string;
   name: string;
@@ -478,6 +499,13 @@ export interface UserAccount {
   bankAccount?: PartnerBankAccount;
   bankDetails?: PartnerBankAccount;
   clientCount?: number;
+  // Exclusive Portfolio fields
+  slug?: string;
+  bio?: string;
+  coverUrl?: string;
+  whatsapp?: string;
+  website?: string;
+  portfolioAlbums?: VendorPortfolioAlbum[];
 }
 
 export interface InvoiceRecord {

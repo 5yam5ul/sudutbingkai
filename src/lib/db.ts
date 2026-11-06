@@ -2163,6 +2163,12 @@ export async function getAllVendors(): Promise<any[]> {
           },
           clientCount: Number(v.client_count ?? 0),
           city: v.city || '',
+          slug: v.slug || '',
+          bio: v.bio || '',
+          coverUrl: formatSafeMediaUrl(v.cover_url || v.coverUrl) || '',
+          whatsapp: v.whatsapp || v.phone || '',
+          website: v.website || '',
+          portfolioAlbums: Array.isArray(v.portfolio_albums) ? v.portfolio_albums : (Array.isArray(v.portfolioAlbums) ? v.portfolioAlbums : []),
           createdAt: v.created_at
         }));
       }
@@ -2176,7 +2182,12 @@ export async function getAllVendors(): Promise<any[]> {
   try {
     const raw = fs.existsSync(VENDORS_FILE) ? fs.readFileSync(VENDORS_FILE, 'utf8') : '[]';
     const parsed: any[] = JSON.parse(raw);
-    return parsed.map(v => ({ ...v, logoUrl: formatSafeMediaUrl(v.logoUrl) || '' }));
+    return parsed.map(v => ({
+      ...v,
+      logoUrl: formatSafeMediaUrl(v.logoUrl) || '',
+      coverUrl: formatSafeMediaUrl(v.coverUrl || v.cover_url) || '',
+      portfolioAlbums: Array.isArray(v.portfolioAlbums) ? v.portfolioAlbums : (Array.isArray(v.portfolio_albums) ? v.portfolio_albums : [])
+    }));
   } catch {
     return [];
   }
@@ -2201,6 +2212,27 @@ async function resolveVendorLogoR2(vendorId: string, rawLogoUrl?: string | null)
     }
   }
   return rawLogoUrl;
+}
+
+async function resolveVendorCoverR2(vendorId: string, rawCoverUrl?: string | null): Promise<string> {
+  if (!rawCoverUrl) return '';
+  if (!rawCoverUrl.startsWith('data:image')) return rawCoverUrl;
+
+  if (isR2Configured) {
+    try {
+      const matches = rawCoverUrl.match(/^data:image\/([a-zA-Z0-9+]+);base64,(.+)$/);
+      const mimeType = matches ? `image/${matches[1]}` : 'image/jpeg';
+      const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg';
+      const base64Data = matches ? matches[2] : rawCoverUrl.replace(/^data:image\/\w+;base64,/, '');
+      const buffer = Buffer.from(base64Data, 'base64');
+      const r2Key = `covers/vendor-${vendorId}-${Date.now()}.${ext}`;
+      const r2Url = await uploadBufferToR2(buffer, r2Key, mimeType);
+      if (r2Url) return r2Url;
+    } catch (err) {
+      console.warn('Vendor cover R2 upload fallback:', err);
+    }
+  }
+  return rawCoverUrl;
 }
 
 async function syncVendorBrandingToEvents(
@@ -2365,6 +2397,17 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       if (updates.totalEarnings !== undefined) dbUpdates.total_earnings = updates.totalEarnings;
       if (updates.clientCount !== undefined) dbUpdates.client_count = updates.clientCount;
       if (updates.city !== undefined) dbUpdates.city = updates.city;
+      if (updates.slug !== undefined) dbUpdates.slug = updates.slug;
+      if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
+      if (updates.coverUrl !== undefined) {
+        if (typeof updates.coverUrl === 'string' && updates.coverUrl.startsWith('data:image')) {
+          updates.coverUrl = await resolveVendorCoverR2(id, updates.coverUrl);
+        }
+        dbUpdates.cover_url = updates.coverUrl;
+      }
+      if (updates.whatsapp !== undefined) dbUpdates.whatsapp = updates.whatsapp;
+      if (updates.website !== undefined) dbUpdates.website = updates.website;
+      if (updates.portfolioAlbums !== undefined) dbUpdates.portfolio_albums = updates.portfolioAlbums;
       if (updates.bankDetails) {
         if (updates.bankDetails.bankName) dbUpdates.bank_name = updates.bankDetails.bankName;
         if (updates.bankDetails.accountNumber) dbUpdates.bank_account_number = updates.bankDetails.accountNumber;
@@ -2400,7 +2443,13 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
             accountHolder: data.bank_account_holder || data.name
           },
           clientCount: Number(data.client_count ?? 0),
-          city: data.city || '',
+          city: data.city || updates.city || '',
+          slug: data.slug || updates.slug || '',
+          bio: data.bio || updates.bio || '',
+          coverUrl: formatSafeMediaUrl(data.cover_url || updates.coverUrl) || '',
+          whatsapp: data.whatsapp || updates.whatsapp || data.phone || '',
+          website: data.website || updates.website || '',
+          portfolioAlbums: Array.isArray(data.portfolio_albums) ? data.portfolio_albums : (updates.portfolioAlbums || []),
           createdAt: data.created_at,
           updatedAt: new Date().toISOString()
         };
@@ -2440,6 +2489,35 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
   } catch {
     return null;
   }
+}
+
+export async function getVendorBySlug(rawSlug: string): Promise<any | null> {
+  if (!rawSlug) return null;
+  const cleanSlug = rawSlug.trim().toLowerCase();
+  const all = await getAllVendors();
+  
+  // 1. Direct match on slug
+  let match = all.find(v => (v.slug || '').toLowerCase() === cleanSlug);
+  if (match) return match;
+
+  // 2. Fallback match on vendor id
+  match = all.find(v => {
+    const vid = (v.id || '').toLowerCase();
+    return vid === cleanSlug || vid === `v_${cleanSlug}` || vid === `vendor_${cleanSlug}`;
+  });
+  if (match) return match;
+
+  // 3. Fallback match on normalized company name (e.g. "Aletheia Photography" -> "aletheia-photography")
+  match = all.find(v => {
+    const compSlug = (v.companyName || v.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return compSlug === cleanSlug;
+  });
+
+  return match || null;
+}
+
+export async function updateVendorPortfolio(vendorId: string, portfolio: any): Promise<any | null> {
+  return await updateVendor(vendorId, portfolio);
 }
 
 export async function deleteVendor(id: string): Promise<boolean> {

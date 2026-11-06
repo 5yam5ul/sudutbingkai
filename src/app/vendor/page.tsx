@@ -11,12 +11,13 @@ import {
   CreditCard, Wallet, Share2, Video, Film, PlayCircle, FolderHeart,
   Printer, Tv, Eye, Award, X, AlertTriangle, AlertCircle, Calendar, MapPin, Mail, Lightbulb, Clock,
   Heart, ChevronDown, ChevronUp, ChevronRight, Shield, FileX,
-  Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic, RefreshCw
+  Send, Smartphone, Megaphone, Target, CheckSquare, Zap, BookOpen, ThumbsUp, Mic, RefreshCw, Sparkles
 } from 'lucide-react';
 import { UserAccount, VideoTestimonialSubmission, PayoutRequest, getEventRetentionInfo, PACKAGE_TIERS, EventPackageTier, resolveEventCategory, getEventCategoryMeta, VendorProofingSession } from '@/lib/types';
 import { getClientSession, setClientSession, clearClientSession, authFetch, isSameVendorId } from '@/lib/auth';
 import { formatSafeMediaUrl } from '@/lib/media-url';
 import ConfirmModal from '@/components/ConfirmModal';
+import VendorPortfolioTab from '@/components/vendor/VendorPortfolioTab';
 import { toast } from 'sonner';
 
 const CURATED_PARTNERS = [
@@ -70,7 +71,7 @@ export default function VendorPortalPage() {
     email: '',
     role: 'vendor'
   });
-  const [activeTab, setActiveTab] = useState<'wallet' | 'clients' | 'proofing' | 'branding' | 'testimonials' | 'marketing'>('wallet');
+  const [activeTab, setActiveTab] = useState<'wallet' | 'clients' | 'proofing' | 'portfolio' | 'branding' | 'testimonials' | 'marketing'>('wallet');
 
   // Vendor Client Proofing Portal State
   const [proofings, setProofings] = useState<VendorProofingSession[]>([]);
@@ -435,7 +436,7 @@ export default function VendorPortalPage() {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
-      if (tabParam === 'clients' || tabParam === 'wallet' || tabParam === 'branding' || tabParam === 'testimonials' || tabParam === 'marketing') {
+      if (tabParam === 'clients' || tabParam === 'wallet' || tabParam === 'proofing' || tabParam === 'portfolio' || tabParam === 'branding' || tabParam === 'testimonials' || tabParam === 'marketing') {
         setActiveTab(tabParam);
       }
       if (urlParams.get('paid') === 'true') {
@@ -2079,6 +2080,28 @@ export default function VendorPortalPage() {
           </button>
 
           <button
+            onClick={() => setActiveTab('portfolio')}
+            className="glass-pill"
+            style={{
+              background: activeTab === 'portfolio' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
+              color: activeTab === 'portfolio' ? '#FFFFFF' : '#1D1D1F',
+              padding: '10px 18px',
+              fontSize: '13px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              whiteSpace: 'nowrap',
+              border: activeTab === 'portfolio' ? '1px solid #C27803' : '1px solid rgba(194, 120, 3, 0.2)'
+            }}
+          >
+            <Sparkles size={14} color="#C27803" />
+            <span className="desktop-only">Portofolio & Landing Page</span>
+            <span className="mobile-only">Portofolio</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab('branding')}
             className="glass-pill"
             style={{
@@ -3134,6 +3157,14 @@ export default function VendorPortalPage() {
               </div>
             )}
           </div>
+        )}
+
+        {/* TAB: EXCLUSIVE PORTFOLIO LANDING PAGE */}
+        {activeTab === 'portfolio' && (
+          <VendorPortfolioTab 
+            vendor={vendor} 
+            onUpdateVendor={(updated) => setVendor(prev => ({ ...prev, ...updated }))} 
+          />
         )}
 
         {/* TAB: UPLOAD LOGO & CO-BRANDING */}
