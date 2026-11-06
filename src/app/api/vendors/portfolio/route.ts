@@ -13,8 +13,9 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const slug = searchParams.get('slug');
     const vendorId = searchParams.get('vendorId');
+    const session = getServerSession(req);
 
-    if (!slug && !vendorId) {
+    if (!slug && !vendorId && !session?.id && !session?.email) {
       return NextResponse.json({ success: false, error: 'Slug atau vendorId diperlukan' }, { status: 400 });
     }
 
@@ -22,9 +23,13 @@ export async function GET(req: Request) {
 
     if (slug) {
       vendor = await getVendorBySlug(slug);
-    } else if (vendorId) {
+    } else {
       const allVendors = await getAllVendors();
-      vendor = allVendors.find(v => isSameVendorId(v.id, vendorId));
+      const lookupId = vendorId || session?.id;
+      vendor = allVendors.find(v => 
+        (lookupId && isSameVendorId(v.id, lookupId)) || 
+        (session?.email && v.email?.toLowerCase() === session.email.toLowerCase())
+      );
     }
 
     if (!vendor) {
@@ -38,15 +43,17 @@ export async function GET(req: Request) {
       companyName: vendor.companyName || vendor.name,
       slug: vendor.slug || (vendor.companyName || vendor.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
       bio: vendor.bio || '',
-      coverUrl: vendor.coverUrl || '',
-      logoUrl: vendor.logoUrl || '',
+      coverUrl: vendor.coverUrl || vendor.cover_url || '',
+      logoUrl: vendor.logoUrl || vendor.logo_url || '',
       city: vendor.city || '',
       instagram: vendor.instagram || '',
       whatsapp: vendor.whatsapp || vendor.phone || '',
       website: vendor.website || '',
       tier: vendor.tier || 'pro',
       partnerTier: vendor.partnerTier || 'regular',
-      albums: Array.isArray(vendor.portfolioAlbums) ? vendor.portfolioAlbums : []
+      albums: Array.isArray(vendor.portfolioAlbums) 
+        ? vendor.portfolioAlbums 
+        : (Array.isArray(vendor.portfolio_albums) ? vendor.portfolio_albums : [])
     };
 
     return NextResponse.json({ success: true, portfolio: publicProfile });
@@ -64,7 +71,14 @@ export async function PUT(req: Request) {
     }
 
     const body = await req.json();
-    const targetVendorId = session.role === 'admin' && body.vendorId ? body.vendorId : session.id;
+    const allVendors = await getAllVendors();
+
+    const currentVendor = allVendors.find(v => 
+      isSameVendorId(v.id, session.role === 'admin' && body.vendorId ? body.vendorId : session.id) ||
+      (session.email && v.email?.toLowerCase() === session.email.toLowerCase())
+    );
+
+    const targetVendorId = currentVendor?.id || (session.role === 'admin' && body.vendorId ? body.vendorId : session.id);
 
     if (!targetVendorId) {
       return NextResponse.json({ success: false, error: 'ID vendor tidak valid' }, { status: 400 });
@@ -90,10 +104,11 @@ export async function PUT(req: Request) {
         }, { status: 400 });
       }
 
-      // Check uniqueness across other vendors
-      const allVendors = await getAllVendors();
+      // Check uniqueness across other vendors (exclude current vendor)
       const duplicate = allVendors.find(v => 
-        (v.slug || '').toLowerCase() === sanitizedSlug && !isSameVendorId(v.id, targetVendorId)
+        (v.slug || '').toLowerCase() === sanitizedSlug && 
+        !isSameVendorId(v.id, targetVendorId) &&
+        (!session.email || v.email?.toLowerCase() !== session.email.toLowerCase())
       );
 
       if (duplicate) {
@@ -148,7 +163,7 @@ export async function PUT(req: Request) {
         instagram: updated.instagram,
         whatsapp: updated.whatsapp,
         website: updated.website,
-        albums: updated.portfolioAlbums || []
+        albums: updated.portfolioAlbums || updated.portfolio_albums || []
       }
     });
   } catch (error: any) {

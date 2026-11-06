@@ -76,21 +76,25 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
 
   // Initialize data
   useEffect(() => {
-    if (!vendor?.id) return;
-
-    const initialSlug = vendor.slug || (vendor.companyName || vendor.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-    setSlug(initialSlug);
-    setBio(vendor.bio || '');
-    setCoverUrl(vendor.coverUrl || '');
-    setWhatsapp(vendor.whatsapp || vendor.phone || '');
-    setWebsite(vendor.website || '');
-    setInstagram(vendor.instagram || '');
-    if (Array.isArray(vendor.portfolioAlbums)) {
-      setAlbums(vendor.portfolioAlbums);
+    if (vendor?.id) {
+      const initialSlug = vendor.slug || (vendor.companyName || vendor.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      setSlug(initialSlug);
+      if (vendor.bio) setBio(vendor.bio);
+      if (vendor.coverUrl) setCoverUrl(vendor.coverUrl);
+      if (vendor.whatsapp || vendor.phone) setWhatsapp(vendor.whatsapp || vendor.phone || '');
+      if (vendor.website) setWebsite(vendor.website);
+      if (vendor.instagram) setInstagram(vendor.instagram);
+      if (Array.isArray(vendor.portfolioAlbums) && vendor.portfolioAlbums.length > 0) {
+        setAlbums(vendor.portfolioAlbums);
+      }
     }
 
-    // Refresh from API
-    authFetch(`/api/vendors/portfolio?vendorId=${encodeURIComponent(vendor.id)}`)
+    // Always fetch fresh portfolio directly from API (which reads Supabase)
+    const targetUrl = vendor?.id 
+      ? `/api/vendors/portfolio?vendorId=${encodeURIComponent(vendor.id)}` 
+      : `/api/vendors/portfolio`;
+
+    authFetch(targetUrl)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.portfolio) {
@@ -101,11 +105,13 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
           if (p.whatsapp !== undefined) setWhatsapp(p.whatsapp);
           if (p.website !== undefined) setWebsite(p.website);
           if (p.instagram !== undefined) setInstagram(p.instagram);
-          if (Array.isArray(p.albums)) setAlbums(p.albums);
+          if (Array.isArray(p.albums)) {
+            setAlbums(p.albums);
+          }
         }
       })
       .catch(err => console.warn('Portfolio load notice:', err));
-  }, [vendor]);
+  }, [vendor?.id]);
 
   const publicPortfolioUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/${slug}` 
@@ -247,6 +253,10 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
         throw new Error(data.error || 'Gagal menyimpan portofolio');
       }
 
+      if (data.portfolio && Array.isArray(data.portfolio.albums)) {
+        setAlbums(data.portfolio.albums);
+      }
+
       if (onUpdateVendor) {
         onUpdateVendor({
           slug: cleanSlug,
@@ -254,7 +264,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
           coverUrl,
           whatsapp,
           website,
-          portfolioAlbums: albumsToSave
+          portfolioAlbums: data.portfolio?.albums || albumsToSave
         });
       }
       return true;

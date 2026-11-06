@@ -142,6 +142,11 @@ export async function POST(request: Request) {
               walletBalance: matchedVendor.walletBalance || 0,
               totalEarnings: matchedVendor.totalEarnings || 0,
               clientCount: matchedVendor.clientCount || 0,
+              slug: matchedVendor.slug || '',
+              bio: matchedVendor.bio || '',
+              coverUrl: matchedVendor.coverUrl || '',
+              whatsapp: matchedVendor.whatsapp || matchedVendor.phone || '',
+              portfolioAlbums: Array.isArray(matchedVendor.portfolioAlbums) ? matchedVendor.portfolioAlbums : []
             }
           : {
               id: body.id || existingSession?.id || 'usr_' + cleanEmail.replace(/[^a-z0-9]/g, '').slice(0, 10),

@@ -2362,7 +2362,7 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       }
       const existingVendors = await getAllVendors();
       const prevVendor = existingVendors.find(
-        v => v.id === id || v.id?.replace(/^v_/, 'vendor_') === String(id).replace(/^v_/, 'vendor_')
+        v => isSameVendorId(v.id, id) || v.id === id || v.id?.replace(/^v_/, 'vendor_') === String(id).replace(/^v_/, 'vendor_')
       );
       await syncVendorBrandingToEvents(prevVendor?.id || id, {
         vendorLogo: updates.logoUrl,
@@ -2379,6 +2379,12 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
   // 1. Try Supabase
   if (isSupabaseConfigured && supabase) {
     try {
+      const existingVendors = await getAllVendors();
+      const prevVendor = existingVendors.find(
+        v => isSameVendorId(v.id, id) || v.id === id || v.id?.replace(/^v_/, 'vendor_') === String(id).replace(/^v_/, 'vendor_')
+      );
+      const targetDbId = prevVendor?.id || id;
+
       const dbUpdates: Record<string, any> = {};
       if (updates.name !== undefined) dbUpdates.name = updates.name;
       if (updates.companyName !== undefined) dbUpdates.company_name = updates.companyName;
@@ -2401,7 +2407,7 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       if (updates.bio !== undefined) dbUpdates.bio = updates.bio;
       if (updates.coverUrl !== undefined) {
         if (typeof updates.coverUrl === 'string' && updates.coverUrl.startsWith('data:image')) {
-          updates.coverUrl = await resolveVendorCoverR2(id, updates.coverUrl);
+          updates.coverUrl = await resolveVendorCoverR2(targetDbId, updates.coverUrl);
         }
         dbUpdates.cover_url = updates.coverUrl;
       }
@@ -2410,7 +2416,7 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       if (Array.isArray(updates.portfolioAlbums)) {
         for (const alb of updates.portfolioAlbums) {
           if (alb.coverImageUrl && typeof alb.coverImageUrl === 'string' && alb.coverImageUrl.startsWith('data:image')) {
-            alb.coverImageUrl = await resolveVendorCoverR2(id, alb.coverImageUrl);
+            alb.coverImageUrl = await resolveVendorCoverR2(targetDbId, alb.coverImageUrl);
           }
         }
         dbUpdates.portfolio_albums = updates.portfolioAlbums;
@@ -2426,9 +2432,13 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
       const { data, error } = await supabase
         .from('vendors')
         .update(dbUpdates)
-        .eq('id', id)
+        .eq('id', targetDbId)
         .select()
         .maybeSingle();
+
+      if (error) {
+        console.warn('Supabase updateVendor update error:', error);
+      }
 
       if (!error && data) {
         const updatedVendor = {

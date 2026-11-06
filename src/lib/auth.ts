@@ -311,11 +311,17 @@ export function getClientSession(): UserAccount | null {
 
 export function isSameVendorId(a?: string | null, b?: string | null): boolean {
   if (!a || !b) return false;
-  const cleanA = a.trim();
-  const cleanB = b.trim();
+  const cleanA = a.trim().toLowerCase();
+  const cleanB = b.trim().toLowerCase();
   if (cleanA === cleanB) return true;
-  const vowsAliases = ['vendor_vows_co', 'v_vowsandco'];
+  const vowsAliases = ['vendor_vows_co', 'v_vowsandco', 'vowsandco'];
   if (vowsAliases.includes(cleanA) && vowsAliases.includes(cleanB)) return true;
+
+  // Normalize prefix differences: v_ vs vendor_ vs raw ID
+  const normA = cleanA.replace(/^(v_|vendor_)/, '');
+  const normB = cleanB.replace(/^(v_|vendor_)/, '');
+  if (normA && normB && normA === normB) return true;
+
   return false;
 }
 
