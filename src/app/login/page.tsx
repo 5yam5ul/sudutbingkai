@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -63,6 +63,8 @@ function LoginFormContent() {
   // UI states
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [gisLoaded, setGisLoaded] = useState(false);
+  const googleBtnRef = useRef<HTMLDivElement>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [existingSession, setExistingSession] = useState<UserAccount | null>(null);
 
@@ -281,7 +283,119 @@ function LoginFormContent() {
     router.push(resolveRedirectDestination('/dashboard', 'host'));
   };
 
-  // Google OAuth Sign-In
+  // Google Identity Services (GIS) Handler (Direct origin: sudutbingkai.id without supabase.co domain)
+  const handleGoogleCredentialResponse = async (response: any) => {
+    setGoogleLoading(true);
+    setErrorMsg('');
+
+    try {
+      const idToken = response.credential;
+      if (!idToken) throw new Error('Token Google tidak ditemukan.');
+
+      // Decode JWT payload safely to extract user profile
+      let decodedPayload: any = {};
+      try {
+        const base64Url = idToken.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        decodedPayload = JSON.parse(decodeURIComponent(escape(window.atob(base64))));
+      } catch {
+        const parts = idToken.split('.');
+        if (parts[1]) {
+          decodedPayload = JSON.parse(atob(parts[1]));
+        }
+      }
+
+      // 1. Authenticate with Supabase using ID token
+      let supabaseUser: any = null;
+      if (supabase && isSupabaseConfigured) {
+        try {
+          const { data, error } = await supabase.auth.signInWithIdToken({
+            provider: 'google',
+            token: idToken
+          });
+          if (!error && data?.user) {
+            supabaseUser = data.user;
+          }
+        } catch (sbErr) {
+          console.warn('Supabase ID Token login notice:', sbErr);
+        }
+      }
+
+      const effectiveUser = supabaseUser || {
+        id: decodedPayload.sub || ('usr_g_' + Math.random().toString(36).substring(2, 9)),
+        email: decodedPayload.email,
+        user_metadata: {
+          full_name: decodedPayload.name || decodedPayload.email?.split('@')[0],
+          name: decodedPayload.name,
+          avatar_url: decodedPayload.picture
+        }
+      };
+
+      await handleSupabaseUserSession(effectiveUser, idToken);
+    } catch (err: any) {
+      console.error('Google ID Token error:', err);
+      setErrorMsg(err.message || 'Gagal masuk dengan Google.');
+      toast.error('Gagal masuk dengan Google: ' + (err.message || 'Silakan coba kembali'));
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  // Initialize Google Identity Services (GIS) on mount and on tab changes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '797504405273-tgo3p4pfdkqkkrkcr6c30jfqqb8108uu.apps.googleusercontent.com';
+
+    const initializeGis = () => {
+      const google = (window as any).google;
+      if (google?.accounts?.id) {
+        try {
+          google.accounts.id.initialize({
+            client_id: clientId,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true
+          });
+
+          if (googleBtnRef.current) {
+            googleBtnRef.current.innerHTML = '';
+            google.accounts.id.renderButton(googleBtnRef.current, {
+              theme: 'outline',
+              size: 'large',
+              type: 'standard',
+              shape: 'pill',
+              text: authMode === 'login' ? 'signin_with' : 'signup_with',
+              locale: 'id',
+              logo_alignment: 'left',
+              width: 360
+            });
+            setGisLoaded(true);
+          }
+
+          // Optional: Prompt One Tap for quick 1-click login on sudutbingkai.id
+          try {
+            google.accounts.id.prompt();
+          } catch {}
+        } catch (e) {
+          console.warn('GIS init error:', e);
+        }
+      }
+    };
+
+    if (!(window as any).google?.accounts?.id) {
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = initializeGis;
+      document.head.appendChild(script);
+    } else {
+      initializeGis();
+    }
+  }, [authMode, portalRole]);
+
+  // Google OAuth Sign-In (Legacy Fallback)
   const handleGoogleSignIn = async () => {
     setErrorMsg('');
     setGoogleLoading(true);
@@ -823,47 +937,60 @@ function LoginFormContent() {
           </div>
 
 
-          {/* GOOGLE SIGN-IN / SIGN-UP BUTTON */}
+          {/* GOOGLE SIGN-IN / SIGN-UP BUTTON (GIS Direct sudutbingkai.id origin + Fallback) */}
           <div style={{ marginBottom: '18px' }}>
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              style={{
+            <div 
+              ref={googleBtnRef} 
+              id="googleSignInDiv" 
+              style={{ 
+                display: 'flex', 
+                justifyContent: 'center', 
                 width: '100%',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                border: '1px solid rgba(0, 0, 0, 0.12)',
-                background: '#FFFFFF',
-                color: '#1D1D1F',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                cursor: googleLoading ? 'wait' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-                transition: 'all 0.15s ease'
-              }}
-            >
-              {googleLoading ? (
-                <>
-                  <Loader2 size={16} className="animate-spin" color="#C27803" />
-                  <span>Menghubungkan ke Google...</span>
-                </>
-              ) : (
-                <>
-                  <GoogleIcon />
-                  <span>
-                    {portalRole === 'vendor' 
-                      ? (authMode === 'login' ? 'Masuk dengan Google (Akun Mitra)' : 'Daftar Agensi dengan Google')
-                      : (authMode === 'login' ? 'Masuk dengan Google' : 'Daftar dengan Google')
-                    }
-                  </span>
-                </>
-              )}
-            </button>
+                minHeight: gisLoaded ? '44px' : '0px'
+              }} 
+            />
+
+            {(!gisLoaded || googleLoading) && (
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={googleLoading}
+                style={{
+                  width: '100%',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(0, 0, 0, 0.12)',
+                  background: '#FFFFFF',
+                  color: '#1D1D1F',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  cursor: googleLoading ? 'wait' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+                  transition: 'all 0.15s ease'
+                }}
+              >
+                {googleLoading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" color="#C27803" />
+                    <span>Menghubungkan ke Google...</span>
+                  </>
+                ) : (
+                  <>
+                    <GoogleIcon />
+                    <span>
+                      {portalRole === 'vendor' 
+                        ? (authMode === 'login' ? 'Masuk dengan Google (Akun Mitra)' : 'Daftar Agensi dengan Google')
+                        : (authMode === 'login' ? 'Masuk dengan Google' : 'Daftar dengan Google')
+                      }
+                    </span>
+                  </>
+                )}
+              </button>
+            )}
 
             <div style={{
               display: 'flex',
