@@ -2494,6 +2494,53 @@ export async function updateVendor(id: string, updates: any): Promise<any | null
 export async function getVendorBySlug(rawSlug: string): Promise<any | null> {
   if (!rawSlug) return null;
   const cleanSlug = rawSlug.trim().toLowerCase();
+
+  // 1. Direct Supabase query (super fast, always fresh, real-time)
+  if (isSupabaseConfigured && supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('vendors')
+        .select('*')
+        .or(`slug.eq.${cleanSlug},id.eq.${cleanSlug},id.eq.v_${cleanSlug},id.eq.vendor_${cleanSlug}`);
+
+      if (!error && data && data.length > 0) {
+        const v = data[0];
+        return {
+          id: v.id,
+          name: v.name,
+          companyName: v.company_name || v.name,
+          email: v.email,
+          phone: v.phone || '',
+          instagram: v.instagram || '',
+          logoUrl: formatSafeMediaUrl(v.logo_url) || '',
+          tier: v.tier === 'suspended' ? 'pro' : (v.tier || 'pro'),
+          status: v.status || (v.tier === 'suspended' ? 'suspended' : 'active'),
+          partnerTier: v.partner_tier || 'regular',
+          referralCode: v.referral_code || '',
+          commissionRate: Number(v.commission_rate ?? 0.12),
+          walletBalance: Number(v.wallet_balance ?? 0),
+          totalEarnings: Number(v.total_earnings ?? 0),
+          bankDetails: {
+            bankName: v.bank_name || 'BCA',
+            accountNumber: v.bank_account_number || '',
+            accountHolder: v.bank_account_holder || v.name
+          },
+          clientCount: Number(v.client_count ?? 0),
+          city: v.city || '',
+          slug: v.slug || cleanSlug,
+          bio: v.bio || '',
+          coverUrl: formatSafeMediaUrl(v.cover_url || v.coverUrl) || '',
+          whatsapp: v.whatsapp || v.phone || '',
+          website: v.website || '',
+          portfolioAlbums: Array.isArray(v.portfolio_albums) ? v.portfolio_albums : (Array.isArray(v.portfolioAlbums) ? v.portfolioAlbums : []),
+          createdAt: v.created_at
+        };
+      }
+    } catch (err) {
+      console.warn('Supabase getVendorBySlug notice:', err);
+    }
+  }
+
   const all = await getAllVendors();
   
   // 1. Direct match on slug

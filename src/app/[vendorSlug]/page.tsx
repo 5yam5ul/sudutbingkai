@@ -3,6 +3,9 @@ import { notFound } from 'next/navigation';
 import { getVendorBySlug } from '@/lib/db';
 import { PortfolioClientView } from '@/components/vendor-portfolio/PortfolioClientView';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface PageProps {
   params: Promise<{ vendorSlug: string }>;
 }
@@ -55,15 +58,15 @@ export default async function VendorPortfolioPage({ params }: PageProps) {
     companyName: vendor.companyName || vendor.name,
     slug: vendor.slug || vendorSlug,
     bio: vendor.bio || '',
-    coverUrl: vendor.coverUrl || '',
-    logoUrl: vendor.logoUrl || '',
+    coverUrl: vendor.coverUrl || vendor.cover_url || '',
+    logoUrl: vendor.logoUrl || vendor.logo_url || '',
     city: vendor.city || '',
     instagram: vendor.instagram || '',
     whatsapp: vendor.whatsapp || vendor.phone || '',
     website: vendor.website || '',
     tier: vendor.tier || 'pro',
     partnerTier: vendor.partnerTier || 'regular',
-    albums: Array.isArray(vendor.portfolioAlbums) ? vendor.portfolioAlbums : []
+    albums: Array.isArray(vendor.portfolioAlbums) ? vendor.portfolioAlbums : (Array.isArray(vendor.portfolio_albums) ? vendor.portfolio_albums : [])
   };
 
   return <PortfolioClientView vendor={publicProfile} />;

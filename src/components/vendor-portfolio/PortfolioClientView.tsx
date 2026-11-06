@@ -120,11 +120,11 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
       </header>
 
       {/* 2. HERO COVER BANNER */}
-      <div style={{ maxWidth: '1120px', margin: '16px auto 0', padding: '0 16px' }}>
+      <div style={{ maxWidth: '1120px', margin: '20px auto 0', padding: '0 16px' }}>
         <div style={{
           position: 'relative',
           width: '100%',
-          height: '240px',
+          height: '280px',
           borderRadius: '24px',
           overflow: 'hidden',
           background: 'linear-gradient(135deg, #1D1D1F 0%, #2A2A2E 100%)',
@@ -134,7 +134,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={vendor.coverUrl}
-              alt={`Cover ${vendor.companyName}`}
+              alt={`Cover ${vendor.companyName || vendor.name}`}
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
           ) : (
@@ -145,7 +145,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'rgba(255, 255, 255, 0.25)',
+              color: 'rgba(255, 255, 255, 0.3)',
               gap: '8px'
             }}>
               <Layers size={40} />
@@ -157,7 +157,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)'
+            background: 'linear-gradient(to top, rgba(0,0,0,0.3) 0%, transparent 60%)'
           }} />
         </div>
       </div>
@@ -167,26 +167,28 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         <div style={{
           display: 'flex',
           flexDirection: 'row',
-          alignItems: 'flex-end',
+          alignItems: 'flex-start',
           justifyContent: 'space-between',
           flexWrap: 'wrap',
-          gap: '20px',
-          marginTop: '-48px',
+          gap: '24px',
           paddingBottom: '28px',
           borderBottom: '1px solid rgba(0, 0, 0, 0.08)'
         }}>
           
           {/* Avatar & Text Details */}
-          <div style={{ display: 'flex', alignItems: 'flex-end', gap: '20px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap', flex: 1, minWidth: '280px' }}>
             <div style={{
-              width: '104px',
-              height: '104px',
-              borderRadius: '22px',
+              width: '112px',
+              height: '112px',
+              borderRadius: '24px',
               backgroundColor: '#FFFFFF',
               border: '4px solid #FFFFFF',
               boxShadow: '0 12px 28px rgba(0, 0, 0, 0.12)',
               overflow: 'hidden',
-              flexShrink: 0
+              flexShrink: 0,
+              marginTop: '-56px',
+              position: 'relative',
+              zIndex: 10
             }}>
               {vendor.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -212,16 +214,16 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
               )}
             </div>
 
-            <div style={{ paddingTop: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                <h1 style={{ fontSize: '26px', fontWeight: 800, color: '#1D1D1F', letterSpacing: '-0.025em', margin: 0 }}>
+            <div style={{ flex: 1, minWidth: '240px', paddingTop: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                <h1 style={{ fontSize: '28px', fontWeight: 800, color: '#1D1D1F', letterSpacing: '-0.025em', margin: 0, lineHeight: 1.2 }}>
                   {vendor.companyName || vendor.name}
                 </h1>
                 <span style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  padding: '3px 10px',
+                  padding: '4px 10px',
                   borderRadius: '8px',
                   fontSize: '11.5px',
                   fontWeight: 600,
@@ -235,11 +237,11 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
               </div>
 
               {vendor.bio ? (
-                <p style={{ fontSize: '14px', color: '#515154', maxWidth: '640px', margin: '6px 0 10px 0', lineHeight: 1.5 }}>
+                <p style={{ fontSize: '14px', color: '#515154', maxWidth: '640px', margin: '0 0 12px 0', lineHeight: 1.5 }}>
                   {vendor.bio}
                 </p>
               ) : (
-                <p style={{ fontSize: '13px', color: '#86868B', margin: '4px 0 8px 0', fontStyle: 'italic' }}>
+                <p style={{ fontSize: '13px', color: '#86868B', margin: '0 0 10px 0', fontStyle: 'italic' }}>
                   Dokumentasi visual momen istimewa & karya fotografi profesional.
                 </p>
               )}
@@ -280,7 +282,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
 
           {/* Primary Action Button (WhatsApp Booking CTA) */}
           {whatsappUrl && (
-            <div style={{ marginTop: '8px' }}>
+            <div style={{ paddingTop: '12px' }}>
               <a
                 href={whatsappUrl}
                 target="_blank"
