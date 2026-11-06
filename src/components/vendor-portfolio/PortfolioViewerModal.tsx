@@ -15,17 +15,23 @@ interface DrivePhoto {
 }
 
 interface PortfolioViewerModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose: () => void;
   album: VendorPortfolioAlbum | null;
   vendorName: string;
+  vendorLogo?: string;
+  whatsappUrl?: string | null;
+  watermarkEnabled?: boolean;
 }
 
 export function PortfolioViewerModal({
-  isOpen,
+  isOpen = true,
   onClose,
   album,
-  vendorName
+  vendorName,
+  vendorLogo,
+  whatsappUrl,
+  watermarkEnabled = false
 }: PortfolioViewerModalProps) {
   const [photos, setPhotos] = useState<DrivePhoto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -361,6 +367,33 @@ export function PortfolioViewerModal({
               }}
               loading="eager"
             />
+
+            {watermarkEnabled && (
+              <div style={{
+                position: 'absolute',
+                bottom: '16px',
+                right: '16px',
+                pointerEvents: 'none',
+                opacity: 0.55,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: 'rgba(0,0,0,0.45)',
+                backdropFilter: 'blur(6px)',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                color: '#FFFFFF',
+                fontSize: '11px',
+                fontWeight: 600,
+                border: '1px solid rgba(255,255,255,0.15)'
+              }}>
+                {vendorLogo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={vendorLogo} alt="Watermark" style={{ width: '16px', height: '16px', objectFit: 'contain' }} />
+                )}
+                <span>© {vendorName}</span>
+              </div>
+            )}
           </div>
         )}
 
