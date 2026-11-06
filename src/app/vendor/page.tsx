@@ -59,11 +59,48 @@ const CURATED_PARTNERS = [
   }
 ];
 
-export default function VendorPortalPage() {
+export type VendorTabKey = 'wallet' | 'clients' | 'proofing' | 'portfolio' | 'branding' | 'testimonials' | 'marketing';
+
+export const VENDOR_SLUG_TO_TAB: Record<string, VendorTabKey> = {
+  'dompet': 'wallet',
+  'wallet': 'wallet',
+  'komisi': 'wallet',
+  'klien': 'clients',
+  'clients': 'clients',
+  'acara': 'clients',
+  'proofing': 'proofing',
+  'portofolio': 'portfolio',
+  'portfolio': 'portfolio',
+  'branding': 'branding',
+  'logo': 'branding',
+  'testimoni': 'testimonials',
+  'testimonials': 'testimonials',
+  'video': 'testimonials',
+  'marketing': 'marketing',
+  'kit': 'marketing'
+};
+
+export const VENDOR_TAB_TO_SLUG: Record<VendorTabKey, string> = {
+  wallet: 'dompet',
+  clients: 'klien',
+  proofing: 'proofing',
+  portfolio: 'portofolio',
+  branding: 'branding',
+  testimonials: 'testimoni',
+  marketing: 'marketing'
+};
+
+export default function VendorPortalPage({ initialTab }: { initialTab?: string } = {}) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const unsavedLogoUploadRef = useRef<string | null>(null);
   const unsavedTestiVideoRef = useRef<string | null>(null);
+
+  const resolveTab = (val?: string | null): VendorTabKey => {
+    if (!val) return 'wallet';
+    const clean = val.toLowerCase().trim();
+    return VENDOR_SLUG_TO_TAB[clean] || 'wallet';
+  };
 
   const [vendor, setVendor] = useState<UserAccount>({
     id: '',
@@ -71,7 +108,15 @@ export default function VendorPortalPage() {
     email: '',
     role: 'vendor'
   });
-  const [activeTab, setActiveTab] = useState<'wallet' | 'clients' | 'proofing' | 'portfolio' | 'branding' | 'testimonials' | 'marketing'>('wallet');
+  const [activeTab, setActiveTab] = useState<VendorTabKey>(() => resolveTab(initialTab));
+
+  const switchTab = (tab: VendorTabKey) => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined') {
+      const slug = VENDOR_TAB_TO_SLUG[tab] || tab;
+      window.history.replaceState(null, '', `/vendor/${slug}`);
+    }
+  };
 
   // Vendor Client Proofing Portal State
   const [proofings, setProofings] = useState<VendorProofingSession[]>([]);
@@ -434,14 +479,44 @@ export default function VendorPortalPage() {
       .catch(() => {});
 
     if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tabParam = urlParams.get('tab');
-      if (tabParam === 'clients' || tabParam === 'wallet' || tabParam === 'proofing' || tabParam === 'portfolio' || tabParam === 'branding' || tabParam === 'testimonials' || tabParam === 'marketing') {
-        setActiveTab(tabParam);
+      const pathnameParts = window.location.pathname.split('/').filter(Boolean);
+      if (pathnameParts.length >= 2 && pathnameParts[0] === 'vendor') {
+        const subSlug = pathnameParts[1].toLowerCase();
+        if (VENDOR_SLUG_TO_TAB[subSlug]) {
+          setActiveTab(VENDOR_SLUG_TO_TAB[subSlug]);
+        }
+      } else {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        if (tabParam && VENDOR_SLUG_TO_TAB[tabParam.toLowerCase()]) {
+          setActiveTab(VENDOR_SLUG_TO_TAB[tabParam.toLowerCase()]);
+        } else if (window.location.hash) {
+          const hashVal = window.location.hash.replace('#', '').toLowerCase();
+          if (VENDOR_SLUG_TO_TAB[hashVal]) {
+            setActiveTab(VENDOR_SLUG_TO_TAB[hashVal]);
+          }
+        }
       }
+
+      const urlParams = new URLSearchParams(window.location.search);
       if (urlParams.get('paid') === 'true') {
         toast.success('Pembayaran klien baru berhasil terkonfirmasi dan komisi telah masuk ke dompet Anda!');
       }
+
+      const handlePopState = () => {
+        const parts = window.location.pathname.split('/').filter(Boolean);
+        if (parts.length >= 2 && parts[0] === 'vendor' && VENDOR_SLUG_TO_TAB[parts[1].toLowerCase()]) {
+          setActiveTab(VENDOR_SLUG_TO_TAB[parts[1].toLowerCase()]);
+        } else {
+          const params = new URLSearchParams(window.location.search);
+          const t = params.get('tab');
+          if (t && VENDOR_SLUG_TO_TAB[t.toLowerCase()]) {
+            setActiveTab(VENDOR_SLUG_TO_TAB[t.toLowerCase()]);
+          }
+        }
+      };
+
+      window.addEventListener('popstate', handlePopState);
     }
 
     const vendorId = session?.id || '';
@@ -2014,9 +2089,13 @@ export default function VendorPortalPage() {
           <span style={{ fontSize: '11px', color: '#86868B', fontWeight: 500 }}>Geser menu fitur</span>
           <ChevronRight size={12} color="#86868B" />
         </div>
-        <div className="horizontal-scroll-row" style={{ gap: '10px', marginBottom: '28px', paddingBottom: '6px', WebkitOverflowScrolling: 'touch' }}>
+        <div className="horizontal-scroll-row" role="tablist" style={{ gap: '10px', marginBottom: '28px', paddingBottom: '6px', WebkitOverflowScrolling: 'touch' }}>
           <button
-            onClick={() => setActiveTab('wallet')}
+            id="tab-dompet"
+            data-slug="dompet"
+            role="tab"
+            aria-selected={activeTab === 'wallet'}
+            onClick={() => switchTab('wallet')}
             className="glass-pill"
             style={{
               background: activeTab === 'wallet' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
@@ -2037,7 +2116,11 @@ export default function VendorPortalPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('clients')}
+            id="tab-klien"
+            data-slug="klien"
+            role="tab"
+            aria-selected={activeTab === 'clients'}
+            onClick={() => switchTab('clients')}
             className="glass-pill"
             style={{
               background: activeTab === 'clients' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
@@ -2058,7 +2141,11 @@ export default function VendorPortalPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('proofing')}
+            id="tab-proofing"
+            data-slug="proofing"
+            role="tab"
+            aria-selected={activeTab === 'proofing'}
+            onClick={() => switchTab('proofing')}
             className="glass-pill"
             style={{
               background: activeTab === 'proofing' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
@@ -2080,7 +2167,11 @@ export default function VendorPortalPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('portfolio')}
+            id="tab-portofolio"
+            data-slug="portofolio"
+            role="tab"
+            aria-selected={activeTab === 'portfolio'}
+            onClick={() => switchTab('portfolio')}
             className="glass-pill"
             style={{
               background: activeTab === 'portfolio' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
@@ -2102,7 +2193,11 @@ export default function VendorPortalPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('branding')}
+            id="tab-branding"
+            data-slug="branding"
+            role="tab"
+            aria-selected={activeTab === 'branding'}
+            onClick={() => switchTab('branding')}
             className="glass-pill"
             style={{
               background: activeTab === 'branding' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
@@ -2123,7 +2218,11 @@ export default function VendorPortalPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('testimonials')}
+            id="tab-testimoni"
+            data-slug="testimoni"
+            role="tab"
+            aria-selected={activeTab === 'testimonials'}
+            onClick={() => switchTab('testimonials')}
             className="glass-pill"
             style={{
               background: activeTab === 'testimonials' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
@@ -2145,7 +2244,11 @@ export default function VendorPortalPage() {
           </button>
 
           <button
-            onClick={() => setActiveTab('marketing')}
+            id="tab-marketing"
+            data-slug="marketing"
+            role="tab"
+            aria-selected={activeTab === 'marketing'}
+            onClick={() => switchTab('marketing')}
             className="glass-pill"
             style={{
               background: activeTab === 'marketing' ? '#1D1D1F' : 'rgba(255, 255, 255, 0.7)',
