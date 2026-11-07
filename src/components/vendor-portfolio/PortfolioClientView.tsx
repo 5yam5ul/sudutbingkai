@@ -376,7 +376,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
       )}
 
       {/* 1. TOP NAV BRAND HEADER */}
-      <header style={{
+      <header className="vp-navbar" style={{
         position: 'sticky',
         top: 0,
         zIndex: 50,
@@ -391,6 +391,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
             <img 
               src="/logo.png" 
               alt="Sudut Bingkai Logo" 
+              className="vp-navbar-logo"
               style={{ 
                 height: '46px', 
                 width: '46px', 
@@ -410,7 +411,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
               <button
                 type="button"
                 onClick={() => setLeadModalOpen(true)}
-                className="glass-pill"
+                className="glass-pill vp-nav-cta-desktop"
                 style={{
                   padding: '7px 14px',
                   fontSize: '12px',
@@ -428,7 +429,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
             <button
               type="button"
               onClick={handleCopyLink}
-              className="glass-pill"
+              className="glass-pill vp-nav-share-btn"
               style={{
                 padding: '6px 14px',
                 fontSize: '12px',
@@ -525,7 +526,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         {/* HERO STYLE B: Split Editorial */}
         {theme.heroStyle === 'split' && (
           <div style={{ maxWidth: '1120px', margin: '40px auto 40px', padding: '0 24px' }}>
-            <div className="glass-card" style={{
+            <div className="glass-card vp-hero-split-card" style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
               gap: '36px',
@@ -535,7 +536,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
               border: `1px solid ${borderColor}`,
               alignItems: 'center'
             }}>
-              <div style={{ position: 'relative', width: '100%', height: '380px', borderRadius: '20px', overflow: 'hidden' }}>
+              <div className="vp-hero-split-cover" style={{ position: 'relative', width: '100%', height: '380px', borderRadius: '20px', overflow: 'hidden' }}>
                 {vendor.coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={vendor.coverUrl} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -662,7 +663,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         {/* HERO STYLE E: Floating Glass Island */}
         {theme.heroStyle === 'floating_island' && (
           <div style={{ maxWidth: '1120px', margin: '20px auto 0', padding: '0 16px' }}>
-            <div style={{
+            <div className="vp-hero-island-cover" style={{
               position: 'relative',
               width: '100%',
               height: '340px',
@@ -684,7 +685,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
 
             {/* Overlapping Floating Glass Island Card */}
             <div style={{ maxWidth: '860px', margin: '-90px auto 0', position: 'relative', zIndex: 20, padding: '0 16px' }}>
-              <div className="glass-card" style={{
+              <div className="glass-card vp-hero-island-card" style={{
                 padding: '32px 36px',
                 borderRadius: '28px',
                 background: isDark ? 'rgba(28, 28, 30, 0.92)' : 'rgba(255, 255, 255, 0.92)',
@@ -780,7 +781,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
 
         {/* HERO STYLE F: Big Editorial Headline */}
         {theme.heroStyle === 'story_headline' && (
-          <div style={{ maxWidth: '1000px', margin: '48px auto 32px', textAlign: 'center', padding: '0 24px' }}>
+          <div className="vp-hero-headline-wrap" style={{ maxWidth: '1000px', margin: '48px auto 32px', textAlign: 'center', padding: '0 24px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
               <div style={{ height: '1px', width: '48px', background: borderColor }} />
               <span className="font-mono-film" style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: accentColor, fontWeight: 700 }}>
@@ -789,7 +790,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
               <div style={{ height: '1px', width: '48px', background: borderColor }} />
             </div>
 
-            <h1 style={{
+            <h1 className="vp-hero-headline-title" style={{
               fontSize: 'clamp(36px, 6vw, 64px)',
               fontWeight: 800,
               letterSpacing: '-0.03em',
@@ -1070,7 +1071,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         {(!theme.heroStyle || theme.heroStyle === 'social') && (
           <>
             <div style={{ maxWidth: '1120px', margin: '20px auto 0', padding: '0 16px' }}>
-              <div style={{
+              <div className="vp-hero-social-cover" style={{
                 position: 'relative',
                 width: '100%',
                 height: '280px',
@@ -1098,7 +1099,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
               </div>
             </div>
 
-            <div style={{ maxWidth: '1120px', margin: '0 auto', padding: '0 24px' }}>
+            <div className="vp-hero-social-container" style={{ maxWidth: '1120px', margin: '0 auto', padding: '0 24px' }}>
               <div style={{
                 display: 'flex',
                 flexDirection: 'row',
@@ -1109,8 +1110,8 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                 paddingBottom: '28px',
                 borderBottom: `1px solid ${borderColor}`
               }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '-44px', flexWrap: 'wrap' }}>
-                  <div style={{
+                <div className="vp-hero-social-avatar-wrap" style={{ display: 'flex', alignItems: 'flex-start', gap: '20px', marginTop: '-44px', flexWrap: 'wrap' }}>
+                  <div className="vp-hero-social-avatar" style={{
                     position: 'relative',
                     width: '92px',
                     height: '92px',
@@ -1131,9 +1132,9 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                     )}
                   </div>
 
-                  <div style={{ paddingTop: '50px' }}>
+                  <div className="vp-hero-social-info" style={{ paddingTop: '50px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
-                      <h1 style={{ fontSize: '26px', fontWeight: 800, color: textColor, margin: 0, letterSpacing: '-0.02em' }}>
+                      <h1 className="vp-hero-social-title" style={{ fontSize: '26px', fontWeight: 800, color: textColor, margin: 0, letterSpacing: '-0.02em' }}>
                         {vendor.companyName || vendor.name}
                       </h1>
                       <span style={{
@@ -1188,11 +1189,12 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                 </div>
 
                 {whatsappUrl && (
-                  <div style={{ paddingTop: '50px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <div className="vp-hero-social-cta-box" style={{ paddingTop: '50px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                     <a
                       href={whatsappUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      className="vp-hero-social-cta-btn"
                       style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -1567,7 +1569,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
 
         // 4. HORIZONTAL SWIPE STAGE (DEFAULT)
         return (
-          <div style={{ maxWidth: '1120px', margin: '48px auto 0', padding: '0 24px' }}>
+          <div className="vp-video-section" style={{ maxWidth: '1120px', margin: '48px auto 0', padding: '0 24px' }}>
             <div style={{ 
               marginBottom: '16px', 
               display: 'flex', 
@@ -1674,6 +1676,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                       key={vid.id || idx}
                       type="button"
                       onClick={() => handleScrollToVideo(idx)}
+                      className="vp-video-tab-btn"
                       style={{
                         padding: '7px 16px',
                         borderRadius: '999px',
@@ -1715,6 +1718,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
               {highlightVideos.map((vid, idx) => (
                 <div
                   key={vid.id || idx}
+                  className="vp-video-card-slide"
                   style={{
                     flex: '0 0 100%',
                     width: '100%',
@@ -1809,7 +1813,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
       )}
 
       {/* 5. PORTFOLIO ALBUM CATEGORIES SECTION */}
-      <div style={{ maxWidth: '1120px', margin: '40px auto 0', padding: '0 24px' }}>
+      <div className="vp-albums-section" style={{ maxWidth: '1120px', margin: '40px auto 0', padding: '0 24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
@@ -2069,6 +2073,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                     ...(isBentoHero ? { gridColumn: 'span 2' } : {}),
                     ...(isDiagonalOffset ? { transform: 'translateY(36px)' } : {})
                   };
+                  const cardWrapperClass = isBentoHero ? 'vp-album-card-bento-hero' : '';
 
                   // STYLE 1: 3D Hardcover Photobook Card
                   if (cardStyle === 'photobook') {
@@ -2076,6 +2081,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                       <div
                         key={album.id}
                         onClick={() => setSelectedAlbum(album)}
+                        className={cardWrapperClass}
                         style={{
                           position: 'relative',
                           borderRadius: '16px',
@@ -2089,7 +2095,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                           ...wrapperExtraStyle
                         }}
                       >
-                        <div style={{ position: 'relative', width: '100%', height: isBentoHero ? '320px' : '240px', overflow: 'hidden' }}>
+                        <div className="vp-album-card-cover" style={{ position: 'relative', width: '100%', height: isBentoHero ? '320px' : '240px', overflow: 'hidden' }}>
                           {album.coverImageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
@@ -2275,6 +2281,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                       <div
                         key={album.id}
                         onClick={() => setSelectedAlbum(album)}
+                        className={`vp-album-card-cover ${cardWrapperClass}`.trim()}
                         style={{
                           position: 'relative',
                           borderRadius: '22px',
@@ -2636,19 +2643,22 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
       )}
 
       {/* 9. BOTTOM FOOTER BRANDING */}
-      <footer style={{
-        maxWidth: '1120px',
-        margin: '64px auto 0',
-        padding: '24px',
-        borderTop: `1px solid ${borderColor}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '16px',
-        fontSize: '12px',
-        color: mutedTextColor
-      }}>
+      <footer 
+        className={theme.enableStickyMobileBar && formattedPhone ? 'vp-footer-with-sticky' : ''}
+        style={{
+          maxWidth: '1120px',
+          margin: '64px auto 0',
+          padding: '24px',
+          borderTop: `1px solid ${borderColor}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '16px',
+          fontSize: '12px',
+          color: mutedTextColor
+        }}
+      >
         <div>
           © {new Date().getFullYear()} {vendor.companyName || vendor.name}. Portofolio Resmi.
         </div>
@@ -2683,13 +2693,13 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
 
       {/* 10. MOBILE FLOATING STICKY BAR */}
       {theme.enableStickyMobileBar && formattedPhone && (
-        <div className="mobile-only" style={{
+        <div className="mobile-only vp-sticky-bottom-bar" style={{
           position: 'fixed',
           bottom: 0,
           left: 0,
           right: 0,
           padding: '12px 16px',
-          background: isObsidian ? 'rgba(18, 18, 20, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+          background: isObsidian ? 'rgba(18, 18, 20, 0.94)' : 'rgba(255, 255, 255, 0.94)',
           backdropFilter: 'blur(20px)',
           borderTop: `1px solid ${borderColor}`,
           zIndex: 50,
@@ -2707,6 +2717,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                   fontSize: '13px',
                   fontWeight: 700,
                   cursor: 'pointer',
+                  minHeight: '44px',
                   background: cardBg,
                   border: `1px solid ${accentColor}`,
                   color: accentColor,
@@ -2733,6 +2744,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                 fontWeight: 700,
                 textAlign: 'center',
                 textDecoration: 'none',
+                minHeight: '44px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

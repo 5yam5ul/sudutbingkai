@@ -582,7 +582,7 @@ export function PortfolioViewerModal({
       `}</style>
 
       {/* 1. TOP HEADER BAR */}
-      <div style={{
+      <div className="vp-modal-header" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -608,7 +608,7 @@ export function PortfolioViewerModal({
             <BookOpen size={19} />
           </div>
           <div style={{ minWidth: 0 }}>
-            <h3 style={{ fontSize: '15.5px', fontWeight: 700, margin: 0, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
+            <h3 className="vp-modal-title" style={{ fontSize: '15.5px', fontWeight: 700, margin: 0, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
               {album.title}
             </h3>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.65)' }}>
@@ -632,6 +632,7 @@ export function PortfolioViewerModal({
             <button
               type="button"
               onClick={() => setIsTransitionMenuOpen(!isTransitionMenuOpen)}
+              className="vp-modal-transition-btn"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -652,7 +653,7 @@ export function PortfolioViewerModal({
             >
               <span style={{ fontSize: '14px' }}>{currentTransitionConfig.icon}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Mode:</span>
+                <span className="vp-modal-transition-label" style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Mode:</span>
                 <span style={{ color: '#FBBF24', fontWeight: 700 }}>{currentTransitionConfig.shortName}</span>
               </span>
               <ChevronDown 
@@ -760,6 +761,7 @@ export function PortfolioViewerModal({
           <button
             type="button"
             onClick={toggleFullscreen}
+            className="desktop-only"
             style={{
               padding: '8px 10px',
               borderRadius: '12px',
@@ -1262,6 +1264,7 @@ export function PortfolioViewerModal({
             <button
               type="button"
               onClick={handlePrev}
+              className="vp-modal-arrow-btn vp-modal-arrow-left"
               style={{
                 position: 'absolute',
                 left: '20px',
@@ -1290,6 +1293,7 @@ export function PortfolioViewerModal({
             <button
               type="button"
               onClick={handleNext}
+              className="vp-modal-arrow-btn vp-modal-arrow-right"
               style={{
                 position: 'absolute',
                 right: '20px',
@@ -1320,7 +1324,7 @@ export function PortfolioViewerModal({
 
       {/* 3. BOTTOM THUMBNAIL STRIP */}
       {!loading && !error && photos.length > 1 && (
-        <div style={{
+        <div className="vp-modal-thumbnail-strip" style={{
           backgroundColor: 'rgba(0, 0, 0, 0.88)',
           backdropFilter: 'blur(20px)',
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
@@ -1342,6 +1346,7 @@ export function PortfolioViewerModal({
                 key={p.id || idx}
                 type="button"
                 onClick={() => handleSelectThumbnail(idx)}
+                className="vp-modal-thumb-btn"
                 style={{
                   width: '54px',
                   height: '54px',

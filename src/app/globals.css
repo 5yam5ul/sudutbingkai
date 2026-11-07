@@ -1500,3 +1500,168 @@ br.mobile-only {
   }
 }
 
+/* ==========================================================================
+   VENDOR PORTFOLIO — LUXURY MOBILE OPTIMIZATIONS (Max-Width: 640px)
+   Applied strictly to mobile viewport for effortless readability & touch flow
+   ========================================================================== */
+@media (max-width: 640px) {
+  /* 1. Navbar Mobile Polish */
+  .vp-navbar {
+    padding: 8px 16px !important;
+  }
+  .vp-navbar-logo {
+    height: 38px !important;
+    width: 38px !important;
+  }
+  .vp-nav-cta-desktop {
+    display: none !important;
+  }
+  .vp-nav-share-btn {
+    padding: 6px 12px !important;
+    font-size: 11.5px !important;
+  }
+
+  /* 2. Social Hero Mobile Polish (Zero awkward gap) */
+  .vp-hero-social-cover {
+    height: 180px !important;
+    border-radius: 18px !important;
+  }
+  .vp-hero-social-container {
+    padding: 0 16px !important;
+  }
+  .vp-hero-social-avatar-wrap {
+    margin-top: -36px !important;
+    gap: 14px !important;
+  }
+  .vp-hero-social-avatar {
+    width: 74px !important;
+    height: 74px !important;
+    border-radius: 18px !important;
+  }
+  .vp-hero-social-info {
+    padding-top: 10px !important;
+    width: 100% !important;
+  }
+  .vp-hero-social-title {
+    font-size: 21px !important;
+    line-height: 1.22 !important;
+    letter-spacing: -0.02em !important;
+  }
+  .vp-hero-social-cta-box {
+    padding-top: 12px !important;
+    width: 100% !important;
+  }
+  .vp-hero-social-cta-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px 18px !important;
+  }
+
+  /* 3. Alternative Hero Mobile Adapters */
+  .vp-hero-split-card {
+    padding: 16px !important;
+    gap: 18px !important;
+    border-radius: 20px !important;
+  }
+  .vp-hero-split-cover {
+    height: 190px !important;
+    border-radius: 14px !important;
+  }
+  .vp-hero-island-cover {
+    height: 190px !important;
+    border-radius: 20px !important;
+  }
+  .vp-hero-island-card {
+    margin-top: -45px !important;
+    padding: 16px !important;
+    border-radius: 20px !important;
+    gap: 14px !important;
+  }
+  .vp-hero-headline-wrap {
+    margin: 24px auto 16px !important;
+    padding: 0 16px !important;
+  }
+  .vp-hero-headline-title {
+    font-size: 30px !important;
+  }
+
+  /* 4. Cinematic Highlight Carousel (Peek Preview & Swipe) */
+  .vp-video-section {
+    margin-top: 28px !important;
+    padding: 0 16px !important;
+  }
+  .vp-video-card-slide {
+    flex: 0 0 88% !important;
+    width: 88% !important;
+    border-radius: 18px !important;
+  }
+  .vp-video-tab-btn {
+    padding: 6px 12px !important;
+    font-size: 11px !important;
+  }
+
+  /* 5. Portfolio Albums Grid & Bento Overflow Fix */
+  .vp-albums-section {
+    margin-top: 28px !important;
+    padding: 0 16px !important;
+  }
+  .vp-album-card-bento-hero {
+    grid-column: span 1 !important;
+  }
+  .vp-album-card-cover {
+    height: 210px !important;
+  }
+  .vp-album-card-photobook {
+    border-radius: 14px !important;
+  }
+
+  /* 6. Mobile Floating Sticky Bar with Safe Area for iPhone */
+  .vp-sticky-bottom-bar {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 8px)) !important;
+    padding-top: 10px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  /* 7. Footer Bottom Cushion */
+  .vp-footer-with-sticky {
+    padding-bottom: calc(85px + env(safe-area-inset-bottom, 16px)) !important;
+  }
+
+  /* 8. Modal Viewer Slideshow Mobile Optimizations */
+  .vp-modal-header {
+    padding: 10px 14px !important;
+  }
+  .vp-modal-title {
+    font-size: 13.5px !important;
+    max-width: 140px !important;
+  }
+  .vp-modal-transition-btn {
+    padding: 6px 10px !important;
+    font-size: 11px !important;
+  }
+  .vp-modal-transition-label {
+    display: none !important;
+  }
+  .vp-modal-arrow-btn {
+    width: 38px !important;
+    height: 38px !important;
+    background: rgba(0, 0, 0, 0.45) !important;
+  }
+  .vp-modal-arrow-left {
+    left: 8px !important;
+  }
+  .vp-modal-arrow-right {
+    right: 8px !important;
+  }
+  .vp-modal-thumbnail-strip {
+    padding: 8px 12px !important;
+  }
+  .vp-modal-thumb-btn {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 8px !important;
+  }
+}
+
+
