@@ -53,6 +53,43 @@ function TikTokIcon({ size = 15 }: { size?: number }) {
   );
 }
 
+function getEmbedVideoUrl(rawUrl?: string): string {
+  if (!rawUrl) return '';
+  const url = rawUrl.trim();
+
+  // 1. YouTube youtu.be/ID (Short links e.g. youtu.be/OxuY6P9pN4R2mZrj)
+  const youtuBeMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+  if (youtuBeMatch && youtuBeMatch[1]) {
+    return `https://www.youtube-nocookie.com/embed/${youtuBeMatch[1]}?rel=0&modestbranding=1`;
+  }
+
+  // 2. YouTube shorts/ID
+  const shortsMatch = url.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]+)/);
+  if (shortsMatch && shortsMatch[1]) {
+    return `https://www.youtube-nocookie.com/embed/${shortsMatch[1]}?rel=0&modestbranding=1`;
+  }
+
+  // 3. YouTube standard watch?v=ID or /embed/ID
+  const youtubeMatch = url.match(/[?&]v=([a-zA-Z0-9_-]+)/) || url.match(/\/embed\/([a-zA-Z0-9_-]+)/);
+  if (youtubeMatch && youtubeMatch[1]) {
+    return `https://www.youtube-nocookie.com/embed/${youtubeMatch[1]}?rel=0&modestbranding=1`;
+  }
+
+  // 4. Google Drive video /file/d/ID/view -> preview
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    return `https://drive.google.com/file/d/${driveMatch[1]}/preview`;
+  }
+
+  // 5. Vimeo
+  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+  if (vimeoMatch && vimeoMatch[1]) {
+    return `https://player.vimeo.com/video/${vimeoMatch[1]}`;
+  }
+
+  return url;
+}
+
 export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
   const theme = vendor.theme || {};
   const [selectedAlbum, setSelectedAlbum] = useState<VendorPortfolioAlbum | null>(null);
@@ -81,6 +118,8 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
   else if (theme.bgPreset === 'terracotta') defaultTextColor = '#2D1E18';
   else if (theme.bgPreset === 'emerald_forest') defaultTextColor = '#132219';
   else if (theme.bgPreset === 'rose_quartz') defaultTextColor = '#2C1D21';
+  else if (theme.bgPreset === 'espresso_bronze') defaultTextColor = '#261C16';
+  else if (theme.bgPreset === 'frosted_pearl') defaultTextColor = '#1A212D';
 
   const textColor = defaultTextColor;
   const mutedTextColor = isDark 
@@ -91,7 +130,11 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         ? '#4A6352' 
         : theme.bgPreset === 'rose_quartz' 
           ? '#875C66' 
-          : '#6E6E73';
+          : theme.bgPreset === 'espresso_bronze'
+            ? '#705345'
+            : theme.bgPreset === 'frosted_pearl'
+              ? '#556377'
+              : '#6E6E73';
 
   const cardBg = isDark ? (theme.bgPreset === 'midnight_navy' ? '#121726' : '#1C1C1E') : '#FFFFFF';
   const borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
@@ -119,6 +162,10 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
       pageBgStyle.background = 'linear-gradient(135deg, #F4F6F4 0%, #E8EFE8 100%)';
     } else if (theme.bgPreset === 'rose_quartz') {
       pageBgStyle.background = 'linear-gradient(135deg, #FDF7F8 0%, #F8ECF0 100%)';
+    } else if (theme.bgPreset === 'espresso_bronze') {
+      pageBgStyle.background = 'linear-gradient(135deg, #F9F6F0 0%, #EFE8DE 100%)';
+    } else if (theme.bgPreset === 'frosted_pearl') {
+      pageBgStyle.background = 'linear-gradient(135deg, #F8F9FA 0%, #E9ECF0 100%)';
     } else {
       pageBgStyle.backgroundColor = '#FBFBFA';
     }
@@ -1174,7 +1221,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
 
           <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: '24px', overflow: 'hidden', boxShadow: '0 12px 36px rgba(0,0,0,0.1)' }}>
             <iframe
-              src={theme.videoHighlightUrl.replace('watch?v=', 'embed/')}
+              src={getEmbedVideoUrl(theme.videoHighlightUrl)}
               title="Highlight Video"
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen

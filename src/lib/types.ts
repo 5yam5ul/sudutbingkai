@@ -489,7 +489,7 @@ export interface VendorPortfolioTheme {
   
   // 2. Background & Atmosphere
   backgroundMode?: 'preset' | 'custom_color' | 'custom_gradient' | 'image' | 'texture';
-  bgPreset?: 'alabaster' | 'champagne' | 'obsidian' | 'slate' | 'terracotta' | 'midnight_navy' | 'emerald_forest' | 'rose_quartz';
+  bgPreset?: 'alabaster' | 'champagne' | 'obsidian' | 'slate' | 'terracotta' | 'midnight_navy' | 'emerald_forest' | 'rose_quartz' | 'espresso_bronze' | 'frosted_pearl';
   bgColor?: string; // hex color e.g. #FBFBFA
   bgGradient?: { from: string; to: string; angle?: number };
   bgImageUrl?: string;

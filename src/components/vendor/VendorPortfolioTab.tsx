@@ -7,7 +7,8 @@ import {
   ExternalLink, Copy, Check, Upload, Image as ImageIcon, 
   Eye, RefreshCw, CheckCircle2, AlertCircle, Loader2,
   Globe, MessageCircle, MapPin, Sliders, Music, Video,
-  Shield, Award, Camera, Star, HelpCircle, FileText, ChevronRight
+  Shield, Award, Camera, Star, HelpCircle, FileText, ChevronRight,
+  RotateCw, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { VendorPortfolioAlbum, VendorPortfolioTheme, VendorPortfolioTestimonial, VendorPortfolioFaq, UserAccount } from '@/lib/types';
 import { authFetch } from '@/lib/auth';
@@ -23,6 +24,274 @@ interface DriveSamplePhoto {
   name: string;
   url: string;
   fullUrl: string;
+}
+
+const FONT_OPTIONS = [
+  {
+    key: 'sans',
+    name: 'Modern Sans (Outfit)',
+    category: 'MINIMAL MODERN',
+    fontFamily: 'var(--font-sans, "Outfit", sans-serif)',
+    sample: 'Abadikan Momen Indah'
+  },
+  {
+    key: 'serif',
+    name: 'Cormorant Garamond',
+    category: 'LUXURY EDITORIAL',
+    fontFamily: '"Cormorant Garamond", Georgia, serif',
+    sample: 'Romansa Elegan & Abadi'
+  },
+  {
+    key: 'mono',
+    name: 'JetBrains Mono',
+    category: 'CINE ANALOG',
+    fontFamily: 'var(--font-mono, monospace)',
+    sample: 'ISO 400 • F/1.4 • EXP 2026'
+  },
+  {
+    key: 'playfair',
+    name: 'Playfair Display',
+    category: 'GRAND WEDDING',
+    fontFamily: 'var(--font-playfair, Georgia, serif)',
+    sample: 'The Royal Wedding Chronicle'
+  },
+  {
+    key: 'cinzel',
+    name: 'Cinzel Roman',
+    category: 'ROYAL EMPIRE',
+    fontFamily: '"Cinzel", "Times New Roman", serif',
+    sample: 'EXQUISITE LUXURY ATELIER'
+  },
+  {
+    key: 'syne',
+    name: 'Syne Avant-Garde',
+    category: 'CREATIVE ART',
+    fontFamily: '"Syne", sans-serif',
+    sample: 'Visual Poetry & Design'
+  },
+  {
+    key: 'jakarta',
+    name: 'Plus Jakarta Sans',
+    category: 'ARCHITECTURAL',
+    fontFamily: '"Plus Jakarta Sans", sans-serif',
+    sample: 'Minimalist Studio Showcase'
+  }
+];
+
+function renderGridLayoutWireframe(key: string, isSelected: boolean) {
+  const accent = isSelected ? '#F59E0B' : '#94A3B8';
+  const subAccent = isSelected ? '#D97706' : '#64748B';
+
+  if (key === 'grid') {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', width: '100%', height: '52px' }}>
+        <div style={{ background: accent, borderRadius: '4px' }} />
+        <div style={{ background: accent, borderRadius: '4px' }} />
+        <div style={{ background: accent, borderRadius: '4px' }} />
+        <div style={{ background: accent, borderRadius: '4px' }} />
+        <div style={{ background: accent, borderRadius: '4px' }} />
+        <div style={{ background: accent, borderRadius: '4px' }} />
+      </div>
+    );
+  }
+
+  if (key === 'masonry') {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', width: '100%', height: '52px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ height: '30px', background: accent, borderRadius: '4px' }} />
+          <div style={{ height: '18px', background: accent, borderRadius: '4px' }} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ height: '18px', background: accent, borderRadius: '4px' }} />
+          <div style={{ height: '30px', background: accent, borderRadius: '4px' }} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ height: '26px', background: accent, borderRadius: '4px' }} />
+          <div style={{ height: '22px', background: accent, borderRadius: '4px' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (key === 'filmstrip') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', width: '100%', height: '52px', padding: '0 4px', borderTop: '2px dashed rgba(255,255,255,0.25)', borderBottom: '2px dashed rgba(255,255,255,0.25)' }}>
+        <div style={{ width: '38px', height: '38px', background: accent, borderRadius: '4px', flexShrink: 0 }} />
+        <div style={{ width: '38px', height: '38px', background: accent, borderRadius: '4px', flexShrink: 0 }} />
+        <div style={{ width: '38px', height: '38px', background: accent, borderRadius: '4px', flexShrink: 0 }} />
+        <span style={{ fontSize: '13px', color: accent, fontWeight: 800 }}>➔</span>
+      </div>
+    );
+  }
+
+  if (key === 'fullwidth_rows') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', height: '52px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '6px', height: '20px', alignItems: 'center' }}>
+          <div style={{ width: '32px', height: '100%', background: accent, borderRadius: '4px' }} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <div style={{ height: '6px', width: '80%', background: 'rgba(255,255,255,0.7)', borderRadius: '2px' }} />
+            <div style={{ height: '4px', width: '50%', background: 'rgba(255,255,255,0.4)', borderRadius: '2px' }} />
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '6px', height: '20px', alignItems: 'center' }}>
+          <div style={{ width: '32px', height: '100%', background: accent, borderRadius: '4px' }} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <div style={{ height: '6px', width: '70%', background: 'rgba(255,255,255,0.7)', borderRadius: '2px' }} />
+            <div style={{ height: '4px', width: '40%', background: 'rgba(255,255,255,0.4)', borderRadius: '2px' }} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (key === 'bento_mosaic') {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '4px', width: '100%', height: '52px' }}>
+        <div style={{ height: '100%', background: accent, borderRadius: '4px' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', height: '100%' }}>
+          <div style={{ height: '50%', background: subAccent, borderRadius: '4px' }} />
+          <div style={{ height: '50%', background: subAccent, borderRadius: '4px' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (key === 'carousel_stage') {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', width: '100%', height: '52px' }}>
+        <div style={{ width: '18px', height: '34px', background: 'rgba(255,255,255,0.2)', borderRadius: '4px' }} />
+        <div style={{ width: '80px', height: '46px', background: accent, borderRadius: '6px', boxShadow: '0 4px 10px rgba(0,0,0,0.3)' }} />
+        <div style={{ width: '18px', height: '34px', background: 'rgba(255,255,255,0.2)', borderRadius: '4px' }} />
+      </div>
+    );
+  }
+
+  if (key === 'compact_list') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', width: '100%', height: '52px', justifyContent: 'center' }}>
+        {[1, 2, 3].map(n => (
+          <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '12px', height: '12px', background: accent, borderRadius: '2px' }} />
+            <div style={{ height: '4px', flex: 1, background: 'rgba(255,255,255,0.7)', borderRadius: '2px' }} />
+            <div style={{ width: '16px', height: '6px', background: subAccent, borderRadius: '999px' }} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // diagonal_flow
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', width: '100%', height: '52px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+        <div style={{ height: '22px', background: accent, borderRadius: '4px' }} />
+        <div style={{ height: '20px', background: accent, borderRadius: '4px' }} />
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', transform: 'translateY(6px)' }}>
+        <div style={{ height: '22px', background: subAccent, borderRadius: '4px' }} />
+        <div style={{ height: '18px', background: subAccent, borderRadius: '4px' }} />
+      </div>
+    </div>
+  );
+}
+
+function renderHeroStyleWireframe(key: string, isSelected: boolean) {
+  const accent = isSelected ? '#F59E0B' : '#94A3B8';
+  const subAccent = isSelected ? '#D97706' : '#64748B';
+
+  if (key === 'social') {
+    return (
+      <div style={{ width: '100%', height: '52px', position: 'relative' }}>
+        <div style={{ width: '100%', height: '34px', background: accent, borderRadius: '4px' }} />
+        <div style={{ position: 'absolute', bottom: '2px', left: '8px', width: '22px', height: '22px', borderRadius: '50%', background: '#FFFFFF', border: `2px solid ${subAccent}` }} />
+        <div style={{ position: 'absolute', bottom: '8px', left: '36px', height: '5px', width: '50px', background: 'rgba(255,255,255,0.8)', borderRadius: '2px' }} />
+      </div>
+    );
+  }
+
+  if (key === 'cinematic_fullscreen') {
+    return (
+      <div style={{ width: '100%', height: '52px', background: '#1E293B', borderRadius: '6px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', border: `1px solid ${accent}` }}>
+        <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: accent }} />
+        <div style={{ width: '60px', height: '4px', background: 'rgba(255,255,255,0.8)', borderRadius: '2px' }} />
+      </div>
+    );
+  }
+
+  if (key === 'split') {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', width: '100%', height: '52px' }}>
+        <div style={{ height: '100%', background: accent, borderRadius: '4px' }} />
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '4px' }}>
+          <div style={{ width: '16px', height: '16px', borderRadius: '4px', background: subAccent }} />
+          <div style={{ width: '80%', height: '5px', background: 'rgba(255,255,255,0.8)', borderRadius: '2px' }} />
+          <div style={{ width: '50%', height: '3px', background: 'rgba(255,255,255,0.5)', borderRadius: '2px' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (key === 'minimalist') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%', height: '52px' }}>
+        <div style={{ width: '20px', height: '20px', borderRadius: '50%', background: accent }} />
+        <div style={{ width: '60px', height: '5px', background: 'rgba(255,255,255,0.8)', borderRadius: '2px' }} />
+        <div style={{ width: '40px', height: '3px', background: 'rgba(255,255,255,0.5)', borderRadius: '2px' }} />
+      </div>
+    );
+  }
+
+  if (key === 'floating_island') {
+    return (
+      <div style={{ width: '100%', height: '52px', position: 'relative' }}>
+        <div style={{ width: '100%', height: '36px', background: accent, borderRadius: '4px' }} />
+        <div style={{ position: 'absolute', bottom: '0px', left: '15%', right: '15%', height: '24px', background: '#1E293B', borderRadius: '8px', border: `1px solid ${accent}`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+          <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: accent }} />
+          <div style={{ width: '30px', height: '4px', background: '#FFFFFF', borderRadius: '2px' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (key === 'story_headline') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', width: '100%', height: '52px' }}>
+        <div style={{ width: '30px', height: '1px', background: accent }} />
+        <div style={{ width: '85%', height: '8px', background: accent, borderRadius: '2px' }} />
+        <div style={{ width: '55%', height: '4px', background: 'rgba(255,255,255,0.7)', borderRadius: '2px' }} />
+        <div style={{ width: '30px', height: '1px', background: accent }} />
+      </div>
+    );
+  }
+
+  if (key === 'side_dock') {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '6px', width: '100%', height: '52px' }}>
+        <div style={{ height: '100%', background: accent, borderRadius: '4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '3px' }}>
+          <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#FFFFFF' }} />
+          <div style={{ width: '14px', height: '3px', background: 'rgba(255,255,255,0.7)', borderRadius: '1px' }} />
+        </div>
+        <div style={{ height: '100%', background: subAccent, borderRadius: '4px' }} />
+      </div>
+    );
+  }
+
+  // polaroid_stacked
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', width: '100%', height: '52px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div style={{ width: '16px', height: '16px', borderRadius: '50%', background: accent }} />
+        <div style={{ width: '70%', height: '4px', background: 'rgba(255,255,255,0.7)', borderRadius: '2px' }} />
+      </div>
+      <div style={{ position: 'relative', width: '100%', height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'absolute', width: '22px', height: '28px', background: '#FFFFFF', borderRadius: '2px', border: '1px solid #CBD5E1', transform: 'rotate(-12deg)' }} />
+        <div style={{ position: 'absolute', width: '22px', height: '28px', background: accent, borderRadius: '2px', border: '1px solid #CBD5E1', transform: 'rotate(0deg)', zIndex: 2 }} />
+        <div style={{ position: 'absolute', width: '22px', height: '28px', background: '#FFFFFF', borderRadius: '2px', border: '1px solid #CBD5E1', transform: 'rotate(12deg)', zIndex: 1 }} />
+      </div>
+    </div>
+  );
 }
 
 function InstagramIcon({ size = 15 }: { size?: number }) {
@@ -100,6 +369,11 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
   const albumCoverInputRef = useRef<HTMLInputElement>(null);
   const bgImageInputRef = useRef<HTMLInputElement>(null);
   const photographerAvatarInputRef = useRef<HTMLInputElement>(null);
+
+  // Card Flip and Font Picker States
+  const [flippedGridCard, setFlippedGridCard] = useState<string | null>(null);
+  const [flippedHeroCard, setFlippedHeroCard] = useState<string | null>(null);
+  const [isFontPickerOpen, setIsFontPickerOpen] = useState(false);
 
   // Temporary item inputs for sub-features
   const [newBadgeText, setNewBadgeText] = useState('');
@@ -555,6 +829,13 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '28px' }}>
+      {/* Live Google Fonts Preconnect for Visual Typography Preview */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Syne:wght@700;800&display=swap"
+        rel="stylesheet"
+      />
       
       {/* 1. TOP HEADER BANNER CARD (SudutBingkai Signature Glass Card) */}
       <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
@@ -945,7 +1226,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
               </h3>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '16px' }}>
               {[
                 { key: 'grid', title: 'Standard Responsive Grid', desc: 'Susunan kartu kolom rapi simetris (2-3 kolom).' },
                 { key: 'masonry', title: 'Masonry Pinterest', desc: 'Ketinggian kartu asimetris yang dinamis dan berjiwa seni.' },
@@ -957,24 +1238,113 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 { key: 'diagonal_flow', title: 'Offset Staggered Cascade', desc: 'Grid 2 kolom zig-zag bergeser vertikal selang-seling ala galeri kontemporer.' }
               ].map((gridOption) => {
                 const isSelected = (theme.gridLayout || 'grid') === gridOption.key;
+                const isFlipped = flippedGridCard === gridOption.key;
                 return (
                   <div
                     key={gridOption.key}
-                    onClick={() => setTheme(prev => ({ ...prev, gridLayout: gridOption.key as any }))}
+                    onClick={() => {
+                      setTheme(prev => ({ ...prev, gridLayout: gridOption.key as any }));
+                      setFlippedGridCard(prev => prev === gridOption.key ? null : gridOption.key);
+                    }}
                     style={{
-                      padding: '16px',
-                      borderRadius: '14px',
-                      cursor: 'pointer',
-                      border: isSelected ? '2px solid #1D1D1F' : '1px solid rgba(0,0,0,0.08)',
-                      background: isSelected ? '#1D1D1F' : '#FFFFFF',
-                      color: isSelected ? '#FFFFFF' : '#1D1D1F',
-                      transition: 'all 0.2s ease'
+                      perspective: '1000px',
+                      minHeight: '170px',
+                      cursor: 'pointer'
                     }}
                   >
-                    <h4 style={{ fontSize: '14px', fontWeight: 700, margin: '0 0 4px 0' }}>{gridOption.title}</h4>
-                    <p style={{ fontSize: '11.5px', color: isSelected ? 'rgba(255,255,255,0.7)' : '#86868B', margin: 0, lineHeight: 1.4 }}>
-                      {gridOption.desc}
-                    </p>
+                    <div style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '100%',
+                      minHeight: '170px',
+                      borderRadius: '16px',
+                      transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                      transformStyle: 'preserve-3d',
+                      transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                    }}>
+                      {/* FRONT FACE (Info & Title) */}
+                      <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        borderRadius: '16px',
+                        padding: '16px 18px',
+                        border: isSelected ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
+                        background: isSelected ? 'rgba(194, 120, 3, 0.04)' : '#FFFFFF',
+                        boxShadow: isSelected ? '0 8px 24px rgba(194, 120, 3, 0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '11px', color: isSelected ? '#C27803' : '#86868B', fontWeight: 700 }}>
+                              {isSelected ? '✓ Terpilih' : 'Layout Galeri'}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <span>Denah</span>
+                              <RotateCw size={11} />
+                            </span>
+                          </div>
+                          <h4 style={{ fontSize: '14.5px', fontWeight: 700, margin: '0 0 4px', color: '#1D1D1F' }}>
+                            {gridOption.title}
+                          </h4>
+                          <p style={{ fontSize: '11.5px', color: '#6E6E73', margin: 0, lineHeight: 1.4 }}>
+                            {gridOption.desc}
+                          </p>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.05)', fontSize: '11px', color: '#86868B' }}>
+                          <span style={{ color: '#C27803', fontWeight: 600 }}>Klik untuk putar & lihat denah</span>
+                          <RotateCw size={12} color="#C27803" />
+                        </div>
+                      </div>
+
+                      {/* BACK FACE (Architectural Wireframe Denah) */}
+                      <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                        borderRadius: '16px',
+                        padding: '14px 16px',
+                        border: isSelected ? '2px solid #C27803' : '1px solid #1D1D1F',
+                        background: '#121214',
+                        color: '#FFFFFF',
+                        boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#F59E0B', fontWeight: 700, letterSpacing: '0.08em' }}>
+                              DENAH STRUKTUR
+                            </span>
+                            <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <RotateCw size={10} />
+                              <span>Putar Balik</span>
+                            </span>
+                          </div>
+
+                          {/* Wireframe Diagram */}
+                          <div style={{ padding: '6px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                            {renderGridLayoutWireframe(gridOption.key, isSelected)}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {gridOption.title}
+                          </span>
+                          <span style={{ fontSize: '9.5px', color: '#10B981', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                            {isSelected ? '✓ Aktif' : 'Pilih'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -1006,7 +1376,9 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 { key: 'terracotta', name: 'Tuscan Terracotta', bg: '#FAF5F0', text: '#2D1E18', desc: 'Nuansa hangat earth-tone merah bata lembut senja Italia.' },
                 { key: 'midnight_navy', name: 'Midnight Sapphire', bg: '#0A0E1A', text: '#F0F4FF', desc: 'Biru navy gelap sinematik malam berbintang yang prestisius.' },
                 { key: 'emerald_forest', name: 'Vintage Olive Garden', bg: '#F3F6F3', text: '#132219', desc: 'Hijau zaitun lembut menenangkan untuk fotografer outdoor.' },
-                { key: 'rose_quartz', name: 'Romantic Rose Petal', bg: '#FDF7F8', text: '#2C1D21', desc: 'Blush pink romantis lembut pengantin dengan kehangatan feminin.' }
+                { key: 'rose_quartz', name: 'Romantic Rose Petal', bg: '#FDF7F8', text: '#2C1D21', desc: 'Blush pink romantis lembut pengantin dengan kehangatan feminin.' },
+                { key: 'espresso_bronze', name: 'Warm Mocha Bronze', bg: '#F9F6F0', text: '#261C16', desc: 'Nuansa cokelat hangat studio kopi & kayu jati mewah.' },
+                { key: 'frosted_pearl', name: 'Frosted Pearl Silver', bg: '#F8F9FA', text: '#1A212D', desc: 'Perak mutiara abu-abu es minimalis murni modern.' }
               ].map((p) => {
                 const isSelected = theme.backgroundMode === 'preset' && (theme.bgPreset || 'alabaster') === p.key;
                 return (
@@ -1129,32 +1501,125 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
               </h3>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '16px' }}>
               {[
                 { key: 'social', title: 'Social Banner (Default)', desc: 'Banner lanskap di atas dengan floating logo profil dan nomor WhatsApp.' },
                 { key: 'cinematic_fullscreen', title: 'Fullscreen Cinematic Hero', desc: 'Foto cover memenuhi 100vh layar penuh dengan nama vendor di tengah.' },
                 { key: 'split', title: 'Split Editorial Studio', desc: 'Layar terbagi 2: 50% foto vertikal di kiri, 50% profil biodata di kanan.' },
                 { key: 'minimalist', title: 'Minimalist Bio-Link', desc: 'Langsung fokus pada logo melingkar di tengah, tanpa banner besar.' },
-                { key: 'floating_island', title: 'Floating Glass Island', desc: 'Banner panorama luas dengan kartu profil & kontak melayang dalam kapsul frosted glass mewah.' },
-                { key: 'story_headline', title: 'Big Editorial Headline', desc: 'Tipografi nama vendor raksasa ala sampul majalah Vogue/Kinfolk dengan tagline elegan di tengah.' },
-                { key: 'side_dock', title: 'Asymmetric Side Dock', desc: 'Panel identitas vertikal ramping di sisi kiri dengan galeri karya mengalir di sisi kanan.' },
-                { key: 'polaroid_stacked', title: 'Stacked Frames Showcase', desc: 'Header interaktif dengan 3 frame preview foto karya artistik bertumpuk di samping profil.' }
+                { key: 'floating_island', title: 'Floating Glass Island', desc: 'Banner panorama luas dengan kartu profil melayang dalam kapsul frosted glass.' },
+                { key: 'story_headline', title: 'Big Editorial Headline', desc: 'Tipografi nama vendor raksasa ala sampul majalah Vogue/Kinfolk.' },
+                { key: 'side_dock', title: 'Asymmetric Side Dock', desc: 'Panel identitas vertikal ramping di sisi kiri dengan galeri karya di kanan.' },
+                { key: 'polaroid_stacked', title: 'Stacked Frames Showcase', desc: 'Header interaktif dengan 3 frame preview foto artistik bertumpuk di samping profil.' }
               ].map((heroOption) => {
                 const isSelected = (theme.heroStyle || 'social') === heroOption.key;
+                const isFlipped = flippedHeroCard === heroOption.key;
                 return (
                   <div
                     key={heroOption.key}
-                    onClick={() => setTheme(prev => ({ ...prev, heroStyle: heroOption.key as any }))}
+                    onClick={() => {
+                      setTheme(prev => ({ ...prev, heroStyle: heroOption.key as any }));
+                      setFlippedHeroCard(prev => prev === heroOption.key ? null : heroOption.key);
+                    }}
                     style={{
-                      padding: '16px',
-                      borderRadius: '16px',
-                      cursor: 'pointer',
-                      border: isSelected ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
-                      background: isSelected ? 'rgba(194, 120, 3, 0.04)' : '#FFFFFF'
+                      perspective: '1000px',
+                      minHeight: '170px',
+                      cursor: 'pointer'
                     }}
                   >
-                    <h4 style={{ fontSize: '14.5px', fontWeight: 700, margin: '0 0 4px 0', color: '#1D1D1F' }}>{heroOption.title}</h4>
-                    <p style={{ fontSize: '11.5px', color: '#6E6E73', margin: 0, lineHeight: 1.4 }}>{heroOption.desc}</p>
+                    <div style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: '100%',
+                      minHeight: '170px',
+                      borderRadius: '16px',
+                      transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                      transformStyle: 'preserve-3d',
+                      transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                    }}>
+                      {/* FRONT FACE (Info & Title) */}
+                      <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        borderRadius: '16px',
+                        padding: '16px 18px',
+                        border: isSelected ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
+                        background: isSelected ? 'rgba(194, 120, 3, 0.04)' : '#FFFFFF',
+                        boxShadow: isSelected ? '0 8px 24px rgba(194, 120, 3, 0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '11px', color: isSelected ? '#C27803' : '#86868B', fontWeight: 700 }}>
+                              {isSelected ? '✓ Terpilih' : 'Gaya Header'}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <span>Denah</span>
+                              <RotateCw size={11} />
+                            </span>
+                          </div>
+                          <h4 style={{ fontSize: '14.5px', fontWeight: 700, margin: '0 0 4px', color: '#1D1D1F' }}>
+                            {heroOption.title}
+                          </h4>
+                          <p style={{ fontSize: '11.5px', color: '#6E6E73', margin: 0, lineHeight: 1.4 }}>
+                            {heroOption.desc}
+                          </p>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.05)', fontSize: '11px', color: '#86868B' }}>
+                          <span style={{ color: '#C27803', fontWeight: 600 }}>Klik untuk putar & lihat denah</span>
+                          <RotateCw size={12} color="#C27803" />
+                        </div>
+                      </div>
+
+                      {/* BACK FACE (Architectural Wireframe Denah) */}
+                      <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backfaceVisibility: 'hidden',
+                        WebkitBackfaceVisibility: 'hidden',
+                        transform: 'rotateY(180deg)',
+                        borderRadius: '16px',
+                        padding: '14px 16px',
+                        border: isSelected ? '2px solid #C27803' : '1px solid #1D1D1F',
+                        background: '#121214',
+                        color: '#FFFFFF',
+                        boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between'
+                      }}>
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#F59E0B', fontWeight: 700, letterSpacing: '0.08em' }}>
+                              DENAH HEADER HERO
+                            </span>
+                            <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                              <RotateCw size={10} />
+                              <span>Putar Balik</span>
+                            </span>
+                          </div>
+
+                          {/* Wireframe Diagram */}
+                          <div style={{ padding: '6px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                            {renderHeroStyleWireframe(heroOption.key, isSelected)}
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {heroOption.title}
+                          </span>
+                          <span style={{ fontSize: '9.5px', color: '#10B981', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                            {isSelected ? '✓ Aktif' : 'Pilih'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -1281,24 +1746,121 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
 
             {/* Typography & Accent Color */}
             <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '20px' }}>
-              <div>
+              {/* Visual Typography Font Picker */}
+              <div style={{ position: 'relative' }}>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '6px' }}>
-                  Gaya Font Brand
+                  Gaya Font Brand (Pilih & Lihat Bentuk Asli Font)
                 </label>
-                <select
-                  value={theme.fontStyle || 'sans'}
-                  onChange={e => setTheme(prev => ({ ...prev, fontStyle: e.target.value as any }))}
-                  className="glass-input"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px' }}
-                >
-                  <option value="sans">Modern Sans-Serif (Geist / Outfit)</option>
-                  <option value="serif">Luxury Classic Serif (Cormorant Garamond)</option>
-                  <option value="mono">Film Cine Monospace (JetBrains Mono)</option>
-                  <option value="playfair">Grand Wedding Serif (Playfair Display)</option>
-                  <option value="cinzel">Royal Roman Empire (Cinzel)</option>
-                  <option value="syne">Avant-Garde Modern Art (Syne)</option>
-                  <option value="jakarta">Architectural Clean (Plus Jakarta Sans)</option>
-                </select>
+
+                {(() => {
+                  const currentFontKey = theme.fontStyle || 'sans';
+                  const currentFontObj = FONT_OPTIONS.find(f => f.key === currentFontKey) || FONT_OPTIONS[0];
+                  return (
+                    <>
+                      {/* Active Font Trigger Card */}
+                      <button
+                        type="button"
+                        onClick={() => setIsFontPickerOpen(!isFontPickerOpen)}
+                        className="glass-card"
+                        style={{
+                          width: '100%',
+                          padding: '10px 14px',
+                          borderRadius: '12px',
+                          background: '#FFFFFF',
+                          border: isFontPickerOpen ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.12)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.02)',
+                          textAlign: 'left'
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 800, color: '#C27803', background: 'rgba(194, 120, 3, 0.1)', padding: '1px 6px', borderRadius: '4px' }}>
+                              {currentFontObj.category}
+                            </span>
+                            <strong style={{ fontSize: '13px', color: '#1D1D1F' }}>
+                              {currentFontObj.name}
+                            </strong>
+                          </div>
+                          <div style={{ fontFamily: currentFontObj.fontFamily, fontSize: '15px', color: '#4B5563', fontStyle: currentFontObj.key === 'playfair' ? 'italic' : 'normal' }}>
+                            {currentFontObj.sample}
+                          </div>
+                        </div>
+
+                        <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {isFontPickerOpen ? <ChevronUp size={15} /> : <ChevronDown size={15} />}
+                        </div>
+                      </button>
+
+                      {/* Dropdown Options List with Live Preview */}
+                      {isFontPickerOpen && (
+                        <div className="glass-card" style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          marginTop: '8px',
+                          zIndex: 70,
+                          padding: '8px',
+                          borderRadius: '16px',
+                          background: 'rgba(255, 255, 255, 0.98)',
+                          backdropFilter: 'blur(20px)',
+                          border: '1px solid rgba(0,0,0,0.12)',
+                          boxShadow: '0 20px 48px rgba(0,0,0,0.16)',
+                          maxHeight: '340px',
+                          overflowY: 'auto',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '4px'
+                        }}>
+                          {FONT_OPTIONS.map((f) => {
+                            const isFontSelected = (theme.fontStyle || 'sans') === f.key;
+                            return (
+                              <div
+                                key={f.key}
+                                onClick={() => {
+                                  setTheme(prev => ({ ...prev, fontStyle: f.key as any }));
+                                  setIsFontPickerOpen(false);
+                                  toast.success(`Font diubah ke: ${f.name}`);
+                                }}
+                                style={{
+                                  padding: '10px 12px',
+                                  borderRadius: '10px',
+                                  cursor: 'pointer',
+                                  background: isFontSelected ? 'rgba(194, 120, 3, 0.08)' : 'transparent',
+                                  border: isFontSelected ? '1px solid #C27803' : '1px solid transparent',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  transition: 'all 0.15s ease'
+                                }}
+                              >
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                                    <span style={{ fontSize: '9.5px', fontWeight: 800, color: isFontSelected ? '#C27803' : '#86868B', letterSpacing: '0.04em' }}>
+                                      {f.category}
+                                    </span>
+                                    <span style={{ fontSize: '13px', fontWeight: 700, color: '#1D1D1F' }}>
+                                      {f.name}
+                                    </span>
+                                  </div>
+                                  <div style={{ fontFamily: f.fontFamily, fontSize: '15px', color: isFontSelected ? '#8C5400' : '#374151', fontStyle: f.key === 'playfair' ? 'italic' : 'normal' }}>
+                                    {f.sample}
+                                  </div>
+                                </div>
+
+                                {isFontSelected && <CheckCircle2 size={16} color="#C27803" />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
 
               <div>
