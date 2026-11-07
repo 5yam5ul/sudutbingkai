@@ -2039,15 +2039,33 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         <div>
           © {new Date().getFullYear()} {vendor.companyName || vendor.name}. Portofolio Resmi.
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Link 
+          href="/" 
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            textDecoration: 'none',
+            color: mutedTextColor,
+            fontSize: '12px'
+          }}
+        >
           <span>Didukung oleh</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             src="/logo.png" 
             alt="Sudut Bingkai" 
-            style={{ width: '22px', height: '22px', objectFit: 'contain', borderRadius: '5px' }} 
+            style={{ 
+              width: '28px', 
+              height: '28px', 
+              objectFit: 'contain', 
+              borderRadius: '6px',
+              display: 'block'
+            }} 
           />
-        </div>
+        </Link>
       </footer>
 
       {/* 10. MOBILE FLOATING STICKY BAR */}
