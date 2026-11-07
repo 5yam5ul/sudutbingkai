@@ -1852,7 +1852,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                         <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
                           <div style={{ maxWidth: '600px' }}>
                             <span style={{ fontSize: '11px', color: '#F59E0B', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
-                              GOOGLE DRIVE COLLECTION
+                              FEATURED ALBUM
                             </span>
                             <h3 style={{ fontSize: '28px', fontWeight: 800, color: '#FFFFFF', margin: '4px 0 6px', letterSpacing: '-0.02em' }}>
                               {currentAlbum.title}
@@ -2006,14 +2006,14 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                           {album.title}
                         </h4>
                         <p style={{ fontSize: '12.5px', color: mutedTextColor, margin: 0, maxWidth: '480px', lineHeight: 1.4 }}>
-                          {album.description || 'Google Drive Album Dokumentasi'}
+                          {album.description || 'Koleksi Dokumentasi Karya Foto'}
                         </p>
                       </div>
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <span style={{ fontSize: '11px', color: mutedTextColor, fontFamily: 'var(--font-mono)' }}>
-                        Folder Drive
+                        {album.photoCount ? `${album.photoCount} Foto` : 'Koleksi Foto'}
                       </span>
                       <span className="glass-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 700, color: accentColor, border: `1px solid ${accentColor}` }}>
                         <span>Buka Album</span>
@@ -2392,7 +2392,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                               {album.title}
                             </h4>
                             <span style={{ fontSize: '11.5px', color: mutedTextColor }}>
-                              Google Drive Portfolio
+                              {album.description || (album.photoCount ? `${album.photoCount} Foto` : 'Koleksi Foto')}
                             </span>
                           </div>
                           <span style={{ width: '34px', height: '34px', borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: accentColor }}>
@@ -2452,7 +2452,9 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                         </div>
                       </div>
                       <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: mutedTextColor, backgroundColor: cardBg }}>
-                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>Google Drive Album</span>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>
+                          {album.photoCount ? `${album.photoCount} Foto` : 'Koleksi Foto'}
+                        </span>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: accentColor, fontWeight: 600 }}>
                           <span>Jelajahi Foto</span>
                           <ArrowRight size={13} />

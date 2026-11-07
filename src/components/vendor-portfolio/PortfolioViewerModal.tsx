@@ -816,7 +816,7 @@ export function PortfolioViewerModal({
         {loading && (
           <div style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
             <Loader2 size={42} className="animate-spin" color="#F59E0B" style={{ margin: '0 auto 12px' }} />
-            <p style={{ fontSize: '14px', fontWeight: 600 }}>Menghubungkan ke Google Drive...</p>
+            <p style={{ fontSize: '14px', fontWeight: 600 }}>Menyiapkan foto album...</p>
             <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)' }}>Menyiapkan album foto definisi tinggi</span>
           </div>
         )}
