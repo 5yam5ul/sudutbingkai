@@ -2082,45 +2082,6 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
             </div>
           </div>
 
-          {/* Background Audio Music Player */}
-          <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
-            <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', marginBottom: '8px' }}>
-              🎵 Musik Latar Suasana (Background Audio)
-            </h3>
-            <p style={{ fontSize: '13px', color: '#6E6E73', margin: '0 0 16px 0' }}>
-              Masukkan link file audio (mp3 / stream) untuk membangun suasana romantis saat klien membuka portofolio Anda.
-            </p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
-                  Link Audio (.mp3 / URL stream)
-                </label>
-                <input
-                  type="text"
-                  value={theme.audioUrl || ''}
-                  onChange={e => setTheme(prev => ({ ...prev, audioUrl: e.target.value }))}
-                  placeholder="https://domain.com/wedding-song.mp3"
-                  className="glass-input"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
-                  Judul Lagu / Suasana
-                </label>
-                <input
-                  type="text"
-                  value={theme.audioTitle || ''}
-                  onChange={e => setTheme(prev => ({ ...prev, audioTitle: e.target.value }))}
-                  placeholder="Contoh: A Thousand Years (Piano Ver.)"
-                  className="glass-input"
-                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px' }}
-                />
-              </div>
-            </div>
-          </div>
 
           {/* Video Highlight Teaser */}
           <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>

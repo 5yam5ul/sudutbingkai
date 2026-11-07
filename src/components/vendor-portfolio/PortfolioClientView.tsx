@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { 
   ShieldCheck, MapPin, Globe, MessageCircle, 
   Sparkles, Layers, BookOpen, ArrowRight, Share2, Check,
-  Music, Volume2, VolumeX, Play, Pause, ChevronDown, ChevronUp,
+  ChevronDown, ChevronUp,
   Star, Award, Camera, Video, HelpCircle, FileText, X, Send, User,
   ChevronLeft, ChevronRight, Eye
 } from 'lucide-react';
@@ -94,7 +94,6 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
   const theme = vendor.theme || {};
   const [selectedAlbum, setSelectedAlbum] = useState<VendorPortfolioAlbum | null>(null);
   const [copied, setCopied] = useState(false);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
   const [leadModalOpen, setLeadModalOpen] = useState(false);
   
@@ -105,7 +104,6 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
   const [leadLocation, setLeadLocation] = useState('');
   const [leadNote, setLeadNote] = useState('');
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const [stageIndex, setStageIndex] = useState(0);
 
   // Compute theme styles
@@ -185,21 +183,6 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
       return () => window.removeEventListener('contextmenu', handleContextMenu);
     }
   }, [theme.disableRightClick]);
-
-  // Audio Playback
-  const toggleAudio = () => {
-    if (!audioRef.current) return;
-    if (isPlayingAudio) {
-      audioRef.current.pause();
-      setIsPlayingAudio(false);
-    } else {
-      audioRef.current.play().then(() => {
-        setIsPlayingAudio(true);
-      }).catch(() => {
-        toast.error('Gagal memutar audio latar.');
-      });
-    }
-  };
 
   // Format WhatsApp Link
   const rawPhone = vendor.whatsapp || '';
@@ -295,61 +278,6 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
             backgroundColor: isObsidian ? '#000000' : '#FFFFFF',
             opacity: (theme.bgDimmer || 40) / 100
           }} />
-        </div>
-      )}
-
-      {/* Optional Audio Element */}
-      {theme.audioUrl && (
-        <audio ref={audioRef} src={theme.audioUrl} loop onEnded={() => setIsPlayingAudio(false)} />
-      )}
-
-      {/* Floating Audio Player Widget */}
-      {theme.audioUrl && (
-        <div style={{
-          position: 'fixed',
-          bottom: '24px',
-          left: '24px',
-          zIndex: 60
-        }}>
-          <button
-            type="button"
-            onClick={toggleAudio}
-            className="glass-card"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              padding: '8px 16px',
-              borderRadius: '999px',
-              border: `1px solid ${borderColor}`,
-              background: isObsidian ? 'rgba(28, 28, 30, 0.85)' : 'rgba(255, 255, 255, 0.85)',
-              backdropFilter: 'blur(20px)',
-              color: textColor,
-              cursor: 'pointer',
-              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)'
-            }}
-          >
-            <div style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '50%',
-              background: accentColor,
-              color: '#FFFFFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              {isPlayingAudio ? <Pause size={13} /> : <Play size={13} style={{ marginLeft: '1px' }} />}
-            </div>
-            <div style={{ textAlign: 'left' }}>
-              <span style={{ fontSize: '11.5px', fontWeight: 700, display: 'block', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {theme.audioTitle || 'Wedding Ambience'}
-              </span>
-              <span style={{ fontSize: '10px', color: mutedTextColor, display: 'block' }}>
-                {isPlayingAudio ? 'Sedang Memutar Musik' : 'Klik untuk Musik'}
-              </span>
-            </div>
-          </button>
         </div>
       )}
 
