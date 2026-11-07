@@ -97,6 +97,7 @@ export async function GET(request: Request) {
     const responsePayload = {
       folders,
       photos,
+      files: photos, // Alias for seamless backward/forward compatibility
       nextPageToken: data.nextPageToken || undefined
     };
 

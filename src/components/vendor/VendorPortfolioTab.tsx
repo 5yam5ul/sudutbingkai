@@ -266,7 +266,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
         throw new Error(data.error || 'Gagal membaca folder Google Drive.');
       }
 
-      const files = data.files || [];
+      const files = data.photos || data.files || [];
       if (files.length === 0) {
         setDriveCheckError('Folder terbaca namun tidak ada file foto di dalamnya.');
         toast.warning('Folder kosong atau belum berisi foto.');
@@ -275,6 +275,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
         if (!albumCoverUrl && files[0]?.url) {
           setAlbumCoverUrl(files[0].url);
         }
+        setDriveCheckError(null);
         toast.success(`Berhasil! Ditemukan ${files.length} foto di dalam folder.`);
       }
     } catch (err: any) {
@@ -380,7 +381,23 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
     }
 
     setIsSavingAlbum(true);
-    const currentCover = albumCoverUrl || (drivePhotos[0]?.url || drivePhotos[0]?.fullUrl) || '';
+    let currentCover = albumCoverUrl || (drivePhotos[0]?.url || drivePhotos[0]?.fullUrl) || '';
+    let resolvedPhotoCount = drivePhotos.length > 0 ? drivePhotos.length : undefined;
+
+    // If user didn't click "Cek Foto" first, attempt automatic first-photo preview resolution
+    if (!currentCover && albumDriveUrl.trim()) {
+      try {
+        const driveRes = await fetch(`/api/proofing/drive?folderId=${encodeURIComponent(albumDriveUrl.trim())}`);
+        const driveData = await driveRes.json();
+        const foundPhotos = driveData.photos || driveData.files || [];
+        if (foundPhotos.length > 0) {
+          currentCover = foundPhotos[0]?.url || foundPhotos[0]?.fullUrl || '';
+          resolvedPhotoCount = foundPhotos.length;
+        }
+      } catch (e) {
+        console.warn('Auto-cover fetch notice:', e);
+      }
+    }
 
     let updatedAlbums: VendorPortfolioAlbum[];
     if (editingAlbumId) {
@@ -389,8 +406,8 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
         title: albumTitle.trim(),
         description: albumDesc.trim(),
         driveFolderUrl: albumDriveUrl.trim(),
-        coverImageUrl: currentCover,
-        photoCount: drivePhotos.length > 0 ? drivePhotos.length : a.photoCount
+        coverImageUrl: currentCover || a.coverImageUrl,
+        photoCount: resolvedPhotoCount !== undefined ? resolvedPhotoCount : a.photoCount
       } : a);
     } else {
       const newAlbum: VendorPortfolioAlbum = {
@@ -399,7 +416,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
         description: albumDesc.trim(),
         driveFolderUrl: albumDriveUrl.trim(),
         coverImageUrl: currentCover,
-        photoCount: drivePhotos.length > 0 ? drivePhotos.length : undefined,
+        photoCount: resolvedPhotoCount,
         order: albums.length,
         createdAt: new Date().toISOString()
       };
@@ -1668,7 +1685,10 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                     type="text"
                     placeholder="https://drive.google.com/drive/folders/..."
                     value={albumDriveUrl}
-                    onChange={e => setAlbumDriveUrl(e.target.value)}
+                    onChange={e => {
+                      setAlbumDriveUrl(e.target.value);
+                      if (driveCheckError) setDriveCheckError(null);
+                    }}
                     className="glass-input"
                     style={{ flex: 1, padding: '12px 14px', borderRadius: '12px', fontSize: '13px' }}
                   />
