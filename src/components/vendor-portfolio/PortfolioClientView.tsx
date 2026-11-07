@@ -53,6 +53,33 @@ function TikTokIcon({ size = 15 }: { size?: number }) {
   );
 }
 
+function BlueVerifiedBadge({ size = 16 }: { size?: number }) {
+  return (
+    <svg 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      xmlns="http://www.w3.org/2000/svg"
+      style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}
+      aria-label="Verified Partner"
+    >
+      <path
+        d="M12.00,1.00L13.79,2.98L16.21,1.84L17.11,4.35L19.78,4.22L19.65,6.89L22.16,7.79L21.02,10.21L23.00,12.00L21.02,13.79L22.16,16.21L19.65,17.11L19.78,19.78L17.11,19.65L16.21,22.16L13.79,21.02L12.00,23.00L10.21,21.02L7.79,22.16L6.89,19.65L4.22,19.78L4.35,17.11L1.84,16.21L2.98,13.79L1.00,12.00L2.98,10.21L1.84,7.79L4.35,6.89L4.22,4.22L6.89,4.35L7.79,1.84L10.21,2.98Z"
+        fill="#1D9BF0"
+      />
+      <polyline 
+        points="7.5 12 10.5 15 16.5 9" 
+        stroke="#FFFFFF" 
+        strokeWidth="2.5" 
+        strokeLinecap="round" 
+        strokeLinejoin="round" 
+        fill="none" 
+      />
+    </svg>
+  );
+}
+
 function getEmbedVideoUrl(rawUrl?: string): string {
   if (!rawUrl) return '';
   const url = rawUrl.trim();
@@ -675,8 +702,9 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                       <h1 style={{ fontSize: '26px', fontWeight: 800, margin: 0, color: textColor, letterSpacing: '-0.02em' }}>
                         {vendor.companyName || vendor.name}
                       </h1>
-                      <span style={{ fontSize: '11px', color: '#D4AF37', background: 'rgba(212, 175, 55, 0.12)', border: '1px solid rgba(212, 175, 55, 0.3)', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
-                        ★ Verified
+                      <span style={{ fontSize: '11px', color: '#1D9BF0', background: 'rgba(29, 155, 240, 0.08)', border: '1px solid rgba(29, 155, 240, 0.3)', padding: '2px 8px', borderRadius: '999px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <BlueVerifiedBadge size={13} />
+                        <span>Verified Partner</span>
                       </span>
                     </div>
                     <p style={{ fontSize: '13.5px', color: mutedTextColor, margin: '0 0 8px 0', maxWidth: '440px', lineHeight: 1.5 }}>
@@ -863,7 +891,10 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                     <div style={{ width: '1px', background: borderColor }} />
                     <div>
                       <span style={{ fontSize: '11px', color: mutedTextColor, display: 'block' }}>Kemitraan</span>
-                      <strong style={{ fontSize: '14px', color: '#10B981' }}>Verified Partner</strong>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        <BlueVerifiedBadge size={14} />
+                        <strong style={{ fontSize: '13.5px', color: '#1D9BF0' }}>Verified Partner</strong>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1087,16 +1118,17 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                       <span style={{
                         display: 'inline-flex',
                         alignItems: 'center',
-                        gap: '4px',
+                        gap: '5px',
                         padding: '3px 10px',
                         borderRadius: '999px',
-                        backgroundColor: 'rgba(194, 120, 3, 0.1)',
-                        color: accentColor,
+                        backgroundColor: 'rgba(29, 155, 240, 0.08)',
+                        color: '#1D9BF0',
                         fontSize: '11px',
                         fontWeight: 700,
-                        border: '1px solid rgba(194, 120, 3, 0.3)'
+                        border: '1px solid rgba(29, 155, 240, 0.3)',
+                        boxShadow: '0 2px 8px rgba(29, 155, 240, 0.12)'
                       }}>
-                        <ShieldCheck size={13} />
+                        <BlueVerifiedBadge size={14} />
                         <span>Verified Partner</span>
                       </span>
                     </div>
