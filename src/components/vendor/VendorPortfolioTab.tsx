@@ -1371,8 +1371,8 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 {
                   key: 'flipbook',
                   icon: '📖',
-                  title: '3D Single-Page Photobook',
-                  desc: 'Lembar kolase album 3D utuh (1 gambar penuh): proporsi asli tanpa terpotong atau melar, ujung kertas melengkung & bisa ditarik/dilepas mouse atau jari.',
+                  title: '3D Photobook Page Flip',
+                  desc: 'Lembar foto membalik 3D realistis pada poros lipatan dengan bayangan kertas. Ukuran & rasio 100% mengikuti foto di folder tanpa ada blok putih.',
                   badge: 'DEFAULT UTAMA'
                 },
                 {

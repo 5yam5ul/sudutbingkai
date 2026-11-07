@@ -4,9 +4,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   X, ChevronLeft, ChevronRight, Loader2, AlertCircle, 
   Maximize2, Minimize2, BookOpen, ChevronDown, Check,
-  Sparkles, Film, Eye, Image as ImageIcon, CornerDownRight, Hand
+  Hand
 } from 'lucide-react';
-import { PageFlip } from 'page-flip';
 import { VendorPortfolioAlbum } from '@/lib/types';
 
 export type SlideshowTransition = 
@@ -30,11 +29,11 @@ interface TransitionOption {
 export const SLIDESHOW_TRANSITIONS: TransitionOption[] = [
   {
     id: 'flipbook',
-    name: '3D Real Physical Photobook (StPageFlip Engine)',
-    shortName: 'Flipbook 3D Asli',
+    name: '3D Photobook Page Flip',
+    shortName: 'Flipbook 3D',
     badge: 'DEFAULT UTAMA',
     icon: '📖',
-    desc: 'Buku album 3D fisik nyata: 2 halaman terbuka (spread), ujung kertas bisa ditarik/dilepas dengan mouse/jari, bayangan silindris alami.'
+    desc: 'Lembaran foto membalik 3D realistis pada poros lipatan dengan bayangan kertas. Ukuran & rasio 100% mengikuti foto di folder tanpa ada blok putih.'
   },
   {
     id: 'fade',
@@ -121,11 +120,11 @@ export function PortfolioViewerModal({
 
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
+  const isMouseDown = useRef(false);
+  const mouseStartX = useRef<number | null>(null);
   const modalContainerRef = useRef<HTMLDivElement>(null);
   const transitionMenuRef = useRef<HTMLDivElement>(null);
   const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const bookContainerRef = useRef<HTMLDivElement>(null);
-  const pageFlipRef = useRef<any>(null);
 
   // Sync default transition when prop changes
   useEffect(() => {
@@ -197,121 +196,7 @@ export function PortfolioViewerModal({
     };
   }, [isOpen, album?.driveFolderUrl]);
 
-  // Real StPageFlip 3D Engine Initialization for 'flipbook' mode (Single-Page Kolase Mode)
-  useEffect(() => {
-    if (transitionMode !== 'flipbook' || !isOpen || loading || error || photos.length <= 1) {
-      if (pageFlipRef.current) {
-        try {
-          pageFlipRef.current.destroy();
-        } catch (e) {}
-        pageFlipRef.current = null;
-      }
-      return;
-    }
-
-    if (!bookContainerRef.current) return;
-
-    // Create fresh wrapper element to safely protect React DOM
-    bookContainerRef.current.innerHTML = '<div class="st-pageflip-mount" style="margin: 0 auto; display: flex; justify-content: center; align-items: center;"></div>';
-    const mountEl = bookContainerRef.current.querySelector('.st-pageflip-mount') as HTMLElement;
-    if (!mountEl) return;
-
-    let isDestroyed = false;
-
-    // Determine the natural aspect ratio from the first image so kolase landscape is NEVER squished
-    const sampleImg = new Image();
-    const firstUrl = photos[0]?.fullUrl || photos[0]?.url;
-    if (!firstUrl) return;
-
-    sampleImg.src = firstUrl;
-
-    const initBook = (naturalW: number, naturalH: number) => {
-      if (isDestroyed || !bookContainerRef.current) return;
-
-      // Natural aspect ratio (kolase wedding usually 16:9 or 3:2 landscape)
-      const aspect = naturalW > 0 && naturalH > 0 ? (naturalW / naturalH) : (16 / 9);
-
-      // Max available space in viewport
-      const screenW = window.innerWidth;
-      const screenH = window.innerHeight;
-      const maxAvailableW = Math.min(screenW * 0.90, 1260);
-      const maxAvailableH = Math.min(screenH * 0.74, 760);
-
-      let bookW = maxAvailableW;
-      let bookH = bookW / aspect;
-
-      if (bookH > maxAvailableH) {
-        bookH = maxAvailableH;
-        bookW = bookH * aspect;
-      }
-
-      bookW = Math.round(bookW);
-      bookH = Math.round(bookH);
-
-      // Style mount element to the exact calculated single-page aspect ratio
-      mountEl.style.width = `${bookW}px`;
-      mountEl.style.height = `${bookH}px`;
-      mountEl.style.maxWidth = '92vw';
-      mountEl.style.maxHeight = '75vh';
-      mountEl.style.position = 'relative';
-
-      try {
-        const pf = new PageFlip(mountEl, {
-          width: bookW,
-          height: bookH,
-          size: 'fixed',
-          minWidth: 200,
-          maxWidth: 2400,
-          minHeight: 150,
-          maxHeight: 1800,
-          maxShadowOpacity: 0.8,
-          showCover: false, // SINGLE PAGE MODE: 1 foto penuh per lembar, tidak ada halaman kosong di samping!
-          mobileScrollSupport: false,
-          usePortrait: true, // Selalu tampilkan 1 halaman kolase penuh!
-          showPageCorners: true,
-          drawShadow: true,
-          flippingTime: 750,
-          useMouseEvents: true,
-          startPage: Math.min(currentIndex, photos.length - 1)
-        });
-
-        pf.loadFromImages(photos.map(p => p.fullUrl || p.url));
-
-        pf.on('flip', (e: any) => {
-          if (!isDestroyed && typeof e.data === 'number') {
-            setCurrentIndex(e.data);
-          }
-        });
-
-        pageFlipRef.current = pf;
-      } catch (err) {
-        console.error('Failed to initialize Single-Page StPageFlip:', err);
-      }
-    };
-
-    if (sampleImg.complete && sampleImg.naturalWidth > 0) {
-      initBook(sampleImg.naturalWidth, sampleImg.naturalHeight);
-    } else {
-      sampleImg.onload = () => {
-        initBook(sampleImg.naturalWidth, sampleImg.naturalHeight);
-      };
-      sampleImg.onerror = () => {
-        initBook(1600, 900);
-      };
-    }
-
-    return () => {
-      isDestroyed = true;
-      if (pageFlipRef.current) {
-        try {
-          pageFlipRef.current.destroy();
-        } catch (e) {}
-        pageFlipRef.current = null;
-      }
-    };
-  }, [transitionMode, isOpen, loading, error, photos]);
-
-  // Transition trigger for non-flipbook modes
+  // Transition trigger
   const triggerTransition = useCallback((targetIndex: number, dir: 'next' | 'prev') => {
     if (photos.length <= 1 || isTransitioning || targetIndex === currentIndex) return;
 
@@ -322,7 +207,8 @@ export function PortfolioViewerModal({
     setDirection(dir);
     setIsTransitioning(true);
 
-    const duration = transitionMode === 'cube_3d' ? 480 : 
+    const duration = transitionMode === 'flipbook' ? 520 :
+                     transitionMode === 'cube_3d' ? 480 : 
                      transitionMode === 'film_reel' ? 450 : 400;
 
     transitionTimerRef.current = setTimeout(() => {
@@ -332,43 +218,21 @@ export function PortfolioViewerModal({
   }, [photos.length, isTransitioning, currentIndex, transitionMode]);
 
   const handleNext = useCallback(() => {
-    if (transitionMode === 'flipbook' && pageFlipRef.current) {
-      try {
-        pageFlipRef.current.flipNext();
-      } catch (e) {}
-      return;
-    }
     if (photos.length <= 1) return;
     const nextIdx = (currentIndex + 1) % photos.length;
     triggerTransition(nextIdx, 'next');
-  }, [transitionMode, photos.length, currentIndex, triggerTransition]);
+  }, [photos.length, currentIndex, triggerTransition]);
 
   const handlePrev = useCallback(() => {
-    if (transitionMode === 'flipbook' && pageFlipRef.current) {
-      try {
-        pageFlipRef.current.flipPrev();
-      } catch (e) {}
-      return;
-    }
     if (photos.length <= 1) return;
     const prevIdx = (currentIndex - 1 + photos.length) % photos.length;
     triggerTransition(prevIdx, 'prev');
-  }, [transitionMode, photos.length, currentIndex, triggerTransition]);
+  }, [photos.length, currentIndex, triggerTransition]);
 
   // Thumbnail click
   const handleSelectThumbnail = (targetIdx: number) => {
     if (targetIdx === currentIndex) return;
-    if (transitionMode === 'flipbook' && pageFlipRef.current) {
-      try {
-        pageFlipRef.current.flip(targetIdx);
-      } catch (e) {
-        try {
-          pageFlipRef.current.turnToPage(targetIdx);
-        } catch (err) {}
-      }
-    } else {
-      triggerTransition(targetIdx, targetIdx > currentIndex ? 'next' : 'prev');
-    }
+    triggerTransition(targetIdx, targetIdx > currentIndex ? 'next' : 'prev');
   };
 
   // Keyboard navigation
@@ -405,19 +269,16 @@ export function PortfolioViewerModal({
     };
   }, [isOpen]);
 
-  // Touch Swipe handlers (for non-flipbook modes; flipbook handles touches via canvas)
+  // Touch Swipe handlers
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (transitionMode === 'flipbook') return;
     touchStartX.current = e.touches[0].clientX;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (transitionMode === 'flipbook') return;
     touchEndX.current = e.touches[0].clientX;
   };
 
   const handleTouchEnd = () => {
-    if (transitionMode === 'flipbook') return;
     if (touchStartX.current === null || touchEndX.current === null) return;
     const diffX = touchStartX.current - touchEndX.current;
     if (diffX > 45) {
@@ -427,6 +288,25 @@ export function PortfolioViewerModal({
     }
     touchStartX.current = null;
     touchEndX.current = null;
+  };
+
+  // Mouse Drag handlers
+  const handleMouseDown = (e: React.MouseEvent) => {
+    // Only drag on stage area
+    isMouseDown.current = true;
+    mouseStartX.current = e.clientX;
+  };
+
+  const handleMouseUp = (e: React.MouseEvent) => {
+    if (!isMouseDown.current || mouseStartX.current === null) return;
+    const diffX = mouseStartX.current - e.clientX;
+    if (diffX > 50) {
+      handleNext();
+    } else if (diffX < -50) {
+      handlePrev();
+    }
+    isMouseDown.current = false;
+    mouseStartX.current = null;
   };
 
   const toggleFullscreen = () => {
@@ -452,61 +332,84 @@ export function PortfolioViewerModal({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 99999,
         backgroundColor: '#070709',
-        backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(28,28,34,0.85) 0%, #040406 100%)',
+        backgroundImage: 'radial-gradient(circle at 50% 50%, rgba(28,28,34,0.9) 0%, #040406 100%)',
         display: 'flex',
         flexDirection: 'column',
         color: '#FFFFFF',
         userSelect: 'none'
       }}
     >
-      {/* STPAGEFLIP CANVAS CSS + CUSTOM KEYFRAMES */}
+      {/* 3D HARDWARE-ACCELERATED TRANSITION KEYFRAMES */}
       <style>{`
-        /* StPageFlip Official Canvas Styles */
-        .stf__parent {
-          position: relative;
-          display: block;
-          box-sizing: border-box;
-          transform: translateZ(0);
-          -ms-touch-action: pan-y;
-          touch-action: pan-y;
+        /* 3D Photobook Page Turn Keyframes (Zero white blocks, natural photo ratio) */
+        @keyframes sbFlipbookTurnNext {
+          0% {
+            transform: perspective(1800px) rotateY(0deg);
+            filter: drop-shadow(0 15px 35px rgba(0,0,0,0.6));
+            opacity: 1;
+          }
+          45% {
+            filter: drop-shadow(-20px 20px 50px rgba(0,0,0,0.85));
+          }
+          100% {
+            transform: perspective(1800px) rotateY(-105deg);
+            filter: drop-shadow(-40px 30px 60px rgba(0,0,0,0.95));
+            opacity: 0;
+          }
         }
-        .sft__wrapper {
-          position: relative;
-          width: 100%;
-          box-sizing: border-box;
+        @keyframes sbFlipbookTurnPrev {
+          0% {
+            transform: perspective(1800px) rotateY(0deg);
+            filter: drop-shadow(0 15px 35px rgba(0,0,0,0.6));
+            opacity: 1;
+          }
+          45% {
+            filter: drop-shadow(20px 20px 50px rgba(0,0,0,0.85));
+          }
+          100% {
+            transform: perspective(1800px) rotateY(105deg);
+            filter: drop-shadow(40px 30px 60px rgba(0,0,0,0.95));
+            opacity: 0;
+          }
         }
-        .stf__parent canvas {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          left: 0;
-          top: 0;
-          filter: drop-shadow(0 25px 50px rgba(0,0,0,0.9));
+        @keyframes sbFlipbookInNext {
+          0% {
+            opacity: 0.65;
+            transform: scale(0.98);
+            filter: brightness(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+            filter: brightness(1);
+          }
         }
-        .stf__block {
-          position: absolute;
-          width: 100%;
-          height: 100%;
-          box-sizing: border-box;
-          perspective: 2000px;
+        @keyframes sbFlipbookInPrev {
+          0% {
+            opacity: 0.65;
+            transform: scale(0.98);
+            filter: brightness(0.9);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1);
+            filter: brightness(1);
+          }
         }
-        .stf__item {
-          display: none;
-          position: absolute;
-          transform-style: preserve-3d;
-        }
-        .stf__outerShadow, .stf__innerShadow, .stf__hardShadow, .stf__hardInnerShadow {
-          position: absolute;
-          left: 0;
-          top: 0;
+        @keyframes sbFlipSheen {
+          0% { opacity: 0; }
+          40% { opacity: 0.55; }
+          100% { opacity: 0; }
         }
 
-        /* 3D Cube & Filmroll Animations */
+        /* 3D Cube & Other Animations */
         @keyframes sbCubeRotateOutNext {
           0% { transform: perspective(1400px) rotateY(0deg) translateZ(0); opacity: 1; }
           100% { transform: perspective(1400px) rotateY(-90deg) translateZ(100px); opacity: 0; }
@@ -586,7 +489,7 @@ export function PortfolioViewerModal({
                 <>
                   <span>•</span>
                   <span style={{ color: '#F59E0B', fontWeight: 600 }}>
-                    Halaman {currentIndex + 1} dari {photos.length}
+                    Foto {currentIndex + 1} dari {photos.length}
                   </span>
                 </>
               )}
@@ -780,7 +683,8 @@ export function PortfolioViewerModal({
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
-        padding: '8px 16px'
+        padding: '12px 24px',
+        cursor: 'grab'
       }}>
         {loading && (
           <div style={{ textAlign: 'center', color: 'rgba(255, 255, 255, 0.7)' }}>
@@ -810,52 +714,8 @@ export function PortfolioViewerModal({
           </div>
         )}
 
-        {/* 2A. TRUE 3D STPAGEFLIP PHOTOBOOK STAGE */}
-        {!loading && !error && photos.length > 1 && transitionMode === 'flipbook' && (
-          <div style={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative'
-          }}>
-            {/* The StPageFlip mount container */}
-            <div 
-              ref={bookContainerRef} 
-              style={{
-                width: '100%',
-                maxHeight: '75vh',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }} 
-            />
-
-            {/* Interactive Gesture Hint Pill */}
-            <div style={{
-              marginTop: '12px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '6px 14px',
-              borderRadius: '20px',
-              background: 'rgba(255, 255, 255, 0.06)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
-              color: 'rgba(255, 255, 255, 0.75)',
-              fontSize: '11px',
-              fontWeight: 500
-            }}>
-              <Hand size={13} color="#F59E0B" />
-              <span>Geser atau tarik ujung halaman dengan mouse/jari untuk membalik buku</span>
-            </div>
-          </div>
-        )}
-
-        {/* 2B. PHOTO DISPLAY STAGE FOR THE OTHER 6 TRANSITION ENGINES */}
-        {!loading && !error && currentPhoto && (transitionMode !== 'flipbook' || photos.length === 1) && (
+        {/* PHOTO DISPLAY STAGE - ZERO WHITE BLOCKS, NATURAL SIZE FOLLOWING EACH PHOTO */}
+        {!loading && !error && currentPhoto && (
           <div 
             style={{
               position: 'relative',
@@ -868,7 +728,99 @@ export function PortfolioViewerModal({
               transformStyle: 'preserve-3d'
             }}
           >
-            {/* FINE-ART SOFT CROSSFADE */}
+            {/* A. 3D PHOTOBOOK PAGE TURN (DEFAULT - CLEAN NATURAL DIMENSIONS, ZERO WHITE BLOCKS) */}
+            {transitionMode === 'flipbook' && (
+              <div 
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  perspective: '1800px',
+                  transformStyle: 'preserve-3d'
+                }}
+              >
+                {/* Outgoing Page Turning Away in 3D */}
+                {isTransitioning && outgoingPhoto && (
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      zIndex: 20,
+                      transformOrigin: direction === 'next' ? 'left center' : 'right center',
+                      animation: direction === 'next' 
+                        ? 'sbFlipbookTurnNext 0.52s cubic-bezier(0.25, 1, 0.5, 1) forwards' 
+                        : 'sbFlipbookTurnPrev 0.52s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                      backfaceVisibility: 'hidden',
+                      WebkitBackfaceVisibility: 'hidden'
+                    }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={outgoingPhoto.fullUrl || outgoingPhoto.url}
+                      alt={outgoingPhoto.name}
+                      style={{
+                        maxHeight: '76vh',
+                        maxWidth: '88vw',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain',
+                        borderRadius: '12px',
+                        boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)',
+                        display: 'block'
+                      }}
+                    />
+                    {/* Dynamic Paper Lighting & Shadow Gradient Sheen */}
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: '12px',
+                      background: direction === 'next' 
+                        ? 'linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(255,255,255,0.15) 30%, rgba(0,0,0,0.6) 100%)' 
+                        : 'linear-gradient(to left, rgba(0,0,0,0.5) 0%, rgba(255,255,255,0.15) 30%, rgba(0,0,0,0.6) 100%)',
+                      animation: 'sbFlipSheen 0.52s ease forwards',
+                      pointerEvents: 'none'
+                    }} />
+                  </div>
+                )}
+
+                {/* Incoming / Current Page Settling Smoothly */}
+                <div style={{
+                  position: 'relative',
+                  zIndex: 10,
+                  animation: isTransitioning ? (
+                    direction === 'next' 
+                      ? 'sbFlipbookInNext 0.52s cubic-bezier(0.25, 1, 0.5, 1) forwards' 
+                      : 'sbFlipbookInPrev 0.52s cubic-bezier(0.25, 1, 0.5, 1) forwards'
+                  ) : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={currentPhoto.fullUrl || currentPhoto.url}
+                    alt={currentPhoto.name || album.title}
+                    style={{
+                      maxHeight: '76vh',
+                      maxWidth: '88vw',
+                      width: 'auto',
+                      height: 'auto',
+                      objectFit: 'contain',
+                      borderRadius: '12px',
+                      boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)',
+                      display: 'block'
+                    }}
+                    loading="eager"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* B. FINE-ART SOFT CROSSFADE */}
             {transitionMode === 'fade' && (
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {isTransitioning && outgoingPhoto && (
@@ -889,10 +841,10 @@ export function PortfolioViewerModal({
                       src={outgoingPhoto.fullUrl || outgoingPhoto.url}
                       alt={outgoingPhoto.name}
                       style={{
-                        maxHeight: '74vh',
-                        maxWidth: '86vw',
+                        maxHeight: '76vh',
+                        maxWidth: '88vw',
                         objectFit: 'contain',
-                        borderRadius: '14px'
+                        borderRadius: '12px'
                       }}
                     />
                   </div>
@@ -909,10 +861,10 @@ export function PortfolioViewerModal({
                     src={currentPhoto.fullUrl || currentPhoto.url}
                     alt={currentPhoto.name || album.title}
                     style={{
-                      maxHeight: '74vh',
-                      maxWidth: '86vw',
+                      maxHeight: '76vh',
+                      maxWidth: '88vw',
                       objectFit: 'contain',
-                      borderRadius: '14px',
+                      borderRadius: '12px',
                       boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)'
                     }}
                     loading="eager"
@@ -921,7 +873,7 @@ export function PortfolioViewerModal({
               </div>
             )}
 
-            {/* EDITORIAL HORIZONTAL PUSH */}
+            {/* C. EDITORIAL HORIZONTAL PUSH */}
             {transitionMode === 'slide_horizontal' && (
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
                 {isTransitioning && outgoingPhoto && (
@@ -941,10 +893,10 @@ export function PortfolioViewerModal({
                       src={outgoingPhoto.fullUrl || outgoingPhoto.url}
                       alt={outgoingPhoto.name}
                       style={{
-                        maxHeight: '74vh',
-                        maxWidth: '86vw',
+                        maxHeight: '76vh',
+                        maxWidth: '88vw',
                         objectFit: 'contain',
-                        borderRadius: '14px'
+                        borderRadius: '12px'
                       }}
                     />
                   </div>
@@ -961,10 +913,10 @@ export function PortfolioViewerModal({
                     src={currentPhoto.fullUrl || currentPhoto.url}
                     alt={currentPhoto.name || album.title}
                     style={{
-                      maxHeight: '74vh',
-                      maxWidth: '86vw',
+                      maxHeight: '76vh',
+                      maxWidth: '88vw',
                       objectFit: 'contain',
-                      borderRadius: '14px',
+                      borderRadius: '12px',
                       boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)'
                     }}
                     loading="eager"
@@ -973,7 +925,7 @@ export function PortfolioViewerModal({
               </div>
             )}
 
-            {/* CINEMATIC KEN BURNS DRIFT */}
+            {/* D. CINEMATIC KEN BURNS DRIFT */}
             {transitionMode === 'zoom_kenburns' && (
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{
@@ -986,10 +938,10 @@ export function PortfolioViewerModal({
                     src={currentPhoto.fullUrl || currentPhoto.url}
                     alt={currentPhoto.name || album.title}
                     style={{
-                      maxHeight: '74vh',
-                      maxWidth: '86vw',
+                      maxHeight: '76vh',
+                      maxWidth: '88vw',
                       objectFit: 'contain',
-                      borderRadius: '14px',
+                      borderRadius: '12px',
                       boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)'
                     }}
                     loading="eager"
@@ -998,7 +950,7 @@ export function PortfolioViewerModal({
               </div>
             )}
 
-            {/* 3D ROTATING PERSPECTIVE CUBE */}
+            {/* E. 3D ROTATING PERSPECTIVE CUBE */}
             {transitionMode === 'cube_3d' && (
               <div style={{
                 position: 'relative',
@@ -1025,10 +977,10 @@ export function PortfolioViewerModal({
                       src={outgoingPhoto.fullUrl || outgoingPhoto.url}
                       alt={outgoingPhoto.name}
                       style={{
-                        maxHeight: '74vh',
-                        maxWidth: '86vw',
+                        maxHeight: '76vh',
+                        maxWidth: '88vw',
                         objectFit: 'contain',
-                        borderRadius: '14px'
+                        borderRadius: '12px'
                       }}
                     />
                   </div>
@@ -1047,10 +999,10 @@ export function PortfolioViewerModal({
                     src={currentPhoto.fullUrl || currentPhoto.url}
                     alt={currentPhoto.name || album.title}
                     style={{
-                      maxHeight: '74vh',
-                      maxWidth: '86vw',
+                      maxHeight: '76vh',
+                      maxWidth: '88vw',
                       objectFit: 'contain',
-                      borderRadius: '14px',
+                      borderRadius: '12px',
                       boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)'
                     }}
                     loading="eager"
@@ -1059,7 +1011,7 @@ export function PortfolioViewerModal({
               </div>
             )}
 
-            {/* CAMERA SHUTTER BLADE WIPE */}
+            {/* F. CAMERA SHUTTER BLADE WIPE */}
             {transitionMode === 'curtain_wipe' && (
               <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{
@@ -1072,10 +1024,10 @@ export function PortfolioViewerModal({
                     src={currentPhoto.fullUrl || currentPhoto.url}
                     alt={currentPhoto.name || album.title}
                     style={{
-                      maxHeight: '74vh',
-                      maxWidth: '86vw',
+                      maxHeight: '76vh',
+                      maxWidth: '88vw',
                       objectFit: 'contain',
-                      borderRadius: '14px',
+                      borderRadius: '12px',
                       boxShadow: '0 25px 60px rgba(0, 0, 0, 0.85)'
                     }}
                     loading="eager"
@@ -1084,7 +1036,7 @@ export function PortfolioViewerModal({
               </div>
             )}
 
-            {/* VINTAGE 35MM ANALOG REEL */}
+            {/* G. VINTAGE 35MM ANALOG REEL */}
             {transitionMode === 'film_reel' && (
               <div style={{
                 position: 'relative',
@@ -1250,7 +1202,7 @@ export function PortfolioViewerModal({
                 zIndex: 40,
                 transition: 'all 0.15s ease'
               }}
-              title="Foto / Halaman Sebelumnya (Panah Kiri)"
+              title="Foto Sebelumnya (Panah Kiri)"
             >
               <ChevronLeft size={28} />
             </button>
@@ -1278,7 +1230,7 @@ export function PortfolioViewerModal({
                 zIndex: 40,
                 transition: 'all 0.15s ease'
               }}
-              title="Foto / Halaman Berikutnya (Panah Kanan)"
+              title="Foto Berikutnya (Panah Kanan)"
             >
               <ChevronRight size={28} />
             </button>
@@ -1325,7 +1277,7 @@ export function PortfolioViewerModal({
                   transform: idx === currentIndex ? 'scale(1.08)' : 'scale(1)',
                   boxShadow: idx === currentIndex ? '0 0 12px rgba(245, 158, 11, 0.4)' : 'none'
                 }}
-                title={`Pindah ke halaman ${idx + 1}`}
+                title={`Pindah ke foto ${idx + 1}`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
