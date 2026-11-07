@@ -365,7 +365,20 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
       }}>
         <div style={{ maxWidth: '1120px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '15px', fontWeight: 800, color: textColor, letterSpacing: '-0.02em' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img 
+              src="/logo.png" 
+              alt="Sudut Bingkai Logo" 
+              style={{ 
+                height: '24px', 
+                width: '24px', 
+                objectFit: 'contain', 
+                borderRadius: '6px',
+                display: 'block',
+                flexShrink: 0 
+              }} 
+            />
+            <span style={{ fontSize: '15px', fontWeight: 800, color: textColor, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center' }}>
               Sudut<span style={{ color: accentColor }}>Bingkai</span>
             </span>
             <span style={{ fontSize: '11px', color: mutedTextColor, background: isObsidian ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
@@ -2101,8 +2114,15 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         <div>
           © {new Date().getFullYear()} {vendor.companyName || vendor.name}. Portofolio Resmi.
         </div>
-        <div>
-          Didukung oleh <strong style={{ color: accentColor }}>SudutBingkai</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span>Didukung oleh</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img 
+            src="/logo.png" 
+            alt="Sudut Bingkai" 
+            style={{ width: '16px', height: '16px', objectFit: 'contain', borderRadius: '4px' }} 
+          />
+          <strong style={{ color: accentColor }}>SudutBingkai</strong>
         </div>
       </footer>
 
