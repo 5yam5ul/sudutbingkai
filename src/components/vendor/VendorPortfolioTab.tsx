@@ -1371,8 +1371,8 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 {
                   key: 'flipbook',
                   icon: '📖',
-                  title: '3D Photobook Page Flip',
-                  desc: 'Lembar foto membalik 3D realistis pada poros lipatan dengan bayangan kertas. Ukuran & rasio 100% mengikuti foto di folder tanpa ada blok putih.',
+                  title: '3D Real Physical Photobook',
+                  desc: 'Simulasi fisika kertas nyata: ujung kertas bisa ditarik/dilepas mouse atau jari. Ukuran dinamis mengikuti foto asli tanpa blok putih.',
                   badge: 'DEFAULT UTAMA'
                 },
                 {
