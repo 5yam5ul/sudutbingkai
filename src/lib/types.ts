@@ -504,6 +504,9 @@ export interface VendorPortfolioTheme {
   // 4. Gallery Grid Layout
   gridLayout?: 'grid' | 'masonry' | 'filmstrip' | 'fullwidth_rows' | 'bento_mosaic' | 'carousel_stage' | 'compact_list' | 'diagonal_flow';
 
+  // 4b. Slideshow Viewer Transition Animation (Default: flipbook)
+  slideshowTransition?: 'flipbook' | 'fade' | 'slide_horizontal' | 'zoom_kenburns' | 'cube_3d' | 'curtain_wipe' | 'film_reel';
+
   // 5. Background Audio Player
   audioUrl?: string;
   audioTitle?: string;

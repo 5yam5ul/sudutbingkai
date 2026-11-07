@@ -332,6 +332,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
     bgPreset: 'alabaster',
     heroStyle: 'social',
     gridLayout: 'grid',
+    slideshowTransition: 'flipbook',
     fontStyle: 'sans',
     accentColor: '#C27803',
     enableStickyMobileBar: true,
@@ -1344,6 +1345,135 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                           </span>
                         </div>
                       </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* SECTION 3: ANIMASI SLIDESHOW FOTO ALBUM */}
+          <div className="glass-card" style={{ padding: '32px', borderRadius: '24px' }}>
+            <div style={{ marginBottom: '20px' }}>
+              <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                TRANSISI MODAL VIEWER FOTO
+              </span>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#1D1D1F', margin: '4px 0 0 0' }}>
+                Gaya Animasi Slideshow Album
+              </h3>
+              <p style={{ fontSize: '13.5px', color: '#6E6E73', margin: '4px 0 0 0' }}>
+                Pilih efek transisi visual saat calon klien membuka foto album di layar penuh. <strong>Default: 📖 3D Flipbook Photobook</strong>.
+              </p>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
+              {[
+                {
+                  key: 'flipbook',
+                  icon: '📖',
+                  title: '3D Flipbook Photobook',
+                  desc: 'Lembaran photobook 3D membalik realistis dengan lekukan bayangan tulang buku & tekstur kertas.',
+                  badge: 'DEFAULT UTAMA'
+                },
+                {
+                  key: 'fade',
+                  icon: '✨',
+                  title: 'Fine-Art Soft Crossfade',
+                  desc: 'Peralihan larut lembut tanpa hentakan ala eksibisi pameran seni museum modern.',
+                  badge: 'Minimalis Seni'
+                },
+                {
+                  key: 'slide_horizontal',
+                  icon: '↔️',
+                  title: 'Editorial Horizontal Push',
+                  desc: 'Geser horizontal presisi tinggi dengan akselerasi kurva kelembutan Apple.',
+                  badge: 'Editorial Modern'
+                },
+                {
+                  key: 'zoom_kenburns',
+                  icon: '🎥',
+                  title: 'Cinematic Ken Burns Drift',
+                  desc: 'Skala zoom perlahan melayang sinematik dengan crossfade puitis ala film dokumenter.',
+                  badge: 'Sinematik Film'
+                },
+                {
+                  key: 'cube_3d',
+                  icon: '🧊',
+                  title: '3D Rotating Dimensional Cube',
+                  desc: 'Rotasi perspektif kubus 3D geometris dengan kedalaman bayangan ruang nyata.',
+                  badge: 'Futuristik 3D'
+                },
+                {
+                  key: 'curtain_wipe',
+                  icon: '📷',
+                  title: 'Camera Shutter Blade Wipe',
+                  desc: 'Efek bilah rana kamera mekanik yang membuka dan menyapu dari poros tengah.',
+                  badge: 'Rana Kamera'
+                },
+                {
+                  key: 'film_reel',
+                  icon: '🎞️',
+                  title: 'Vintage 35mm Analog Reel',
+                  desc: 'Gulungan film klise analog vertikal dengan aksen lubang perforasi seluloid klasik.',
+                  badge: 'Retro Analog'
+                }
+              ].map((animOption) => {
+                const isSelected = (theme.slideshowTransition || 'flipbook') === animOption.key;
+                return (
+                  <div
+                    key={animOption.key}
+                    onClick={() => setTheme(prev => ({ ...prev, slideshowTransition: animOption.key as any }))}
+                    style={{
+                      padding: '20px',
+                      borderRadius: '16px',
+                      cursor: 'pointer',
+                      border: isSelected ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
+                      background: isSelected ? 'rgba(194, 120, 3, 0.05)' : '#FFFFFF',
+                      boxShadow: isSelected ? '0 10px 24px rgba(194, 120, 3, 0.16)' : '0 2px 8px rgba(0,0,0,0.02)',
+                      transition: 'all 0.2s ease',
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between'
+                    }}
+                  >
+                    <div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '20px' }}>{animOption.icon}</span>
+                          <span style={{ fontSize: '14.5px', fontWeight: 700, color: '#1D1D1F' }}>
+                            {animOption.title}
+                          </span>
+                        </div>
+                        {animOption.badge && (
+                          <span style={{
+                            fontSize: '9.5px',
+                            fontWeight: 700,
+                            padding: '3px 7px',
+                            borderRadius: '6px',
+                            background: animOption.key === 'flipbook' ? '#F59E0B' : 'rgba(0,0,0,0.06)',
+                            color: animOption.key === 'flipbook' ? '#000000' : '#64748B'
+                          }}>
+                            {animOption.badge}
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ fontSize: '12.5px', color: '#6E6E73', margin: 0, lineHeight: 1.45 }}>
+                        {animOption.desc}
+                      </p>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '16px', paddingTop: '10px', borderTop: '1px solid rgba(0,0,0,0.06)' }}>
+                      <span style={{ fontSize: '11px', color: isSelected ? '#C27803' : '#94A3B8', fontWeight: 600 }}>
+                        {isSelected ? '✓ Terpilih sebagai default' : 'Klik untuk memilih'}
+                      </span>
+                      <div style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '50%',
+                        border: isSelected ? '6px solid #C27803' : '2px solid #CBD5E1',
+                        transition: 'all 0.15s ease'
+                      }} />
                     </div>
                   </div>
                 );

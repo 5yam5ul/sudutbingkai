@@ -2299,6 +2299,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
           vendorLogo={vendor.logoUrl}
           whatsappUrl={whatsappUrl}
           watermarkEnabled={theme.watermarkEnabled}
+          defaultTransition={theme.slideshowTransition || 'flipbook'}
           onClose={() => setSelectedAlbum(null)}
         />
       )}
