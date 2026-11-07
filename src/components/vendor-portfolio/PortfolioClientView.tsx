@@ -292,24 +292,21 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         padding: '12px 24px'
       }}>
         <div style={{ maxWidth: '1120px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               src="/logo.png" 
               alt="Sudut Bingkai Logo" 
               style={{ 
-                height: '24px', 
-                width: '24px', 
+                height: '32px', 
+                width: '32px', 
                 objectFit: 'contain', 
-                borderRadius: '6px',
+                borderRadius: '8px',
                 display: 'block',
                 flexShrink: 0 
               }} 
             />
-            <span style={{ fontSize: '15px', fontWeight: 800, color: textColor, letterSpacing: '-0.02em', display: 'flex', alignItems: 'center' }}>
-              Sudut<span style={{ color: accentColor }}>Bingkai</span>
-            </span>
-            <span style={{ fontSize: '11px', color: mutedTextColor, background: isObsidian ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', padding: '2px 8px', borderRadius: '6px', fontWeight: 600 }}>
+            <span style={{ fontSize: '11px', color: mutedTextColor, background: isObsidian ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
               Official Partner
             </span>
           </Link>
@@ -2042,15 +2039,14 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         <div>
           © {new Date().getFullYear()} {vendor.companyName || vendor.name}. Portofolio Resmi.
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span>Didukung oleh</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             src="/logo.png" 
             alt="Sudut Bingkai" 
-            style={{ width: '16px', height: '16px', objectFit: 'contain', borderRadius: '4px' }} 
+            style={{ width: '22px', height: '22px', objectFit: 'contain', borderRadius: '5px' }} 
           />
-          <strong style={{ color: accentColor }}>SudutBingkai</strong>
         </div>
       </footer>
 
