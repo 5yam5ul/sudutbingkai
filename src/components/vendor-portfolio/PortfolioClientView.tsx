@@ -2098,10 +2098,18 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                         <div className="vp-album-card-cover" style={{ position: 'relative', width: '100%', height: isBentoHero ? '320px' : '240px', overflow: 'hidden' }}>
                           {album.coverImageUrl ? (
                             // eslint-disable-next-line @next/next/no-img-element
-                            <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                            <img 
+                              src={album.coverImageUrl} 
+                              alt={album.title} 
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                              loading="lazy" 
+                            />
                           ) : (
-                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
-                              <BookOpen size={36} />
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #18181C 0%, #25252D 100%)', color: '#86868B' }}>
+                              <BookOpen size={36} color={accentColor} />
                             </div>
                           )}
                           <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '18px', background: 'linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(255,255,255,0.15) 50%, rgba(0,0,0,0.3) 100%)', boxShadow: '1px 0 3px rgba(0,0,0,0.3)' }} />
@@ -2297,10 +2305,17 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                       >
                         {album.coverImageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img 
+                            src={album.coverImageUrl} 
+                            alt={album.title} 
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                            }}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                          />
                         ) : (
-                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
-                            <Camera size={36} />
+                          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(135deg, #18181C 0%, #25252D 100%)', color: '#86868B', gap: '8px' }}>
+                            <Camera size={36} color={accentColor} />
                           </div>
                         )}
                         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />

@@ -611,13 +611,13 @@ export function PortfolioViewerModal({
             <h3 className="vp-modal-title" style={{ fontSize: '15.5px', fontWeight: 700, margin: 0, color: '#FFFFFF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
               {album.title}
             </h3>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'rgba(255, 255, 255, 0.65)' }}>
-              <span>{vendorName}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: 'rgba(255, 255, 255, 0.65)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{vendorName}</span>
               {photos.length > 0 && (
                 <>
                   <span>•</span>
-                  <span style={{ color: '#F59E0B', fontWeight: 600 }}>
-                    Halaman {currentIndex + 1} dari {photos.length}
+                  <span style={{ color: '#F59E0B', fontWeight: 600, flexShrink: 0 }}>
+                    Hal. {currentIndex + 1}/{photos.length}
                   </span>
                 </>
               )}
@@ -626,7 +626,7 @@ export function PortfolioViewerModal({
         </div>
 
         {/* Right Header Controls: Mode Selector Dropdown, Fullscreen, Close */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
           {/* SLIDESHOW TRANSITION SELECTOR PILL */}
           <div ref={transitionMenuRef} style={{ position: 'relative' }}>
             <button
@@ -636,7 +636,7 @@ export function PortfolioViewerModal({
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '8px',
+                gap: '6px',
                 padding: '8px 14px',
                 borderRadius: '12px',
                 background: 'rgba(255, 255, 255, 0.08)',
@@ -652,12 +652,15 @@ export function PortfolioViewerModal({
               title="Ganti Mode Animasi Slideshow"
             >
               <span style={{ fontSize: '14px' }}>{currentTransitionConfig.icon}</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span className="vp-modal-transition-label" style={{ color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>Mode:</span>
                 <span style={{ color: '#FBBF24', fontWeight: 700 }}>{currentTransitionConfig.shortName}</span>
               </span>
+              <span className="mobile-only" style={{ color: '#FBBF24', fontWeight: 700, fontSize: '11px' }}>
+                {currentTransitionConfig.id === 'flipbook' ? '3D' : currentTransitionConfig.shortName.split(' ')[0]}
+              </span>
               <ChevronDown 
-                size={14} 
+                size={13} 
                 style={{ 
                   color: 'rgba(255,255,255,0.5)', 
                   transform: isTransitionMenuOpen ? 'rotate(180deg)' : 'rotate(0deg)',
@@ -672,7 +675,8 @@ export function PortfolioViewerModal({
                 position: 'absolute',
                 top: 'calc(100% + 8px)',
                 right: 0,
-                width: '340px',
+                width: '320px',
+                maxWidth: 'calc(100vw - 24px)',
                 background: '#151518',
                 borderRadius: '16px',
                 border: '1px solid rgba(255, 255, 255, 0.15)',
@@ -792,15 +796,18 @@ export function PortfolioViewerModal({
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '6px',
               fontWeight: 600,
               fontSize: '12px',
+              minWidth: '38px',
+              minHeight: '38px',
               transition: 'all 0.15s ease'
             }}
             title="Tutup (Esc)"
           >
             <X size={16} />
-            <span>Tutup</span>
+            <span className="desktop-only">Tutup</span>
           </button>
         </div>
       </div>

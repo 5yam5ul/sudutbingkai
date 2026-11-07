@@ -82,16 +82,15 @@ export async function GET(request: Request) {
         name: f.name
       }));
 
-    // Filter media items that have thumbnail links
+    // Filter media items that have thumbnail links (use permanent lh3.googleusercontent.com/d/ URLs)
     const photos = rawFiles
-      .filter((f: any) => f.mimeType !== 'application/vnd.google-apps.folder' && f.thumbnailLink)
+      .filter((f: any) => f.mimeType !== 'application/vnd.google-apps.folder' && (f.thumbnailLink || f.id))
       .map((f: any) => ({
         id: f.id,
         name: f.name,
-        // High efficiency 500px for grid view
-        url: f.thumbnailLink ? f.thumbnailLink.replace('=s220', '=s500') : '',
-        // Master QHD 1600px for lightbox inspection
-        fullUrl: f.thumbnailLink ? f.thumbnailLink.replace('=s220', '=s1600') : ''
+        // Permanent Google CDN URL: never expires with 403
+        url: `https://lh3.googleusercontent.com/d/${f.id}=s500`,
+        fullUrl: `https://lh3.googleusercontent.com/d/${f.id}=s1600`
       }));
 
     const responsePayload = {
