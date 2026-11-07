@@ -555,6 +555,7 @@ export interface VendorPortfolioTheme {
   videoHighlightUrl?: string;
   videoHighlightTitle?: string;
   videoHighlights?: VendorPortfolioVideo[];
+  videoHighlightLayout?: 'carousel_slider' | 'cinema_imax' | 'side_split' | 'bento_grid';
 
   // 9. Typography & Accent Color
   fontStyle?: 'sans' | 'serif' | 'mono' | 'playfair' | 'cinzel' | 'syne' | 'jakarta';

@@ -1190,219 +1190,542 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         )}
       </div>
 
-      {/* 3. OPTIONAL MODULAR SECTION: VIDEO HIGHLIGHT (SWIPEABLE HORIZONTAL SLIDER) */}
-      {theme.showVideoHighlight && highlightVideos.length > 0 && (
-        <div style={{ maxWidth: '1120px', margin: '48px auto 0', padding: '0 24px' }}>
-          <div style={{ 
-            marginBottom: '16px', 
-            display: 'flex', 
-            alignItems: 'flex-end', 
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '12px'
-          }}>
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                <Video size={13} />
-                <span>CINEMATIC HIGHLIGHT</span>
-                {highlightVideos[activeVideoIdx]?.category && (
-                  <span style={{ 
-                    background: isObsidian ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', 
-                    color: textColor,
-                    padding: '2px 8px', 
-                    borderRadius: '5px',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    textTransform: 'none',
-                    letterSpacing: 'normal'
-                  }}>
-                    {highlightVideos[activeVideoIdx]?.category}
-                  </span>
-                )}
-              </div>
-              <h2 style={{ fontSize: '22px', fontWeight: 800, color: textColor, margin: '6px 0 0 0' }}>
-                {highlightVideos[activeVideoIdx]?.title || theme.videoHighlightTitle || 'Wedding Film Showcase'}
-              </h2>
-            </div>
+      {/* 3. OPTIONAL MODULAR SECTION: VIDEO HIGHLIGHT (4 DYNAMIC LAYOUT STYLES) */}
+      {theme.showVideoHighlight && highlightVideos.length > 0 && (() => {
+        const videoLayout = theme.videoHighlightLayout || 'carousel_slider';
 
-            {/* Slider Controls (if > 1 video) */}
-            {highlightVideos.length > 1 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: mutedTextColor, marginRight: '4px' }}>
-                  {activeVideoIdx + 1} / {highlightVideos.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={handlePrevVideo}
-                  disabled={activeVideoIdx === 0}
-                  className="glass-card"
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: activeVideoIdx === 0 ? 'not-allowed' : 'pointer',
-                    opacity: activeVideoIdx === 0 ? 0.35 : 1,
-                    border: `1px solid ${borderColor}`,
-                    color: textColor,
-                    background: isObsidian ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                    transition: 'all 0.2s'
-                  }}
-                  aria-label="Video Sebelumnya"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleNextVideo}
-                  disabled={activeVideoIdx === highlightVideos.length - 1}
-                  className="glass-card"
-                  style={{
-                    width: '36px',
-                    height: '36px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: activeVideoIdx === highlightVideos.length - 1 ? 'not-allowed' : 'pointer',
-                    opacity: activeVideoIdx === highlightVideos.length - 1 ? 0.35 : 1,
-                    border: `1px solid ${borderColor}`,
-                    color: textColor,
-                    background: isObsidian ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                    transition: 'all 0.2s'
-                  }}
-                  aria-label="Video Berikutnya"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            )}
-          </div>
-
-          {/* Video Selector Tabs (if > 1 video) */}
-          {highlightVideos.length > 1 && (
+        // 1. IMAX EDGE-TO-EDGE THEATER
+        if (videoLayout === 'cinema_imax') {
+          return (
             <div style={{ 
-              display: 'flex', 
-              gap: '8px', 
-              overflowX: 'auto', 
-              paddingBottom: '10px', 
-              marginBottom: '14px', 
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none'
+              width: '100vw', 
+              marginLeft: 'calc(-50vw + 50%)', 
+              background: isObsidian ? '#050508' : '#0B0D12', 
+              padding: '60px 0 70px', 
+              marginTop: '48px',
+              position: 'relative',
+              overflow: 'hidden'
             }}>
-              {highlightVideos.map((vid, idx) => {
-                const isActive = activeVideoIdx === idx;
-                return (
-                  <button
-                    key={vid.id || idx}
-                    type="button"
-                    onClick={() => handleScrollToVideo(idx)}
-                    style={{
-                      padding: '7px 16px',
-                      borderRadius: '999px',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      whiteSpace: 'nowrap',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      border: isActive ? `1px solid ${accentColor}` : `1px solid ${borderColor}`,
-                      background: isActive ? accentColor : (isObsidian ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'),
-                      color: isActive ? '#FFFFFF' : textColor,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                  >
-                    <span>{vid.title || `Video #${idx + 1}`}</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
+              {/* Cinematic Ambient Glow */}
+              <div style={{
+                position: 'absolute',
+                top: '15%',
+                left: '20%',
+                right: '20%',
+                height: '50%',
+                background: `radial-gradient(ellipse at center, ${accentColor}30 0%, transparent 70%)`,
+                filter: 'blur(70px)',
+                pointerEvents: 'none'
+              }} />
 
-          {/* Swipeable Video Slider Track */}
-          <div
-            ref={videoSliderRef}
-            onScroll={handleVideoScroll}
-            style={{
-              display: 'flex',
-              gap: '24px',
-              overflowX: 'auto',
-              scrollSnapType: 'x mandatory',
-              WebkitOverflowScrolling: 'touch',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-              borderRadius: '24px'
-            }}
-          >
-            {highlightVideos.map((vid, idx) => (
-              <div
-                key={vid.id || idx}
-                style={{
-                  flex: '0 0 100%',
+              <div style={{ maxWidth: '1180px', margin: '0 auto', padding: '0 24px', position: 'relative', zIndex: 2 }}>
+                <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                      <Video size={13} />
+                      <span>IMAX CINEMA EXPERIENCE</span>
+                      {highlightVideos[activeVideoIdx]?.category && (
+                        <span style={{ 
+                          background: 'rgba(255,255,255,0.1)', 
+                          color: '#FFFFFF',
+                          padding: '2px 8px', 
+                          borderRadius: '5px',
+                          fontSize: '10px',
+                          fontWeight: 600,
+                          textTransform: 'none',
+                          letterSpacing: 'normal'
+                        }}>
+                          {highlightVideos[activeVideoIdx]?.category}
+                        </span>
+                      )}
+                    </div>
+                    <h2 style={{ fontSize: '26px', fontWeight: 800, color: '#FFFFFF', margin: '6px 0 0 0' }}>
+                      {highlightVideos[activeVideoIdx]?.title || theme.videoHighlightTitle || 'Wedding Film Showcase'}
+                    </h2>
+                  </div>
+
+                  {highlightVideos.length > 1 && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.6)', marginRight: '4px' }}>
+                        {activeVideoIdx + 1} / {highlightVideos.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handlePrevVideo}
+                        disabled={activeVideoIdx === 0}
+                        style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: activeVideoIdx === 0 ? 'not-allowed' : 'pointer',
+                          opacity: activeVideoIdx === 0 ? 0.3 : 1,
+                          border: '1px solid rgba(255,255,255,0.18)',
+                          color: '#FFFFFF',
+                          background: 'rgba(255,255,255,0.08)',
+                          transition: 'all 0.2s'
+                        }}
+                        aria-label="Video Sebelumnya"
+                      >
+                        <ChevronLeft size={18} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleNextVideo}
+                        disabled={activeVideoIdx === highlightVideos.length - 1}
+                        style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '50%',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: activeVideoIdx === highlightVideos.length - 1 ? 'not-allowed' : 'pointer',
+                          opacity: activeVideoIdx === highlightVideos.length - 1 ? 0.3 : 1,
+                          border: '1px solid rgba(255,255,255,0.18)',
+                          color: '#FFFFFF',
+                          background: 'rgba(255,255,255,0.08)',
+                          transition: 'all 0.2s'
+                        }}
+                        aria-label="Video Berikutnya"
+                      >
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Theater Screen Frame */}
+                <div style={{
+                  position: 'relative',
                   width: '100%',
-                  scrollSnapAlign: 'center',
+                  paddingBottom: '56.25%',
+                  height: 0,
                   borderRadius: '24px',
                   overflow: 'hidden',
-                  boxShadow: '0 16px 40px rgba(0,0,0,0.14)',
-                  background: isObsidian ? '#000000' : '#1C1C1E',
-                  position: 'relative'
-                }}
-              >
-                <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0 }}>
+                  boxShadow: '0 28px 60px rgba(0,0,0,0.6), 0 0 40px rgba(0,0,0,0.4)',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}>
                   <iframe
-                    src={getEmbedVideoUrl(vid.url)}
-                    title={vid.title || `Highlight Video ${idx + 1}`}
+                    src={getEmbedVideoUrl(highlightVideos[activeVideoIdx]?.url)}
+                    title={highlightVideos[activeVideoIdx]?.title || 'IMAX Feature Film'}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                  />
+                </div>
+
+                {/* Playlist selector below (if > 1 video) */}
+                {highlightVideos.length > 1 && (
+                  <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', marginTop: '20px', scrollbarWidth: 'none', paddingBottom: '6px' }}>
+                    {highlightVideos.map((vid, idx) => {
+                      const isActive = activeVideoIdx === idx;
+                      return (
+                        <button
+                          key={vid.id || idx}
+                          type="button"
+                          onClick={() => setActiveVideoIdx(idx)}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px 18px',
+                            borderRadius: '14px',
+                            border: isActive ? `1px solid ${accentColor}` : '1px solid rgba(255,255,255,0.12)',
+                            background: isActive ? 'rgba(194, 120, 3, 0.25)' : 'rgba(255,255,255,0.06)',
+                            color: '#FFFFFF',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: isActive ? accentColor : 'rgba(255,255,255,0.5)' }}>
+                            {idx + 1 < 10 ? `0${idx + 1}` : idx + 1}
+                          </span>
+                          <div style={{ textAlign: 'left' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 600 }}>{vid.title || `Film #${idx + 1}`}</div>
+                            {vid.category && <div style={{ fontSize: '10.5px', color: 'rgba(255,255,255,0.5)' }}>{vid.category}</div>}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        }
+
+        // 2. EDITORIAL SPLIT STORY
+        if (videoLayout === 'side_split') {
+          return (
+            <div style={{ maxWidth: '1120px', margin: '48px auto 0', padding: '0 24px' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '36px',
+                alignItems: 'center',
+                padding: '36px',
+                borderRadius: '28px',
+                background: isObsidian ? 'rgba(24, 24, 28, 0.7)' : 'rgba(255, 255, 255, 0.7)',
+                border: `1px solid ${borderColor}`,
+                backdropFilter: 'blur(20px)',
+                boxShadow: '0 16px 40px rgba(0,0,0,0.06)'
+              }}>
+                {/* Left Column: Story Details & Playlist */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                    <Video size={13} />
+                    <span>EDITORIAL FILM STORY</span>
+                  </div>
+                  <h2 style={{ fontSize: '26px', fontWeight: 800, color: textColor, margin: 0, lineHeight: 1.25 }}>
+                    {highlightVideos[activeVideoIdx]?.title || theme.videoHighlightTitle || 'Wedding Film Showcase'}
+                  </h2>
+                  {highlightVideos[activeVideoIdx]?.category && (
+                    <span style={{ display: 'inline-block', alignSelf: 'flex-start', fontSize: '11.5px', fontWeight: 600, color: accentColor, background: isObsidian ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', padding: '3px 10px', borderRadius: '6px' }}>
+                      {highlightVideos[activeVideoIdx]?.category}
+                    </span>
+                  )}
+                  <p style={{ fontSize: '13.5px', color: mutedTextColor, lineHeight: 1.6, margin: 0 }}>
+                    Karya dokumentasi visual sinematik berkualitas tinggi yang mengabadikan setiap emosi, tatapan hangat, dan janji suci pernikahan Anda dalam estetika film layar lebar.
+                  </p>
+
+                  {/* Playlist Series */}
+                  {highlightVideos.length > 1 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                      <span style={{ fontSize: '11.5px', fontWeight: 700, color: textColor, letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                        Daftar Seri Video ({highlightVideos.length})
+                      </span>
+                      {highlightVideos.map((vid, idx) => {
+                        const isActive = activeVideoIdx === idx;
+                        return (
+                          <div
+                            key={vid.id || idx}
+                            onClick={() => setActiveVideoIdx(idx)}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '10px 14px',
+                              borderRadius: '12px',
+                              cursor: 'pointer',
+                              border: isActive ? `1px solid ${accentColor}` : `1px solid ${borderColor}`,
+                              background: isActive ? (isObsidian ? 'rgba(194,120,3,0.15)' : 'rgba(194,120,3,0.08)') : 'transparent',
+                              transition: 'all 0.2s'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: 700, color: isActive ? accentColor : mutedTextColor }}>
+                                #{idx + 1}
+                              </span>
+                              <span style={{ fontSize: '13px', fontWeight: isActive ? 700 : 500, color: textColor }}>
+                                {vid.title || `Video Highlight #${idx + 1}`}
+                              </span>
+                            </div>
+                            <span style={{ fontSize: '11px', color: isActive ? accentColor : mutedTextColor, fontWeight: 600 }}>
+                              {isActive ? '▶ Sedang Tayang' : 'Pilih'}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Right Column: Video Screen */}
+                <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, borderRadius: '20px', overflow: 'hidden', boxShadow: '0 16px 40px rgba(0,0,0,0.18)' }}>
+                  <iframe
+                    src={getEmbedVideoUrl(highlightVideos[activeVideoIdx]?.url)}
+                    title={highlightVideos[activeVideoIdx]?.title || 'Main Highlight Video'}
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                     style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
                   />
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          );
+        }
 
-          {/* Dots Indicator & Swipe Tip (if > 1 video) */}
-          {highlightVideos.length > 1 && (
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'space-between',
-              marginTop: '16px',
-              flexWrap: 'wrap',
-              gap: '12px'
-            }}>
-              <span style={{ fontSize: '11.5px', color: mutedTextColor, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Sparkles size={13} style={{ color: accentColor }} />
-                <span>Geser ke samping untuk melihat video lainnya</span>
-              </span>
+        // 3. BENTO VIDEO MOSAIC
+        if (videoLayout === 'bento_grid') {
+          return (
+            <div style={{ maxWidth: '1120px', margin: '48px auto 0', padding: '0 24px' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  <Video size={13} />
+                  <span>CINEMATIC HIGHLIGHT MOSAIC</span>
+                </div>
+                <h2 style={{ fontSize: '22px', fontWeight: 800, color: textColor, margin: '6px 0 0 0' }}>
+                  {theme.videoHighlightTitle || 'Wedding Film Showcase'}
+                </h2>
+              </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                {highlightVideos.map((_, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => handleScrollToVideo(i)}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: highlightVideos.length === 1 ? '1fr' : 'repeat(auto-fit, minmax(320px, 1fr))',
+                gap: '24px'
+              }}>
+                {highlightVideos.map((vid, idx) => (
+                  <div
+                    key={vid.id || idx}
                     style={{
-                      width: activeVideoIdx === i ? '22px' : '7px',
-                      height: '7px',
-                      borderRadius: '999px',
-                      background: activeVideoIdx === i ? accentColor : (isObsidian ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
-                      border: 'none',
-                      padding: 0,
-                      cursor: 'pointer',
-                      transition: 'all 0.25s ease'
+                      borderRadius: '22px',
+                      overflow: 'hidden',
+                      border: `1px solid ${borderColor}`,
+                      background: isObsidian ? 'rgba(24, 24, 28, 0.8)' : '#FFFFFF',
+                      boxShadow: '0 12px 30px rgba(0,0,0,0.08)',
+                      display: 'flex',
+                      flexDirection: 'column'
                     }}
-                    aria-label={`Lihat video ${i + 1}`}
-                  />
+                  >
+                    <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0, background: '#000000' }}>
+                      <iframe
+                        src={getEmbedVideoUrl(vid.url)}
+                        title={vid.title || `Video ${idx + 1}`}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                      />
+                    </div>
+                    <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <h3 style={{ fontSize: '14.5px', fontWeight: 700, color: textColor, margin: 0 }}>
+                          {vid.title || `Cinematic Film #${idx + 1}`}
+                        </h3>
+                        {vid.category && (
+                          <span style={{ fontSize: '11.5px', color: mutedTextColor, marginTop: '2px', display: 'block' }}>
+                            {vid.category}
+                          </span>
+                        )}
+                      </div>
+                      <span style={{ fontSize: '10.5px', fontWeight: 700, color: accentColor, background: isObsidian ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', padding: '3px 8px', borderRadius: '6px' }}>
+                        #{idx + 1}
+                      </span>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
-          )}
-        </div>
-      )}
+          );
+        }
+
+        // 4. HORIZONTAL SWIPE STAGE (DEFAULT)
+        return (
+          <div style={{ maxWidth: '1120px', margin: '48px auto 0', padding: '0 24px' }}>
+            <div style={{ 
+              marginBottom: '16px', 
+              display: 'flex', 
+              alignItems: 'flex-end', 
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '12px'
+            }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  <Video size={13} />
+                  <span>CINEMATIC HIGHLIGHT</span>
+                  {highlightVideos[activeVideoIdx]?.category && (
+                    <span style={{ 
+                      background: isObsidian ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', 
+                      color: textColor,
+                      padding: '2px 8px', 
+                      borderRadius: '5px',
+                      fontSize: '10px',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      letterSpacing: 'normal'
+                    }}>
+                      {highlightVideos[activeVideoIdx]?.category}
+                    </span>
+                  )}
+                </div>
+                <h2 style={{ fontSize: '22px', fontWeight: 800, color: textColor, margin: '6px 0 0 0' }}>
+                  {highlightVideos[activeVideoIdx]?.title || theme.videoHighlightTitle || 'Wedding Film Showcase'}
+                </h2>
+              </div>
+
+              {/* Slider Controls (if > 1 video) */}
+              {highlightVideos.length > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 600, color: mutedTextColor, marginRight: '4px' }}>
+                    {activeVideoIdx + 1} / {highlightVideos.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handlePrevVideo}
+                    disabled={activeVideoIdx === 0}
+                    className="glass-card"
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: activeVideoIdx === 0 ? 'not-allowed' : 'pointer',
+                      opacity: activeVideoIdx === 0 ? 0.35 : 1,
+                      border: `1px solid ${borderColor}`,
+                      color: textColor,
+                      background: isObsidian ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                      transition: 'all 0.2s'
+                    }}
+                    aria-label="Video Sebelumnya"
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNextVideo}
+                    disabled={activeVideoIdx === highlightVideos.length - 1}
+                    className="glass-card"
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: activeVideoIdx === highlightVideos.length - 1 ? 'not-allowed' : 'pointer',
+                      opacity: activeVideoIdx === highlightVideos.length - 1 ? 0.35 : 1,
+                      border: `1px solid ${borderColor}`,
+                      color: textColor,
+                      background: isObsidian ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                      transition: 'all 0.2s'
+                    }}
+                    aria-label="Video Berikutnya"
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Video Selector Tabs (if > 1 video) */}
+            {highlightVideos.length > 1 && (
+              <div style={{ 
+                display: 'flex', 
+                gap: '8px', 
+                overflowX: 'auto', 
+                paddingBottom: '10px', 
+                marginBottom: '14px', 
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none'
+              }}>
+                {highlightVideos.map((vid, idx) => {
+                  const isActive = activeVideoIdx === idx;
+                  return (
+                    <button
+                      key={vid.id || idx}
+                      type="button"
+                      onClick={() => handleScrollToVideo(idx)}
+                      style={{
+                        padding: '7px 16px',
+                        borderRadius: '999px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        whiteSpace: 'nowrap',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        border: isActive ? `1px solid ${accentColor}` : `1px solid ${borderColor}`,
+                        background: isActive ? accentColor : (isObsidian ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)'),
+                        color: isActive ? '#FFFFFF' : textColor,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}
+                    >
+                      <span>{vid.title || `Video #${idx + 1}`}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Swipeable Video Slider Track */}
+            <div
+              ref={videoSliderRef}
+              onScroll={handleVideoScroll}
+              style={{
+                display: 'flex',
+                gap: '24px',
+                overflowX: 'auto',
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                borderRadius: '24px'
+              }}
+            >
+              {highlightVideos.map((vid, idx) => (
+                <div
+                  key={vid.id || idx}
+                  style={{
+                    flex: '0 0 100%',
+                    width: '100%',
+                    scrollSnapAlign: 'center',
+                    borderRadius: '24px',
+                    overflow: 'hidden',
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.14)',
+                    background: isObsidian ? '#000000' : '#1C1C1E',
+                    position: 'relative'
+                  }}
+                >
+                  <div style={{ position: 'relative', width: '100%', paddingBottom: '56.25%', height: 0 }}>
+                    <iframe
+                      src={getEmbedVideoUrl(vid.url)}
+                      title={vid.title || `Highlight Video ${idx + 1}`}
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                      style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 'none' }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Dots Indicator & Swipe Tip (if > 1 video) */}
+            {highlightVideos.length > 1 && (
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'space-between',
+                marginTop: '16px',
+                flexWrap: 'wrap',
+                gap: '12px'
+              }}>
+                <span style={{ fontSize: '11.5px', color: mutedTextColor, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={13} style={{ color: accentColor }} />
+                  <span>Geser ke samping untuk melihat video lainnya</span>
+                </span>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {highlightVideos.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => handleScrollToVideo(i)}
+                      style={{
+                        width: activeVideoIdx === i ? '22px' : '7px',
+                        height: '7px',
+                        borderRadius: '999px',
+                        background: activeVideoIdx === i ? accentColor : (isObsidian ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        transition: 'all 0.25s ease'
+                      }}
+                      aria-label={`Lihat video ${i + 1}`}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 4. OPTIONAL MODULAR SECTION: BADGES & PENGHARGAAN */}
       {theme.showBadges && theme.badges && theme.badges.length > 0 && (

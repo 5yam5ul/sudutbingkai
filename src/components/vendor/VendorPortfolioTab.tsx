@@ -294,6 +294,71 @@ function renderHeroStyleWireframe(key: string, isSelected: boolean) {
   );
 }
 
+function renderVideoHighlightWireframe(key: string, isSelected: boolean) {
+  const accent = isSelected ? '#F59E0B' : '#94A3B8';
+  const subAccent = isSelected ? '#D97706' : '#64748B';
+
+  if (key === 'carousel_slider') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '52px', gap: '3px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '5px', width: '100%', justifyContent: 'center' }}>
+          <span style={{ fontSize: '9px', color: subAccent }}>◀</span>
+          <div style={{ width: '74px', height: '36px', background: accent, borderRadius: '5px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ width: '0', height: '0', borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: '7px solid #FFF' }} />
+          </div>
+          <span style={{ fontSize: '9px', color: subAccent }}>▶</span>
+        </div>
+        <div style={{ display: 'flex', gap: '3px', marginTop: '2px' }}>
+          <div style={{ width: '8px', height: '3px', background: accent, borderRadius: '999px' }} />
+          <div style={{ width: '3px', height: '3px', background: subAccent, borderRadius: '999px' }} />
+          <div style={{ width: '3px', height: '3px', background: subAccent, borderRadius: '999px' }} />
+        </div>
+      </div>
+    );
+  }
+
+  if (key === 'cinema_imax') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', height: '52px', position: 'relative' }}>
+        <div style={{ width: '100%', height: '36px', background: accent, borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 10px ${accent}66` }}>
+          <div style={{ width: '0', height: '0', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderLeft: '8px solid #FFF' }} />
+        </div>
+        <div style={{ width: '55%', height: '3px', background: 'rgba(255,255,255,0.4)', borderRadius: '2px', marginTop: '4px' }} />
+      </div>
+    );
+  }
+
+  if (key === 'side_split') {
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '5px', width: '100%', height: '52px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+          <div style={{ width: '45%', height: '3px', background: subAccent, borderRadius: '2px' }} />
+          <div style={{ width: '90%', height: '5px', background: '#FFF', borderRadius: '2px' }} />
+          <div style={{ width: '65%', height: '3px', background: 'rgba(255,255,255,0.6)', borderRadius: '2px' }} />
+        </div>
+        <div style={{ height: '38px', background: accent, borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: '0', height: '0', borderTop: '4px solid transparent', borderBottom: '4px solid transparent', borderLeft: '6px solid #FFF' }} />
+        </div>
+      </div>
+    );
+  }
+
+  // bento_grid
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', width: '100%', height: '52px', alignItems: 'center' }}>
+      <div style={{ height: '34px', background: accent, borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '0', height: '0', borderTop: '3px solid transparent', borderBottom: '3px solid transparent', borderLeft: '4px solid #FFF' }} />
+      </div>
+      <div style={{ height: '34px', background: subAccent, borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '0', height: '0', borderTop: '3px solid transparent', borderBottom: '3px solid transparent', borderLeft: '4px solid #FFF' }} />
+      </div>
+      <div style={{ height: '34px', background: subAccent, borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: '0', height: '0', borderTop: '3px solid transparent', borderBottom: '3px solid transparent', borderLeft: '4px solid #FFF' }} />
+      </div>
+    </div>
+  );
+}
+
 function InstagramIcon({ size = 15 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -374,6 +439,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
   // Card Flip and Font Picker States
   const [flippedGridCard, setFlippedGridCard] = useState<string | null>(null);
   const [flippedHeroCard, setFlippedHeroCard] = useState<string | null>(null);
+  const [flippedVideoCard, setFlippedVideoCard] = useState<string | null>(null);
   const [isFontPickerOpen, setIsFontPickerOpen] = useState(false);
 
   // Temporary item inputs for sub-features
@@ -2152,7 +2218,161 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
             </div>
 
             {theme.showVideoHighlight && (
-              <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* 3D Flip Card Layout Options */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                    <div>
+                      <span className="font-mono-film" style={{ color: '#C27803', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                        TATA LETAK SINEMATIK
+                      </span>
+                      <h4 style={{ fontSize: '16px', fontWeight: 700, color: '#1D1D1F', margin: '4px 0 0 0' }}>
+                        Pilihan Gaya Layout Video Highlight
+                      </h4>
+                      <p style={{ fontSize: '12px', color: '#6E6E73', margin: '2px 0 0 0' }}>
+                        Klik kartu untuk memilih tata letak dan memutar kartu (3D Flip) untuk melihat denah strukturnya.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: '14px' }}>
+                    {[
+                      { 
+                        key: 'carousel_slider', 
+                        title: 'Horizontal Swipe Stage', 
+                        desc: 'Panggung carousel layar lebar dengan swipe horizontal, tab judul film, dan tombol panah navigasi (Default).' 
+                      },
+                      { 
+                        key: 'cinema_imax', 
+                        title: 'Full-Width IMAX Theater', 
+                        desc: 'Tampilan sinema membentang penuh (edge-to-edge) dengan backdrop blur dramatis dan aura bioskop mewah.' 
+                      },
+                      { 
+                        key: 'side_split', 
+                        title: 'Editorial Split Story', 
+                        desc: 'Layout 2 kolom: kiri untuk sinopsis & daftar playlist film, kanan untuk pemutar video utama.' 
+                      },
+                      { 
+                        key: 'bento_grid', 
+                        title: 'Bento Video Mosaic', 
+                        desc: 'Semua video highlight langsung tertata rapi dalam kisi grid berdampingan tanpa perlu digeser.' 
+                      }
+                    ].map((opt) => {
+                      const isSelected = (theme.videoHighlightLayout || 'carousel_slider') === opt.key;
+                      const isFlipped = flippedVideoCard === opt.key;
+                      return (
+                        <div
+                          key={opt.key}
+                          onClick={() => {
+                            setTheme(prev => ({ ...prev, videoHighlightLayout: opt.key as any }));
+                            setFlippedVideoCard(prev => prev === opt.key ? null : opt.key);
+                          }}
+                          style={{
+                            perspective: '1000px',
+                            minHeight: '170px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <div style={{
+                            position: 'relative',
+                            width: '100%',
+                            height: '100%',
+                            minHeight: '170px',
+                            borderRadius: '16px',
+                            transition: 'transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
+                            transformStyle: 'preserve-3d',
+                            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'
+                          }}>
+                            {/* FRONT FACE */}
+                            <div style={{
+                              position: 'absolute',
+                              inset: 0,
+                              backfaceVisibility: 'hidden',
+                              WebkitBackfaceVisibility: 'hidden',
+                              borderRadius: '16px',
+                              padding: '16px 18px',
+                              border: isSelected ? '2px solid #C27803' : '1px solid rgba(0,0,0,0.08)',
+                              background: isSelected ? 'rgba(194, 120, 3, 0.04)' : '#FFFFFF',
+                              boxShadow: isSelected ? '0 8px 24px rgba(194, 120, 3, 0.15)' : '0 2px 8px rgba(0,0,0,0.02)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between'
+                            }}>
+                              <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                  <span style={{ fontSize: '11px', color: isSelected ? '#C27803' : '#86868B', fontWeight: 700 }}>
+                                    {isSelected ? '✓ Terpilih' : 'Layout Video'}
+                                  </span>
+                                  <span style={{ fontSize: '11px', color: '#86868B', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    <span>Denah</span>
+                                    <RotateCw size={11} />
+                                  </span>
+                                </div>
+                                <h4 style={{ fontSize: '14.5px', fontWeight: 700, margin: '0 0 4px', color: '#1D1D1F' }}>
+                                  {opt.title}
+                                </h4>
+                                <p style={{ fontSize: '11.5px', color: '#6E6E73', margin: 0, lineHeight: 1.4 }}>
+                                  {opt.desc}
+                                </p>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid rgba(0,0,0,0.05)', fontSize: '11px', color: '#86868B' }}>
+                                <span style={{ color: '#C27803', fontWeight: 600 }}>Klik untuk putar & lihat denah</span>
+                                <RotateCw size={12} color="#C27803" />
+                              </div>
+                            </div>
+
+                            {/* BACK FACE (Architectural Wireframe Denah) */}
+                            <div style={{
+                              position: 'absolute',
+                              inset: 0,
+                              backfaceVisibility: 'hidden',
+                              WebkitBackfaceVisibility: 'hidden',
+                              transform: 'rotateY(180deg)',
+                              borderRadius: '16px',
+                              padding: '14px 16px',
+                              border: isSelected ? '2px solid #C27803' : '1px solid #1D1D1F',
+                              background: '#121214',
+                              color: '#FFFFFF',
+                              boxShadow: '0 12px 30px rgba(0,0,0,0.25)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between'
+                            }}>
+                              <div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                  <span style={{ fontSize: '10px', fontFamily: 'var(--font-mono)', color: '#F59E0B', fontWeight: 700, letterSpacing: '0.08em' }}>
+                                    DENAH STRUKTUR
+                                  </span>
+                                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                    <RotateCw size={10} />
+                                    <span>Putar Balik</span>
+                                  </span>
+                                </div>
+
+                                {/* Wireframe Diagram */}
+                                <div style={{ padding: '6px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                  {renderVideoHighlightWireframe(opt.key, isSelected)}
+                                </div>
+                              </div>
+
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '6px' }}>
+                                <span style={{ fontSize: '12px', fontWeight: 700, color: '#FFFFFF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {opt.title}
+                                </span>
+                                <span style={{ fontSize: '9.5px', color: '#10B981', background: 'rgba(16, 185, 129, 0.15)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                  {isSelected ? '✓ Aktif' : 'Pilih'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ height: '1px', background: 'rgba(0,0,0,0.06)', margin: '4px 0' }} />
                 {currentVideoList.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '24px', borderRadius: '16px', background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(0,0,0,0.1)' }}>
                     <p style={{ fontSize: '13px', color: '#6E6E73', margin: '0 0 12px 0' }}>Belum ada video highlight yang ditambahkan.</p>
