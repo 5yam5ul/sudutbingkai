@@ -485,11 +485,11 @@ export interface VendorPortfolioFaq {
 
 export interface VendorPortfolioTheme {
   // 1. Card Album Style
-  cardStyle?: 'photobook' | 'polaroid' | 'editorial' | 'cinematic';
+  cardStyle?: 'photobook' | 'polaroid' | 'editorial' | 'cinematic' | 'film_slide' | 'floating_canvas' | 'gallery_frame' | 'modern_pill';
   
   // 2. Background & Atmosphere
   backgroundMode?: 'preset' | 'custom_color' | 'custom_gradient' | 'image' | 'texture';
-  bgPreset?: 'alabaster' | 'champagne' | 'obsidian' | 'slate';
+  bgPreset?: 'alabaster' | 'champagne' | 'obsidian' | 'slate' | 'terracotta' | 'midnight_navy' | 'emerald_forest' | 'rose_quartz';
   bgColor?: string; // hex color e.g. #FBFBFA
   bgGradient?: { from: string; to: string; angle?: number };
   bgImageUrl?: string;
@@ -498,11 +498,11 @@ export interface VendorPortfolioTheme {
   bgTexture?: 'none' | 'grain' | 'canvas' | 'linen';
 
   // 3. Header / Hero Style
-  heroStyle?: 'social' | 'cinematic_fullscreen' | 'split' | 'minimalist';
+  heroStyle?: 'social' | 'cinematic_fullscreen' | 'split' | 'minimalist' | 'floating_island' | 'story_headline' | 'side_dock' | 'polaroid_stacked';
   tagline?: string;
 
   // 4. Gallery Grid Layout
-  gridLayout?: 'grid' | 'masonry' | 'filmstrip' | 'fullwidth_rows';
+  gridLayout?: 'grid' | 'masonry' | 'filmstrip' | 'fullwidth_rows' | 'bento_mosaic' | 'carousel_stage' | 'compact_list' | 'diagonal_flow';
 
   // 5. Background Audio Player
   audioUrl?: string;
@@ -546,7 +546,7 @@ export interface VendorPortfolioTheme {
   videoHighlightTitle?: string;
 
   // 9. Typography & Accent Color
-  fontStyle?: 'sans' | 'serif' | 'mono';
+  fontStyle?: 'sans' | 'serif' | 'mono' | 'playfair' | 'cinzel' | 'syne' | 'jakarta';
   accentColor?: string; // Hex for button & badges e.g. #C27803
 }
 

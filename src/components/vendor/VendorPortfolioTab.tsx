@@ -857,6 +857,30 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                   title: '✨ Cinematic Glass',
                   desc: 'Rasio sinematik 16:9 modern dengan badge kaca buram transparan dan efek zoom perlahan.',
                   badge: 'Modern Clean'
+                },
+                {
+                  key: 'film_slide',
+                  title: '🎞️ 35mm Slide Transparency',
+                  desc: 'Bingkai proyektor slide film 35mm dengan stempel kode film, frame counter, dan lubang sprocket autentik.',
+                  badge: 'Analog Vintage'
+                },
+                {
+                  key: 'floating_canvas',
+                  title: '🖼️ Frameless Floating Canvas',
+                  desc: 'Kanvas seni tanpa tepi dengan soft ambient drop-shadow tebal, hover elevation 3D, dan sudut halus lembut.',
+                  badge: 'Minimal Art Gallery'
+                },
+                {
+                  key: 'gallery_frame',
+                  title: '🏛️ Museum Matted Frame',
+                  desc: 'Bingkai pameran seni rupa dengan matboard putih luas passe-partout di sekeliling foto & plat kuningan.',
+                  badge: 'Luxury Fine Art'
+                },
+                {
+                  key: 'modern_pill',
+                  title: '💊 Ultra-Curved Modern Capsule',
+                  desc: 'Desain kurva rounded 32px futuristik dengan glassmorphism pill melayang dan gradient border halus.',
+                  badge: 'Trend 2026'
                 }
               ].map((styleOption) => {
                 const isSelected = (theme.cardStyle || 'photobook') === styleOption.key;
@@ -909,7 +933,11 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 { key: 'grid', title: 'Standard Responsive Grid', desc: 'Susunan kartu kolom rapi simetris (2-3 kolom).' },
                 { key: 'masonry', title: 'Masonry Pinterest', desc: 'Ketinggian kartu asimetris yang dinamis dan berjiwa seni.' },
                 { key: 'filmstrip', title: 'Horizontal Filmstrip Reel', desc: 'Dapat digeser / swipe horizontal seperti klise rol film.' },
-                { key: 'fullwidth_rows', title: 'Full-Width Rows', desc: 'Setiap kategori membentang 1 baris penuh dengan cerita karya.' }
+                { key: 'fullwidth_rows', title: 'Full-Width Rows', desc: 'Setiap kategori membentang 1 baris penuh dengan cerita karya.' },
+                { key: 'bento_mosaic', title: 'Bento Mosaic Showcase', desc: 'Tata letak bento modern dengan kartu hero utama 2x2 dan kartu pendukung 1x1.' },
+                { key: 'carousel_stage', title: 'Spotlight Carousel Stage', desc: 'Panggung carousel kartu 3D terpusat dengan tombol panah navigasi interaktif.' },
+                { key: 'compact_list', title: 'Curated Archive Directory', desc: 'Daftar baris arsip kurasi minimalis dengan nomor seri & thumbnail estetik.' },
+                { key: 'diagonal_flow', title: 'Offset Staggered Cascade', desc: 'Grid 2 kolom zig-zag bergeser vertikal selang-seling ala galeri kontemporer.' }
               ].map((gridOption) => {
                 const isSelected = (theme.gridLayout || 'grid') === gridOption.key;
                 return (
@@ -957,7 +985,11 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 { key: 'alabaster', name: 'Alabaster Clean', bg: '#FBFBFA', text: '#1D1D1F', desc: 'Putih gading minimalis khas Apple / SudutBingkai.' },
                 { key: 'champagne', name: 'Warm Champagne', bg: '#F7EFE5', text: '#2A231C', desc: 'Krem hangat mewah, sangat ideal untuk wedding estetik.' },
                 { key: 'obsidian', name: 'Obsidian Darkroom', bg: '#121214', text: '#F5F5F7', desc: 'Hitam pekat sinematik kontras tinggi ala Leica.' },
-                { key: 'slate', name: 'Earthy Slate', bg: '#F1F3F5', text: '#1A202C', desc: 'Abu-abu sejuk minimalis kontemporer.' }
+                { key: 'slate', name: 'Earthy Slate', bg: '#F1F3F5', text: '#1A202C', desc: 'Abu-abu sejuk minimalis kontemporer.' },
+                { key: 'terracotta', name: 'Tuscan Terracotta', bg: '#FAF5F0', text: '#2D1E18', desc: 'Nuansa hangat earth-tone merah bata lembut senja Italia.' },
+                { key: 'midnight_navy', name: 'Midnight Sapphire', bg: '#0A0E1A', text: '#F0F4FF', desc: 'Biru navy gelap sinematik malam berbintang yang prestisius.' },
+                { key: 'emerald_forest', name: 'Vintage Olive Garden', bg: '#F3F6F3', text: '#132219', desc: 'Hijau zaitun lembut menenangkan untuk fotografer outdoor.' },
+                { key: 'rose_quartz', name: 'Romantic Rose Petal', bg: '#FDF7F8', text: '#2C1D21', desc: 'Blush pink romantis lembut pengantin dengan kehangatan feminin.' }
               ].map((p) => {
                 const isSelected = theme.backgroundMode === 'preset' && (theme.bgPreset || 'alabaster') === p.key;
                 return (
@@ -1085,7 +1117,11 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 { key: 'social', title: 'Social Banner (Default)', desc: 'Banner lanskap di atas dengan floating logo profil dan nomor WhatsApp.' },
                 { key: 'cinematic_fullscreen', title: 'Fullscreen Cinematic Hero', desc: 'Foto cover memenuhi 100vh layar penuh dengan nama vendor di tengah.' },
                 { key: 'split', title: 'Split Editorial Studio', desc: 'Layar terbagi 2: 50% foto vertikal di kiri, 50% profil biodata di kanan.' },
-                { key: 'minimalist', title: 'Minimalist Bio-Link', desc: 'Langsung fokus pada logo melingkar di tengah, tanpa banner besar.' }
+                { key: 'minimalist', title: 'Minimalist Bio-Link', desc: 'Langsung fokus pada logo melingkar di tengah, tanpa banner besar.' },
+                { key: 'floating_island', title: 'Floating Glass Island', desc: 'Banner panorama luas dengan kartu profil & kontak melayang dalam kapsul frosted glass mewah.' },
+                { key: 'story_headline', title: 'Big Editorial Headline', desc: 'Tipografi nama vendor raksasa ala sampul majalah Vogue/Kinfolk dengan tagline elegan di tengah.' },
+                { key: 'side_dock', title: 'Asymmetric Side Dock', desc: 'Panel identitas vertikal ramping di sisi kiri dengan galeri karya mengalir di sisi kanan.' },
+                { key: 'polaroid_stacked', title: 'Stacked Frames Showcase', desc: 'Header interaktif dengan 3 frame preview foto karya artistik bertumpuk di samping profil.' }
               ].map((heroOption) => {
                 const isSelected = (theme.heroStyle || 'social') === heroOption.key;
                 return (
@@ -1238,9 +1274,13 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                   className="glass-input"
                   style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px' }}
                 >
-                  <option value="sans">Modern Sans-Serif (Geist / Inter)</option>
-                  <option value="serif">Luxury Classic Serif (Playfair / Cinzel)</option>
+                  <option value="sans">Modern Sans-Serif (Geist / Outfit)</option>
+                  <option value="serif">Luxury Classic Serif (Cormorant Garamond)</option>
                   <option value="mono">Film Cine Monospace (JetBrains Mono)</option>
+                  <option value="playfair">Grand Wedding Serif (Playfair Display)</option>
+                  <option value="cinzel">Royal Roman Empire (Cinzel)</option>
+                  <option value="syne">Avant-Garde Modern Art (Syne)</option>
+                  <option value="jakarta">Architectural Clean (Plus Jakarta Sans)</option>
                 </select>
               </div>
 

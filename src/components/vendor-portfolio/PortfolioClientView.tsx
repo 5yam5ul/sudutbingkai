@@ -6,7 +6,8 @@ import {
   ShieldCheck, MapPin, Globe, MessageCircle, 
   Sparkles, Layers, BookOpen, ArrowRight, Share2, Check,
   Music, Volume2, VolumeX, Play, Pause, ChevronDown, ChevronUp,
-  Star, Award, Camera, Video, HelpCircle, FileText, X, Send, User
+  Star, Award, Camera, Video, HelpCircle, FileText, X, Send, User,
+  ChevronLeft, ChevronRight, Eye
 } from 'lucide-react';
 import { VendorPortfolioAlbum, VendorPortfolioTheme } from '@/lib/types';
 import { PortfolioViewerModal } from './PortfolioViewerModal';
@@ -68,14 +69,32 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
   const [leadNote, setLeadNote] = useState('');
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [stageIndex, setStageIndex] = useState(0);
 
   // Compute theme styles
   const accentColor = theme.accentColor || '#C27803';
-  const isObsidian = theme.bgPreset === 'obsidian' || (theme.backgroundMode === 'custom_color' && (theme.bgColor === '#121214' || theme.bgColor === '#000000'));
-  const textColor = isObsidian ? '#F5F5F7' : '#1D1D1F';
-  const mutedTextColor = isObsidian ? 'rgba(245, 245, 247, 0.65)' : '#6E6E73';
-  const cardBg = isObsidian ? '#1C1C1E' : '#FFFFFF';
-  const borderColor = isObsidian ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
+  const isDark = theme.bgPreset === 'obsidian' || theme.bgPreset === 'midnight_navy' || (theme.backgroundMode === 'custom_color' && (theme.bgColor === '#121214' || theme.bgColor === '#000000' || theme.bgColor === '#0A0E1A'));
+  const isObsidian = isDark;
+  
+  let defaultTextColor = '#1D1D1F';
+  if (isDark) defaultTextColor = '#F5F5F7';
+  else if (theme.bgPreset === 'terracotta') defaultTextColor = '#2D1E18';
+  else if (theme.bgPreset === 'emerald_forest') defaultTextColor = '#132219';
+  else if (theme.bgPreset === 'rose_quartz') defaultTextColor = '#2C1D21';
+
+  const textColor = defaultTextColor;
+  const mutedTextColor = isDark 
+    ? 'rgba(245, 245, 247, 0.65)' 
+    : theme.bgPreset === 'terracotta' 
+      ? '#7A5C50' 
+      : theme.bgPreset === 'emerald_forest' 
+        ? '#4A6352' 
+        : theme.bgPreset === 'rose_quartz' 
+          ? '#875C66' 
+          : '#6E6E73';
+
+  const cardBg = isDark ? (theme.bgPreset === 'midnight_navy' ? '#121726' : '#1C1C1E') : '#FFFFFF';
+  const borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)';
 
   // Compute Background CSS
   let pageBgStyle: React.CSSProperties = {
@@ -92,6 +111,14 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
       pageBgStyle.backgroundColor = '#121214';
     } else if (theme.bgPreset === 'slate') {
       pageBgStyle.backgroundColor = '#F1F3F5';
+    } else if (theme.bgPreset === 'terracotta') {
+      pageBgStyle.background = 'linear-gradient(135deg, #FAF5F0 0%, #F5ECE3 100%)';
+    } else if (theme.bgPreset === 'midnight_navy') {
+      pageBgStyle.backgroundColor = '#0A0E1A';
+    } else if (theme.bgPreset === 'emerald_forest') {
+      pageBgStyle.background = 'linear-gradient(135deg, #F4F6F4 0%, #E8EFE8 100%)';
+    } else if (theme.bgPreset === 'rose_quartz') {
+      pageBgStyle.background = 'linear-gradient(135deg, #FDF7F8 0%, #F8ECF0 100%)';
     } else {
       pageBgStyle.backgroundColor = '#FBFBFA';
     }
@@ -162,14 +189,30 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
   };
 
   // Font family resolution
-  const fontFamily = theme.fontStyle === 'serif' 
-    ? 'var(--font-serif, "Playfair Display", Georgia, serif)' 
-    : theme.fontStyle === 'mono' 
-      ? 'var(--font-mono, "JetBrains Mono", monospace)' 
-      : 'inherit';
+  let fontFamily = 'inherit';
+  if (theme.fontStyle === 'serif') {
+    fontFamily = '"Cormorant Garamond", Georgia, serif';
+  } else if (theme.fontStyle === 'mono') {
+    fontFamily = 'var(--font-mono, "JetBrains Mono", monospace)';
+  } else if (theme.fontStyle === 'playfair') {
+    fontFamily = 'var(--font-playfair, "Playfair Display", Georgia, serif)';
+  } else if (theme.fontStyle === 'cinzel') {
+    fontFamily = '"Cinzel", "Times New Roman", serif';
+  } else if (theme.fontStyle === 'syne') {
+    fontFamily = '"Syne", sans-serif';
+  } else if (theme.fontStyle === 'jakarta') {
+    fontFamily = '"Plus Jakarta Sans", sans-serif';
+  }
 
   return (
     <div style={{ ...pageBgStyle, fontFamily, paddingBottom: theme.enableStickyMobileBar ? '120px' : '80px' }}>
+      {/* Dynamic Google Fonts Preconnect & Load */}
+      <link rel="preconnect" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+      <link
+        href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Syne:wght@700;800&display=swap"
+        rel="stylesheet"
+      />
       
       {/* Background Texture Overlay */}
       {theme.backgroundMode === 'texture' && (
@@ -537,6 +580,409 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
           </div>
         )}
 
+        {/* HERO STYLE E: Floating Glass Island */}
+        {theme.heroStyle === 'floating_island' && (
+          <div style={{ maxWidth: '1120px', margin: '20px auto 0', padding: '0 16px' }}>
+            <div style={{
+              position: 'relative',
+              width: '100%',
+              height: '340px',
+              borderRadius: '28px',
+              overflow: 'hidden',
+              background: 'linear-gradient(135deg, #1D1D1F 0%, #2A2A2E 100%)',
+              boxShadow: '0 16px 40px rgba(0,0,0,0.08)'
+            }}>
+              {vendor.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={vendor.coverUrl} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                <div style={{ width: '100%', height: '100%', background: '#121214', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                  <Layers size={40} />
+                </div>
+              )}
+              <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%)' }} />
+            </div>
+
+            {/* Overlapping Floating Glass Island Card */}
+            <div style={{ maxWidth: '860px', margin: '-90px auto 0', position: 'relative', zIndex: 20, padding: '0 16px' }}>
+              <div className="glass-card" style={{
+                padding: '32px 36px',
+                borderRadius: '28px',
+                background: isDark ? 'rgba(28, 28, 30, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+                backdropFilter: 'blur(30px)',
+                border: `1px solid ${borderColor}`,
+                boxShadow: '0 24px 60px -12px rgba(0,0,0,0.18)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '24px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                  <div style={{
+                    position: 'relative',
+                    width: '84px',
+                    height: '84px',
+                    borderRadius: '22px',
+                    overflow: 'hidden',
+                    border: `3px solid ${accentColor}`,
+                    boxShadow: '0 10px 24px rgba(0,0,0,0.12)',
+                    flexShrink: 0
+                  }}>
+                    {vendor.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={vendor.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '100%', height: '100%', background: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF', fontWeight: 800, fontSize: '28px' }}>
+                        {(vendor.companyName || vendor.name).charAt(0)}
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <h1 style={{ fontSize: '26px', fontWeight: 800, margin: 0, color: textColor, letterSpacing: '-0.02em' }}>
+                        {vendor.companyName || vendor.name}
+                      </h1>
+                      <span style={{ fontSize: '11px', color: '#D4AF37', background: 'rgba(212, 175, 55, 0.12)', border: '1px solid rgba(212, 175, 55, 0.3)', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                        ★ Verified
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '13.5px', color: mutedTextColor, margin: '0 0 8px 0', maxWidth: '440px', lineHeight: 1.5 }}>
+                      {vendor.bio || 'Dokumentasi visual momen istimewa & karya fotografi profesional.'}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px', fontSize: '12px', color: mutedTextColor }}>
+                      {vendor.city && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <MapPin size={13} color={accentColor} />
+                          <span>{vendor.city}</span>
+                        </span>
+                      )}
+                      {vendor.instagram && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <InstagramIcon size={13} />
+                          <span>{vendor.instagram}</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  {whatsappUrl && (
+                    <a
+                      href={whatsappUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        padding: '12px 24px',
+                        borderRadius: '14px',
+                        background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                        color: '#FFFFFF',
+                        textDecoration: 'none',
+                        fontSize: '13.5px',
+                        fontWeight: 700,
+                        boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)'
+                      }}
+                    >
+                      <MessageCircle size={16} />
+                      <span>Reservasi</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* HERO STYLE F: Big Editorial Headline */}
+        {theme.heroStyle === 'story_headline' && (
+          <div style={{ maxWidth: '1000px', margin: '48px auto 32px', textAlign: 'center', padding: '0 24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ height: '1px', width: '48px', background: borderColor }} />
+              <span className="font-mono-film" style={{ fontSize: '11px', letterSpacing: '0.2em', textTransform: 'uppercase', color: accentColor, fontWeight: 700 }}>
+                CURATED VISUAL CHRONICLE • VOL. 2026
+              </span>
+              <div style={{ height: '1px', width: '48px', background: borderColor }} />
+            </div>
+
+            <h1 style={{
+              fontSize: 'clamp(36px, 6vw, 64px)',
+              fontWeight: 800,
+              letterSpacing: '-0.03em',
+              margin: '0 0 16px 0',
+              color: textColor,
+              lineHeight: 1.08
+            }}>
+              {vendor.companyName || vendor.name}
+            </h1>
+
+            <p style={{
+              fontSize: '16px',
+              fontStyle: 'italic',
+              color: mutedTextColor,
+              maxWidth: '640px',
+              margin: '0 auto 28px',
+              lineHeight: 1.65
+            }}>
+              "{vendor.bio || 'Menghadirkan karya seni visual abadi yang merayakan keindahan setiap momen istimewa.'}"
+            </p>
+
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', justifyContent: 'center' }}>
+              {whatsappUrl && (
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    padding: '12px 26px',
+                    borderRadius: '999px',
+                    background: textColor,
+                    color: cardBg,
+                    textDecoration: 'none',
+                    fontSize: '13.5px',
+                    fontWeight: 700,
+                    boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                  }}
+                >
+                  <MessageCircle size={16} />
+                  <span>Mulai Reservasi Tanggal</span>
+                </a>
+              )}
+
+              {theme.pricelistPdfUrl && (
+                <a
+                  href={theme.pricelistPdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="glass-pill"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '11px 22px',
+                    fontSize: '13px',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    color: textColor,
+                    border: `1px solid ${borderColor}`,
+                    background: cardBg
+                  }}
+                >
+                  <FileText size={15} color={accentColor} />
+                  <span>{theme.pricelistButtonText || 'Lihat Pricelist PDF'}</span>
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* HERO STYLE G: Asymmetric Side Dock */}
+        {theme.heroStyle === 'side_dock' && (
+          <div style={{ maxWidth: '1120px', margin: '32px auto 0', padding: '0 24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '28px', alignItems: 'stretch' }}>
+              {/* Left Dock Panel */}
+              <div className="glass-card" style={{
+                padding: '36px',
+                borderRadius: '28px',
+                background: cardBg,
+                border: `1px solid ${borderColor}`,
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                gap: '24px'
+              }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                    <div style={{ width: '64px', height: '64px', borderRadius: '18px', overflow: 'hidden', border: `2px solid ${accentColor}`, flexShrink: 0 }}>
+                      {vendor.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={vendor.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', background: accentColor, color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                          {(vendor.companyName || vendor.name).charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <span className="font-mono-film" style={{ fontSize: '10.5px', letterSpacing: '0.12em', color: accentColor, textTransform: 'uppercase', fontWeight: 700 }}>
+                        OFFICIAL ATELIER
+                      </span>
+                      <h1 style={{ fontSize: '24px', fontWeight: 800, margin: '2px 0 0', color: textColor }}>
+                        {vendor.companyName || vendor.name}
+                      </h1>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '14px', color: mutedTextColor, lineHeight: 1.6, margin: '0 0 20px' }}>
+                    {vendor.bio || 'Dokumentasi visual momen istimewa & karya fotografi profesional.'}
+                  </p>
+
+                  <div style={{ display: 'flex', gap: '16px', padding: '14px 18px', borderRadius: '16px', background: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)', border: `1px solid ${borderColor}`, marginBottom: '16px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', color: mutedTextColor, display: 'block' }}>Kategori Album</span>
+                      <strong style={{ fontSize: '16px', color: textColor }}>{vendor.albums.length} Galeri</strong>
+                    </div>
+                    <div style={{ width: '1px', background: borderColor }} />
+                    <div>
+                      <span style={{ fontSize: '11px', color: mutedTextColor, display: 'block' }}>Kemitraan</span>
+                      <strong style={{ fontSize: '14px', color: '#10B981' }}>Verified Partner</strong>
+                    </div>
+                  </div>
+                </div>
+
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '13px 20px',
+                      borderRadius: '14px',
+                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                      color: '#FFFFFF',
+                      textDecoration: 'none',
+                      fontSize: '13.5px',
+                      fontWeight: 700
+                    }}
+                  >
+                    <MessageCircle size={16} />
+                    <span>Konsultasi & Reservasi</span>
+                  </a>
+                )}
+              </div>
+
+              {/* Right Side Cover Preview Frame */}
+              <div style={{ position: 'relative', width: '100%', minHeight: '340px', borderRadius: '28px', overflow: 'hidden', boxShadow: '0 12px 36px rgba(0,0,0,0.08)' }}>
+                {vendor.coverUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={vendor.coverUrl} alt="Cover" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  <div style={{ width: '100%', height: '100%', background: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                    <Camera size={44} />
+                  </div>
+                )}
+                <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.4) 0%, transparent 60%)' }} />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* HERO STYLE H: Stacked Frames Showcase */}
+        {theme.heroStyle === 'polaroid_stacked' && (
+          <div style={{ maxWidth: '1120px', margin: '36px auto 0', padding: '0 24px' }}>
+            <div className="glass-card" style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+              gap: '40px',
+              padding: '36px',
+              borderRadius: '28px',
+              background: cardBg,
+              border: `1px solid ${borderColor}`,
+              alignItems: 'center'
+            }}>
+              <div>
+                <div style={{ width: '72px', height: '72px', borderRadius: '18px', overflow: 'hidden', border: `2px solid ${accentColor}`, marginBottom: '16px' }}>
+                  {vendor.logoUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={vendor.logoUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', background: accentColor, color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800 }}>
+                      {(vendor.companyName || vendor.name).charAt(0)}
+                    </div>
+                  )}
+                </div>
+
+                <span className="font-mono-film" style={{ fontSize: '11px', letterSpacing: '0.12em', color: accentColor, textTransform: 'uppercase', fontWeight: 700 }}>
+                  FINE ART ARCHIVE
+                </span>
+                <h1 style={{ fontSize: '32px', fontWeight: 800, margin: '4px 0 12px', color: textColor, letterSpacing: '-0.02em' }}>
+                  {vendor.companyName || vendor.name}
+                </h1>
+                <p style={{ fontSize: '14.5px', color: mutedTextColor, lineHeight: 1.6, margin: '0 0 24px' }}>
+                  {vendor.bio || 'Dokumentasi visual momen istimewa & karya fotografi profesional.'}
+                </p>
+
+                {whatsappUrl && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '12px 26px',
+                      borderRadius: '14px',
+                      background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                      color: '#FFFFFF',
+                      textDecoration: 'none',
+                      fontSize: '13.5px',
+                      fontWeight: 700
+                    }}
+                  >
+                    <MessageCircle size={16} />
+                    <span>Konsultasi & Reservasi</span>
+                  </a>
+                )}
+              </div>
+
+              {/* Stacked 3 Polaroid/Art Frames Fan */}
+              <div style={{ position: 'relative', height: '320px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {vendor.albums.slice(0, 3).map((alb, i) => {
+                  const rotations = [-8, 2, 9];
+                  const zIndexes = [1, 2, 3];
+                  const leftOffsets = [-24, 0, 24];
+                  return (
+                    <div
+                      key={alb.id}
+                      onClick={() => setSelectedAlbum(alb)}
+                      style={{
+                        position: 'absolute',
+                        width: '210px',
+                        background: '#FFFFFF',
+                        padding: '10px 10px 24px 10px',
+                        borderRadius: '8px',
+                        boxShadow: '0 16px 36px rgba(0,0,0,0.14)',
+                        transform: `rotate(${rotations[i % 3]}deg) translateX(${leftOffsets[i % 3]}px)`,
+                        zIndex: zIndexes[i % 3],
+                        cursor: 'pointer',
+                        transition: 'transform 0.3s ease'
+                      }}
+                    >
+                      <div style={{ position: 'relative', width: '100%', height: '170px', overflow: 'hidden', borderRadius: '4px', background: '#1A1A1E' }}>
+                        {alb.coverImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={alb.coverImageUrl} alt={alb.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                            <Camera size={28} />
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ marginTop: '10px', textAlign: 'center' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 700, color: '#1D1D1F', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {alb.title}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* HERO STYLE D: Social Banner (Default) */}
         {(!theme.heroStyle || theme.heroStyle === 'social') && (
           <>
@@ -784,255 +1230,665 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
           </span>
         </div>
 
-        {/* ALBUMS RENDERER (Dynamic Layout: Grid vs Masonry vs Filmstrip vs Fullwidth) */}
+        {/* ALBUMS RENDERER (Dynamic Layout: Grid vs Masonry vs Filmstrip vs Fullwidth vs Bento vs Carousel vs Compact List vs Diagonal) */}
         {vendor.albums && vendor.albums.length > 0 ? (
-          <div style={
-            theme.gridLayout === 'filmstrip'
-              ? { display: 'flex', gap: '24px', overflowX: 'auto', paddingBottom: '16px', scrollSnapType: 'x mandatory' }
-              : theme.gridLayout === 'fullwidth_rows'
-                ? { display: 'flex', flexDirection: 'column', gap: '28px' }
-                : { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }
-          }>
-            {vendor.albums.map((album, idx) => {
-              const cardStyle = theme.cardStyle || 'photobook';
+          <>
+            {/* SPECIAL LAYOUT A: Spotlight Carousel Stage */}
+            {theme.gridLayout === 'carousel_stage' && (
+              <div style={{ position: 'relative', width: '100%', padding: '16px 0 24px' }}>
+                {(() => {
+                  const safeIndex = stageIndex % vendor.albums.length;
+                  const currentAlbum = vendor.albums[safeIndex];
+                  return (
+                    <div>
+                      {/* Big Spotlight Stage Display */}
+                      <div
+                        onClick={() => setSelectedAlbum(currentAlbum)}
+                        className="glass-card"
+                        style={{
+                          position: 'relative',
+                          width: '100%',
+                          height: '420px',
+                          borderRadius: '28px',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          boxShadow: '0 24px 60px rgba(0,0,0,0.18)',
+                          background: '#1A1A1E'
+                        }}
+                      >
+                        {currentAlbum.coverImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={currentAlbum.coverImageUrl} alt={currentAlbum.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                            <Camera size={48} />
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.5) 100%)' }} />
 
-              // STYLE 1: 3D Hardcover Photobook Card
-              if (cardStyle === 'photobook') {
-                return (
+                        {/* Top Bar Pill */}
+                        <div style={{ position: 'absolute', top: '20px', left: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ padding: '6px 14px', borderRadius: '999px', background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(10px)', color: '#FFFFFF', fontSize: '11px', fontFamily: 'var(--font-mono)', fontWeight: 700 }}>
+                            SPOTLIGHT #{safeIndex + 1} OF {vendor.albums.length}
+                          </span>
+                        </div>
+
+                        {/* Bottom Info & Action */}
+                        <div style={{ position: 'absolute', bottom: '24px', left: '24px', right: '24px', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>
+                          <div style={{ maxWidth: '600px' }}>
+                            <span style={{ fontSize: '11px', color: '#F59E0B', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                              GOOGLE DRIVE COLLECTION
+                            </span>
+                            <h3 style={{ fontSize: '28px', fontWeight: 800, color: '#FFFFFF', margin: '4px 0 6px', letterSpacing: '-0.02em' }}>
+                              {currentAlbum.title}
+                            </h3>
+                            {currentAlbum.description && (
+                              <p style={{ fontSize: '13.5px', color: 'rgba(255,255,255,0.85)', margin: 0, lineHeight: 1.5 }}>
+                                {currentAlbum.description}
+                              </p>
+                            )}
+                          </div>
+
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '12px 24px', borderRadius: '14px', background: accentColor, color: '#FFFFFF', fontWeight: 700, fontSize: '13px' }}>
+                            <BookOpen size={16} />
+                            <span>Buka Slideshow Album</span>
+                          </div>
+                        </div>
+
+                        {/* Stage Prev / Next Buttons */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStageIndex(prev => (prev - 1 + vendor.albums.length) % vendor.albums.length);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            left: '16px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '50%',
+                            background: 'rgba(0,0,0,0.5)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            color: '#FFFFFF',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <ChevronLeft size={22} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStageIndex(prev => (prev + 1) % vendor.albums.length);
+                          }}
+                          style={{
+                            position: 'absolute',
+                            right: '16px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            width: '44px',
+                            height: '44px',
+                            borderRadius: '50%',
+                            background: 'rgba(0,0,0,0.5)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            color: '#FFFFFF',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <ChevronRight size={22} />
+                        </button>
+                      </div>
+
+                      {/* Bottom Thumbnail Strip */}
+                      <div className="horizontal-scroll-row" style={{ gap: '12px', marginTop: '16px', paddingBottom: '8px' }}>
+                        {vendor.albums.map((alb, i) => (
+                          <div
+                            key={alb.id}
+                            onClick={() => setStageIndex(i)}
+                            style={{
+                              position: 'relative',
+                              width: '120px',
+                              height: '75px',
+                              borderRadius: '12px',
+                              overflow: 'hidden',
+                              cursor: 'pointer',
+                              flexShrink: 0,
+                              border: i === safeIndex ? `2px solid ${accentColor}` : `1px solid ${borderColor}`,
+                              opacity: i === safeIndex ? 1 : 0.6,
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            {alb.coverImageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={alb.coverImageUrl} alt={alb.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{ width: '100%', height: '100%', background: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                                <Camera size={16} />
+                              </div>
+                            )}
+                            <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 70%)' }} />
+                            <span style={{ position: 'absolute', bottom: '4px', left: '6px', right: '6px', color: '#FFFFFF', fontSize: '10px', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {alb.title}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
+            {/* SPECIAL LAYOUT B: Curated Archive Directory (Compact List) */}
+            {theme.gridLayout === 'compact_list' && (
+              <div className="glass-card" style={{ borderRadius: '24px', background: cardBg, border: `1px solid ${borderColor}`, overflow: 'hidden' }}>
+                {vendor.albums.map((album, idx) => (
                   <div
                     key={album.id}
                     onClick={() => setSelectedAlbum(album)}
                     style={{
-                      position: 'relative',
-                      borderRadius: '16px',
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      boxShadow: '0 16px 36px rgba(0, 0, 0, 0.12), -6px 0 16px rgba(0, 0, 0, 0.15) inset',
-                      borderLeft: `8px solid ${accentColor}`,
-                      background: '#1A1A1E',
-                      transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-                      minWidth: theme.gridLayout === 'filmstrip' ? '320px' : 'auto'
-                    }}
-                  >
-                    <div style={{ position: 'relative', width: '100%', height: '240px', overflow: 'hidden' }}>
-                      {album.coverImageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={album.coverImageUrl}
-                          alt={album.title}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
-                          <BookOpen size={36} />
-                        </div>
-                      )}
-                      
-                      {/* Photobook Spine Highlight */}
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        bottom: 0,
-                        width: '18px',
-                        background: 'linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(255,255,255,0.15) 50%, rgba(0,0,0,0.3) 100%)',
-                        boxShadow: '1px 0 3px rgba(0,0,0,0.3)'
-                      }} />
-
-                      {/* Bookmark Ribbon on top-right */}
-                      <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        right: '24px',
-                        width: '14px',
-                        height: '24px',
-                        background: accentColor,
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
-                        clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%)'
-                      }} />
-
-                      <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)' }} />
-
-                      <div style={{ position: 'absolute', bottom: '16px', left: '26px', right: '16px' }}>
-                        <span style={{ fontSize: '10.5px', color: '#F59E0B', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                          HARDCOVER PHOTOBOOK
-                        </span>
-                        <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#FFFFFF', margin: '4px 0 0 0' }}>
-                          {album.title}
-                        </h3>
-                        {album.description && (
-                          <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.75)', margin: '4px 0 0 0' }}>
-                            {album.description}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div style={{
-                      padding: '12px 18px 12px 26px',
+                      padding: '20px 24px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      background: cardBg,
-                      fontSize: '11.5px',
-                      color: mutedTextColor
-                    }}>
-                      <span style={{ fontFamily: 'var(--font-mono)' }}>Buka Slideshow Buku</span>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: accentColor, fontWeight: 700 }}>
-                        <span>Lihat Album</span>
+                      flexWrap: 'wrap',
+                      gap: '16px',
+                      borderBottom: idx < vendor.albums.length - 1 ? `1px solid ${borderColor}` : 'none',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s ease'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                      <span className="font-mono-film" style={{ fontSize: '14px', fontWeight: 800, color: accentColor, width: '32px' }}>
+                        #{String(idx + 1).padStart(2, '0')}
+                      </span>
+
+                      <div style={{ width: '84px', height: '64px', borderRadius: '10px', overflow: 'hidden', background: '#1D1D1F', flexShrink: 0 }}>
+                        {album.coverImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                            <Camera size={18} />
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <h4 style={{ fontSize: '16px', fontWeight: 700, color: textColor, margin: '0 0 4px' }}>
+                          {album.title}
+                        </h4>
+                        <p style={{ fontSize: '12.5px', color: mutedTextColor, margin: 0, maxWidth: '480px', lineHeight: 1.4 }}>
+                          {album.description || 'Google Drive Album Dokumentasi'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '11px', color: mutedTextColor, fontFamily: 'var(--font-mono)' }}>
+                        Folder Drive
+                      </span>
+                      <span className="glass-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 16px', fontSize: '12px', fontWeight: 700, color: accentColor, border: `1px solid ${accentColor}` }}>
+                        <span>Buka Album</span>
                         <ArrowRight size={13} />
                       </span>
                     </div>
                   </div>
-                );
-              }
+                ))}
+              </div>
+            )}
 
-              // STYLE 2: Polaroid / Vintage Film Stack
-              if (cardStyle === 'polaroid') {
-                return (
-                  <div
-                    key={album.id}
-                    onClick={() => setSelectedAlbum(album)}
-                    style={{
-                      position: 'relative',
-                      background: '#FFFFFF',
-                      padding: '12px 12px 28px 12px',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      boxShadow: '0 12px 28px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
-                      transition: 'all 0.25s ease',
-                      transform: idx % 2 === 0 ? 'rotate(-1.5deg)' : 'rotate(1.5deg)',
-                      minWidth: theme.gridLayout === 'filmstrip' ? '300px' : 'auto'
-                    }}
-                  >
-                    <div style={{ position: 'relative', width: '100%', height: '220px', background: '#1D1D1F', overflow: 'hidden', borderRadius: '4px' }}>
-                      {album.coverImageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
-                          <Camera size={32} />
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ marginTop: '16px', textAlign: 'center' }}>
-                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
-                        {album.title}
-                      </h3>
-                      {album.description && (
-                        <p style={{ fontSize: '11.5px', color: '#86868B', margin: '4px 0 0 0' }}>
-                          {album.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
+            {/* STANDARD & CARD-BASED GRID LAYOUTS (grid, masonry, filmstrip, fullwidth_rows, bento_mosaic, diagonal_flow) */}
+            {theme.gridLayout !== 'carousel_stage' && theme.gridLayout !== 'compact_list' && (
+              <div style={
+                theme.gridLayout === 'filmstrip'
+                  ? { display: 'flex', gap: '24px', overflowX: 'auto', paddingBottom: '16px', scrollSnapType: 'x mandatory' }
+                  : theme.gridLayout === 'fullwidth_rows'
+                    ? { display: 'flex', flexDirection: 'column', gap: '28px' }
+                    : theme.gridLayout === 'diagonal_flow'
+                      ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '28px' }
+                      : theme.gridLayout === 'bento_mosaic'
+                        ? { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }
+                        : { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }
+              }>
+                {vendor.albums.map((album, idx) => {
+                  const cardStyle = theme.cardStyle || 'photobook';
+                  const isBentoHero = theme.gridLayout === 'bento_mosaic' && idx === 0;
+                  const isDiagonalOffset = theme.gridLayout === 'diagonal_flow' && idx % 2 === 1;
 
-              // STYLE 3: Editorial Fine-Art Magazine
-              if (cardStyle === 'editorial') {
-                return (
-                  <div
-                    key={album.id}
-                    onClick={() => setSelectedAlbum(album)}
-                    style={{
-                      position: 'relative',
-                      cursor: 'pointer',
-                      borderRadius: '16px',
-                      overflow: 'hidden',
-                      background: cardBg,
-                      border: `1px solid ${borderColor}`,
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.04)',
-                      transition: 'all 0.3s ease',
-                      minWidth: theme.gridLayout === 'filmstrip' ? '280px' : 'auto'
-                    }}
-                  >
-                    <div style={{ position: 'relative', width: '100%', height: '300px', overflow: 'hidden' }}>
-                      {album.coverImageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      ) : (
-                        <div style={{ width: '100%', height: '100%', background: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
-                          <BookOpen size={36} />
+                  // Wrapper style helper for bento & diagonal
+                  const wrapperExtraStyle: React.CSSProperties = {
+                    ...(isBentoHero ? { gridColumn: 'span 2' } : {}),
+                    ...(isDiagonalOffset ? { transform: 'translateY(36px)' } : {})
+                  };
+
+                  // STYLE 1: 3D Hardcover Photobook Card
+                  if (cardStyle === 'photobook') {
+                    return (
+                      <div
+                        key={album.id}
+                        onClick={() => setSelectedAlbum(album)}
+                        style={{
+                          position: 'relative',
+                          borderRadius: '16px',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          boxShadow: '0 16px 36px rgba(0, 0, 0, 0.12), -6px 0 16px rgba(0, 0, 0, 0.15) inset',
+                          borderLeft: `8px solid ${accentColor}`,
+                          background: '#1A1A1E',
+                          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                          minWidth: theme.gridLayout === 'filmstrip' ? '320px' : 'auto',
+                          ...wrapperExtraStyle
+                        }}
+                      >
+                        <div style={{ position: 'relative', width: '100%', height: isBentoHero ? '320px' : '240px', overflow: 'hidden' }}>
+                          {album.coverImageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                              <BookOpen size={36} />
+                            </div>
+                          )}
+                          <div style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: '18px', background: 'linear-gradient(to right, rgba(0,0,0,0.5) 0%, rgba(255,255,255,0.15) 50%, rgba(0,0,0,0.3) 100%)', boxShadow: '1px 0 3px rgba(0,0,0,0.3)' }} />
+                          <div style={{ position: 'absolute', top: 0, right: '24px', width: '14px', height: '24px', background: accentColor, boxShadow: '0 2px 6px rgba(0,0,0,0.3)', clipPath: 'polygon(0 0, 100% 0, 100% 100%, 50% 80%, 0 100%)' }} />
+                          <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)' }} />
+                          <div style={{ position: 'absolute', bottom: '16px', left: '26px', right: '16px' }}>
+                            <span style={{ fontSize: '10.5px', color: '#F59E0B', fontFamily: 'var(--font-mono)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                              HARDCOVER PHOTOBOOK
+                            </span>
+                            <h3 style={{ fontSize: isBentoHero ? '22px' : '18px', fontWeight: 700, color: '#FFFFFF', margin: '4px 0 0 0' }}>
+                              {album.title}
+                            </h3>
+                            {album.description && (
+                              <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.75)', margin: '4px 0 0 0' }}>
+                                {album.description}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                      )}
-                      <div style={{ position: 'absolute', top: '14px', right: '14px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', padding: '3px 9px', borderRadius: '6px', color: '#FFFFFF', fontSize: '10.5px', fontFamily: 'var(--font-mono)' }}>
-                        VOL. {String(idx + 1).padStart(2, '0')}
+
+                        <div style={{ padding: '12px 18px 12px 26px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: cardBg, fontSize: '11.5px', color: mutedTextColor }}>
+                          <span style={{ fontFamily: 'var(--font-mono)' }}>Buka Slideshow Buku</span>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: accentColor, fontWeight: 700 }}>
+                            <span>Lihat Album</span>
+                            <ArrowRight size={13} />
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // STYLE 2: Polaroid / Vintage Film Stack
+                  if (cardStyle === 'polaroid') {
+                    return (
+                      <div
+                        key={album.id}
+                        onClick={() => setSelectedAlbum(album)}
+                        style={{
+                          position: 'relative',
+                          background: '#FFFFFF',
+                          padding: '12px 12px 28px 12px',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          boxShadow: '0 12px 28px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)',
+                          transition: 'all 0.25s ease',
+                          transform: idx % 2 === 0 ? 'rotate(-1.5deg)' : 'rotate(1.5deg)',
+                          minWidth: theme.gridLayout === 'filmstrip' ? '300px' : 'auto',
+                          ...wrapperExtraStyle
+                        }}
+                      >
+                        <div style={{ position: 'relative', width: '100%', height: isBentoHero ? '300px' : '220px', background: '#1D1D1F', overflow: 'hidden', borderRadius: '4px' }}>
+                          {album.coverImageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                              <Camera size={32} />
+                            </div>
+                          )}
+                        </div>
+                        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#1D1D1F', margin: 0 }}>
+                            {album.title}
+                          </h3>
+                          {album.description && (
+                            <p style={{ fontSize: '11.5px', color: '#86868B', margin: '4px 0 0 0' }}>
+                              {album.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // STYLE 3: Editorial Fine-Art Magazine
+                  if (cardStyle === 'editorial') {
+                    return (
+                      <div
+                        key={album.id}
+                        onClick={() => setSelectedAlbum(album)}
+                        style={{
+                          position: 'relative',
+                          cursor: 'pointer',
+                          borderRadius: '16px',
+                          overflow: 'hidden',
+                          background: cardBg,
+                          border: `1px solid ${borderColor}`,
+                          boxShadow: '0 10px 30px rgba(0,0,0,0.04)',
+                          transition: 'all 0.3s ease',
+                          minWidth: theme.gridLayout === 'filmstrip' ? '280px' : 'auto',
+                          ...wrapperExtraStyle
+                        }}
+                      >
+                        <div style={{ position: 'relative', width: '100%', height: isBentoHero ? '340px' : '300px', overflow: 'hidden' }}>
+                          {album.coverImageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', background: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                              <BookOpen size={36} />
+                            </div>
+                          )}
+                          <div style={{ position: 'absolute', top: '14px', right: '14px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', padding: '3px 9px', borderRadius: '6px', color: '#FFFFFF', fontSize: '10.5px', fontFamily: 'var(--font-mono)' }}>
+                            VOL. {String(idx + 1).padStart(2, '0')}
+                          </div>
+                        </div>
+                        <div style={{ padding: '18px', textAlign: 'left' }}>
+                          <h3 style={{ fontSize: '17px', fontWeight: 700, color: textColor, margin: 0 }}>
+                            {album.title}
+                          </h3>
+                          {album.description && (
+                            <p style={{ fontSize: '12px', color: mutedTextColor, margin: '4px 0 0 0' }}>
+                              {album.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // STYLE 5 (NEW): 35mm Slide Transparency Frame
+                  if (cardStyle === 'film_slide') {
+                    return (
+                      <div
+                        key={album.id}
+                        onClick={() => setSelectedAlbum(album)}
+                        style={{
+                          position: 'relative',
+                          background: isDark ? '#1F222B' : '#F5F3EC',
+                          padding: '14px 14px 20px 14px',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          boxShadow: '0 14px 32px rgba(0,0,0,0.1)',
+                          border: `1px solid ${borderColor}`,
+                          minWidth: theme.gridLayout === 'filmstrip' ? '300px' : 'auto',
+                          ...wrapperExtraStyle
+                        }}
+                      >
+                        {/* Film Slide Header with Sprocket Holes */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', padding: '0 6px' }}>
+                          <span style={{ fontSize: '9.5px', fontFamily: 'var(--font-mono)', color: '#DC2626', fontWeight: 800, letterSpacing: '0.1em' }}>
+                            SB COLOR • 400 ISO
+                          </span>
+                          <span style={{ fontSize: '9.5px', fontFamily: 'var(--font-mono)', color: mutedTextColor, fontWeight: 700 }}>
+                            EXP #{String(idx + 1).padStart(2, '0')}
+                          </span>
+                        </div>
+
+                        {/* Inset Photo Slide Area */}
+                        <div style={{ position: 'relative', width: '100%', height: isBentoHero ? '300px' : '220px', borderRadius: '4px', overflow: 'hidden', background: '#000000', border: '2px solid rgba(0,0,0,0.6)' }}>
+                          {album.coverImageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                              <Camera size={32} />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Slide Label Footer */}
+                        <div style={{ marginTop: '12px', textAlign: 'center' }}>
+                          <h4 style={{ fontSize: '15px', fontWeight: 800, color: textColor, margin: 0, fontFamily: 'var(--font-mono)' }}>
+                            {album.title}
+                          </h4>
+                          <span style={{ fontSize: '11px', color: mutedTextColor, display: 'block', marginTop: '2px' }}>
+                            {album.description || 'Slide Frame Curated Film'}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // STYLE 6 (NEW): Frameless Floating Canvas
+                  if (cardStyle === 'floating_canvas') {
+                    return (
+                      <div
+                        key={album.id}
+                        onClick={() => setSelectedAlbum(album)}
+                        style={{
+                          position: 'relative',
+                          borderRadius: '22px',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          boxShadow: '0 24px 50px -10px rgba(0,0,0,0.22)',
+                          minWidth: theme.gridLayout === 'filmstrip' ? '310px' : 'auto',
+                          height: isBentoHero ? '380px' : '280px',
+                          background: '#121214',
+                          transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                          ...wrapperExtraStyle
+                        }}
+                      >
+                        {album.coverImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                            <Camera size={36} />
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.2) 60%, transparent 100%)' }} />
+
+                        {/* Floating bottom chip */}
+                        <div style={{ position: 'absolute', bottom: '18px', left: '18px', right: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div>
+                            <span style={{ fontSize: '10px', color: '#D4AF37', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
+                              CANVAS GALLERY
+                            </span>
+                            <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#FFFFFF', margin: '2px 0 0' }}>
+                              {album.title}
+                            </h3>
+                          </div>
+                          <span style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFFFFF' }}>
+                            <ArrowRight size={16} />
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // STYLE 7 (NEW): Museum Matted Passe-Partout Frame
+                  if (cardStyle === 'gallery_frame') {
+                    return (
+                      <div
+                        key={album.id}
+                        onClick={() => setSelectedAlbum(album)}
+                        style={{
+                          position: 'relative',
+                          background: isDark ? '#121316' : '#1A1817',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          boxShadow: '0 16px 40px rgba(0,0,0,0.18)',
+                          border: '3px solid #2B2825',
+                          minWidth: theme.gridLayout === 'filmstrip' ? '320px' : 'auto',
+                          ...wrapperExtraStyle
+                        }}
+                      >
+                        {/* White Passe-Partout Matboard Area */}
+                        <div style={{
+                          background: '#FFFFFF',
+                          padding: '20px 20px 24px 20px',
+                          borderRadius: '4px',
+                          boxShadow: 'inset 0 0 8px rgba(0,0,0,0.15)'
+                        }}>
+                          <div style={{ position: 'relative', width: '100%', height: isBentoHero ? '280px' : '200px', overflow: 'hidden', background: '#000000', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
+                            {album.coverImageUrl ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ) : (
+                              <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                                <Camera size={28} />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Brass / Gold Plaque label */}
+                          <div style={{
+                            marginTop: '16px',
+                            padding: '6px 12px',
+                            background: 'linear-gradient(135deg, #F3E7C4 0%, #D8B978 100%)',
+                            borderRadius: '4px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                            textAlign: 'center'
+                          }}>
+                            <span style={{ fontSize: '11.5px', fontWeight: 800, color: '#3A2E12', letterSpacing: '0.04em', textTransform: 'uppercase', display: 'block' }}>
+                              {album.title}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // STYLE 8 (NEW): Ultra-Curved Modern Capsule
+                  if (cardStyle === 'modern_pill') {
+                    return (
+                      <div
+                        key={album.id}
+                        onClick={() => setSelectedAlbum(album)}
+                        className="glass-card"
+                        style={{
+                          position: 'relative',
+                          borderRadius: '32px',
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          background: cardBg,
+                          border: `1px solid ${borderColor}`,
+                          boxShadow: '0 16px 40px rgba(0,0,0,0.06)',
+                          transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                          minWidth: theme.gridLayout === 'filmstrip' ? '300px' : 'auto',
+                          ...wrapperExtraStyle
+                        }}
+                      >
+                        <div style={{ position: 'relative', width: '100%', height: isBentoHero ? '300px' : '220px', overflow: 'hidden', borderRadius: '28px 28px 0 0' }}>
+                          {album.coverImageUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '100%', height: '100%', background: '#1D1D1F', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#86868B' }}>
+                              <Camera size={32} />
+                            </div>
+                          )}
+                          <div style={{ position: 'absolute', top: '14px', left: '14px' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 14px', borderRadius: '999px', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', color: '#FFFFFF', fontSize: '11px', fontWeight: 700 }}>
+                              <Camera size={12} color={accentColor} />
+                              <span>Lihat Album</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div>
+                            <h4 style={{ fontSize: '16px', fontWeight: 800, color: textColor, margin: 0 }}>
+                              {album.title}
+                            </h4>
+                            <span style={{ fontSize: '11.5px', color: mutedTextColor }}>
+                              Google Drive Portfolio
+                            </span>
+                          </div>
+                          <span style={{ width: '34px', height: '34px', borderRadius: '50%', background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: accentColor }}>
+                            <ArrowRight size={14} />
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // STYLE 4: Cinematic Glass (Default Fallback)
+                  return (
+                    <div
+                      key={album.id}
+                      onClick={() => setSelectedAlbum(album)}
+                      className="glass-card"
+                      style={{
+                        borderRadius: '20px',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        transition: 'all 0.25s ease',
+                        boxShadow: '0 10px 30px rgba(0, 0, 0, 0.04)',
+                        border: `1px solid ${borderColor}`,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        background: cardBg,
+                        minWidth: theme.gridLayout === 'filmstrip' ? '320px' : 'auto',
+                        ...wrapperExtraStyle
+                      }}
+                    >
+                      <div style={{ position: 'relative', width: '100%', height: isBentoHero ? '280px' : '220px', backgroundColor: '#1D1D1F', overflow: 'hidden' }}>
+                        {album.coverImageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#86868B', gap: '8px' }}>
+                            <BookOpen size={36} />
+                            <span style={{ fontSize: '12px' }}>Klik untuk membuka album</span>
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)' }} />
+                        <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '8px', backgroundColor: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(8px)', color: '#FFFFFF', fontSize: '11px', fontWeight: 600 }}>
+                            <BookOpen size={11} color={accentColor} />
+                            <span>Buka Photobook</span>
+                          </span>
+                        </div>
+                        <div style={{ position: 'absolute', bottom: '14px', left: '14px', right: '14px' }}>
+                          <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFFFFF', margin: 0 }}>
+                            {album.title}
+                          </h3>
+                          {album.description && (
+                            <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.75)', margin: '3px 0 0 0', lineHeight: 1.3 }}>
+                              {album.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: mutedTextColor, backgroundColor: cardBg }}>
+                        <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>Google Drive Album</span>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: accentColor, fontWeight: 600 }}>
+                          <span>Jelajahi Foto</span>
+                          <ArrowRight size={13} />
+                        </span>
                       </div>
                     </div>
-                    <div style={{ padding: '18px', textAlign: 'left' }}>
-                      <h3 style={{ fontSize: '17px', fontWeight: 700, color: textColor, margin: 0 }}>
-                        {album.title}
-                      </h3>
-                      {album.description && (
-                        <p style={{ fontSize: '12px', color: mutedTextColor, margin: '4px 0 0 0' }}>
-                          {album.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                );
-              }
-
-              // STYLE 4: Cinematic Glass (Default Fallback)
-              return (
-                <div
-                  key={album.id}
-                  onClick={() => setSelectedAlbum(album)}
-                  className="glass-card"
-                  style={{
-                    borderRadius: '20px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    transition: 'all 0.25s ease',
-                    boxShadow: '0 10px 30px rgba(0, 0, 0, 0.04)',
-                    border: `1px solid ${borderColor}`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    background: cardBg,
-                    minWidth: theme.gridLayout === 'filmstrip' ? '320px' : 'auto'
-                  }}
-                >
-                  <div style={{ position: 'relative', width: '100%', height: '220px', backgroundColor: '#1D1D1F', overflow: 'hidden' }}>
-                    {album.coverImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={album.coverImageUrl} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
-                    ) : (
-                      <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#86868B', gap: '8px' }}>
-                        <BookOpen size={36} />
-                        <span style={{ fontSize: '12px' }}>Klik untuk membuka album</span>
-                      </div>
-                    )}
-                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 60%)' }} />
-                    <div style={{ position: 'absolute', top: '12px', left: '12px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '4px 10px', borderRadius: '8px', backgroundColor: 'rgba(0, 0, 0, 0.65)', backdropFilter: 'blur(8px)', color: '#FFFFFF', fontSize: '11px', fontWeight: 600 }}>
-                        <BookOpen size={11} color={accentColor} />
-                        <span>Buka Photobook</span>
-                      </span>
-                    </div>
-                    <div style={{ position: 'absolute', bottom: '14px', left: '14px', right: '14px' }}>
-                      <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#FFFFFF', margin: 0 }}>
-                        {album.title}
-                      </h3>
-                      {album.description && (
-                        <p style={{ fontSize: '12px', color: 'rgba(255, 255, 255, 0.75)', margin: '3px 0 0 0', lineHeight: 1.3 }}>
-                          {album.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', color: mutedTextColor, backgroundColor: cardBg }}>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px' }}>Google Drive Album</span>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: accentColor, fontWeight: 600 }}>
-                      <span>Jelajahi Foto</span>
-                      <ArrowRight size={13} />
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         ) : (
           <div className="glass-card" style={{ padding: '48px 24px', textAlign: 'center', borderRadius: '24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', background: cardBg, border: `1px solid ${borderColor}` }}>
             <div style={{ width: '52px', height: '52px', borderRadius: '16px', background: 'rgba(194, 120, 3, 0.1)', color: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
