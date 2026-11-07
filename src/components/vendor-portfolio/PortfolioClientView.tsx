@@ -4,9 +4,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   ShieldCheck, MapPin, Globe, MessageCircle, 
-  Sparkles, Layers, BookOpen, ArrowRight, Share2, Check,
+  Layers, BookOpen, ArrowRight, Share2, Check,
   ChevronDown, ChevronUp,
-  Star, Award, Camera, Video, HelpCircle, FileText, X, Send, User,
+  Star, Award, Camera, Video, Film, Calendar, HelpCircle, FileText, X, Send, User,
   ChevronLeft, ChevronRight, Eye
 } from 'lucide-react';
 import { VendorPortfolioAlbum, VendorPortfolioTheme, VendorPortfolioVideo } from '@/lib/types';
@@ -1729,7 +1729,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
                 gap: '12px'
               }}>
                 <span style={{ fontSize: '11.5px', color: mutedTextColor, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={13} style={{ color: accentColor }} />
+                  <Film size={13} style={{ color: accentColor }} />
                   <span>Geser ke samping untuk melihat video lainnya</span>
                 </span>
 
@@ -1792,7 +1792,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '24px' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '4px' }}>
-              <Sparkles size={13} />
+              <Camera size={13} />
               <span>KOLEKSI KARYA FOTOGRAFI</span>
             </div>
             <h2 style={{ fontSize: '22px', fontWeight: 800, color: textColor, letterSpacing: '-0.02em', margin: 0 }}>
@@ -2746,7 +2746,7 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={18} color={accentColor} />
+                <Calendar size={18} color={accentColor} />
                 <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: textColor }}>
                   Cek Jadwal & Reservasi
                 </h3>

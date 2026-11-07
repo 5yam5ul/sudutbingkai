@@ -3,10 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { 
-  Sparkles, Layers, BookOpen, Plus, Trash2, Edit3, 
+  Layers, BookOpen, Plus, Trash2, Edit3, 
   ExternalLink, Copy, Check, Upload, Image as ImageIcon, 
   Eye, RefreshCw, CheckCircle2, AlertCircle, Loader2,
-  Globe, MessageCircle, MapPin, Sliders, Music, Video,
+  Globe, MessageCircle, MapPin, Sliders, Music, Video, Film, Palette, Save,
   Shield, Award, Camera, Star, HelpCircle, FileText, ChevronRight,
   RotateCw, ChevronDown, ChevronUp
 } from 'lucide-react';
@@ -1054,7 +1054,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 boxShadow: '0 4px 14px rgba(194, 120, 3, 0.35)'
               }}
             >
-              {isSavingProfile ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+              {isSavingProfile ? <Loader2 size={15} className="animate-spin" /> : <Save size={15} />}
               <span>Publikasikan Kustomisasi</span>
             </button>
           </div>
@@ -1066,7 +1066,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
         {[
           { key: 'albums', label: `Kategori Album (${albums.length})`, icon: Layers },
           { key: 'style', label: 'Gaya Card & Grid', icon: BookOpen },
-          { key: 'atmosphere', label: 'Suasana & Background', icon: Sparkles },
+          { key: 'atmosphere', label: 'Suasana & Background', icon: Palette },
           { key: 'profile', label: 'Identitas & Header Hero', icon: Sliders },
           { key: 'features', label: 'Fitur Tambahan & Keamanan', icon: Shield }
         ].map((tabItem) => {
@@ -2497,7 +2497,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 </div>
 
                 <div style={{ marginTop: '8px', padding: '10px 14px', borderRadius: '12px', background: 'rgba(194, 120, 3, 0.07)', border: '1px solid rgba(194, 120, 3, 0.2)', fontSize: '12px', color: '#8F5700', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Sparkles size={14} style={{ flexShrink: 0 }} />
+                  <Film size={14} style={{ flexShrink: 0 }} />
                   <span><strong>Fitur Geser / Slider Otomatis:</strong> Di website portofolio Anda, video akan ditampilkan dalam bentuk carousel geser (horizontal swipe) lengkap dengan tombol navigasi panah dan tab judul video.</span>
                 </div>
               </div>
