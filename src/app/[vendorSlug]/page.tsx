@@ -27,17 +27,54 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     return { title: 'Portofolio Vendor | SudutBingkai' };
   }
 
-  const name = vendor.companyName || vendor.name;
-  const description = vendor.bio || `Koleksi portofolio dokumentasi fotografi resmi dari ${name}. Jelajahi album dan hubungi kami untuk reservasi acara Anda.`;
+  const name = (vendor.companyName || vendor.name || 'Vendor Fotografi').trim();
+  
+  // Format clean professional description, ignoring trivial 4-character test strings
+  const cleanBio = vendor.bio && vendor.bio.trim().length > 6 && vendor.bio.trim().toLowerCase() !== 'test'
+    ? `${vendor.bio.trim()} — Portofolio karya resmi ${name}.`
+    : `Koleksi portofolio dokumentasi fotografi & visual resmi dari ${name}. Buka galeri album karya dan reservasi jadwal acara Anda.`;
+
+  const canonicalUrl = `https://www.sudutbingkai.id/${vendorSlug}`;
+
+  // Prioritize vendor official logo so WhatsApp displays vendor's logo thumbnail on the left
+  const rawImage = vendor.logoUrl || vendor.coverUrl || '/logo-full.png';
+  const resolvedImageUrl = rawImage.startsWith('http://') || rawImage.startsWith('https://')
+    ? rawImage
+    : `https://www.sudutbingkai.id${rawImage.startsWith('/') ? '' : '/'}${rawImage}`;
+
+  const isSquareLogo = Boolean(vendor.logoUrl);
 
   return {
-    title: `${name} - Portofolio Fotografi | SudutBingkai`,
-    description,
+    title: {
+      absolute: `${name} — Portofolio Fotografi Resmi`,
+    },
+    description: cleanBio,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
-      title: `${name} - Portofolio Fotografi`,
-      description,
-      images: vendor.coverUrl ? [{ url: vendor.coverUrl }] : (vendor.logoUrl ? [{ url: vendor.logoUrl }] : [])
-    }
+      siteName: `${name} • Portofolio Resmi`,
+      title: `${name} — Portofolio Fotografi`,
+      description: cleanBio,
+      url: canonicalUrl,
+      type: 'profile',
+      locale: 'id_ID',
+      images: [
+        {
+          url: resolvedImageUrl,
+          width: isSquareLogo ? 400 : 1200,
+          height: isSquareLogo ? 400 : 630,
+          alt: `Logo ${name}`,
+          type: resolvedImageUrl.endsWith('.png') ? 'image/png' : 'image/jpeg',
+        },
+      ],
+    },
+    twitter: {
+      card: isSquareLogo ? 'summary' : 'summary_large_image',
+      title: `${name} — Portofolio Fotografi`,
+      description: cleanBio,
+      images: [resolvedImageUrl],
+    },
   };
 }
 

@@ -269,12 +269,33 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
   );
   const whatsappUrl = formattedPhone ? `https://wa.me/${formattedPhone}?text=${defaultGreeting}` : null;
 
-  const handleCopyLink = () => {
+  const handleCopyLink = async () => {
     if (typeof window !== 'undefined') {
-      navigator.clipboard.writeText(window.location.href);
-      setCopied(true);
-      toast.success('Link portofolio berhasil disalin!');
-      setTimeout(() => setCopied(false), 2000);
+      const shareUrl = window.location.href;
+      const shareTitle = `${vendor.companyName || vendor.name} • Portofolio Fotografi Resmi`;
+      
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: shareTitle,
+            text: `Lihat portofolio karya fotografi resmi dari ${vendor.companyName || vendor.name}:`,
+            url: shareUrl,
+          });
+          return;
+        } catch (err: any) {
+          // If user aborted/dismissed native share modal, do not show error
+          if (err?.name === 'AbortError') return;
+        }
+      }
+
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopied(true);
+        toast.success('Link portofolio berhasil disalin!');
+        setTimeout(() => setCopied(false), 2000);
+      } catch {
+        toast.info('Silakan salin link langsung dari browser URL.');
+      }
     }
   };
 
