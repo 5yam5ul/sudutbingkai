@@ -197,7 +197,7 @@ export function PortfolioViewerModal({
     };
   }, [isOpen, album?.driveFolderUrl]);
 
-  // Real StPageFlip 3D Engine Initialization for 'flipbook' mode
+  // Real StPageFlip 3D Engine Initialization for 'flipbook' mode (Single-Page Kolase Mode)
   useEffect(() => {
     if (transitionMode !== 'flipbook' || !isOpen || loading || error || photos.length <= 1) {
       if (pageFlipRef.current) {
@@ -218,42 +218,86 @@ export function PortfolioViewerModal({
 
     let isDestroyed = false;
 
-    try {
-      const isMobile = window.innerWidth < 768;
-      // Single page width. On desktop 2 pages will form a spread (width * 2)
-      const baseWidth = isMobile ? Math.min(window.innerWidth - 32, 380) : 480;
-      const baseHeight = isMobile ? Math.min(window.innerHeight - 200, 560) : 640;
+    // Determine the natural aspect ratio from the first image so kolase landscape is NEVER squished
+    const sampleImg = new Image();
+    const firstUrl = photos[0]?.fullUrl || photos[0]?.url;
+    if (!firstUrl) return;
 
-      const pf = new PageFlip(mountEl, {
-        width: baseWidth,
-        height: baseHeight,
-        size: 'stretch',
-        minWidth: 260,
-        maxWidth: 680,
-        minHeight: 380,
-        maxHeight: 880,
-        maxShadowOpacity: 0.85,
-        showCover: true,
-        mobileScrollSupport: false,
-        usePortrait: true,
-        showPageCorners: true,
-        drawShadow: true,
-        flippingTime: 850,
-        useMouseEvents: true,
-        startPage: Math.min(currentIndex, photos.length - 1)
-      });
+    sampleImg.src = firstUrl;
 
-      pf.loadFromImages(photos.map(p => p.fullUrl || p.url));
+    const initBook = (naturalW: number, naturalH: number) => {
+      if (isDestroyed || !bookContainerRef.current) return;
 
-      pf.on('flip', (e: any) => {
-        if (!isDestroyed && typeof e.data === 'number') {
-          setCurrentIndex(e.data);
-        }
-      });
+      // Natural aspect ratio (kolase wedding usually 16:9 or 3:2 landscape)
+      const aspect = naturalW > 0 && naturalH > 0 ? (naturalW / naturalH) : (16 / 9);
 
-      pageFlipRef.current = pf;
-    } catch (err) {
-      console.error('Failed to initialize StPageFlip:', err);
+      // Max available space in viewport
+      const screenW = window.innerWidth;
+      const screenH = window.innerHeight;
+      const maxAvailableW = Math.min(screenW * 0.90, 1260);
+      const maxAvailableH = Math.min(screenH * 0.74, 760);
+
+      let bookW = maxAvailableW;
+      let bookH = bookW / aspect;
+
+      if (bookH > maxAvailableH) {
+        bookH = maxAvailableH;
+        bookW = bookH * aspect;
+      }
+
+      bookW = Math.round(bookW);
+      bookH = Math.round(bookH);
+
+      // Style mount element to the exact calculated single-page aspect ratio
+      mountEl.style.width = `${bookW}px`;
+      mountEl.style.height = `${bookH}px`;
+      mountEl.style.maxWidth = '92vw';
+      mountEl.style.maxHeight = '75vh';
+      mountEl.style.position = 'relative';
+
+      try {
+        const pf = new PageFlip(mountEl, {
+          width: bookW,
+          height: bookH,
+          size: 'fixed',
+          minWidth: 200,
+          maxWidth: 2400,
+          minHeight: 150,
+          maxHeight: 1800,
+          maxShadowOpacity: 0.8,
+          showCover: false, // SINGLE PAGE MODE: 1 foto penuh per lembar, tidak ada halaman kosong di samping!
+          mobileScrollSupport: false,
+          usePortrait: true, // Selalu tampilkan 1 halaman kolase penuh!
+          showPageCorners: true,
+          drawShadow: true,
+          flippingTime: 750,
+          useMouseEvents: true,
+          startPage: Math.min(currentIndex, photos.length - 1)
+        });
+
+        pf.loadFromImages(photos.map(p => p.fullUrl || p.url));
+
+        pf.on('flip', (e: any) => {
+          if (!isDestroyed && typeof e.data === 'number') {
+            setCurrentIndex(e.data);
+          }
+        });
+
+        pageFlipRef.current = pf;
+      } catch (err) {
+        console.error('Failed to initialize Single-Page StPageFlip:', err);
+      }
+    };
+
+    if (sampleImg.complete && sampleImg.naturalWidth > 0) {
+      initBook(sampleImg.naturalWidth, sampleImg.naturalHeight);
+    } else {
+      sampleImg.onload = () => {
+        initBook(sampleImg.naturalWidth, sampleImg.naturalHeight);
+      };
+      sampleImg.onerror = () => {
+        initBook(1600, 900);
+      };
     }
 
     return () => {
