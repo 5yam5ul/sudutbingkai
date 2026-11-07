@@ -1371,8 +1371,8 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                 {
                   key: 'flipbook',
                   icon: '📖',
-                  title: '3D Flipbook Photobook',
-                  desc: 'Lembaran photobook 3D membalik realistis dengan lekukan bayangan tulang buku & tekstur kertas.',
+                  title: '3D Real Physical Photobook',
+                  desc: 'Buku album 3D fisik nyata: 2 halaman terbuka (spread), ujung kertas melengkung & bisa ditarik/dilepas mouse atau jari dengan bayangan silindris alami.',
                   badge: 'DEFAULT UTAMA'
                 },
                 {
