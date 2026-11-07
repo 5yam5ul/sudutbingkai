@@ -335,24 +335,24 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
         background: isObsidian ? 'rgba(18, 18, 20, 0.85)' : 'rgba(251, 251, 250, 0.85)',
         backdropFilter: 'blur(20px)',
         borderBottom: `1px solid ${borderColor}`,
-        padding: '12px 24px'
+        padding: '10px 24px'
       }}>
         <div style={{ maxWidth: '1120px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Link href="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '12px' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               src="/logo.png" 
               alt="Sudut Bingkai Logo" 
               style={{ 
-                height: '32px', 
-                width: '32px', 
+                height: '46px', 
+                width: '46px', 
                 objectFit: 'contain', 
-                borderRadius: '8px',
+                borderRadius: '10px',
                 display: 'block',
                 flexShrink: 0 
               }} 
             />
-            <span style={{ fontSize: '11px', color: mutedTextColor, background: isObsidian ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', padding: '3px 8px', borderRadius: '6px', fontWeight: 600 }}>
+            <span style={{ fontSize: '11px', color: mutedTextColor, background: isObsidian ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', padding: '4px 10px', borderRadius: '6px', fontWeight: 600 }}>
               Official Partner
             </span>
           </Link>
@@ -2281,10 +2281,10 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
           style={{ 
             display: 'inline-flex', 
             alignItems: 'center', 
-            gap: '8px', 
+            gap: '10px', 
             textDecoration: 'none',
             color: mutedTextColor,
-            fontSize: '12px'
+            fontSize: '12.5px'
           }}
         >
           <span>Didukung oleh</span>
@@ -2293,10 +2293,10 @@ export function PortfolioClientView({ vendor }: PortfolioClientViewProps) {
             src="/logo.png" 
             alt="Sudut Bingkai" 
             style={{ 
-              width: '28px', 
-              height: '28px', 
+              width: '42px', 
+              height: '42px', 
               objectFit: 'contain', 
-              borderRadius: '6px',
+              borderRadius: '8px',
               display: 'block'
             }} 
           />
