@@ -10,7 +10,7 @@ import {
   Shield, Award, Camera, Star, HelpCircle, FileText, ChevronRight,
   RotateCw, ChevronDown, ChevronUp
 } from 'lucide-react';
-import { VendorPortfolioAlbum, VendorPortfolioTheme, VendorPortfolioTestimonial, VendorPortfolioFaq, UserAccount } from '@/lib/types';
+import { VendorPortfolioAlbum, VendorPortfolioTheme, VendorPortfolioTestimonial, VendorPortfolioFaq, VendorPortfolioVideo, UserAccount } from '@/lib/types';
 import { authFetch } from '@/lib/auth';
 import { toast } from 'sonner';
 
@@ -825,6 +825,55 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
     setTheme(prev => ({
       ...prev,
       testimonials: currentTestis.filter(t => t.id !== id)
+    }));
+  };
+
+  // Video Highlights multiple helpers
+  const currentVideoList: VendorPortfolioVideo[] = (theme.videoHighlights && theme.videoHighlights.length > 0)
+    ? theme.videoHighlights
+    : (theme.videoHighlightUrl
+      ? [{ id: 'vid_1', url: theme.videoHighlightUrl, title: theme.videoHighlightTitle || 'Wedding Film Showcase', category: 'Cinematic Teaser' }]
+      : []);
+
+  const handleAddVideo = () => {
+    const baseList = currentVideoList.length > 0 
+      ? currentVideoList 
+      : (theme.videoHighlightUrl ? [{ id: 'vid_1', url: theme.videoHighlightUrl, title: theme.videoHighlightTitle || 'Wedding Film Showcase', category: 'Cinematic Teaser' }] : []);
+    const newVid: VendorPortfolioVideo = {
+      id: `vid_${Date.now()}`,
+      url: '',
+      title: '',
+      category: 'Wedding Highlight'
+    };
+    const updated = [...baseList, newVid];
+    setTheme(prev => ({
+      ...prev,
+      videoHighlights: updated,
+      videoHighlightUrl: updated[0]?.url || '',
+      videoHighlightTitle: updated[0]?.title || ''
+    }));
+  };
+
+  const handleUpdateVideo = (id: string, field: keyof VendorPortfolioVideo, val: string) => {
+    const baseList = currentVideoList.length > 0 
+      ? currentVideoList 
+      : [{ id, url: theme.videoHighlightUrl || '', title: theme.videoHighlightTitle || '' }];
+    const updated = baseList.map(v => v.id === id ? { ...v, [field]: val } : v);
+    setTheme(prev => ({
+      ...prev,
+      videoHighlights: updated,
+      videoHighlightUrl: updated[0]?.url || '',
+      videoHighlightTitle: updated[0]?.title || ''
+    }));
+  };
+
+  const handleRemoveVideo = (id: string) => {
+    const updated = currentVideoList.filter(v => v.id !== id);
+    setTheme(prev => ({
+      ...prev,
+      videoHighlights: updated,
+      videoHighlightUrl: updated[0]?.url || '',
+      videoHighlightTitle: updated[0]?.title || ''
     }));
   };
 
@@ -2091,7 +2140,7 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
                   🎥 Video Highlight / Cinematic Teaser
                 </h3>
                 <p style={{ fontSize: '13px', color: '#6E6E73', margin: '4px 0 0 0' }}>
-                  Sematkan video teaser pernikahan layar lebar di landing page.
+                  Sematkan video teaser pernikahan layar lebar di landing page. Klien dapat menggeser (swipe horizontal) jika ada lebih dari 1 video.
                 </p>
               </div>
               <input
@@ -2103,32 +2152,133 @@ export default function VendorPortfolioTab({ vendor, onUpdateVendor }: VendorPor
             </div>
 
             {theme.showVideoHighlight && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginTop: '16px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
-                    Link Video (YouTube / Vimeo Embed)
-                  </label>
-                  <input
-                    type="text"
-                    value={theme.videoHighlightUrl || ''}
-                    onChange={e => setTheme(prev => ({ ...prev, videoHighlightUrl: e.target.value }))}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                    className="glass-input"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px' }}
-                  />
+              <div style={{ marginTop: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {currentVideoList.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '24px', borderRadius: '16px', background: 'rgba(0,0,0,0.02)', border: '1px dashed rgba(0,0,0,0.1)' }}>
+                    <p style={{ fontSize: '13px', color: '#6E6E73', margin: '0 0 12px 0' }}>Belum ada video highlight yang ditambahkan.</p>
+                    <button type="button" onClick={handleAddVideo} className="btn-apple-black" style={{ padding: '8px 16px', fontSize: '12px', cursor: 'pointer' }}>
+                      + Tambah Video Pertama
+                    </button>
+                  </div>
+                ) : (
+                  currentVideoList.map((vid, idx) => (
+                    <div 
+                      key={vid.id || idx} 
+                      style={{ 
+                        padding: '18px', 
+                        borderRadius: '16px', 
+                        background: 'rgba(0,0,0,0.02)', 
+                        border: '1px solid rgba(0,0,0,0.07)',
+                        position: 'relative' 
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 700, background: '#1D1D1F', color: '#FFF', padding: '3px 8px', borderRadius: '6px' }}>
+                            Video #{idx + 1}
+                          </span>
+                          {vid.title && (
+                            <span style={{ fontSize: '13px', fontWeight: 600, color: '#1D1D1F' }}>
+                              {vid.title}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveVideo(vid.id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: '#EF4444',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            fontSize: '12px',
+                            fontWeight: 500
+                          }}
+                        >
+                          <Trash2 size={13} />
+                          <span>Hapus</span>
+                        </button>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' }}>
+                        <div>
+                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
+                            Link Video (YouTube / Vimeo / Drive) *
+                          </label>
+                          <input
+                            type="text"
+                            value={vid.url || ''}
+                            onChange={e => handleUpdateVideo(vid.id, 'url', e.target.value)}
+                            placeholder="https://www.youtube.com/watch?v=..."
+                            className="glass-input"
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', fontSize: '12.5px' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
+                            Judul Video
+                          </label>
+                          <input
+                            type="text"
+                            value={vid.title || ''}
+                            onChange={e => handleUpdateVideo(vid.id, 'title', e.target.value)}
+                            placeholder="Contoh: The Wedding of Rian & Nisa"
+                            className="glass-input"
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', fontSize: '12.5px' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '11.5px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
+                            Kategori / Tag Subtitle (Opsional)
+                          </label>
+                          <input
+                            type="text"
+                            value={vid.category || ''}
+                            onChange={e => handleUpdateVideo(vid.id, 'category', e.target.value)}
+                            placeholder="Contoh: Cinematic Teaser / Prewedding"
+                            className="glass-input"
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '10px', fontSize: '12.5px' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginTop: '4px' }}>
+                  <button
+                    type="button"
+                    onClick={handleAddVideo}
+                    className="btn-apple-black"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '9px 16px',
+                      fontSize: '12.5px',
+                      borderRadius: '10px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Plus size={14} />
+                    <span>+ Tambah Video Highlight Lainnya</span>
+                  </button>
+
+                  {currentVideoList.length > 1 && (
+                    <span style={{ fontSize: '12px', color: '#6E6E73' }}>
+                      Total {currentVideoList.length} video (bisa digeser oleh klien)
+                    </span>
+                  )}
                 </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 600, color: '#1D1D1F', display: 'block', marginBottom: '4px' }}>
-                    Judul Section Video
-                  </label>
-                  <input
-                    type="text"
-                    value={theme.videoHighlightTitle || ''}
-                    onChange={e => setTheme(prev => ({ ...prev, videoHighlightTitle: e.target.value }))}
-                    placeholder="Contoh: The Wedding of Rian & Nisa"
-                    className="glass-input"
-                    style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', fontSize: '13px' }}
-                  />
+
+                <div style={{ marginTop: '8px', padding: '10px 14px', borderRadius: '12px', background: 'rgba(194, 120, 3, 0.07)', border: '1px solid rgba(194, 120, 3, 0.2)', fontSize: '12px', color: '#8F5700', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={14} style={{ flexShrink: 0 }} />
+                  <span><strong>Fitur Geser / Slider Otomatis:</strong> Di website portofolio Anda, video akan ditampilkan dalam bentuk carousel geser (horizontal swipe) lengkap dengan tombol navigasi panah dan tab judul video.</span>
                 </div>
               </div>
             )}

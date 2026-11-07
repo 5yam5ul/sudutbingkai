@@ -478,6 +478,13 @@ export interface VendorPortfolioTestimonial {
   quote: string;
 }
 
+export interface VendorPortfolioVideo {
+  id: string;
+  url: string;
+  title?: string;
+  category?: string;
+}
+
 export interface VendorPortfolioFaq {
   question: string;
   answer: string;
@@ -547,6 +554,7 @@ export interface VendorPortfolioTheme {
   showVideoHighlight?: boolean;
   videoHighlightUrl?: string;
   videoHighlightTitle?: string;
+  videoHighlights?: VendorPortfolioVideo[];
 
   // 9. Typography & Accent Color
   fontStyle?: 'sans' | 'serif' | 'mono' | 'playfair' | 'cinzel' | 'syne' | 'jakarta';
